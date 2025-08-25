@@ -1,0 +1,88 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36" version="28.0.7">
+  <diagram name="Page-1" id="PsyA2pruMKwUGKAQiDDY">
+    <mxGraphModel dx="1365" dy="1843" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="N-0GSJycp1Z9dRoiIRym-16" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;" edge="1" parent="1" source="N-0GSJycp1Z9dRoiIRym-1" target="N-0GSJycp1Z9dRoiIRym-14">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="N-0GSJycp1Z9dRoiIRym-1" value="User" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;" vertex="1" parent="1">
+          <mxGeometry x="60" y="-1070" width="80" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="N-0GSJycp1Z9dRoiIRym-45" value="Request Form Login" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="460" y="-1050" as="sourcePoint" />
+            <mxPoint x="670" y="-1050" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="N-0GSJycp1Z9dRoiIRym-5" value="Screen Login" style="html=1;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry x="350" y="-1060" width="110" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="N-0GSJycp1Z9dRoiIRym-14" value="" style="html=1;points=[];perimeter=orthogonalPerimeter;fillColor=strokeColor;" vertex="1" parent="1">
+          <mxGeometry x="93.75" y="-890" width="12.5" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="N-0GSJycp1Z9dRoiIRym-41" value="Send Form CSRF Token" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="670" y="-1000.69" as="sourcePoint" />
+            <mxPoint x="460" y="-1000.69" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="N-0GSJycp1Z9dRoiIRym-57" value="&lt;div style=&quot;line-height: 130%;&quot;&gt;&lt;br&gt;&lt;/div&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;dashed=1;" edge="1" parent="1" source="N-0GSJycp1Z9dRoiIRym-17" target="N-0GSJycp1Z9dRoiIRym-53">
+          <mxGeometry x="-0.1667" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="N-0GSJycp1Z9dRoiIRym-58" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;dashed=1;" edge="1" parent="1" source="N-0GSJycp1Z9dRoiIRym-17" target="N-0GSJycp1Z9dRoiIRym-50">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="N-0GSJycp1Z9dRoiIRym-61" value="Verification Type User" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="N-0GSJycp1Z9dRoiIRym-58">
+          <mxGeometry x="-0.0933" relative="1" as="geometry">
+            <mxPoint x="29" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="N-0GSJycp1Z9dRoiIRym-17" value="Server" style="html=1;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry x="670" y="-1060" width="110" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="N-0GSJycp1Z9dRoiIRym-39" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=1;entryDx=0;entryDy=0;dashed=1;" edge="1" parent="1" source="N-0GSJycp1Z9dRoiIRym-18" target="N-0GSJycp1Z9dRoiIRym-5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="N-0GSJycp1Z9dRoiIRym-18" value="" style="html=1;points=[];perimeter=orthogonalPerimeter;fillColor=strokeColor;" vertex="1" parent="1">
+          <mxGeometry x="310" y="-890" width="12.5" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="N-0GSJycp1Z9dRoiIRym-34" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.472;entryY=-0.003;entryDx=0;entryDy=0;entryPerimeter=0;dashed=1;" edge="1" parent="1" source="N-0GSJycp1Z9dRoiIRym-14" target="N-0GSJycp1Z9dRoiIRym-18">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="N-0GSJycp1Z9dRoiIRym-36" value="Vis" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="N-0GSJycp1Z9dRoiIRym-34">
+          <mxGeometry x="0.4073" relative="1" as="geometry">
+            <mxPoint x="13" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="N-0GSJycp1Z9dRoiIRym-37" value="Visit Screen" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="N-0GSJycp1Z9dRoiIRym-34">
+          <mxGeometry x="0.5087" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="N-0GSJycp1Z9dRoiIRym-35" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.527;entryY=0.997;entryDx=0;entryDy=0;entryPerimeter=0;dashed=1;" edge="1" parent="1" source="N-0GSJycp1Z9dRoiIRym-14" target="N-0GSJycp1Z9dRoiIRym-18">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="N-0GSJycp1Z9dRoiIRym-38" value="Password and Email" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="N-0GSJycp1Z9dRoiIRym-35">
+          <mxGeometry x="0.4569" y="1" relative="1" as="geometry">
+            <mxPoint x="5" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="N-0GSJycp1Z9dRoiIRym-40" value="Email + Password + CSRF Token" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.543;entryY=1.07;entryDx=0;entryDy=0;entryPerimeter=0;dashed=1;" edge="1" parent="1" source="N-0GSJycp1Z9dRoiIRym-18" target="N-0GSJycp1Z9dRoiIRym-17">
+          <mxGeometry x="-0.1097" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="N-0GSJycp1Z9dRoiIRym-50" value="Dashboard Client" style="html=1;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry x="1000" y="-950" width="140" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="N-0GSJycp1Z9dRoiIRym-53" value="Dashboard Doctor" style="html=1;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry x="820" y="-950" width="140" height="60" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
