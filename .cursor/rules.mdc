@@ -1,0 +1,31 @@
+# Regras do Projeto Telemedicina para Todos
+
+## Visão Geral
+Este projeto é uma plataforma de telemedicina desenvolvida com Laravel 12 + Vue.js 3 + TypeScript + Tailwind CSS.
+
+## Regras Gerais
+- Sempre use português para comentários e documentação
+- Siga as convenções do Laravel para PHP
+- Siga as convenções do Vue.js 3 Composition API
+- Use TypeScript para todos os arquivos JavaScript/Vue
+- Mantenha o código limpo e bem documentado
+- Teste todas as funcionalidades antes de fazer commit
+
+## Arquitetura
+- Backend: Laravel 12 (MVC)
+- Frontend: Vue.js 3 + Inertia.js
+- Estilização: Tailwind CSS 4
+- Build: Vite
+- Banco: MySQL/SQLite
+
+## Padrões de Nomenclatura
+- Controllers: PascalCase (ex: UserController)
+- Models: PascalCase singular (ex: User)
+- Views: kebab-case (ex: user-profile.vue)
+- Rotas: kebab-case (ex: /user-profile)
+- Variáveis: camelCase
+- Constantes: UPPER_SNAKE_CASE
+description:
+globs:
+alwaysApply: false
+---

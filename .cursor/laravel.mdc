@@ -1,0 +1,42 @@
+# Regras Laravel
+
+## Controllers
+- Use Resource Controllers quando possível
+- Implemente validação com Form Requests
+- Use injeção de dependência
+- Mantenha controllers enxutos (máximo 5 métodos)
+
+## Models
+- Use Eloquent ORM
+- Defina relacionamentos claramente
+- Use fillable/guarded apropriadamente
+- Implemente mutators/accessors quando necessário
+
+## Migrations
+- Use nomes descritivos (ex: create_users_table)
+- Defina índices para campos de busca
+- Use foreign keys para relacionamentos
+- Documente mudanças importantes
+
+## Rotas
+- Agrupe rotas por funcionalidade
+- Use middleware para autenticação/autorização
+- Nomeie rotas para facilitar manutenção
+
+## Validação
+- Crie Form Requests para validações complexas
+- Use regras de validação nativas do Laravel
+- Implemente validação customizada quando necessário
+
+## Testes
+- Teste todos os endpoints
+- Use factories para dados de teste
+- Implemente testes de integração
+description: Regras específicas para desenvolvimento Laravel
+globs: ["app/**/*.php", "database/**/*.php", "routes/**/*.php", "tests/**/*.php"]
+alwaysApply: false
+---
+description:
+globs:
+alwaysApply: false
+---

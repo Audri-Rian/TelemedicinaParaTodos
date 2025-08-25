@@ -1,0 +1,41 @@
+# Regras de Negócio - Telemedicina
+
+## Segurança e Privacidade
+- Sempre criptografe dados sensíveis (HIPAA compliance)
+- Implemente autenticação de dois fatores para médicos
+- Use HTTPS para todas as comunicações
+- Implemente logs de auditoria para ações críticas
+
+## Funcionalidades Principais
+- Consultas online com videoconferência
+- Sistema de agendamento inteligente
+- Prontuários eletrônicos seguros
+- Chat médico seguro
+- Prescrições digitais
+
+## Validações Específicas
+- CPF válido para pacientes
+- CRM válido para médicos
+- Horários de consulta não conflitantes
+- Disponibilidade do médico
+- Status da consulta (agendada, em andamento, finalizada)
+
+## Fluxos de Negócio
+- Agendamento → Confirmação → Consulta → Prontuário
+- Prescrição → Farmacêutica → Entrega
+- Pagamento → Confirmação → Agendamento
+
+## Componentes de UI
+- Calendário de agendamento
+- Videochamada integrada
+- Editor de prontuário
+- Sistema de notificações
+- Dashboard médico/paciente
+description: Regras específicas para o domínio de telemedicina
+globs: ["app/**/*.php", "resources/js/**/*.vue", "resources/js/**/*.ts"]
+alwaysApply: false
+---
+description:
+globs:
+alwaysApply: false
+---
