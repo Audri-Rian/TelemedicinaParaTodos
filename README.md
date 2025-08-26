@@ -28,12 +28,6 @@ Esta seção reúne os documentos essenciais para compreender a arquitetura, reg
 
 ## Técnologias Utilizadas
 
-## Técnologias Utilizadas
-
-->
-
-## Tecnologias Utilizadas
-
 ### Backend
 - **Laravel 12** - Framework PHP para desenvolvimento web
 - **PHP 8.2+** - Linguagem de programação
