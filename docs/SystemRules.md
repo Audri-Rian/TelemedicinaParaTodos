@@ -1,56 +1,42 @@
-Sempre que abrir o Cursor para uma task, dê contexto:
-
-“Considere as regras em docs/SystemRules.md e o guia em docs/DevGuide.md para criar este código.”
-
-👉 Serve para alinhar as regras de negócio e as restrições técnicas.
-Exemplo de tópicos:
-
-Domínio: o que o sistema faz, quem são os usuários, quais processos ele resolve.
-
-Regras de negócio:
-
-SKU deve ser único e gerado automaticamente.
-
-Um pedido só pode ser finalizado se tiver pagamento aprovado.
-
-Soft delete deve ser usado em todas as entidades.
-
-Políticas de segurança: autenticação, autorização, logs de auditoria.
-
-📌 Benefício: quando você pedir ao Cursor “crie um endpoint de criação de produto”, ele já sabe que precisa respeitar essas regras.
-
-Exemplos:
 # 📜 Regras do Sistema
 
 ## 🎯 Objetivo
-O sistema visa informatizar a administração de uma loja física/virtual, centralizando o controle de **produtos, estoque, clientes, fornecedores e vendas**.
+Esse projeto tem como objetivo de criar uma platarforma de Telemedicina Moderna, segura e acessível desenvolvida com Laravel(PHP). Ele conecta médicos e pacientes de forma remota, oferecendo consultas online, agendamento inteligente, prontuários digitais e comunicação segura tudo em um único sistema integrado.
 
----
+# 🏥 Regras de Negócio 
 
-## ⚖️ Regras de Negócio
-1. **Produtos**
-   - Cada produto deve ter um **SKU único**.
-   - O SKU deve ser **gerado automaticamente** no momento do cadastro.
-   - Produtos devem suportar **soft delete**.
+### Módulo Usuários e Informações
 
-2. **Usuários**
-   - Autenticação via **Laravel Sanctum**.
-   - Perfis de acesso: **Admin, Gerente, Usuário comum**.
-   - Apenas Admin pode excluir usuários.
+#### 👥 USERS (Usuários Base)
+- **Tabela central** de autenticação (polimórfica: médico OU paciente)
+- **Email único** e obrigatório, verificação obrigatória
+- **Senha segura** (mínimo 8 caracteres, maiúsculas, números)
+- **Status**: ativo, inativo, suspenso, bloqueado
+- **Soft delete** para auditoria completa
 
-3. **Pedidos**
-   - Um pedido só pode ser finalizado se o **pagamento for aprovado**.
-   - Cancelamentos devem gerar **registro de auditoria**.
+#### 👨‍⚕️ DOCTORS (Médicos)
+- **Extensão de USERS** com relacionamento 1:1
+- **CRM obrigatório** e único por estado/região
+- **Especialidade principal** obrigatória
+- **Controle de agenda** e disponibilidade para consultas
+- **Apenas ativos** podem receber agendamentos
 
----
+#### 👤 PATIENTS (Pacientes)
+- **Extensão de USERS** com relacionamento 1:1
+- **Data de nascimento** obrigatória para cálculos médicos
+- **Contato de emergência** obrigatório
+- **Consentimento explícito** para telemedicina
+- **Histórico médico** para diagnósticos precisos
 
-## 🔐 Segurança
-- Todos os inputs devem ser validados e sanitizados.
-- Proteger contra SQL Injection, XSS e CSRF.
-- Nunca exibir mensagens de erro internas para o cliente final.
+#### 🔗 Relacionamentos
+- **USERS** é a entidade base obrigatória
+- **DOCTORS/PATIENTS** dependem de USERS existentes
+- **Exclusão em cascata** com soft delete para auditoria
+- **Apenas entidades ativas** podem se relacionar
 
----
-
-## 📦 Padrões de Dados
-- Datas no formato **YYYY-MM-DD**.
-- Valores monetários em **centavos (inteiro)** no banco de dados.
+#### 🛡️ Segurança e Compliance
+- **Criptografia** de dados sensíveis (histórico médico)
+- **Logs de auditoria** para todas as ações médicas
+- **Controle de acesso** baseado em roles
+- **Compliance LGPD** e regulamentações médicas
+- **Backup diário** com logs de auditoria
