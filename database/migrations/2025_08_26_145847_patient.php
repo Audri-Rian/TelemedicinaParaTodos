@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('patients', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->foreignId('user_id')->unique()->constrained()->onDelete('cascade');
+            $table->foreignUuid('user_id')->unique()->constrained();
             
             // Informações pessoais
             $table->enum('gender', ['male', 'female', 'other'])->nullable();
@@ -45,6 +45,8 @@ return new class extends Migration
             $table->index('date_of_birth');
             $table->index('last_consultation_at');
             $table->index('created_at');
+
+
         });
     }
 
