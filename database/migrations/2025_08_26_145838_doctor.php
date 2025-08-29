@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('doctors', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->foreignId('user_id')->unique()->constrained()->onDelete('cascade');
+            $table->uuid('user_id')->unique();
             $table->string('crm', 20)->nullable()->unique()->index();
             $table->string('specialty', 100)->nullable()->index();
             $table->text('biography')->nullable();
@@ -28,6 +28,9 @@ return new class extends Migration
             // Indexes para performance
             $table->index(['specialty', 'status']);
             $table->index('created_at');
+            
+            // Foreign key para tabelas de usuários
+            $table->foreign('user_id')->references('id')->on('users');
         });
     }
 

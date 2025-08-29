@@ -1,12 +1,25 @@
 <script setup lang="ts">
 import AppLogoIcon from '@/components/AppLogoIcon.vue';
+
+interface Props {
+    logoSrc?: string;
+    logoAlt?: string;
+}
+
+defineProps<Props>();
 </script>
 
 <template>
-    <div class="flex aspect-square size-8 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground">
-        <AppLogoIcon class="size-5 fill-current text-white dark:text-black" />
+    <div class="size-12">
+        <img 
+            v-if="logoSrc" 
+            :src="logoSrc" 
+            :alt="logoAlt || 'Logo Telemedicina'" 
+        />
+        <AppLogoIcon v-else class="" />
     </div>
-    <div class="ml-1 grid flex-1 text-left text-sm">
-        <span class="mb-0.5 truncate leading-tight font-semibold">Laravel Starter Kit</span>
+    <div class="text-left">
+        <span class="ml-1 text-xl font-semibold">Telemedicina</span>
+        <p class="ml-1.5 text-gray-400 text-xs">Para todos</p>
     </div>
 </template>
