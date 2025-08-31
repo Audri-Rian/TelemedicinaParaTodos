@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -10,7 +10,7 @@ use Illuminate\Notifications\Notifiable;
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, HasUuids;
 
     /**
      * The attributes that are mass assignable.
@@ -26,7 +26,7 @@ class User extends Authenticatable
     /**
      * The attributes that should be hidden for serialization.
      *
-     * @var list<string>
+     * @var array<string, string>
      */
     protected $hidden = [
         'password',
@@ -44,5 +44,61 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    /**
+     * Get the route key for the model.
+     */
+    public function getRouteKeyName(): string
+    {
+        return 'id';
+    }
+
+    /**
+     * Get the doctor profile associated with the user.
+     */
+    public function doctor()
+    {
+        return $this->hasOne(Doctor::class);
+    }
+
+    /**
+     * Get the patient profile associated with the user.
+     */
+    public function patient()
+    {
+        return $this->hasOne(Patient::class);
+    }
+
+    /**
+     * Check if the user is a doctor.
+     */
+    public function isDoctor(): bool
+    {
+        return $this->doctor()->exists();
+    }
+
+    /**
+     * Check if the user is a patient.
+     */
+    public function isPatient(): bool
+    {
+        return $this->isPatient();
+    }
+
+    /**
+     * Get the user's role.
+     */
+    public function getRole(): string
+    {
+        if ($this->isDoctor()) {
+            return 'doctor';
+        }
+        
+        if ($this->isPatient()) {
+            return 'patient';
+        }
+        
+        return 'user';
     }
 }
