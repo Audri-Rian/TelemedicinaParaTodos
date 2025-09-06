@@ -9,6 +9,8 @@ module.exports = {
       extend: {
         colors: {
           primary: "#FAF505",  // Amarelo Tailwind
+          secondary: "#F5F5F0",  // Cinza claro Tailwind
+          tertiary: "#8C8C5E",  // Cinza escuro Tailwind
         },
         fontFamily: {
           sans: ["Spline Sans", "ui-sans-serif", "system-ui", "sans-serif"],
