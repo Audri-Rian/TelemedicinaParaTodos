@@ -173,7 +173,7 @@ import { LoaderCircle } from 'lucide-vue-next';
 
                         <!-- Imagem central -->
                         <div class="relative z-10 flex items-center justify-center">
-                            <img src="/storage/photos/doctordoodle.png" alt="Doctor Doodle"
+                            <img src="/storage/photos/patientdoodle.png" alt="Doctor Doodle"
                                 class="w-[620px] h-[620px] object-contain drop-shadow-2xl" />
                         </div>
                     </div>
