@@ -1,0 +1,22 @@
+Grafico de comunicação com o TypeScript
+
+
+graph TD
+    A[Usuário acessa página] --> B[BackgroundDecorativo carrega]
+    B --> C[usePatientRegistration inicializa]
+    C --> D[useRealTimeValidation ativa]
+    D --> E[useRateLimit verifica tentativas]
+    E --> F[Usuário preenche formulário]
+    F --> G[Validação em tempo real]
+    G --> H{Campo válido?}
+    H -->|Sim| I[Campo fica verde]
+    H -->|Não| J[Mostra erro específico]
+    I --> K[Usuário continua]
+    J --> K
+    K --> L[Submete formulário]
+    L --> M[Rate limit verifica]
+    M --> N{Pode submeter?}
+    N -->|Sim| O[Envia para servidor]
+    N -->|Não| P[Mostra erro de limite]
+    O --> Q[Sucesso!]
+    P --> R[Tenta novamente depois]

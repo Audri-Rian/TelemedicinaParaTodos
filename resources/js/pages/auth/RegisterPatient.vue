@@ -66,12 +66,12 @@ const handleSubmit = async () => {
                     <div>
                         <!-- Card do formulário -->
                         <div
-                            class="bg-white/95 backdrop-blur-lg rounded-2xl lg:rounded-3xl p-4 lg:p-5 shadow-2xl border border-white/40 hover:shadow-3xl transition-all duration-500 relative z-20">
+                            class="bg-white/95 backdrop-blur-lg rounded-2xl lg:rounded-3xl p-2 lg:p-3 shadow-2xl border border-white/40 hover:shadow-3xl transition-all duration-500 relative z-20">
                             <!-- Header com ícone -->
                             <div class="text-center">
                                 <div
-                                    class="inline-flex items-center justify-center w-12 h-12 bg-gradient-to-br from-primary/20 to-primary/10 rounded-xl mb-2 shadow-lg">
-                                    <svg class="w-6 h-6 text-black" fill="none" stroke="currentColor"
+                                    class="inline-flex items-center justify-center w-8 h-8 bg-gradient-to-br from-primary/20 to-primary/10 rounded-lg mb-1 shadow-lg">
+                                    <svg class="w-4 h-4 text-black" fill="none" stroke="currentColor"
                                         viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                             d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z">
@@ -79,19 +79,19 @@ const handleSubmit = async () => {
                                     </svg>
                                 </div>
                                 <h1
-                                    class="text-xl lg:text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                                    class="text-base lg:text-lg font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
                                     Registro de Paciente</h1>
-                                <p class="text-xs lg:text-sm text-gray-500 mt-2 font-medium">Junte-se à nossa comunidade
+                                <p class="text-xs text-gray-500 font-medium">Junte-se à nossa comunidade
                                     médica</p>
                             </div>
 
                             <!-- Mensagem de sucesso -->
                             <div v-if="showSuccessMessage" 
-                                class="mb-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded-lg"
+                                class="mb-2 p-2 bg-green-100 border border-green-400 text-green-700 rounded-lg"
                                 role="alert"
                                 aria-live="polite">
                                 <div class="flex items-center">
-                                    <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                    <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
                                         <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
                                     </svg>
                                     Conta criada com sucesso! Redirecionando...
@@ -100,23 +100,23 @@ const handleSubmit = async () => {
 
                             <!-- Mensagem de erro de rate limit -->
                             <div v-if="submitError" 
-                                class="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg"
+                                class="mb-2 p-2 bg-red-100 border border-red-400 text-red-700 rounded-lg"
                                 role="alert"
                                 aria-live="assertive">
                                 <div class="flex items-center">
-                                    <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                    <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
                                         <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
                                     </svg>
                                     {{ submitError }}
                                 </div>
                             </div>
 
-                            <form @submit.prevent="handleSubmit" class="space-y-4 lg:space-y-5">
+                            <form @submit.prevent="handleSubmit" class="space-y-2 lg:space-y-3">
 
                                 <!-- Campo Nome -->
-                                <div class="space-y-1">
+                                <div class="space-y-0.5">
                                     <Label for="name" class="text-sm font-bold text-gray-700 flex items-center gap-2">
-                                        <svg class="w-4 h-4 text-black" fill="none" stroke="currentColor"
+                                        <svg class="w-3 h-3 text-black" fill="none" stroke="currentColor"
                                             viewBox="0 0 24 24" aria-hidden="true">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                 d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z">
@@ -138,7 +138,7 @@ const handleSubmit = async () => {
                                             @input="updateField('name', ($event.target as HTMLInputElement).value)"
                                             @blur="touchField('name')"
                                             :class="[
-                                                'h-12 lg:h-14 bg-gradient-to-r from-gray-50/90 to-white/90 border-2 rounded-xl lg:rounded-2xl px-4 text-base lg:text-lg placeholder:text-gray-400 focus:bg-white focus:shadow-lg focus:shadow-primary/10 transition-all duration-300 hover:border-gray-300 hover:shadow-md',
+                                                'h-9 lg:h-10 bg-gradient-to-r from-gray-50/90 to-white/90 border-2 rounded-lg lg:rounded-xl px-3 lg:px-4 text-sm placeholder:text-gray-400 focus:bg-white focus:shadow-lg focus:shadow-primary/10 transition-all duration-300 hover:border-gray-300 hover:shadow-md',
                                                 hasFieldError('name') && isFieldTouched('name') 
                                                     ? 'border-red-500 focus:border-red-500' 
                                                     : 'border-gray-200/50 focus:border-primary'
@@ -155,9 +155,9 @@ const handleSubmit = async () => {
                                 </div>
 
                                 <!-- Campo Email -->
-                                <div class="space-y-1">
+                                <div class="space-y-0.5">
                                     <Label for="email" class="text-sm font-bold text-gray-700 flex items-center gap-2">
-                                        <svg class="w-4 h-4 text-black" fill="none" stroke="currentColor"
+                                        <svg class="w-3 h-3 text-black" fill="none" stroke="currentColor"
                                             viewBox="0 0 24 24" aria-hidden="true">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                 d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z">
@@ -178,7 +178,7 @@ const handleSubmit = async () => {
                                             @input="updateField('email', ($event.target as HTMLInputElement).value)"
                                             @blur="touchField('email')"
                                             :class="[
-                                                'h-12 lg:h-14 bg-gradient-to-r from-gray-50/90 to-white/90 border-2 rounded-xl lg:rounded-2xl px-4 text-base lg:text-lg placeholder:text-gray-400 focus:bg-white focus:shadow-lg focus:shadow-primary/10 transition-all duration-300 hover:border-gray-300 hover:shadow-md',
+                                                'h-9 lg:h-10 bg-gradient-to-r from-gray-50/90 to-white/90 border-2 rounded-lg lg:rounded-xl px-3 lg:px-4 text-sm placeholder:text-gray-400 focus:bg-white focus:shadow-lg focus:shadow-primary/10 transition-all duration-300 hover:border-gray-300 hover:shadow-md',
                                                 hasFieldError('email') && isFieldTouched('email') 
                                                     ? 'border-red-500 focus:border-red-500' 
                                                     : 'border-gray-200/50 focus:border-primary'
@@ -195,9 +195,9 @@ const handleSubmit = async () => {
                                 </div>
 
                                 <!-- Campo Data de Nascimento -->
-                                <div class="space-y-1">
+                                <div class="space-y-0.5">
                                     <Label for="date_of_birth" class="text-sm font-bold text-gray-700 flex items-center gap-2">
-                                        <svg class="w-4 h-4 text-black" fill="none" stroke="currentColor"
+                                        <svg class="w-3 h-3 text-black" fill="none" stroke="currentColor"
                                             viewBox="0 0 24 24" aria-hidden="true">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                 d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
@@ -216,7 +216,7 @@ const handleSubmit = async () => {
                                             @input="updateField('date_of_birth', ($event.target as HTMLInputElement).value)"
                                             @blur="touchField('date_of_birth')"
                                             :class="[
-                                                'h-12 lg:h-14 bg-gradient-to-r from-gray-50/90 to-white/90 border-2 rounded-xl lg:rounded-2xl px-4 text-base lg:text-lg placeholder:text-gray-400 focus:bg-white focus:shadow-lg focus:shadow-primary/10 transition-all duration-300 hover:border-gray-300 hover:shadow-md',
+                                                'h-9 lg:h-10 bg-gradient-to-r from-gray-50/90 to-white/90 border-2 rounded-lg lg:rounded-xl px-3 lg:px-4 text-sm placeholder:text-gray-400 focus:bg-white focus:shadow-lg focus:shadow-primary/10 transition-all duration-300 hover:border-gray-300 hover:shadow-md',
                                                 hasFieldError('date_of_birth') && isFieldTouched('date_of_birth') 
                                                     ? 'border-red-500 focus:border-red-500' 
                                                     : 'border-gray-200/50 focus:border-primary'
@@ -232,89 +232,92 @@ const handleSubmit = async () => {
                                     />
                                 </div>
 
-                                <!-- Campo Contato de Emergência -->
-                                <div class="space-y-1">
-                                    <Label for="emergency_contact" class="text-sm font-bold text-gray-700 flex items-center gap-2">
-                                        <svg class="w-4 h-4 text-black" fill="none" stroke="currentColor"
-                                            viewBox="0 0 24 24" aria-hidden="true">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z">
-                                            </path>
-                                        </svg>
-                                        Contato de Emergência
-                                    </Label>
-                                    <div class="relative">
-                                        <Input 
-                                            id="emergency_contact" 
-                                            type="text" 
-                                            required 
-                                            :tabindex="4"
-                                            name="emergency_contact" 
-                                            placeholder="Nome do contato de emergência"
-                                            :value="formData.emergency_contact"
-                                            @input="updateField('emergency_contact', ($event.target as HTMLInputElement).value)"
-                                            @blur="touchField('emergency_contact')"
-                                            :class="[
-                                                'h-12 lg:h-14 bg-gradient-to-r from-gray-50/90 to-white/90 border-2 rounded-xl lg:rounded-2xl px-4 text-base lg:text-lg placeholder:text-gray-400 focus:bg-white focus:shadow-lg focus:shadow-primary/10 transition-all duration-300 hover:border-gray-300 hover:shadow-md',
-                                                hasFieldError('emergency_contact') && isFieldTouched('emergency_contact') 
-                                                    ? 'border-red-500 focus:border-red-500' 
-                                                    : 'border-gray-200/50 focus:border-primary'
-                                            ]"
-                                            :aria-invalid="hasFieldError('emergency_contact') && isFieldTouched('emergency_contact')"
-                                            :aria-describedby="hasFieldError('emergency_contact') && isFieldTouched('emergency_contact') ? 'emergency_contact-error' : undefined"
+                                <!-- Campos de Emergência lado a lado -->
+                                <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 lg:gap-3">
+                                    <!-- Campo Contato de Emergência -->
+                                    <div class="space-y-0.5">
+                                        <Label for="emergency_contact" class="text-sm font-bold text-gray-700 flex items-center gap-2">
+                                            <svg class="w-3 h-3 text-black" fill="none" stroke="currentColor"
+                                                viewBox="0 0 24 24" aria-hidden="true">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z">
+                                                </path>
+                                            </svg>
+                                            Contato de Emergência
+                                        </Label>
+                                        <div class="relative">
+                                            <Input 
+                                                id="emergency_contact" 
+                                                type="text" 
+                                                required 
+                                                :tabindex="4"
+                                                name="emergency_contact" 
+                                                placeholder="Nome do contato"
+                                                :value="formData.emergency_contact"
+                                                @input="updateField('emergency_contact', ($event.target as HTMLInputElement).value)"
+                                                @blur="touchField('emergency_contact')"
+                                                :class="[
+                                                    'h-9 lg:h-10 bg-gradient-to-r from-gray-50/90 to-white/90 border-2 rounded-lg lg:rounded-xl px-3 lg:px-4 text-sm placeholder:text-gray-400 focus:bg-white focus:shadow-lg focus:shadow-primary/10 transition-all duration-300 hover:border-gray-300 hover:shadow-md',
+                                                    hasFieldError('emergency_contact') && isFieldTouched('emergency_contact') 
+                                                        ? 'border-red-500 focus:border-red-500' 
+                                                        : 'border-gray-200/50 focus:border-primary'
+                                                ]"
+                                                :aria-invalid="hasFieldError('emergency_contact') && isFieldTouched('emergency_contact')"
+                                                :aria-describedby="hasFieldError('emergency_contact') && isFieldTouched('emergency_contact') ? 'emergency_contact-error' : undefined"
+                                            />
+                                        </div>
+                                        <InputError 
+                                            v-if="hasFieldError('emergency_contact') && isFieldTouched('emergency_contact')"
+                                            :message="getFieldError('emergency_contact')" 
+                                            id="emergency_contact-error"
                                         />
                                     </div>
-                                    <InputError 
-                                        v-if="hasFieldError('emergency_contact') && isFieldTouched('emergency_contact')"
-                                        :message="getFieldError('emergency_contact')" 
-                                        id="emergency_contact-error"
-                                    />
-                                </div>
 
-                                <!-- Campo Telefone de Emergência -->
-                                <div class="space-y-1">
-                                    <Label for="emergency_phone" class="text-sm font-bold text-gray-700 flex items-center gap-2">
-                                        <svg class="w-4 h-4 text-black" fill="none" stroke="currentColor"
-                                            viewBox="0 0 24 24" aria-hidden="true">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z">
-                                            </path>
-                                        </svg>
-                                        Telefone de Emergência
-                                    </Label>
-                                    <div class="relative">
-                                        <Input 
-                                            id="emergency_phone" 
-                                            type="tel" 
-                                            required 
-                                            :tabindex="5"
-                                            name="emergency_phone" 
-                                            placeholder="(11) 99999-9999"
-                                            :value="formData.emergency_phone"
-                                            @input="updateField('emergency_phone', ($event.target as HTMLInputElement).value)"
-                                            @blur="touchField('emergency_phone')"
-                                            :class="[
-                                                'h-12 lg:h-14 bg-gradient-to-r from-gray-50/90 to-white/90 border-2 rounded-xl lg:rounded-2xl px-4 text-base lg:text-lg placeholder:text-gray-400 focus:bg-white focus:shadow-lg focus:shadow-primary/10 transition-all duration-300 hover:border-gray-300 hover:shadow-md',
-                                                hasFieldError('emergency_phone') && isFieldTouched('emergency_phone') 
-                                                    ? 'border-red-500 focus:border-red-500' 
-                                                    : 'border-gray-200/50 focus:border-primary'
-                                            ]"
-                                            :aria-invalid="hasFieldError('emergency_phone') && isFieldTouched('emergency_phone')"
-                                            :aria-describedby="hasFieldError('emergency_phone') && isFieldTouched('emergency_phone') ? 'emergency_phone-error' : undefined"
+                                    <!-- Campo Telefone de Emergência -->
+                                    <div class="space-y-0.5">
+                                        <Label for="emergency_phone" class="text-sm font-bold text-gray-700 flex items-center gap-2">
+                                            <svg class="w-3 h-3 text-black" fill="none" stroke="currentColor"
+                                                viewBox="0 0 24 24" aria-hidden="true">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z">
+                                                </path>
+                                            </svg>
+                                            Telefone de Emergência
+                                        </Label>
+                                        <div class="relative">
+                                            <Input 
+                                                id="emergency_phone" 
+                                                type="tel" 
+                                                required 
+                                                :tabindex="5"
+                                                name="emergency_phone" 
+                                                placeholder="(11) 99999-9999"
+                                                :value="formData.emergency_phone"
+                                                @input="updateField('emergency_phone', ($event.target as HTMLInputElement).value)"
+                                                @blur="touchField('emergency_phone')"
+                                                :class="[
+                                                    'h-9 lg:h-10 bg-gradient-to-r from-gray-50/90 to-white/90 border-2 rounded-lg lg:rounded-xl px-3 lg:px-4 text-sm placeholder:text-gray-400 focus:bg-white focus:shadow-lg focus:shadow-primary/10 transition-all duration-300 hover:border-gray-300 hover:shadow-md',
+                                                    hasFieldError('emergency_phone') && isFieldTouched('emergency_phone') 
+                                                        ? 'border-red-500 focus:border-red-500' 
+                                                        : 'border-gray-200/50 focus:border-primary'
+                                                ]"
+                                                :aria-invalid="hasFieldError('emergency_phone') && isFieldTouched('emergency_phone')"
+                                                :aria-describedby="hasFieldError('emergency_phone') && isFieldTouched('emergency_phone') ? 'emergency_phone-error' : undefined"
+                                            />
+                                        </div>
+                                        <InputError 
+                                            v-if="hasFieldError('emergency_phone') && isFieldTouched('emergency_phone')"
+                                            :message="getFieldError('emergency_phone')" 
+                                            id="emergency_phone-error"
                                         />
                                     </div>
-                                    <InputError 
-                                        v-if="hasFieldError('emergency_phone') && isFieldTouched('emergency_phone')"
-                                        :message="getFieldError('emergency_phone')" 
-                                        id="emergency_phone-error"
-                                    />
                                 </div>
 
                                 <!-- Campo Senha -->
-                                <div class="space-y-1">
+                                <div class="space-y-0.5">
                                     <Label for="password"
                                         class="text-sm font-bold text-gray-700 flex items-center gap-2">
-                                        <svg class="w-4 h-4 text-black" fill="none" stroke="currentColor"
+                                        <svg class="w-3 h-3 text-black" fill="none" stroke="currentColor"
                                             viewBox="0 0 24 24" aria-hidden="true">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                 d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z">
@@ -335,7 +338,7 @@ const handleSubmit = async () => {
                                             @input="updateField('password', ($event.target as HTMLInputElement).value)"
                                             @blur="touchField('password')"
                                             :class="[
-                                                'h-12 lg:h-14 bg-gradient-to-r from-gray-50/90 to-white/90 border-2 rounded-xl lg:rounded-2xl px-4 text-base lg:text-lg placeholder:text-gray-400 focus:bg-white focus:shadow-lg focus:shadow-primary/10 transition-all duration-300 hover:border-gray-300 hover:shadow-md',
+                                                'h-9 lg:h-10 bg-gradient-to-r from-gray-50/90 to-white/90 border-2 rounded-lg lg:rounded-xl px-3 lg:px-4 text-sm placeholder:text-gray-400 focus:bg-white focus:shadow-lg focus:shadow-primary/10 transition-all duration-300 hover:border-gray-300 hover:shadow-md',
                                                 hasFieldError('password') && isFieldTouched('password') 
                                                     ? 'border-red-500 focus:border-red-500' 
                                                     : 'border-gray-200/50 focus:border-primary'
@@ -352,10 +355,10 @@ const handleSubmit = async () => {
                                 </div>
 
                                 <!-- Campo Confirmar Senha -->
-                                <div class="space-y-1">
+                                <div class="space-y-0.5">
                                     <Label for="password_confirmation"
                                         class="text-sm font-bold text-gray-700 flex items-center gap-2">
-                                        <svg class="w-4 h-4 text-black" fill="none" stroke="currentColor"
+                                        <svg class="w-3 h-3 text-black" fill="none" stroke="currentColor"
                                             viewBox="0 0 24 24" aria-hidden="true">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                 d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
@@ -375,7 +378,7 @@ const handleSubmit = async () => {
                                             @input="updateField('password_confirmation', ($event.target as HTMLInputElement).value)"
                                             @blur="touchField('password_confirmation')"
                                             :class="[
-                                                'h-12 lg:h-14 bg-gradient-to-r from-gray-50/90 to-white/90 border-2 rounded-xl lg:rounded-2xl px-4 text-base lg:text-lg placeholder:text-gray-400 focus:bg-white focus:shadow-lg focus:shadow-primary/10 transition-all duration-300 hover:border-gray-300 hover:shadow-md',
+                                                'h-9 lg:h-10 bg-gradient-to-r from-gray-50/90 to-white/90 border-2 rounded-lg lg:rounded-xl px-3 lg:px-4 text-sm placeholder:text-gray-400 focus:bg-white focus:shadow-lg focus:shadow-primary/10 transition-all duration-300 hover:border-gray-300 hover:shadow-md',
                                                 hasFieldError('password_confirmation') && isFieldTouched('password_confirmation') 
                                                     ? 'border-red-500 focus:border-red-500' 
                                                     : 'border-gray-200/50 focus:border-primary'
@@ -392,7 +395,7 @@ const handleSubmit = async () => {
                                 </div>
 
                                 <!-- Checkbox Consentimento Telemedicina -->
-                                <div class="space-y-1">
+                                <div class="space-y-0.5">
                                     <div class="flex items-start gap-3">
                                         <input 
                                             id="consent_telemedicine" 
@@ -411,9 +414,24 @@ const handleSubmit = async () => {
                                             :aria-invalid="hasFieldError('consent_telemedicine') && isFieldTouched('consent_telemedicine')"
                                             :aria-describedby="hasFieldError('consent_telemedicine') && isFieldTouched('consent_telemedicine') ? 'consent_telemedicine-error' : undefined"
                                         />
-                                        <Label for="consent_telemedicine" class="text-sm font-medium text-gray-700 cursor-pointer">
-                                            Eu aceito os termos de uso da telemedicina e autorizo o tratamento dos meus dados pessoais conforme a LGPD.
-                                        </Label>
+                                        <div class="text-xs text-gray-600 leading-relaxed">
+                                            <label for="consent_telemedicine" class="cursor-pointer">
+                                                Concordo com os 
+                                                <a href="/terms" target="_blank" class="text-primary hover:text-primary/80 underline underline-offset-2 hover:underline-offset-4 transition-all duration-300">
+                                                    Termos de Serviço
+                                                </a> 
+                                                e 
+                                                <a href="/privacy" target="_blank" class="text-primary hover:text-primary/80 underline underline-offset-2 hover:underline-offset-4 transition-all duration-300">
+                                                    Política de Privacidade
+                                                </a>
+                                                , incluindo o tratamento de dados pessoais conforme a 
+                                                <strong class="text-gray-700">Lei Geral de Proteção de Dados (LGPD)</strong>.
+                                                <br>
+                                                <span class="text-gray-500 mt-1 block">
+                                                    Autorizo o uso da telemedicina e o tratamento dos meus dados exclusivamente para prestação de serviços médicos.
+                                                </span>
+                                            </label>
+                                        </div>
                                     </div>
                                     <InputError 
                                         v-if="hasFieldError('consent_telemedicine') && isFieldTouched('consent_telemedicine')"
@@ -428,12 +446,12 @@ const handleSubmit = async () => {
                                         type="submit"
                                         :disabled="!canSubmit"
                                         :tabindex="9"
-                                        class="w-full h-12 lg:h-14 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-black text-base lg:text-lg font-bold rounded-xl lg:rounded-2xl shadow-xl hover:shadow-2xl transform hover:scale-[1.02] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none border-2 border-primary/20 hover:border-primary/30"
+                                        class="w-full h-9 lg:h-10 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-black text-sm font-bold rounded-lg lg:rounded-xl shadow-xl hover:shadow-2xl transform hover:scale-[1.02] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none border-2 border-primary/20 hover:border-primary/30"
                                         :aria-describedby="rateLimit.remainingAttempts < 3 ? 'rate-limit-warning' : undefined"
                                     >
                                         <div class="flex items-center justify-center gap-2">
-                                            <LoaderCircle v-if="isSubmitting" class="w-5 h-5 animate-spin" aria-hidden="true" />
-                                            <svg v-if="!isSubmitting" class="w-5 h-5" fill="none" stroke="currentColor"
+                                            <LoaderCircle v-if="isSubmitting" class="w-4 h-4 animate-spin" aria-hidden="true" />
+                                            <svg v-if="!isSubmitting" class="w-4 h-4" fill="none" stroke="currentColor"
                                                 viewBox="0 0 24 24" aria-hidden="true">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                     d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
@@ -459,7 +477,7 @@ const handleSubmit = async () => {
                 </div>
 
                 <!-- Imagem central - apenas em desktop -->
-                <div class="hidden lg:flex relative w-[600px] h-[600px] items-center justify-center">
+                <div class="hidden lg:flex relative w-[400px] h-[400px] items-center justify-center">
                     <!-- Container principal com gradiente de fundo sutil -->
                     <div class="relative w-full h-full flex items-center justify-center">
                         <!-- Gradiente de fundo sutil -->
@@ -483,7 +501,7 @@ const handleSubmit = async () => {
                         <!-- Imagem central -->
                         <div class="relative z-10 flex items-center justify-center">
                             <img src="/storage/photos/patientdoodle.png" alt="Doctor Doodle"
-                                class="w-[620px] h-[620px] object-contain drop-shadow-2xl" />
+                                class="w-[420px] h-[420px] object-contain drop-shadow-2xl" />
                         </div>
                     </div>
                 </div>
@@ -491,15 +509,15 @@ const handleSubmit = async () => {
         </div>
 
         <!-- Link para login -->
-        <div class="text-center mt-6 lg:mt-1 relative z-10">
+        <div class="text-center relative z-10">
             <div
-                class="inline-flex items-center gap-2 bg-white/80 backdrop-blur-md rounded-xl lg:rounded-2xl px-3 lg:px-4 py-2 lg:py-3 shadow-lg border border-white/30">
-                <svg class="w-3 h-3 lg:w-4 lg:h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                class="inline-flex items-center gap-1 bg-white/80 backdrop-blur-md rounded-lg lg:rounded-xl px-2 lg:px-3 py-1 lg:py-2 shadow-lg border border-white/30">
+                <svg class="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1">
                     </path>
                 </svg>
-                <p class="text-gray-600 text-sm lg:text-base font-medium">
+                <p class="text-gray-600 text-xs lg:text-sm font-medium">
                     Já tem uma conta?
                     <TextLink :href="login()"
                         class="text-black hover:text-black/80 font-bold underline underline-offset-4 hover:underline-offset-2 transition-all duration-300 ml-1"

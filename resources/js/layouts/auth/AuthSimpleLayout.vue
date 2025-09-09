@@ -31,7 +31,7 @@ defineProps<{
         </div>
 
         <!-- Conteúdo principal centralizado -->
-        <div class="flex min-h-svh flex-col items-center justify-center gap-6 p-6 md:p-10 mt-4">
+        <div class="flex min-h-svh flex-col items-center justify-center gap-6 p-6 md:p-10 mt-2">
             <div>
                 <div class="flex flex-col gap-8">
                     <div class="space-y-2 text-center">

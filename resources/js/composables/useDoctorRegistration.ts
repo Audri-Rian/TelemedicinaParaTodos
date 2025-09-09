@@ -11,6 +11,7 @@ export interface DoctorRegistrationData {
   specialty: string;
   license_number?: string;
   license_expiry_date?: string;
+  terms_accepted: boolean;
 }
 
 const initialData: DoctorRegistrationData = {
@@ -21,7 +22,8 @@ const initialData: DoctorRegistrationData = {
   crm: '',
   specialty: '',
   license_number: '',
-  license_expiry_date: ''
+  license_expiry_date: '',
+  terms_accepted: false
 };
 
 const validationRules: Record<keyof DoctorRegistrationData, ValidationRule> = {
@@ -87,6 +89,15 @@ const validationRules: Record<keyof DoctorRegistrationData, ValidationRule> = {
         if (expiryDate <= today) {
           return 'Data de expiração deve ser futura';
         }
+      }
+      return null;
+    }
+  },
+  terms_accepted: {
+    required: true,
+    custom: (value: boolean) => {
+      if (!value) {
+        return 'Você deve aceitar os termos de serviço e política de privacidade';
       }
       return null;
     }
