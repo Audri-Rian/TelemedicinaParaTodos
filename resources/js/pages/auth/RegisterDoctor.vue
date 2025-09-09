@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { store } from '@/actions/App/Http/Controllers/Auth/RegisteredUserController';
+import { ref } from 'vue';
+import { useDoctorRegistration } from '@/composables/useDoctorRegistration';
+import BackgroundDecorativo from '@/components/BackgroundDecorativo.vue';
 import InputError from '@/components/InputError.vue';
 import TextLink from '@/components/TextLink.vue';
 import { Button } from '@/components/ui/button';
@@ -9,6 +11,38 @@ import AuthBase from '@/layouts/AuthLayout.vue';
 import { login } from '@/routes';
 import { Form, Head } from '@inertiajs/vue3';
 import { LoaderCircle } from 'lucide-vue-next';
+
+// Composables
+const {
+  formData,
+  isSubmitting,
+  hasErrors,
+  canSubmit,
+  submitError,
+  rateLimit,
+  specialties,
+  updateField,
+  touchField,
+  submitForm,
+  getFieldError,
+  hasFieldError,
+  isFieldTouched
+} = useDoctorRegistration();
+
+// Estado local
+const showSuccessMessage = ref(false);
+
+// Função para lidar com submissão
+const handleSubmit = async () => {
+  const success = await submitForm();
+  if (success) {
+    showSuccessMessage.value = true;
+    // Redirecionar após sucesso
+    setTimeout(() => {
+      window.location.href = '/dashboard';
+    }, 2000);
+  }
+};
 </script>
 
 <template>
@@ -18,36 +52,11 @@ import { LoaderCircle } from 'lucide-vue-next';
         <Head title="Registro de Médico" />
 
         <!-- Background decorativo moderno -->
-        <div class="fixed inset-0 overflow-hidden pointer-events-none">
-            <!-- Gradiente base sutil -->
-            <div class="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/10"></div>
-            
-            <!-- Formas abstratas flutuantes -->
-            <!-- Canto superior esquerdo -->
-            <div class="absolute -top-20 -left-20 w-80 h-80 bg-primary/20 rounded-full blur-3xl opacity-30 animate-pulse"></div>
-            <div class="absolute top-10 left-10 w-40 h-40 bg-primary/15 rounded-full blur-2xl opacity-25"></div>
-            
-            <!-- Canto superior direito -->
-            <div class="absolute -top-32 -right-32 w-96 h-96 bg-primary/25 rounded-full blur-3xl opacity-20"></div>
-            <div class="absolute top-20 right-20 w-32 h-32 bg-primary/20 rounded-full blur-xl opacity-30"></div>
-            
-            <!-- Canto inferior esquerdo -->
-            <div class="absolute -bottom-24 -left-24 w-72 h-72 bg-primary/18 rounded-full blur-3xl opacity-25"></div>
-            <div class="absolute bottom-16 left-16 w-48 h-48 bg-primary/12 rounded-full blur-2xl opacity-30"></div>
-            
-            <!-- Canto inferior direito -->
-            <div class="absolute -bottom-20 -right-20 w-64 h-64 bg-primary/22 rounded-full blur-3xl opacity-20"></div>
-            <div class="absolute bottom-12 right-12 w-36 h-36 bg-primary/15 rounded-full blur-xl opacity-25"></div>
-            
-            <!-- Centro da tela - luz difusa -->
-            <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-primary/10 rounded-full blur-3xl opacity-20"></div>
-            
-            <!-- Formas menores espalhadas -->
-            <div class="absolute top-1/3 left-1/4 w-24 h-24 bg-primary/20 rounded-full blur-xl opacity-25"></div>
-            <div class="absolute top-2/3 right-1/3 w-20 h-20 bg-primary/15 rounded-full blur-lg opacity-30"></div>
-            <div class="absolute top-1/4 right-1/4 w-28 h-28 bg-primary/18 rounded-full blur-2xl opacity-20"></div>
-            <div class="absolute bottom-1/3 left-1/3 w-16 h-16 bg-primary/25 rounded-full blur-lg opacity-25"></div>
-        </div>
+        <BackgroundDecorativo 
+            variant="doctor" 
+            intensity="medium" 
+            :enable-animations="true" 
+        />
 
         <!-- Container principal com layout responsivo -->
         <div class="relative w-full max-w-8xl mx-auto z-10">
@@ -76,8 +85,33 @@ import { LoaderCircle } from 'lucide-vue-next';
                                 <p class="text-xs text-gray-500 mt-1 font-medium">Junte-se à nossa plataforma médica</p>
                             </div>
 
-                            <Form v-bind="store.form()" :reset-on-success="['password', 'password_confirmation']"
-                                v-slot="{ errors, processing }" class="space-y-3 lg:space-y-4">
+                            <!-- Mensagem de sucesso -->
+                            <div v-if="showSuccessMessage" 
+                                class="mb-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded-lg"
+                                role="alert"
+                                aria-live="polite">
+                                <div class="flex items-center">
+                                    <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                                    </svg>
+                                    Conta criada com sucesso! Redirecionando...
+                                </div>
+                            </div>
+
+                            <!-- Mensagem de erro de rate limit -->
+                            <div v-if="submitError" 
+                                class="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg"
+                                role="alert"
+                                aria-live="assertive">
+                                <div class="flex items-center">
+                                    <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+                                    </svg>
+                                    {{ submitError }}
+                                </div>
+                            </div>
+
+                            <form @submit.prevent="handleSubmit" class="space-y-3 lg:space-y-4">
 
                                 <!-- Campo Nome -->
                                 <div class="space-y-1">
@@ -95,7 +129,11 @@ import { LoaderCircle } from 'lucide-vue-next';
                                             autocomplete="name" name="name" placeholder="Dr. Seu Nome Completo"
                                             class="h-10 lg:h-12 bg-gradient-to-r from-gray-50/90 to-white/90 border-2 border-gray-200/50 rounded-xl lg:rounded-2xl px-4 text-sm lg:text-base placeholder:text-gray-400 focus:border-primary focus:bg-white focus:shadow-lg focus:shadow-primary/10 transition-all duration-300 hover:border-gray-300 hover:shadow-md" />
                                     </div>
-                                    <InputError :message="errors.name" />
+                                    <InputError 
+                                        v-if="hasFieldError('name') && isFieldTouched('name')"
+                                        :message="getFieldError('name')" 
+                                        id="name-error"
+                                    />
                                 </div>
 
                                 <!-- Campo CRM -->
@@ -114,7 +152,11 @@ import { LoaderCircle } from 'lucide-vue-next';
                                             autocomplete="off" name="crm" placeholder="Ex: 123456-SP"
                                             class="h-10 lg:h-12 bg-gradient-to-r from-gray-50/90 to-white/90 border-2 border-gray-200/50 rounded-xl lg:rounded-2xl px-4 text-sm lg:text-base placeholder:text-gray-400 focus:border-primary focus:bg-white focus:shadow-lg focus:shadow-primary/10 transition-all duration-300 hover:border-gray-300 hover:shadow-md" />
                                     </div>
-                                    <InputError :message="errors.crm" />
+                                    <InputError 
+                                        v-if="hasFieldError('crm') && isFieldTouched('crm')"
+                                        :message="getFieldError('crm')" 
+                                        id="crm-error"
+                                    />
                                 </div>
 
                                 <!-- Campo Especialidade -->
@@ -129,25 +171,34 @@ import { LoaderCircle } from 'lucide-vue-next';
                                         Especialidade Principal
                                     </Label>
                                     <div class="relative">
-                                        <select id="specialty" name="specialty" required :tabindex="3"
-                                            class="h-10 lg:h-12 bg-gradient-to-r from-gray-50/90 to-white/90 border-2 border-gray-200/50 rounded-xl lg:rounded-2xl px-4 text-sm lg:text-base text-gray-700 focus:border-primary focus:bg-white focus:shadow-lg focus:shadow-primary/10 transition-all duration-300 hover:border-gray-300 hover:shadow-md w-full">
+                                        <select 
+                                            id="specialty" 
+                                            name="specialty" 
+                                            required 
+                                            :tabindex="3"
+                                            :value="formData.specialty"
+                                            @change="updateField('specialty', ($event.target as HTMLSelectElement).value)"
+                                            @blur="touchField('specialty')"
+                                            :class="[
+                                                'h-10 lg:h-12 bg-gradient-to-r from-gray-50/90 to-white/90 border-2 rounded-xl lg:rounded-2xl px-4 text-sm lg:text-base text-gray-700 focus:bg-white focus:shadow-lg focus:shadow-primary/10 transition-all duration-300 hover:border-gray-300 hover:shadow-md w-full',
+                                                hasFieldError('specialty') && isFieldTouched('specialty') 
+                                                    ? 'border-red-500 focus:border-red-500' 
+                                                    : 'border-gray-200/50 focus:border-primary'
+                                            ]"
+                                            :aria-invalid="hasFieldError('specialty') && isFieldTouched('specialty')"
+                                            :aria-describedby="hasFieldError('specialty') && isFieldTouched('specialty') ? 'specialty-error' : undefined"
+                                        >
                                             <option value="">Selecione sua especialidade</option>
-                                            <option value="cardiologia">Cardiologia</option>
-                                            <option value="dermatologia">Dermatologia</option>
-                                            <option value="endocrinologia">Endocrinologia</option>
-                                            <option value="gastroenterologia">Gastroenterologia</option>
-                                            <option value="ginecologia">Ginecologia</option>
-                                            <option value="neurologia">Neurologia</option>
-                                            <option value="oftalmologia">Oftalmologia</option>
-                                            <option value="ortopedia">Ortopedia</option>
-                                            <option value="pediatria">Pediatria</option>
-                                            <option value="psiquiatria">Psiquiatria</option>
-                                            <option value="urologia">Urologia</option>
-                                            <option value="clinica_geral">Clínica Geral</option>
-                                            <option value="outras">Outras</option>
+                                            <option v-for="specialty in specialties" :key="specialty" :value="specialty.toLowerCase()">
+                                                {{ specialty }}
+                                            </option>
                                         </select>
                                     </div>
-                                    <InputError :message="errors.specialty" />
+                                    <InputError 
+                                        v-if="hasFieldError('specialty') && isFieldTouched('specialty')"
+                                        :message="getFieldError('specialty')" 
+                                        id="specialty-error"
+                                    />
                                 </div>
 
                                 <!-- Campo Email -->
@@ -166,7 +217,11 @@ import { LoaderCircle } from 'lucide-vue-next';
                                             name="email" placeholder="seu@email.com"
                                             class="h-10 lg:h-12 bg-gradient-to-r from-gray-50/90 to-white/90 border-2 border-gray-200/50 rounded-xl lg:rounded-2xl px-4 text-sm lg:text-base placeholder:text-gray-400 focus:border-primary focus:bg-white focus:shadow-lg focus:shadow-primary/10 transition-all duration-300 hover:border-gray-300 hover:shadow-md" />
                                     </div>
-                                    <InputError :message="errors.email" />
+                                    <InputError 
+                                        v-if="hasFieldError('email') && isFieldTouched('email')"
+                                        :message="getFieldError('email')" 
+                                        id="email-error"
+                                    />
                                 </div>
 
                                 <!-- Campo Senha -->
@@ -187,7 +242,11 @@ import { LoaderCircle } from 'lucide-vue-next';
                                             placeholder="Mínimo 8 caracteres"
                                             class="h-10 lg:h-12 bg-gradient-to-r from-gray-50/90 to-white/90 border-2 border-gray-200/50 rounded-xl lg:rounded-2xl px-4 text-sm lg:text-base placeholder:text-gray-400 focus:border-primary focus:bg-white focus:shadow-lg focus:shadow-primary/10 transition-all duration-300 hover:border-gray-300 hover:shadow-md" />
                                     </div>
-                                    <InputError :message="errors.password" />
+                                    <InputError 
+                                        v-if="hasFieldError('password') && isFieldTouched('password')"
+                                        :message="getFieldError('password')" 
+                                        id="password-error"
+                                    />
                                 </div>
 
                                 <!-- Campo Confirmar Senha -->
@@ -207,28 +266,46 @@ import { LoaderCircle } from 'lucide-vue-next';
                                             placeholder="Digite a senha novamente"
                                             class="h-10 lg:h-12 bg-gradient-to-r from-gray-50/90 to-white/90 border-2 border-gray-200/50 rounded-xl lg:rounded-2xl px-4 text-sm lg:text-base placeholder:text-gray-400 focus:border-primary focus:bg-white focus:shadow-lg focus:shadow-primary/10 transition-all duration-300 hover:border-gray-300 hover:shadow-md" />
                                     </div>
-                                    <InputError :message="errors.password_confirmation" />
+                                    <InputError 
+                                        v-if="hasFieldError('password_confirmation') && isFieldTouched('password_confirmation')"
+                                        :message="getFieldError('password_confirmation')" 
+                                        id="password_confirmation-error"
+                                    />
                                 </div>
 
                                 <!-- Botão de Registro -->
                                 <div class="">
-                                    <Button type="submit"
+                                    <Button 
+                                        type="submit"
+                                        :disabled="!canSubmit"
+                                        :tabindex="7"
                                         class="w-full h-10 lg:h-12 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-black text-sm lg:text-base font-bold rounded-xl lg:rounded-2xl shadow-xl hover:shadow-2xl transform hover:scale-[1.02] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none border-2 border-primary/20 hover:border-primary/30"
-                                        tabindex="7" :disabled="processing">
+                                        :aria-describedby="rateLimit.remainingAttempts < 2 ? 'rate-limit-warning' : undefined"
+                                    >
                                         <div class="flex items-center justify-center gap-2">
-                                            <LoaderCircle v-if="processing" class="w-5 h-5 animate-spin" />
-                                            <svg v-if="!processing" class="w-5 h-5" fill="none" stroke="currentColor"
-                                                viewBox="0 0 24 24">
+                                            <LoaderCircle v-if="isSubmitting" class="w-5 h-5 animate-spin" aria-hidden="true" />
+                                            <svg v-if="!isSubmitting" class="w-5 h-5" fill="none" stroke="currentColor"
+                                                viewBox="0 0 24 24" aria-hidden="true">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                     d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
                                                 </path>
                                             </svg>
-                                            <span class="font-bold">{{ processing ? 'Registrando médico...' : 'Registrar como Médico'
-                                                }}</span>
+                                            <span class="font-bold">
+                                                {{ isSubmitting ? 'Registrando médico...' : 'Registrar como Médico' }}
+                                            </span>
                                         </div>
                                     </Button>
+                                    
+                                    <!-- Aviso de rate limit -->
+                                    <div v-if="rateLimit.remainingAttempts < 2 && rateLimit.remainingAttempts > 0" 
+                                        id="rate-limit-warning"
+                                        class="mt-2 text-sm text-orange-600 text-center"
+                                        role="alert"
+                                        aria-live="polite">
+                                        ⚠️ Restam {{ rateLimit.remainingAttempts }} tentativa{{ rateLimit.remainingAttempts > 1 ? 's' : '' }}
+                                    </div>
                                 </div>
-                            </Form>
+                            </form>
                         </div>
                     </div>
                 </div>
