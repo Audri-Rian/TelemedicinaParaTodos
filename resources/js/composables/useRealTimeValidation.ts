@@ -126,11 +126,15 @@ export function useRealTimeValidation<T extends Record<string, any>>(
 
   // Atualizar campo
   const updateField = (fieldName: keyof T, value: any) => {
-    const field = fields.value[fieldName];
-    field.value = value;
-    field.touched = true;
-    field.errors = validateField(fieldName, value);
+    // Atualizar formData primeiro
     formData.value[fieldName] = value;
+    
+    // Depois atualizar o campo correspondente
+    const field = fields.value[fieldName];
+    if (field) {
+      field.value = value;
+      // Não marcar como touched nem validar aqui - isso será feito no blur
+    }
   };
 
   // Validar todos os campos
@@ -150,11 +154,11 @@ export function useRealTimeValidation<T extends Record<string, any>>(
 
   // Computed properties
   const hasErrors = computed(() => {
-    return Object.values(fields.value).some(field => field.errors.length > 0);
+    return Object.values(fields.value).some(field => (field as FormField).errors.length > 0);
   });
 
   const isFormValid = computed(() => {
-    return !hasErrors.value && Object.values(fields.value).every(field => field.touched);
+    return !hasErrors.value && Object.values(fields.value).every(field => (field as FormField).touched);
   });
 
   const allErrors = computed(() => {
@@ -168,13 +172,14 @@ export function useRealTimeValidation<T extends Record<string, any>>(
     return errors;
   });
 
-  // Watch para validação em tempo real
+  // Watch para validação em tempo real - apenas quando o campo foi tocado
   Object.keys(fields.value).forEach((key) => {
     const fieldKey = key as keyof T;
     watch(
       () => fields.value[fieldKey].value,
-      (newValue) => {
-        if (fields.value[fieldKey].touched) {
+      (newValue, oldValue) => {
+        // Só validar se o campo foi tocado e o valor realmente mudou
+        if (fields.value[fieldKey].touched && newValue !== oldValue) {
           fields.value[fieldKey].errors = validateField(fieldKey, newValue);
         }
       }
@@ -183,7 +188,9 @@ export function useRealTimeValidation<T extends Record<string, any>>(
 
   // Função para marcar campo como tocado
   const touchField = (fieldName: keyof T) => {
-    fields.value[fieldName].touched = true;
+    const field = fields.value[fieldName];
+    field.touched = true;
+    field.errors = validateField(fieldName, field.value);
   };
 
   // Função para limpar erros

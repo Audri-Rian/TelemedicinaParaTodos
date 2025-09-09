@@ -57,13 +57,36 @@ const validationRules: Record<keyof PatientRegistrationData, ValidationRule> = {
   },
   date_of_birth: {
     required: true,
-    date: true,
-    before: 'today',
+    pattern: /^\d{2}\/\d{2}\/\d{4}$/,
     custom: (value: string) => {
       if (value) {
-        const birthDate = new Date(value);
+        // Validar formato dd/mm/aaaa
+        const dateRegex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
+        const match = value.match(dateRegex);
+        
+        if (!match) {
+          return 'Data deve estar no formato dd/mm/aaaa';
+        }
+        
+        const [, day, month, year] = match;
+        const dayNum = parseInt(day, 10);
+        const monthNum = parseInt(month, 10);
+        const yearNum = parseInt(year, 10);
+        
+        // Validar se a data é válida
+        const date = new Date(yearNum, monthNum - 1, dayNum);
+        if (date.getDate() !== dayNum || date.getMonth() !== monthNum - 1 || date.getFullYear() !== yearNum) {
+          return 'Data de nascimento inválida';
+        }
+        
+        // Validar se não é data futura
         const today = new Date();
-        const age = today.getFullYear() - birthDate.getFullYear();
+        if (date >= today) {
+          return 'Data de nascimento não pode ser no futuro';
+        }
+        
+        // Validar idade (entre 0 e 120 anos)
+        const age = today.getFullYear() - yearNum;
         if (age < 0 || age > 120) {
           return 'Data de nascimento inválida';
         }
