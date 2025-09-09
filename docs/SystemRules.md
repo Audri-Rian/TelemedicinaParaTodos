@@ -22,11 +22,12 @@ Esse projeto tem como objetivo de criar uma platarforma de Telemedicina Moderna,
 - **Apenas ativos** podem receber agendamentos
 
 #### 👤 PATIENTS (Pacientes)
+##### Alguns dados do patient não são obrigatorios no inicio
 - **Extensão de USERS** com relacionamento 1:1
 - **Data de nascimento** obrigatória para cálculos médicos
-- **Contato de emergência** obrigatório
-- **Consentimento explícito** para telemedicina
-- **Histórico médico** para diagnósticos precisos
+- **Contato de emergência**  Obrigatorio apos a primeira etapa de autenticação.
+- **Consentimento explícito** para telemedicina, não precisa no register incial
+- **Histórico médico** para diagnósticos precisos, não precisa no register incial
 
 #### 🔗 Relacionamentos
 - **USERS** é a entidade base obrigatória

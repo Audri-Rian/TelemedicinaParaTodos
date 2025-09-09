@@ -7,6 +7,8 @@ use App\Http\Controllers\Auth\EmailVerificationPromptController;
 use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
+use App\Http\Controllers\Auth\PatientRegistrationController;
+use App\Http\Controllers\Auth\DoctorRegistrationController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -19,13 +21,14 @@ Route::middleware('guest')->group(function () {
         return Inertia::render('auth/RegisterSelect');
     })->name('register.select');
 
-    Route::get('register/patient', function () {
-        return Inertia::render('auth/RegisterPatient');
-    })->name('register.patient');
+    Route::get('register/patient', [PatientRegistrationController::class, 'create'])
+        ->name('register.patient');
 
-    Route::get('register/doctor', function () {
-        return Inertia::render('auth/RegisterDoctor');
-    })->name('register.doctor');
+    Route::get('register/doctor', [DoctorRegistrationController::class, 'create'])
+        ->name('register.doctor');
+
+    Route::post('register/patient', [PatientRegistrationController::class, 'store'])
+        ->name('register.patient.store');
 
     Route::post('register', [RegisteredUserController::class, 'store']);
 

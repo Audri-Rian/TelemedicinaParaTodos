@@ -83,7 +83,7 @@ class User extends Authenticatable
      */
     public function isPatient(): bool
     {
-        return $this->isPatient();
+        return $this->isPatient()->exists();
     }
 
     /**

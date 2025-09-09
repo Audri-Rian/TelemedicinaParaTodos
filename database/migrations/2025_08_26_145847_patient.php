@@ -16,9 +16,9 @@ return new class extends Migration
             $table->foreignUuid('user_id')->unique()->constrained();
             
             // Informações pessoais
-            $table->enum('gender', ['male', 'female', 'other'])->nullable();
-            $table->date('date_of_birth')->nullable();
-            $table->string('phone_number', 20)->nullable();
+            $table->enum('gender', ['male', 'female', 'other']);
+            $table->date('date_of_birth');
+            $table->string('phone_number', 20);
             $table->string('emergency_contact', 100)->nullable();
             $table->string('emergency_phone', 20)->nullable();
             
