@@ -6,6 +6,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\AppointmentsController;
 use App\Http\Controllers\ConsultationsController;
 use App\Http\Controllers\HealthController;
+use App\Http\Controllers\SpecializationController;
 
 Route::get('/', function () {
     return Inertia::render('Welcome');
@@ -16,6 +17,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('appointments', [AppointmentsController::class, 'index'])->name('appointments');
     Route::get('consultations', [ConsultationsController::class, 'index'])->name('consultations');
     Route::get('healthRecords', [HealthController::class, 'index'])->name('healthRecords');
+    
+    // Rotas para especializações
+    Route::resource('specializations', SpecializationController::class);
+});
+
+// Rotas públicas para API de especializações
+Route::prefix('api')->group(function () {
+    Route::get('specializations/list', [SpecializationController::class, 'list'])->name('api.specializations.list');
+    Route::get('specializations/options', [SpecializationController::class, 'options'])->name('api.specializations.options');
 });
 
 

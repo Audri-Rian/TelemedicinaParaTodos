@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\DoctorRegistrationRequest;
 use App\Models\Doctor;
 use App\Models\User;
+use App\Models\Specialization;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
@@ -19,7 +20,11 @@ class DoctorRegistrationController extends Controller
      */
     public function create(): Response
     {
-        return Inertia::render('auth/RegisterDoctor');
+        $specializations = Specialization::orderBy('name')->get(['id', 'name']);
+        
+        return Inertia::render('auth/RegisterDoctor', [
+            'specializations' => $specializations
+        ]);
     }
 
     /**
@@ -37,11 +42,15 @@ class DoctorRegistrationController extends Controller
                 ]);
 
                 // Criar o médico relacionado
-                $user->doctor()->create([
+                $doctor = $user->doctor()->create([
                     'crm' => $request->crm,
-                    'specialty' => $request->specialty,
                     'status' => Doctor::STATUS_ACTIVE,
                 ]);
+
+                // Associar especialização(ões) ao médico
+                if (!empty($request->specializations)) {
+                    $doctor->specializations()->attach($request->specializations);
+                }
 
                 return $user;
             });

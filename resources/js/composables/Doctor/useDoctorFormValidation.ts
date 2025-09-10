@@ -57,14 +57,24 @@ export const useDoctorFormValidation = () => {
     }
   };
 
-  // Validação de especialidade
-  const specialtyValidation: ValidationRule = {
+  // Validação de especializações (array de UUIDs)
+  const specializationsValidation: ValidationRule = {
     required: true,
-    min: 2,
-    max: 100,
-    custom: (value: string) => {
-      if (value && !/^[a-zA-ZÀ-ÿ\s]+$/.test(value)) {
-        return 'Especialidade deve conter apenas letras e espaços';
+    custom: (value: string[]) => {
+      if (!Array.isArray(value)) {
+        return 'Especializações deve ser uma lista';
+      }
+      if (value.length === 0) {
+        return 'Pelo menos uma especialização deve ser selecionada';
+      }
+      if (value.length > 5) {
+        return 'Máximo de 5 especializações permitidas';
+      }
+      // Validar formato UUID (versão mais flexível para UUIDs v4)
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const invalidUuid = value.find(id => !uuidRegex.test(id));
+      if (invalidUuid) {
+        return 'ID de especialização inválido';
       }
       return null;
     }
@@ -166,7 +176,7 @@ export const useDoctorFormValidation = () => {
     passwordValidation,
     passwordConfirmationValidation,
     crmValidation,
-    specialtyValidation,
+    specializationsValidation,
     
     // Validações opcionais para perfil complementar
     biographyValidation,

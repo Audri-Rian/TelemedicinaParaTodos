@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { ref, watch, onMounted } from 'vue';
 import { useDoctorRegistration } from '@/composables/Doctor/useDoctorRegistration';
 import BackgroundDecorativo from '@/components/BackgroundDecorativo.vue';
 import InputError from '@/components/InputError.vue';
@@ -7,10 +7,16 @@ import TextLink from '@/components/TextLink.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import AuthBase from '@/layouts/AuthLayout.vue';
 import { login } from '@/routes';
 import { Form, Head } from '@inertiajs/vue3';
-import { LoaderCircle } from 'lucide-vue-next';
+import { LoaderCircle, ChevronDown, X } from 'lucide-vue-next';
+
+// Props do Inertia
+const props = defineProps<{
+  specializations: Array<{ id: string; name: string }>;
+}>();
 
 // Composables
 const {
@@ -28,32 +34,91 @@ const {
   isFieldTouched
 } = useDoctorRegistration();
 
-// Lista de especialidades médicas
-const specialties = [
-  'Cardiologia',
-  'Dermatologia',
-  'Endocrinologia',
-  'Gastroenterologia',
-  'Neurologia',
-  'Pediatria',
-  'Psiquiatria',
-  'Ortopedia',
-  'Oftalmologia',
-  'Urologia',
-  'Ginecologia',
-  'Obstetrícia',
-  'Anestesiologia',
-  'Radiologia',
-  'Patologia',
-  'Medicina Interna',
-  'Cirurgia Geral',
-  'Cirurgia Plástica',
-  'Otorrinolaringologia',
-  'Pneumologia'
-];
+// Estado local para especializações
+const availableSpecializations = ref<Array<{ id: string; name: string }>>([]);
+const isDropdownOpen = ref(false);
+const searchTerm = ref('');
+const filteredSpecializations = ref<Array<{ id: string; name: string }>>([]);
 
 // Estado local
 const showSuccessMessage = ref(false);
+
+// Função para fechar dropdown quando clicar fora
+const closeDropdown = () => {
+  isDropdownOpen.value = false;
+  searchTerm.value = '';
+};
+
+// Inicializar especializações
+onMounted(() => {
+  availableSpecializations.value = props.specializations || [];
+  filteredSpecializations.value = availableSpecializations.value;
+  
+  // Listener para fechar dropdown ao clicar fora
+  document.addEventListener('click', (event) => {
+    const dropdown = document.querySelector('.specialization-dropdown');
+    if (dropdown && !dropdown.contains(event.target as Node)) {
+      closeDropdown();
+    }
+  });
+});
+
+// Filtrar especializações baseado na busca
+watch(searchTerm, (newTerm) => {
+  if (newTerm.trim() === '') {
+    filteredSpecializations.value = availableSpecializations.value;
+  } else {
+    filteredSpecializations.value = availableSpecializations.value.filter(spec =>
+      spec.name.toLowerCase().includes(newTerm.toLowerCase())
+    );
+  }
+});
+
+// Funções para gerenciar especializações
+const toggleSpecialization = (specializationId: string) => {
+  const currentSpecializations = [...formData.value.specializations];
+  const index = currentSpecializations.indexOf(specializationId);
+  
+  if (index > -1) {
+    // Remove se já estiver selecionada
+    currentSpecializations.splice(index, 1);
+  } else {
+    // Adiciona se não estiver selecionada (máximo 5)
+    if (currentSpecializations.length < 5) {
+      currentSpecializations.push(specializationId);
+    }
+  }
+  
+  formData.value.specializations = currentSpecializations;
+  
+  // Marcar campo como tocado para validação
+  touchField('specializations');
+  
+  // Fechar dropdown após seleção (opcional - pode manter aberto para múltiplas seleções)
+  // closeDropdown();
+};
+
+const removeSpecialization = (specializationId: string) => {
+  const currentSpecializations = [...formData.value.specializations];
+  const index = currentSpecializations.indexOf(specializationId);
+  if (index > -1) {
+    currentSpecializations.splice(index, 1);
+    formData.value.specializations = currentSpecializations;
+    
+    // Marcar campo como tocado para validação
+    touchField('specializations');
+  }
+};
+
+const getSelectedSpecializations = () => {
+  return availableSpecializations.value.filter(spec =>
+    formData.value.specializations.includes(spec.id)
+  );
+};
+
+const isSpecializationSelected = (specializationId: string) => {
+  return formData.value.specializations.includes(specializationId);
+};
 
 // Watchers para conectar v-model com os composables
 watch(() => formData.value.name, (newValue) => {
@@ -64,9 +129,9 @@ watch(() => formData.value.crm, (newValue) => {
   updateField('crm', newValue);
 });
 
-watch(() => formData.value.specialty, (newValue) => {
-  updateField('specialty', newValue);
-});
+watch(() => formData.value.specializations, (newValue) => {
+  updateField('specializations', newValue);
+}, { deep: true });
 
 watch(() => formData.value.email, (newValue) => {
   updateField('email', newValue);
@@ -201,7 +266,7 @@ const handleSubmit = async () => {
                                     />
                                 </div>
 
-                                <!-- Campos CRM e Especialidade lado a lado -->
+                                <!-- Campos CRM e Especializações lado a lado -->
                                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 lg:gap-3">
                                     <!-- Campo CRM -->
                                     <div class="space-y-0.5">
@@ -242,44 +307,122 @@ const handleSubmit = async () => {
                                         />
                                     </div>
 
-                                    <!-- Campo Especialidade -->
+                                    <!-- Campo Especializações -->
                                     <div class="space-y-0.5">
-                                        <Label for="specialty" class="text-sm font-bold text-gray-700 flex items-center gap-2">
+                                        <Label class="text-sm font-bold text-gray-700 flex items-center gap-2">
                                             <svg class="w-3 h-3 text-black" fill="none" stroke="currentColor"
                                                 viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                     d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z">
                                                 </path>
                                             </svg>
-                                            Especialidade
+                                            Especializações
                                         </Label>
-                                        <div class="relative">
-                                            <select 
-                                                id="specialty" 
-                                                name="specialty" 
-                                                required 
-                                                :tabindex="3"
-                                                v-model="formData.specialty"
-                                                @blur="touchField('specialty')"
+                                        
+                                        <!-- Multi-select de especializações -->
+                                        <div class="relative specialization-dropdown">
+                                            <!-- Campo de entrada com tags selecionadas -->
+                                            <div 
+                                                @click="isDropdownOpen = !isDropdownOpen"
+                                                @blur="touchField('specializations')"
                                                 :class="[
-                                                    'h-9 lg:h-11 bg-gradient-to-r from-gray-50/90 to-white/90 border-2 rounded-xl lg:rounded-2xl px-4 text-sm text-gray-700 focus:bg-white focus:shadow-lg focus:shadow-primary/10 transition-all duration-300 hover:border-gray-300 hover:shadow-md w-full',
-                                                    hasFieldError('specialty') && isFieldTouched('specialty') 
+                                                    'h-9 lg:h-11 bg-gradient-to-r from-gray-50/90 to-white/90 border-2 rounded-xl lg:rounded-2xl px-4 text-sm focus:bg-white focus:shadow-lg focus:shadow-primary/10 transition-all duration-300 hover:border-gray-300 hover:shadow-md w-full cursor-pointer flex items-center justify-between',
+                                                    hasFieldError('specializations') && isFieldTouched('specializations') 
                                                         ? 'border-red-500 focus:border-red-500' 
                                                         : 'border-gray-200/50 focus:border-primary'
                                                 ]"
-                                                :aria-invalid="hasFieldError('specialty') && isFieldTouched('specialty')"
-                                                :aria-describedby="hasFieldError('specialty') && isFieldTouched('specialty') ? 'specialty-error' : undefined"
+                                                :aria-invalid="hasFieldError('specializations') && isFieldTouched('specializations')"
+                                                :aria-describedby="hasFieldError('specializations') && isFieldTouched('specializations') ? 'specializations-error' : undefined"
+                                                tabindex="3"
                                             >
-                                                <option value="">Selecione sua especialidade</option>
-                                                <option v-for="specialty in specialties" :key="specialty" :value="specialty">
-                                                    {{ specialty }}
-                                                </option>
-                                            </select>
+                                                <div class="flex flex-wrap items-center gap-1 flex-1 min-w-0">
+                                                    <!-- Tags das especializações selecionadas -->
+                                                    <span 
+                                                        v-for="spec in getSelectedSpecializations()" 
+                                                        :key="spec.id"
+                                                        class="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-black text-xs rounded-md"
+                                                    >
+                                                        {{ spec.name }}
+                                                        <button 
+                                                            type="button"
+                                                            @click.stop="removeSpecialization(spec.id)"
+                                                            class="hover:text-gray-600 text-gray-500"
+                                                        >
+                                                            <X class="w-3 h-3" />
+                                                        </button>
+                                                    </span>
+                                                    
+                                                    <!-- Placeholder quando nenhuma especialização está selecionada -->
+                                                    <span 
+                                                        v-if="formData.specializations.length === 0"
+                                                        class="text-gray-400"
+                                                    >
+                                                        Selecione suas especializações
+                                                    </span>
+                                                </div>
+                                                
+                                                <!-- Ícone de dropdown -->
+                                                <ChevronDown 
+                                                    :class="[
+                                                        'w-4 h-4 text-gray-400 transition-transform duration-200',
+                                                        isDropdownOpen ? 'rotate-180' : ''
+                                                    ]"
+                                                />
+                                            </div>
+
+                                            <!-- Dropdown de especializações -->
+                                            <div 
+                                                v-if="isDropdownOpen"
+                                                class="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-xl lg:rounded-2xl shadow-lg max-h-60 overflow-hidden"
+                                            >
+                                                <!-- Campo de busca -->
+                                                <div class="p-3 border-b border-gray-100">
+                                                    <Input 
+                                                        v-model="searchTerm"
+                                                        placeholder="Buscar especializações..."
+                                                        class="h-8 text-sm"
+                                                        @click.stop
+                                                    />
+                                                </div>
+                                                
+                                                <!-- Lista de especializações -->
+                                                <div class="max-h-48 overflow-y-auto">
+                                                    <div 
+                                                        v-for="spec in filteredSpecializations" 
+                                                        :key="spec.id"
+                                                        @click="toggleSpecialization(spec.id)"
+                                                        :class="[
+                                                            'px-3 py-2 text-sm cursor-pointer hover:bg-gray-50 flex items-center justify-between',
+                                                            isSpecializationSelected(spec.id) ? 'bg-primary/5 text-primary' : 'text-gray-700'
+                                                        ]"
+                                                    >
+                                                        <span>{{ spec.name }}</span>
+                                                        <Checkbox 
+                                                            :checked="isSpecializationSelected(spec.id)"
+                                                            class="pointer-events-none"
+                                                        />
+                                                    </div>
+                                                    
+                                                    <!-- Mensagem quando não há resultados -->
+                                                    <div 
+                                                        v-if="filteredSpecializations.length === 0"
+                                                        class="px-3 py-2 text-sm text-gray-500 text-center"
+                                                    >
+                                                        Nenhuma especialização encontrada
+                                                    </div>
+                                                </div>
+                                                
+                                                <!-- Contador de seleções -->
+                                                <div class="px-3 py-2 text-xs text-gray-500 border-t border-gray-100 bg-gray-50">
+                                                    {{ formData.specializations.length }} de 5 especializações selecionadas
+                                                </div>
+                                            </div>
                                         </div>
+                                        
                                         <InputError 
-                                            v-if="hasFieldError('specialty') && isFieldTouched('specialty')"
-                                            :message="getFieldError('specialty')" 
-                                            id="specialty-error"
+                                            v-if="hasFieldError('specializations') && isFieldTouched('specializations')"
+                                            :message="getFieldError('specializations')" 
+                                            id="specializations-error"
                                         />
                                     </div>
                                 </div>

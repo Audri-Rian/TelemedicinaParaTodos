@@ -16,7 +16,6 @@ class Doctor extends Model
     protected $fillable = [
         'user_id',
         'crm',
-        'specialty',
         'biography',
         'license_number',
         'license_expiry_date',
@@ -43,15 +42,35 @@ class Doctor extends Model
         return $this->belongsTo(User::class);
     }
 
+    // Relacionamento N:N com Specialization
+    public function specializations()
+    {
+        return $this->belongsToMany(Specialization::class, 'doctor_specialization')
+                    ->withTimestamps();
+    }
+
     // Scopes para filtros
     public function scopeActive(Builder $query): void
     {
         $query->where('status', self::STATUS_ACTIVE);
     }
 
-    public function scopeBySpecialty(Builder $query, string $specialty): void
+    public function scopeBySpecialization(Builder $query, $specializationId): void
     {
-        $query->where('specialty', $specialty);
+        $query->whereHas('specializations', function ($specializationQuery) use ($specializationId) {
+            if (is_array($specializationId)) {
+                $specializationQuery->whereIn('specializations.id', $specializationId);
+            } else {
+                $specializationQuery->where('specializations.id', $specializationId);
+            }
+        });
+    }
+
+    public function scopeBySpecializationName(Builder $query, string $specializationName): void
+    {
+        $query->whereHas('specializations', function ($specializationQuery) use ($specializationName) {
+            $specializationQuery->where('name', 'like', '%' . $specializationName . '%');
+        });
     }
 
     public function scopeAvailable(Builder $query): void
@@ -66,9 +85,19 @@ class Doctor extends Model
         return $this->status === self::STATUS_ACTIVE;
     }
 
+    public function hasSpecialization(string $specializationName): bool
+    {
+        return $this->specializations()->where('name', $specializationName)->exists();
+    }
+
+    public function hasAnySpecialization(): bool
+    {
+        return $this->specializations()->exists();
+    }
+
     public function isLicenseExpired(): bool
     {
-        return $this->license_expiry_date && $this->license_expiry_date->isPast();
+        return $this->license_expiry_date && $this->license_expiry_date < now();
     }
 
     public function isAvailable(): bool
@@ -79,17 +108,22 @@ class Doctor extends Model
     }
 
     // Accessors
+    public function getSpecializationNamesAttribute(): string
+    {
+        return $this->specializations->pluck('name')->implode(', ') ?: 'Não informado';
+    }
+
     public function getFormattedConsultationFeeAttribute(): string
     {
         return $this->consultation_fee 
-            ? 'R$ ' . number_format($this->consultation_fee, 2, ',', '.')
+            ? 'R$ ' . number_format((float) $this->consultation_fee, 2, ',', '.')
             : 'Não informado';
     }
 
     public function getFormattedLicenseExpiryDateAttribute(): string
     {
         return $this->license_expiry_date 
-            ? $this->license_expiry_date->format('d/m/Y')
+            ? Carbon::parse($this->license_expiry_date)->format('d/m/Y')
             : 'Não informado';
     }
 

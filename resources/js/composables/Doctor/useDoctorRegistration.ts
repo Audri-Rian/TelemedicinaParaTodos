@@ -14,7 +14,7 @@ export interface DoctorRegistrationData {
   password: string;
   password_confirmation: string;
   crm: string;
-  specialty: string;
+  specializations: string[];
   terms_accepted: boolean;
 }
 
@@ -27,7 +27,7 @@ interface RequiredDoctorFields {
   password: string;
   password_confirmation: string;
   crm: string;
-  specialty: string;
+  specializations: string[];
 }
 
 /**
@@ -39,7 +39,7 @@ const initialData: DoctorRegistrationData = {
   password: '',
   password_confirmation: '',
   crm: '',
-  specialty: '',
+  specializations: [],
   terms_accepted: false
 };
 
@@ -54,7 +54,7 @@ export function useDoctorRegistration() {
     passwordValidation,
     passwordConfirmationValidation,
     crmValidation,
-    specialtyValidation
+    specializationsValidation
   } = useDoctorFormValidation();
 
   // Validação mockada para termos (não obrigatória)
@@ -69,7 +69,7 @@ export function useDoctorRegistration() {
     password: passwordValidation,
     password_confirmation: passwordConfirmationValidation,
     crm: crmValidation,
-    specialty: specialtyValidation
+    specializations: specializationsValidation
   };
 
   // Dados apenas para validação (sem terms_accepted)
@@ -79,7 +79,7 @@ export function useDoctorRegistration() {
     password: initialData.password,
     password_confirmation: initialData.password_confirmation,
     crm: initialData.crm,
-    specialty: initialData.specialty
+    specializations: initialData.specializations
   };
 
   const {
@@ -120,9 +120,9 @@ export function useDoctorRegistration() {
     validationFormData.value.crm = newValue;
   });
   
-  watch(() => formData.value.specialty, (newValue) => {
-    validationFormData.value.specialty = newValue;
-  });
+  watch(() => formData.value.specializations, (newValue) => {
+    validationFormData.value.specializations = newValue;
+  }, { deep: true });
 
   // Rate limiting: 5 tentativas por 15 minutos, bloqueio por 1 hora
   const rateLimit = useRateLimit({

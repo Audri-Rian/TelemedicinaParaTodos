@@ -15,7 +15,6 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->uuid('user_id')->unique();
             $table->string('crm', 20)->nullable()->unique()->index();
-            $table->string('specialty', 100)->nullable()->index();
             $table->text('biography')->nullable();
             $table->string('license_number', 50)->nullable()->unique();
             $table->date('license_expiry_date')->nullable();
@@ -26,7 +25,7 @@ return new class extends Migration
             $table->softDeletes();
             
             // Indexes para performance
-            $table->index(['specialty', 'status']);
+            $table->index('status');
             $table->index('created_at');
             
             // Foreign key para tabelas de usuários

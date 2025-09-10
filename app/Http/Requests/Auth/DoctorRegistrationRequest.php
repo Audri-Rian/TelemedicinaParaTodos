@@ -5,6 +5,7 @@ namespace App\Http\Requests\Auth;
 use Illuminate\Foundation\Http\FormRequest;
 use App\Models\User;
 use App\Models\Doctor;
+use App\Models\Specialization;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules;
 
@@ -44,7 +45,12 @@ class DoctorRegistrationRequest extends FormRequest
                 'regex:/^[A-Z0-9]+$/',
                 Rule::unique(Doctor::class)
             ],
-            'specialty' => 'required|string|max:100',
+            'specializations' => 'required|array|min:1',
+            'specializations.*' => [
+                'required',
+                'uuid',
+                Rule::exists(Specialization::class, 'id')
+            ],
         ];
     }
 
@@ -62,7 +68,11 @@ class DoctorRegistrationRequest extends FormRequest
             'crm.required' => 'O CRM é obrigatório.',
             'crm.unique' => 'Este CRM já está sendo usado.',
             'crm.regex' => 'O CRM deve conter apenas letras maiúsculas e números.',
-            'specialty.required' => 'A especialidade é obrigatória.',
+            'specializations.required' => 'Pelo menos uma especialização deve ser selecionada.',
+            'specializations.min' => 'Pelo menos uma especialização deve ser selecionada.',
+            'specializations.*.required' => 'Especialização inválida.',
+            'specializations.*.uuid' => 'Especialização deve ser um UUID válido.',
+            'specializations.*.exists' => 'Especialização selecionada não existe.',
         ];
     }
 
@@ -77,7 +87,7 @@ class DoctorRegistrationRequest extends FormRequest
             'password' => 'senha',
             'password_confirmation' => 'confirmação da senha',
             'crm' => 'CRM',
-            'specialty' => 'especialidade',
+            'specializations' => 'especializações',
         ];
     }
 }
