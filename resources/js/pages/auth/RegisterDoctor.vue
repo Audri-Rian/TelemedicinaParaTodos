@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-import { useDoctorRegistration } from '@/composables/useDoctorRegistration';
+import { ref, watch } from 'vue';
+import { useDoctorRegistration } from '@/composables/Doctor/useDoctorRegistration';
 import BackgroundDecorativo from '@/components/BackgroundDecorativo.vue';
 import InputError from '@/components/InputError.vue';
 import TextLink from '@/components/TextLink.vue';
@@ -20,7 +20,6 @@ const {
   canSubmit,
   submitError,
   rateLimit,
-  specialties,
   updateField,
   touchField,
   submitForm,
@@ -29,8 +28,57 @@ const {
   isFieldTouched
 } = useDoctorRegistration();
 
+// Lista de especialidades médicas
+const specialties = [
+  'Cardiologia',
+  'Dermatologia',
+  'Endocrinologia',
+  'Gastroenterologia',
+  'Neurologia',
+  'Pediatria',
+  'Psiquiatria',
+  'Ortopedia',
+  'Oftalmologia',
+  'Urologia',
+  'Ginecologia',
+  'Obstetrícia',
+  'Anestesiologia',
+  'Radiologia',
+  'Patologia',
+  'Medicina Interna',
+  'Cirurgia Geral',
+  'Cirurgia Plástica',
+  'Otorrinolaringologia',
+  'Pneumologia'
+];
+
 // Estado local
 const showSuccessMessage = ref(false);
+
+// Watchers para conectar v-model com os composables
+watch(() => formData.value.name, (newValue) => {
+  updateField('name', newValue);
+});
+
+watch(() => formData.value.crm, (newValue) => {
+  updateField('crm', newValue);
+});
+
+watch(() => formData.value.specialty, (newValue) => {
+  updateField('specialty', newValue);
+});
+
+watch(() => formData.value.email, (newValue) => {
+  updateField('email', newValue);
+});
+
+watch(() => formData.value.password, (newValue) => {
+  updateField('password', newValue);
+});
+
+watch(() => formData.value.password_confirmation, (newValue) => {
+  updateField('password_confirmation', newValue);
+});
 
 // Função para lidar com submissão
 const handleSubmit = async () => {
@@ -125,9 +173,26 @@ const handleSubmit = async () => {
                                         Nome completo
                                     </Label>
                                     <div class="relative">
-                                        <Input id="name" type="text" required autofocus :tabindex="1"
-                                            autocomplete="name" name="name" placeholder="Dr. Seu Nome Completo"
-                                            class="h-9 lg:h-11 bg-gradient-to-r from-gray-50/90 to-white/90 border-2 border-gray-200/50 rounded-xl lg:rounded-2xl px-4 text-sm placeholder:text-gray-400 focus:border-primary focus:bg-white focus:shadow-lg focus:shadow-primary/10 transition-all duration-300 hover:border-gray-300 hover:shadow-md" />
+                                        <Input 
+                                            id="name" 
+                                            type="text" 
+                                            required 
+                                            autofocus 
+                                            :tabindex="1"
+                                            autocomplete="name" 
+                                            name="name" 
+                                            placeholder="Dr. Seu Nome Completo"
+                                            v-model="formData.name"
+                                            @blur="touchField('name')"
+                                            :class="[
+                                                'h-9 lg:h-11 bg-gradient-to-r from-gray-50/90 to-white/90 border-2 rounded-xl lg:rounded-2xl px-4 text-sm placeholder:text-gray-400 focus:bg-white focus:shadow-lg focus:shadow-primary/10 transition-all duration-300 hover:border-gray-300 hover:shadow-md',
+                                                hasFieldError('name') && isFieldTouched('name') 
+                                                    ? 'border-red-500 focus:border-red-500' 
+                                                    : 'border-gray-200/50 focus:border-primary'
+                                            ]"
+                                            :aria-invalid="hasFieldError('name') && isFieldTouched('name')"
+                                            :aria-describedby="hasFieldError('name') && isFieldTouched('name') ? 'name-error' : undefined"
+                                        />
                                     </div>
                                     <InputError 
                                         v-if="hasFieldError('name') && isFieldTouched('name')"
@@ -150,9 +215,25 @@ const handleSubmit = async () => {
                                             CRM
                                         </Label>
                                         <div class="relative">
-                                            <Input id="crm" type="text" required :tabindex="2"
-                                                autocomplete="off" name="crm" placeholder="Ex: 123456-SP"
-                                                class="h-9 lg:h-11 bg-gradient-to-r from-gray-50/90 to-white/90 border-2 border-gray-200/50 rounded-xl lg:rounded-2xl px-4 text-sm placeholder:text-gray-400 focus:border-primary focus:bg-white focus:shadow-lg focus:shadow-primary/10 transition-all duration-300 hover:border-gray-300 hover:shadow-md" />
+                                            <Input 
+                                                id="crm" 
+                                                type="text" 
+                                                required 
+                                                :tabindex="2"
+                                                autocomplete="off" 
+                                                name="crm" 
+                                                placeholder="Ex: 123456SP"
+                                                v-model="formData.crm"
+                                                @blur="touchField('crm')"
+                                                :class="[
+                                                    'h-9 lg:h-11 bg-gradient-to-r from-gray-50/90 to-white/90 border-2 rounded-xl lg:rounded-2xl px-4 text-sm placeholder:text-gray-400 focus:bg-white focus:shadow-lg focus:shadow-primary/10 transition-all duration-300 hover:border-gray-300 hover:shadow-md',
+                                                    hasFieldError('crm') && isFieldTouched('crm') 
+                                                        ? 'border-red-500 focus:border-red-500' 
+                                                        : 'border-gray-200/50 focus:border-primary'
+                                                ]"
+                                                :aria-invalid="hasFieldError('crm') && isFieldTouched('crm')"
+                                                :aria-describedby="hasFieldError('crm') && isFieldTouched('crm') ? 'crm-error' : undefined"
+                                            />
                                         </div>
                                         <InputError 
                                             v-if="hasFieldError('crm') && isFieldTouched('crm')"
@@ -178,8 +259,7 @@ const handleSubmit = async () => {
                                                 name="specialty" 
                                                 required 
                                                 :tabindex="3"
-                                                :value="formData.specialty"
-                                                @change="updateField('specialty', ($event.target as HTMLSelectElement).value)"
+                                                v-model="formData.specialty"
                                                 @blur="touchField('specialty')"
                                                 :class="[
                                                     'h-9 lg:h-11 bg-gradient-to-r from-gray-50/90 to-white/90 border-2 rounded-xl lg:rounded-2xl px-4 text-sm text-gray-700 focus:bg-white focus:shadow-lg focus:shadow-primary/10 transition-all duration-300 hover:border-gray-300 hover:shadow-md w-full',
@@ -191,7 +271,7 @@ const handleSubmit = async () => {
                                                 :aria-describedby="hasFieldError('specialty') && isFieldTouched('specialty') ? 'specialty-error' : undefined"
                                             >
                                                 <option value="">Selecione sua especialidade</option>
-                                                <option v-for="specialty in specialties" :key="specialty" :value="specialty.toLowerCase()">
+                                                <option v-for="specialty in specialties" :key="specialty" :value="specialty">
                                                     {{ specialty }}
                                                 </option>
                                             </select>
@@ -216,9 +296,25 @@ const handleSubmit = async () => {
                                         E-mail Profissional
                                     </Label>
                                     <div class="relative">
-                                        <Input id="email" type="email" required :tabindex="4" autocomplete="email"
-                                            name="email" placeholder="seu@email.com"
-                                            class="h-9 lg:h-11 bg-gradient-to-r from-gray-50/90 to-white/90 border-2 border-gray-200/50 rounded-xl lg:rounded-2xl px-4 text-sm placeholder:text-gray-400 focus:border-primary focus:bg-white focus:shadow-lg focus:shadow-primary/10 transition-all duration-300 hover:border-gray-300 hover:shadow-md" />
+                                        <Input 
+                                            id="email" 
+                                            type="email" 
+                                            required 
+                                            :tabindex="4" 
+                                            autocomplete="email"
+                                            name="email" 
+                                            placeholder="seu@email.com"
+                                            v-model="formData.email"
+                                            @blur="touchField('email')"
+                                            :class="[
+                                                'h-9 lg:h-11 bg-gradient-to-r from-gray-50/90 to-white/90 border-2 rounded-xl lg:rounded-2xl px-4 text-sm placeholder:text-gray-400 focus:bg-white focus:shadow-lg focus:shadow-primary/10 transition-all duration-300 hover:border-gray-300 hover:shadow-md',
+                                                hasFieldError('email') && isFieldTouched('email') 
+                                                    ? 'border-red-500 focus:border-red-500' 
+                                                    : 'border-gray-200/50 focus:border-primary'
+                                            ]"
+                                            :aria-invalid="hasFieldError('email') && isFieldTouched('email')"
+                                            :aria-describedby="hasFieldError('email') && isFieldTouched('email') ? 'email-error' : undefined"
+                                        />
                                     </div>
                                     <InputError 
                                         v-if="hasFieldError('email') && isFieldTouched('email')"
@@ -240,10 +336,25 @@ const handleSubmit = async () => {
                                         Senha
                                     </Label>
                                     <div class="relative">
-                                        <Input id="password" type="password" required :tabindex="5"
-                                            autocomplete="new-password" name="password"
+                                        <Input 
+                                            id="password" 
+                                            type="password" 
+                                            required 
+                                            :tabindex="5"
+                                            autocomplete="new-password" 
+                                            name="password"
                                             placeholder="Mínimo 8 caracteres"
-                                            class="h-9 lg:h-11 bg-gradient-to-r from-gray-50/90 to-white/90 border-2 border-gray-200/50 rounded-xl lg:rounded-2xl px-4 text-sm placeholder:text-gray-400 focus:border-primary focus:bg-white focus:shadow-lg focus:shadow-primary/10 transition-all duration-300 hover:border-gray-300 hover:shadow-md" />
+                                            v-model="formData.password"
+                                            @blur="touchField('password')"
+                                            :class="[
+                                                'h-9 lg:h-11 bg-gradient-to-r from-gray-50/90 to-white/90 border-2 rounded-xl lg:rounded-2xl px-4 text-sm placeholder:text-gray-400 focus:bg-white focus:shadow-lg focus:shadow-primary/10 transition-all duration-300 hover:border-gray-300 hover:shadow-md',
+                                                hasFieldError('password') && isFieldTouched('password') 
+                                                    ? 'border-red-500 focus:border-red-500' 
+                                                    : 'border-gray-200/50 focus:border-primary'
+                                            ]"
+                                            :aria-invalid="hasFieldError('password') && isFieldTouched('password')"
+                                            :aria-describedby="hasFieldError('password') && isFieldTouched('password') ? 'password-error' : undefined"
+                                        />
                                     </div>
                                     <InputError 
                                         v-if="hasFieldError('password') && isFieldTouched('password')"
@@ -264,10 +375,25 @@ const handleSubmit = async () => {
                                         Confirmar senha
                                     </Label>
                                     <div class="relative">
-                                        <Input id="password_confirmation" type="password" required :tabindex="6"
-                                            autocomplete="new-password" name="password_confirmation"
+                                        <Input 
+                                            id="password_confirmation" 
+                                            type="password" 
+                                            required 
+                                            :tabindex="6"
+                                            autocomplete="new-password" 
+                                            name="password_confirmation"
                                             placeholder="Digite a senha novamente"
-                                            class="h-9 lg:h-11 bg-gradient-to-r from-gray-50/90 to-white/90 border-2 border-gray-200/50 rounded-xl lg:rounded-2xl px-4 text-sm placeholder:text-gray-400 focus:border-primary focus:bg-white focus:shadow-lg focus:shadow-primary/10 transition-all duration-300 hover:border-gray-300 hover:shadow-md" />
+                                            v-model="formData.password_confirmation"
+                                            @blur="touchField('password_confirmation')"
+                                            :class="[
+                                                'h-9 lg:h-11 bg-gradient-to-r from-gray-50/90 to-white/90 border-2 rounded-xl lg:rounded-2xl px-4 text-sm placeholder:text-gray-400 focus:bg-white focus:shadow-lg focus:shadow-primary/10 transition-all duration-300 hover:border-gray-300 hover:shadow-md',
+                                                hasFieldError('password_confirmation') && isFieldTouched('password_confirmation') 
+                                                    ? 'border-red-500 focus:border-red-500' 
+                                                    : 'border-gray-200/50 focus:border-primary'
+                                            ]"
+                                            :aria-invalid="hasFieldError('password_confirmation') && isFieldTouched('password_confirmation')"
+                                            :aria-describedby="hasFieldError('password_confirmation') && isFieldTouched('password_confirmation') ? 'password_confirmation-error' : undefined"
+                                        />
                                     </div>
                                     <InputError 
                                         v-if="hasFieldError('password_confirmation') && isFieldTouched('password_confirmation')"
@@ -276,18 +402,15 @@ const handleSubmit = async () => {
                                     />
                                 </div>
 
-                                <!-- Termos de Serviço e LGPD -->
+                                <!-- Termos de Serviço e LGPD (Mockado) -->
                                 <div class="space-y-2">
                                     <div class="flex items-start gap-3">
                                         <input 
                                             id="terms_accepted" 
                                             type="checkbox" 
-                                            required 
                                             :tabindex="7"
                                             v-model="formData.terms_accepted"
                                             class="mt-1 h-4 w-4 text-primary bg-gray-100 border-gray-300 rounded focus:ring-primary focus:ring-2"
-                                            :aria-invalid="hasFieldError('terms_accepted') && isFieldTouched('terms_accepted')"
-                                            :aria-describedby="hasFieldError('terms_accepted') && isFieldTouched('terms_accepted') ? 'terms_accepted-error' : undefined"
                                         />
                                         <div class="text-xs text-gray-600 leading-relaxed">
                                             <label for="terms_accepted" class="cursor-pointer">
@@ -308,11 +431,6 @@ const handleSubmit = async () => {
                                             </label>
                                         </div>
                                     </div>
-                                    <InputError 
-                                        v-if="hasFieldError('terms_accepted') && isFieldTouched('terms_accepted')"
-                                        :message="getFieldError('terms_accepted')" 
-                                        id="terms_accepted-error"
-                                    />
                                 </div>
 
                                 <!-- Botão de Registro -->
@@ -397,7 +515,7 @@ const handleSubmit = async () => {
                     Já tem uma conta?
                     <TextLink :href="login()"
                         class="text-black hover:text-black/80 font-bold underline underline-offset-4 hover:underline-offset-2 transition-all duration-300 ml-1"
-                        :tabindex="8">
+                        :tabindex="9">
                         Faça login aqui
                     </TextLink>
                 </p>

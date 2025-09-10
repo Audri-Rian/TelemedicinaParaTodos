@@ -30,6 +30,9 @@ Route::middleware('guest')->group(function () {
     Route::post('register/patient', [PatientRegistrationController::class, 'store'])
         ->name('register.patient.store');
 
+    Route::post('register/doctor', [DoctorRegistrationController::class, 'store'])
+        ->name('register.doctor.store');
+
     Route::post('register', [RegisteredUserController::class, 'store']);
 
     Route::get('login', [AuthenticatedSessionController::class, 'create'])

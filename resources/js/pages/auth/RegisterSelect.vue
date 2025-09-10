@@ -88,27 +88,27 @@
                 <!-- Card Médico -->
                 <button
                   @click="goToDoctorRegister"
-                  class="group w-full relative overflow-hidden rounded-xl lg:rounded-2xl bg-white border-2 border-gray-200/50 px-5 lg:px-7 py-3 lg:py-4 text-left shadow-lg hover:shadow-xl hover:border-primary/30 transform hover:scale-[1.02] transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  class="group w-full relative overflow-hidden rounded-xl lg:rounded-2xl bg-gradient-to-r from-green-50/80 to-green-100/80 border-2 border-green-200/60 px-5 lg:px-7 py-3 lg:py-4 text-left shadow-lg hover:shadow-xl hover:border-green-300/80 transform hover:scale-[1.02] transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-green-200/60"
                 >
                   <!-- Efeito de brilho no hover -->
-                  <div class="absolute inset-0 bg-gradient-to-r from-transparent via-primary/5 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
+                  <div class="absolute inset-0 bg-gradient-to-r from-transparent via-green-50/40 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
                   
                   <div class="relative flex items-center space-x-4 lg:space-x-5">
                     <div class="flex-shrink-0">
-                      <div class="w-10 h-10 lg:w-12 lg:h-12 bg-gradient-to-r from-primary/20 to-primary/10 rounded-xl lg:rounded-2xl flex items-center justify-center">
-                        <svg class="w-5 h-5 lg:w-6 lg:h-6 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <div class="w-10 h-10 lg:w-12 lg:h-12 bg-gradient-to-r from-green-500 to-green-600 rounded-xl lg:rounded-2xl flex items-center justify-center">
+                        <svg class="w-5 h-5 lg:w-6 lg:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                         </svg>
                       </div>
                     </div>
                     <div class="flex-1">
-                      <h3 class="text-sm lg:text-xl font-bold text-gray-800 mb-1 lg:mb-2">Sou Médico</h3>
-                      <p class="text-gray-600 text-xs lg:text-lg">
+                      <h3 class="text-sm lg:text-xl font-bold text-green-800 mb-1 lg:mb-2">Sou Médico</h3>
+                      <p class="text-green-600 text-xs lg:text-lg">
                         Gerencie sua agenda profissional, atenda pacientes remotamente, mantenha prontuários digitais e tenha acesso a ferramentas avançadas de diagnóstico
                       </p>
                     </div>
                     <div class="flex-shrink-0">
-                      <svg class="w-5 h-5 lg:w-6 lg:h-6 text-gray-400 group-hover:text-primary group-hover:translate-x-1 transition-all duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg class="w-5 h-5 lg:w-6 lg:h-6 text-green-400 group-hover:text-green-600 group-hover:translate-x-1 transition-all duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
                       </svg>
                     </div>
