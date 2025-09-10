@@ -28,9 +28,6 @@ const {
     isFieldTouched
 } = usePatientRegistration();
 
-// Estado local
-const showSuccessMessage = ref(false);
-
 // Função para aplicar máscara de data brasileira
 const applyDateMask = (value: string) => {
   // Remove tudo que não é número
@@ -55,14 +52,9 @@ const handleDateInput = (value: string | number) => {
 
 // Função para lidar com submissão
 const handleSubmit = async () => {
-    const success = await submitForm();
-    if (success) {
-        showSuccessMessage.value = true;
-        // Redirecionar após sucesso
-        setTimeout(() => {
-            window.location.href = '/dashboard';
-        }, 2000);
-    }
+    await submitForm();
+    // O redirecionamento é feito automaticamente pelo Inertia.js
+    // Não precisa mais de setTimeout manual
 };
 </script>
 
@@ -101,20 +93,6 @@ const handleSubmit = async () => {
                                     Registro de Paciente</h1>
                                 <p class="text-xs text-gray-500 font-medium">Junte-se à nossa comunidade
                                     médica</p>
-                            </div>
-
-                            <!-- Mensagem de sucesso -->
-                            <div v-if="showSuccessMessage"
-                                class="mb-2 p-2 bg-green-100 border border-green-400 text-green-700 rounded-lg"
-                                role="alert" aria-live="polite">
-                                <div class="flex items-center">
-                                    <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd"
-                                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                            clip-rule="evenodd"></path>
-                                    </svg>
-                                    Conta criada com sucesso! Redirecionando...
-                                </div>
                             </div>
 
                             <!-- Mensagem de erro de rate limit -->

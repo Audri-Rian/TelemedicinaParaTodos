@@ -25,42 +25,53 @@ class PatientRegistrationController extends Controller
     /**
      * Handle patient registration request.
      */
-    public function store(PatientRegistrationRequest $request) // ✅ Usar Request Class
+    public function store(PatientRegistrationRequest $request)
     {
-        $user = DB::transaction(function () use ($request) {
-            // Criar o usuário
-            $user = User::create([
-                'name' => $request->name,
-                'email' => $request->email,
-                'password' => Hash::make($request->password),
-            ]);
+        try {
+            $user = DB::transaction(function () use ($request) {
+                // Criar o usuário
+                $user = User::create([
+                    'name' => $request->name,
+                    'email' => $request->email,
+                    'password' => Hash::make($request->password),
+                ]);
 
-            // Criar o paciente relacionado
-            $user->patient()->create([
-                // Obrigatórios (conforme migration)
-                'gender' => $request->gender,
-                'date_of_birth' => $request->date_of_birth,
-                'phone_number' => $request->phone_number,
-                'status' => 'active',
+                // Criar o paciente relacionado
+                $user->patient()->create([
+                    // Obrigatórios (conforme migration)
+                    'gender' => $request->gender,
+                    'date_of_birth' => $request->date_of_birth,
+                    'phone_number' => $request->phone_number,
+                    'status' => 'active',
 
-                // Opcionais (conforme migration)
-                'emergency_contact' => $request->emergency_contact,
-                'emergency_phone' => $request->emergency_phone,
-                'medical_history' => $request->medical_history,
-                'allergies' => $request->allergies,
-                'current_medications' => $request->current_medications,
-                'blood_type' => $request->blood_type,
-                'height' => $request->height,
-                'weight' => $request->weight,
-                'insurance_provider' => $request->insurance_provider,
-                'insurance_number' => $request->insurance_number,
-                'consent_telemedicine' => (bool) $request->consent_telemedicine,
-            ]);
+                    // Opcionais (conforme migration)
+                    'emergency_contact' => $request->emergency_contact,
+                    'emergency_phone' => $request->emergency_phone,
+                    'medical_history' => $request->medical_history,
+                    'allergies' => $request->allergies,
+                    'current_medications' => $request->current_medications,
+                    'blood_type' => $request->blood_type,
+                    'height' => $request->height,
+                    'weight' => $request->weight,
+                    'insurance_provider' => $request->insurance_provider,
+                    'insurance_number' => $request->insurance_number,
+                    'consent_telemedicine' => (bool) $request->consent_telemedicine,
+                ]);
 
-            return $user;
-        });
+                return $user;
+            });
 
-        Auth::login($user);
-        return to_route('dashboard');
+            Auth::login($user);
+            
+            return redirect()->route('dashboard')
+                ->with('success', 'Conta criada com sucesso! Bem-vindo à Telemedicina para Todos.');
+                
+        } catch (\Exception $e) {
+            \Log::error('Erro no registro de paciente: ' . $e->getMessage());
+            
+            return back()
+                ->withErrors(['general' => 'Erro interno do servidor. Tente novamente em alguns instantes.'])
+                ->withInput();
+        }
     }
 }

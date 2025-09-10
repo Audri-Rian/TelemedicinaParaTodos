@@ -1,4 +1,5 @@
 import { ref, computed } from 'vue';
+import { router } from '@inertiajs/vue3';
 import { useRealTimeValidation, type ValidationRule } from '../useRealTimeValidation';
 import { useRateLimit } from '../useRateLimit';
 import { usePatientFormValidation } from './usePatientFormValidation';
@@ -104,32 +105,41 @@ export function usePatientRegistration() {
       return false;
     }
 
-    isSubmitting.value = true;
-
-    try {
-      // Validação final
-      if (!validateAll()) {
-        isSubmitting.value = false;
-        return false;
-      }
-
-      // TODO: Implementar chamada real da API para registro
-      // await registerPatient(formData.value);
-      
-      // Simulação de submissão
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Reset do formulário após sucesso
-      resetForm();
-      rateLimit.reset();
-      
-      return true;
-    } catch (error) {
-      console.error('Erro ao submeter formulário:', error);
+    // Validação final
+    if (!validateAll()) {
       return false;
-    } finally {
-      isSubmitting.value = false;
     }
+
+    // Usar Inertia.js para submissão
+    router.post('/register/patient', formData.value, {
+      onStart: () => {
+        isSubmitting.value = true;
+      },
+      onSuccess: () => {
+        // Sucesso - o Laravel já redireciona para dashboard
+        resetForm();
+        rateLimit.reset();
+        return true;
+      },
+      onError: (errors) => {
+        // Mapear erros do backend para os campos do frontend
+        Object.keys(errors).forEach(field => {
+          const fieldKey = field as keyof PatientRegistrationData;
+          if (fields.value[fieldKey]) {
+            fields.value[fieldKey].errors = Array.isArray(errors[field]) 
+              ? errors[field] 
+              : [errors[field]];
+            fields.value[fieldKey].touched = true;
+          }
+        });
+        return false;
+      },
+      onFinish: () => {
+        isSubmitting.value = false;
+      }
+    });
+
+    return true;
   };
 
   // Função para obter mensagem de erro específica do campo

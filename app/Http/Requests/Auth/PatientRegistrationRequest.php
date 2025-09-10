@@ -7,6 +7,7 @@ use Illuminate\Foundation\Http\FormRequest;
 use App\Models\User;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules;
+use Carbon\Carbon;
 
 class PatientRegistrationRequest extends FormRequest
 {
@@ -16,6 +17,25 @@ class PatientRegistrationRequest extends FormRequest
     public function authorize(): bool
     {
         return true; // Qualquer um pode fazer registro
+    }
+
+    /**
+     * Prepare the data for validation.
+     */
+    protected function prepareForValidation(): void
+    {
+        // Converter data de dd/mm/aaaa para aaaa-mm-dd
+        if ($this->date_of_birth) {
+            try {
+                $date = Carbon::createFromFormat('d/m/Y', $this->date_of_birth);
+                $this->merge([
+                    'date_of_birth' => $date->format('Y-m-d')
+                ]);
+            } catch (\Exception $e) {
+                // Se não conseguir converter, mantém o valor original
+                // A validação vai capturar o erro
+            }
+        }
     }
 
     /**

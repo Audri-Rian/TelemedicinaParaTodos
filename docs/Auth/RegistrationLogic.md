@@ -28,6 +28,12 @@ O sistema de registro suporta diferentes tipos de usuários (pacientes e médico
 - **Campos opcionais**: emergency_contact, medical_history, allergies, etc.
 - **Recursos**: Mensagens em português, validação de unicidade
 
+#### DoctorRegistrationRequest
+- **Responsabilidade**: Validação de dados de pacientes
+- **Campos obrigatórios**: name, email, password, gender, date_of_birth, phone_number
+- **Campos opcionais**: emergency_contact, medical_history, allergies, etc.
+- **Recursos**: Mensagens em português, validação de unicidade
+
 #### LoginRequest
 - **Responsabilidade**: Validação e autenticação
 - **Recursos**: Rate limiting (5 tentativas), proteção contra força bruta
@@ -104,3 +110,8 @@ graph TD
     Q --> R[Autenticação]
     R --> J
 ```
+Frontend (Vue) → Composable → API Call → Laravel Controller → Database
+     ↓              ↓           ↓              ↓              ↓
+1. Validação    2. Rate      3. POST       4. Validação   5. User + Patient
+   Client-side    Limit       /register/    Server-side    Created
+                  Check       patient
