@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { usePatientRegistration } from '@/composables/usePatientRegistration';
+import { usePatientRegistration } from '@/composables/Patient/usePatientRegistration';
 import BackgroundDecorativo from '@/components/BackgroundDecorativo.vue';
 import InputError from '@/components/InputError.vue';
 import TextLink from '@/components/TextLink.vue';
@@ -188,100 +188,101 @@ const handleSubmit = async () => {
                                         :message="getFieldError('email')" id="email-error" />
                                 </div>
 
-                                <!-- Campo Data de Nascimento -->
+                                <!-- Campos Data de Nascimento e Gênero lado a lado -->
+                                <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 lg:gap-3">
+                                    <!-- Campo Data de Nascimento -->
+                                    <div class="space-y-0.5">
+                                        <Label for="date_of_birth"
+                                            class="text-sm font-bold text-gray-700 flex items-center gap-2">
+                                            <svg class="w-3 h-3 text-black" fill="none" stroke="currentColor"
+                                                viewBox="0 0 24 24" aria-hidden="true">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
+                                                </path>
+                                            </svg>
+                                            Data de Nascimento
+                                        </Label>
+                                        <div class="relative">
+                                            <Input id="date_of_birth" type="text" required :tabindex="3"
+                                                name="date_of_birth" placeholder="dd/mm/aaaa" maxlength="10"
+                                                :model-value="formData.date_of_birth"
+                                                @update:model-value="handleDateInput"
+                                                @blur="touchField('date_of_birth')" :class="[
+                                                    'h-9 lg:h-10 bg-gradient-to-r from-gray-50/90 to-white/90 border-2 rounded-lg lg:rounded-xl px-3 lg:px-4 text-sm placeholder:text-gray-400 focus:bg-white focus:shadow-lg focus:shadow-primary/10 transition-all duration-300 hover:border-gray-300 hover:shadow-md',
+                                                    hasFieldError('date_of_birth') && isFieldTouched('date_of_birth')
+                                                        ? 'border-red-500 focus:border-red-500'
+                                                        : 'border-gray-200/50 focus:border-primary'
+                                                ]"
+                                                :aria-invalid="hasFieldError('date_of_birth') && isFieldTouched('date_of_birth')"
+                                                :aria-describedby="hasFieldError('date_of_birth') && isFieldTouched('date_of_birth') ? 'date_of_birth-error' : undefined" />
+                                        </div>
+                                        <InputError v-if="hasFieldError('date_of_birth') && isFieldTouched('date_of_birth')"
+                                            :message="getFieldError('date_of_birth')" id="date_of_birth-error" />
+                                    </div>
+
+                                    <!-- Campo Gênero -->
+                                    <div class="space-y-0.5">
+                                        <Label for="gender"
+                                            class="text-sm font-bold text-gray-700 flex items-center gap-2">
+                                            <svg class="w-3 h-3 text-black" fill="none" stroke="currentColor"
+                                                viewBox="0 0 24 24" aria-hidden="true">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z">
+                                                </path>
+                                            </svg>
+                                            Gênero
+                                        </Label>
+                                        <div class="relative">
+                                            <select id="gender" required :tabindex="4"
+                                                name="gender" :value="formData.gender"
+                                                @change="updateField('gender', ($event.target as HTMLSelectElement).value)"
+                                                @blur="touchField('gender')" :class="[
+                                                    'h-9 lg:h-10 bg-gradient-to-r from-gray-50/90 to-white/90 border-2 rounded-lg lg:rounded-xl px-3 lg:px-4 text-sm focus:bg-white focus:shadow-lg focus:shadow-primary/10 transition-all duration-300 hover:border-gray-300 hover:shadow-md w-full',
+                                                    hasFieldError('gender') && isFieldTouched('gender')
+                                                        ? 'border-red-500 focus:border-red-500'
+                                                        : 'border-gray-200/50 focus:border-primary'
+                                                ]"
+                                                :aria-invalid="hasFieldError('gender') && isFieldTouched('gender')"
+                                                :aria-describedby="hasFieldError('gender') && isFieldTouched('gender') ? 'gender-error' : undefined">
+                                                <option value="">Selecione seu gênero</option>
+                                                <option value="male">Masculino</option>
+                                                <option value="female">Feminino</option>
+                                                <option value="other">Outro</option>
+                                            </select>
+                                        </div>
+                                        <InputError v-if="hasFieldError('gender') && isFieldTouched('gender')"
+                                            :message="getFieldError('gender')" id="gender-error" />
+                                    </div>
+                                </div>
+
+                                <!-- Campo Telefone -->
                                 <div class="space-y-0.5">
-                                    <Label for="date_of_birth"
+                                    <Label for="phone_number"
                                         class="text-sm font-bold text-gray-700 flex items-center gap-2">
                                         <svg class="w-3 h-3 text-black" fill="none" stroke="currentColor"
                                             viewBox="0 0 24 24" aria-hidden="true">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
+                                                d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z">
                                             </path>
                                         </svg>
-                                        Data de Nascimento
+                                        Telefone
                                     </Label>
                                     <div class="relative">
-                                        <Input id="date_of_birth" type="text" required :tabindex="3"
-                                            name="date_of_birth" placeholder="dd/mm/aaaa" maxlength="10"
-                                            :model-value="formData.date_of_birth"
-                                            @update:model-value="handleDateInput"
-                                            @blur="touchField('date_of_birth')" :class="[
+                                        <Input id="phone_number" type="tel" required :tabindex="5"
+                                            name="phone_number" placeholder="(11) 99999-9999"
+                                            :model-value="formData.phone_number"
+                                            @update:model-value="updateField('phone_number', $event)"
+                                            @blur="touchField('phone_number')" :class="[
                                                 'h-9 lg:h-10 bg-gradient-to-r from-gray-50/90 to-white/90 border-2 rounded-lg lg:rounded-xl px-3 lg:px-4 text-sm placeholder:text-gray-400 focus:bg-white focus:shadow-lg focus:shadow-primary/10 transition-all duration-300 hover:border-gray-300 hover:shadow-md',
-                                                hasFieldError('date_of_birth') && isFieldTouched('date_of_birth')
+                                                hasFieldError('phone_number') && isFieldTouched('phone_number')
                                                     ? 'border-red-500 focus:border-red-500'
                                                     : 'border-gray-200/50 focus:border-primary'
                                             ]"
-                                            :aria-invalid="hasFieldError('date_of_birth') && isFieldTouched('date_of_birth')"
-                                            :aria-describedby="hasFieldError('date_of_birth') && isFieldTouched('date_of_birth') ? 'date_of_birth-error' : undefined" />
+                                            :aria-invalid="hasFieldError('phone_number') && isFieldTouched('phone_number')"
+                                            :aria-describedby="hasFieldError('phone_number') && isFieldTouched('phone_number') ? 'phone_number-error' : undefined" />
                                     </div>
-                                    <InputError v-if="hasFieldError('date_of_birth') && isFieldTouched('date_of_birth')"
-                                        :message="getFieldError('date_of_birth')" id="date_of_birth-error" />
-                                </div>
-
-                                <!-- Campos de Emergência lado a lado -->
-                                <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 lg:gap-3">
-                                    <!-- Campo Contato de Emergência -->
-                                    <div class="space-y-0.5">
-                                        <Label for="emergency_contact"
-                                            class="text-sm font-bold text-gray-700 flex items-center gap-2">
-                                            <svg class="w-3 h-3 text-black" fill="none" stroke="currentColor"
-                                                viewBox="0 0 24 24" aria-hidden="true">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                    d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z">
-                                                </path>
-                                            </svg>
-                                            Contato de Emergência
-                                        </Label>
-                                        <div class="relative">
-                                            <Input id="emergency_contact" type="text" required :tabindex="4"
-                                                name="emergency_contact" placeholder="Nome do contato"
-                                                :model-value="formData.emergency_contact"
-                                                @update:model-value="updateField('emergency_contact', $event)"
-                                                @blur="touchField('emergency_contact')" :class="[
-                                                    'h-9 lg:h-10 bg-gradient-to-r from-gray-50/90 to-white/90 border-2 rounded-lg lg:rounded-xl px-3 lg:px-4 text-sm placeholder:text-gray-400 focus:bg-white focus:shadow-lg focus:shadow-primary/10 transition-all duration-300 hover:border-gray-300 hover:shadow-md',
-                                                    hasFieldError('emergency_contact') && isFieldTouched('emergency_contact')
-                                                        ? 'border-red-500 focus:border-red-500'
-                                                        : 'border-gray-200/50 focus:border-primary'
-                                                ]"
-                                                :aria-invalid="hasFieldError('emergency_contact') && isFieldTouched('emergency_contact')"
-                                                :aria-describedby="hasFieldError('emergency_contact') && isFieldTouched('emergency_contact') ? 'emergency_contact-error' : undefined" />
-                                        </div>
-                                        <InputError
-                                            v-if="hasFieldError('emergency_contact') && isFieldTouched('emergency_contact')"
-                                            :message="getFieldError('emergency_contact')"
-                                            id="emergency_contact-error" />
-                                    </div>
-
-                                    <!-- Campo Telefone de Emergência -->
-                                    <div class="space-y-0.5">
-                                        <Label for="emergency_phone"
-                                            class="text-sm font-bold text-gray-700 flex items-center gap-2">
-                                            <svg class="w-3 h-3 text-black" fill="none" stroke="currentColor"
-                                                viewBox="0 0 24 24" aria-hidden="true">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                    d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z">
-                                                </path>
-                                            </svg>
-                                            Telefone de Emergência
-                                        </Label>
-                                        <div class="relative">
-                                            <Input id="emergency_phone" type="tel" required :tabindex="5"
-                                                name="emergency_phone" placeholder="(11) 99999-9999"
-                                                :model-value="formData.emergency_phone"
-                                                @update:model-value="updateField('emergency_phone', $event)"
-                                                @blur="touchField('emergency_phone')" :class="[
-                                                    'h-9 lg:h-10 bg-gradient-to-r from-gray-50/90 to-white/90 border-2 rounded-lg lg:rounded-xl px-3 lg:px-4 text-sm placeholder:text-gray-400 focus:bg-white focus:shadow-lg focus:shadow-primary/10 transition-all duration-300 hover:border-gray-300 hover:shadow-md',
-                                                    hasFieldError('emergency_phone') && isFieldTouched('emergency_phone')
-                                                        ? 'border-red-500 focus:border-red-500'
-                                                        : 'border-gray-200/50 focus:border-primary'
-                                                ]"
-                                                :aria-invalid="hasFieldError('emergency_phone') && isFieldTouched('emergency_phone')"
-                                                :aria-describedby="hasFieldError('emergency_phone') && isFieldTouched('emergency_phone') ? 'emergency_phone-error' : undefined" />
-                                        </div>
-                                        <InputError
-                                            v-if="hasFieldError('emergency_phone') && isFieldTouched('emergency_phone')"
-                                            :message="getFieldError('emergency_phone')" id="emergency_phone-error" />
-                                    </div>
+                                    <InputError v-if="hasFieldError('phone_number') && isFieldTouched('phone_number')"
+                                        :message="getFieldError('phone_number')" id="phone_number-error" />
                                 </div>
 
                                 <!-- Campo Senha -->
@@ -348,7 +349,7 @@ const handleSubmit = async () => {
                                 <!-- Checkbox Consentimento Telemedicina -->
                                 <div class="space-y-0.5">
                                     <div class="flex items-start gap-3">
-                                        <input id="consent_telemedicine" type="checkbox" required :tabindex="8"
+                                        <input id="consent_telemedicine" type="checkbox" required :tabindex="7"
                                             :checked="formData.consent_telemedicine"
                                             @change="updateField('consent_telemedicine', ($event.target as HTMLInputElement).checked)"
                                             @blur="touchField('consent_telemedicine')" :class="[
@@ -390,7 +391,7 @@ const handleSubmit = async () => {
 
                                 <!-- Botão de Registro -->
                                 <div class="">
-                                    <Button type="submit" :disabled="!canSubmit" :tabindex="9"
+                                    <Button type="submit" :disabled="!canSubmit" :tabindex="8"
                                         class="w-full h-9 lg:h-10 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-black text-sm font-bold rounded-lg lg:rounded-xl shadow-xl hover:shadow-2xl transform hover:scale-[1.02] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none border-2 border-primary/20 hover:border-primary/30"
                                         :aria-describedby="rateLimit.remainingAttempts < 3 ? 'rate-limit-warning' : undefined">
                                         <div class="flex items-center justify-center gap-2">
@@ -465,7 +466,7 @@ const handleSubmit = async () => {
                     Já tem uma conta?
                     <TextLink :href="login()"
                         class="text-black hover:text-black/80 font-bold underline underline-offset-4 hover:underline-offset-2 transition-all duration-300 ml-1"
-                        :tabindex="6">
+                        :tabindex="9">
                         Faça login aqui
                     </TextLink>
                 </p>

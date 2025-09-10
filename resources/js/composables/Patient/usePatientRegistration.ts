@@ -1,122 +1,65 @@
 import { ref, computed } from 'vue';
-import { useRealTimeValidation, type ValidationRule } from './useRealTimeValidation';
-import { useRateLimit } from './useRateLimit';
+import { useRealTimeValidation, type ValidationRule } from '../useRealTimeValidation';
+import { useRateLimit } from '../useRateLimit';
+import { usePatientFormValidation } from './usePatientFormValidation';
 
+/**
+ * Interface para dados de registro inicial do paciente
+ * Contém apenas campos obrigatórios para criação da conta
+ */
 export interface PatientRegistrationData {
   name: string;
   email: string;
   password: string;
   password_confirmation: string;
   date_of_birth: string;
-  emergency_contact: string;
-  emergency_phone: string;
+  phone_number: string;
+  gender: string;
   consent_telemedicine: boolean;
 }
 
+/**
+ * Dados iniciais para o formulário de registro
+ */
 const initialData: PatientRegistrationData = {
   name: '',
   email: '',
   password: '',
   password_confirmation: '',
   date_of_birth: '',
-  emergency_contact: '',
-  emergency_phone: '',
+  phone_number: '',
+  gender: '',
   consent_telemedicine: false
 };
 
-const validationRules: Record<keyof PatientRegistrationData, ValidationRule> = {
-  name: {
-    required: true,
-    min: 2,
-    max: 255,
-    custom: (value: string) => {
-      if (value && !/^[a-zA-ZÀ-ÿ\s]+$/.test(value)) {
-        return 'Nome deve conter apenas letras e espaços';
-      }
-      return null;
-    }
-  },
-  email: {
-    required: true,
-    email: true,
-    max: 255
-  },
-  password: {
-    required: true,
-    min: 8,
-    custom: (value: string) => {
-      if (value && !/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(value)) {
-        return 'Senha deve conter pelo menos uma letra minúscula, uma maiúscula e um número';
-      }
-      return null;
-    }
-  },
-  password_confirmation: {
-    required: true,
-    confirmed: 'password'
-  },
-  date_of_birth: {
-    required: true,
-    pattern: /^\d{2}\/\d{2}\/\d{4}$/,
-    custom: (value: string) => {
-      if (value) {
-        // Validar formato dd/mm/aaaa
-        const dateRegex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
-        const match = value.match(dateRegex);
-        
-        if (!match) {
-          return 'Data deve estar no formato dd/mm/aaaa';
-        }
-        
-        const [, day, month, year] = match;
-        const dayNum = parseInt(day, 10);
-        const monthNum = parseInt(month, 10);
-        const yearNum = parseInt(year, 10);
-        
-        // Validar se a data é válida
-        const date = new Date(yearNum, monthNum - 1, dayNum);
-        if (date.getDate() !== dayNum || date.getMonth() !== monthNum - 1 || date.getFullYear() !== yearNum) {
-          return 'Data de nascimento inválida';
-        }
-        
-        // Validar se não é data futura
-        const today = new Date();
-        if (date >= today) {
-          return 'Data de nascimento não pode ser no futuro';
-        }
-        
-        // Validar idade (entre 0 e 120 anos)
-        const age = today.getFullYear() - yearNum;
-        if (age < 0 || age > 120) {
-          return 'Data de nascimento inválida';
-        }
-      }
-      return null;
-    }
-  },
-  emergency_contact: {
-    required: true,
-    min: 2,
-    max: 100
-  },
-  emergency_phone: {
-    required: true,
-    min: 10,
-    max: 20,
-    pattern: /^[\d\s\(\)\-\+]+$/
-  },
-  consent_telemedicine: {
-    required: true,
-    custom: (value: boolean) => {
-      if (!value) {
-        return 'Você deve aceitar os termos de telemedicina';
-      }
-      return null;
-    }
-  }
-};
-
+/**
+ * Composable para gerenciar o registro inicial de pacientes
+ * Focado apenas nos campos obrigatórios para criação da conta
+ */
 export function usePatientRegistration() {
+  const { 
+    nameValidation,
+    emailValidation,
+    passwordValidation,
+    passwordConfirmationValidation,
+    dateOfBirthValidation,
+    phoneValidation,
+    genderValidation,
+    consentTelemedicineValidation
+  } = usePatientFormValidation();
+
+  // Regras de validação para campos obrigatórios
+  const validationRules: Record<keyof PatientRegistrationData, ValidationRule> = {
+    name: nameValidation,
+    email: emailValidation,
+    password: passwordValidation,
+    password_confirmation: passwordConfirmationValidation,
+    date_of_birth: dateOfBirthValidation,
+    phone_number: phoneValidation,
+    gender: genderValidation,
+    consent_telemedicine: consentTelemedicineValidation
+  };
+
   const {
     formData,
     fields,
@@ -138,7 +81,7 @@ export function usePatientRegistration() {
     blockDurationMs: 60 * 60 * 1000 // 1 hora
   });
 
-  // Computed properties específicas
+  // Computed properties específicas para registro
   const canSubmit = computed(() => {
     return isFormValid.value && !isSubmitting.value && rateLimit.canAttempt.value;
   });
@@ -150,7 +93,7 @@ export function usePatientRegistration() {
     return null;
   });
 
-  // Função para submeter formulário
+  // Função para submeter formulário de registro
   const submitForm = async (): Promise<boolean> => {
     if (!canSubmit.value) {
       return false;
@@ -170,7 +113,10 @@ export function usePatientRegistration() {
         return false;
       }
 
-      // Simulação de submissão (substituir pela chamada real da API)
+      // TODO: Implementar chamada real da API para registro
+      // await registerPatient(formData.value);
+      
+      // Simulação de submissão
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       // Reset do formulário após sucesso
