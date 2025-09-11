@@ -118,6 +118,7 @@ Após seguir todos os passos, você poderá acessar:
 
 - **Aplicação Principal**: http://localhost:8000
 - **Servidor Reverb**: http://localhost:8080
+- **Servidor Peerjs**: Para projetos grandes, é comum rodar um servidor PeerJS (com npx peerjs --port 9000) ou usar STUN/TURN para conexões externas.
 
 ## 🧪 Executando Testes
 
