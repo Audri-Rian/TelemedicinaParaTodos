@@ -13,7 +13,7 @@
 **Turma:** Noturna
 **Data:** 28/08/2025
 
-**Versão:** 1.3
+**Versão:** 1.5
 
 ---
 
@@ -25,6 +25,7 @@
 | 14/08/2025 |    1.1 | Detalhamento de todos os tópicos já existentes na documentação.                                                                           | Audri Rian Cordeiro Carvalho Alves |
 | 21/08/2025 |    1.2 | Inclusão dos requisitos funcionais e não funcionais, regras de negócio e classes, assim como os diagramas de regras de negócio e classes. | Audri Rian Cordeiro Carvalho Alves |
 | 28/08/2025 |    1.4 | Adição dos mockups de tela e o fluxo de navegação das mesmas, junto a isso, a explicação do layout.                                       | Audri Rian Cordeiro Carvalho Alves |
+| 13/09/2025 |    1.5 | Alinhado com implementação atual: Especializações (CRUD + API), cadastro separado Paciente/Médico, videoconferência P2P (PeerJS + Reverb), e modelo de Consultas (Appointments). | Audri Rian Cordeiro Carvalho Alves |
 
 ---
 
@@ -78,7 +79,7 @@ A plataforma funcionará como um ambiente digital completo para interação entr
 * Cadastro e autenticação de usuários;
 * Perfis personalizados para pacientes e profissionais;
 * Agendamento de consultas online;
-* Atendimentos por videoconferência e chat interno;
+* Atendimentos por videoconferência em tempo real (WebRTC via PeerJS) e sinalização por WebSockets (Laravel Reverb);
 * Gestão de documentos e prescrições digitais;
 * Pagamentos integrados (feature futura);
 * Segurança e conformidade com a LGPD.
@@ -120,10 +121,10 @@ O projeto promove acesso facilitado e inclusivo aos serviços de saúde e bem-es
 * Cadastro e autenticação de usuários (pacientes e profissionais);
 * Perfis personalizados para pacientes e profissionais;
 * Agendamento de consultas;
-* Atendimento por videoconferência e chat interno;
+* Atendimento por videoconferência em tempo real (WebRTC via PeerJS) e sinalização por WebSockets (Laravel Reverb);
 * Prescrição digital e envio de documentos;
 * Pagamentos online (futuro);
-* Notificações de consultas;
+* Notificações e sinalização em tempo real via canais privados (Echo/Reverb);
 * Gestão de permissões e autenticação segura.
 
 ### 1.7.2 Entregáveis
@@ -252,6 +253,48 @@ Requisitos funcionais descrevem as funções que usuários e clientes esperam do
 * **Entradas / Pré-Condições:** Consulta agendada ou alterada.
 * **Saídas / Pós-Condições:** Envio de notificação via e-mail e/ou painel da plataforma.
 
+### \[RF009] Gestão de Especializações (Médicas)
+
+* **Descrição:** CRUD de especializações com listagem, exibição, edição e exclusão (com validação de integridade) e endpoints públicos de consulta.
+* **Atores:** Administrador
+* **Prioridade:** Importante
+* **Entradas / Pré-Condições:** Nome da especialização (único, até 100 caracteres).
+* **Saídas / Pós-Condições:** Especializações disponíveis para vinculação a médicos e consulta pública.
+* **Observações:** API pública implementada: `GET /api/specializations/list` (filtros: `search`, `active_only`, `with_count`) e `GET /api/specializations/options`.
+
+### \[RF010] Cadastro de Médico com Especializações
+
+* **Descrição:** Fluxo de registro dedicado a médicos com CRM único, seleção de 1+ especializações e criação do perfil vinculado ao usuário.
+* **Atores:** Médico, Administrador
+* **Prioridade:** Essencial
+* **Entradas / Pré-Condições:** Nome, E-mail, Senha, CRM (único; formato alfanumérico), Especializações (UUID existentes).
+* **Saídas / Pós-Condições:** Usuário autenticado com perfil médico ativo e especializações vinculadas.
+
+### \[RF011] Cadastro de Paciente com Dados Clínicos Básicos
+
+* **Descrição:** Fluxo de registro dedicado a pacientes com dados mínimos obrigatórios e campos clínicos opcionais.
+* **Atores:** Paciente
+* **Prioridade:** Essencial
+* **Entradas / Pré-Condições:** Nome, E-mail, Senha, Gênero, Data de nascimento, Telefone. Opcionais: contato de emergência, histórico médico, alergias etc.
+* **Saídas / Pós-Condições:** Usuário autenticado com perfil de paciente ativo.
+
+### \[RF012] Videoconferência de Consultas (Tempo Real)
+
+* **Descrição:** Solicitação e aceite de chamada de vídeo entre usuários via canais privados e conexão P2P para mídia.
+* **Atores:** Paciente, Médico
+* **Prioridade:** Essencial
+* **Entradas / Pré-Condições:** Usuários autenticados, permissão de câmera/microfone, PeerID válido; eventos `RequestVideoCall` e `RequestVideoCallStatus` no canal privado `video-call.{id}`.
+* **Saídas / Pós-Condições:** Estabelecimento de sessão de vídeo, término registra estado local da sessão (UI) e libera recursos.
+* **Observações:** Endpoints: `POST /video-call/request/{user}` e `POST /video-call/request/status/{user}`. Página: `GET /consultations`.
+
+### \[RF013] Configurações de Perfil e Senha
+
+* **Descrição:** Edição de perfil, atualização de senha e exclusão de conta.
+* **Atores:** Usuário autenticado
+* **Prioridade:** Importante
+* **Entradas / Pré-Condições:** Dados de perfil válidos e senha atual para update de senha.
+* **Saídas / Pós-Condições:** Perfil atualizado e persistido.
+
 ## 2.2 Requisitos Não Funcionais
 
 * **\[NF001] Acesso Web:** Acesso por navegadores modernos; suporte a dispositivos com câmera e microfone. *(Prioridade: Essencial)*
@@ -290,14 +333,15 @@ O sistema utiliza o padrão **Controller → Service → Repository** seguindo o
 * **Banco de Dados:** MySQL 8.0+
 * **Cache/Queue:** Redis
 * **Autenticação:** Laravel Sanctum
-* **Videoconferência:** Integração com APIs externas (Jitsi Meet/WebRTC)
+* **WebSockets:** Laravel Reverb (Broadcasting + Echo)
+* **Videoconferência:** WebRTC via PeerJS (P2P)
 
 ## 3.2 Modelo de Dados (ERD)
 
 ### Entidades Principais
 
 **Users (Tabela Base):**
-* id (bigint, primary key)
+* id (uuid, primary key)
 * name (string, 255)
 * email (string, unique)
 * email_verified_at (timestamp)
@@ -309,13 +353,13 @@ O sistema utiliza o padrão **Controller → Service → Repository** seguindo o
 * id (uuid, primary key)
 * user_id (foreign key → users.id, unique)
 * crm (string, 20, unique, nullable)
-* specialty (string, 100, indexed)
 * biography (text)
 * license_number (string, 50, unique)
 * license_expiry_date (date)
 * status (enum: active, inactive, suspended)
 * availability_schedule (json)
 * consultation_fee (decimal 8,2)
+* specializations (relacionamento N:N via pivot)
 
 **Patients (Extensão de Users - 1:1):**
 * id (uuid, primary key)
@@ -325,7 +369,7 @@ O sistema utiliza o padrão **Controller → Service → Repository** seguindo o
 * phone_number (string, 20)
 * emergency_contact (string, 100)
 * emergency_phone (string, 20)
-* medical_history (text, encrypted)
+* medical_history (text)
 * allergies (text)
 * current_medications (text)
 * blood_type (string, 5)
@@ -334,12 +378,45 @@ O sistema utiliza o padrão **Controller → Service → Repository** seguindo o
 * consent_telemedicine (boolean)
 * last_consultation_at (timestamp)
 
+**Specializations:**
+* id (uuid, primary key)
+* name (string, 100, unique, indexed)
+* created_at, updated_at
+
+**doctor_specialization (Pivot N:N):**
+* doctor_id (uuid, fk → doctors.id)
+* specialization_id (uuid, fk → specializations.id)
+* created_at, updated_at
+* primary key composta (doctor_id, specialization_id)
+
+**Appointments (Consultas):**
+* id (uuid, primary key)
+* doctor_id (fk → doctors.id)
+* patient_id (fk → patients.id)
+* scheduled_at (timestamp, indexed)
+* access_code (string, unique, indexed)
+* started_at, ended_at (timestamp nullable)
+* video_recording_url (string nullable)
+* status (enum: scheduled, in_progress, completed, no_show, cancelled, rescheduled)
+* notes (text nullable)
+* metadata (json nullable)
+* created_at, updated_at, deleted_at (soft delete)
+
+**AppointmentLog:**
+* id (pk)
+* appointments_id (fk → appointments.id)
+* event (string)
+* metadata (json)
+* created_at, updated_at
+
 ### Relacionamentos
 * **Users** ↔ **Doctors/Patients** (1:1, polimórfico)
 * **Doctors** ↔ **Consultations** (1:N)
 * **Patients** ↔ **Consultations** (1:N)
 * **Consultations** ↔ **Prescriptions** (1:N)
 * **Users** ↔ **Notifications** (1:N)
+* **Doctors** ↔ **Specializations** (N:N via pivot)
+* **Doctors/Patients** ↔ **Appointments** (1:N)
 
 ## 3.3 Casos de Uso por Ator
 
@@ -352,6 +429,7 @@ O sistema utiliza o padrão **Controller → Service → Repository** seguindo o
 * Participar de consultas via videoconferência
 * Receber prescrições e documentos digitais
 * Visualizar histórico de consultas
+* Iniciar/aceitar chamadas de vídeo em tempo real
 
 **Médico:**
 * Registrar-se com dados profissionais (CRM, especialidade)
@@ -361,6 +439,8 @@ O sistema utiliza o padrão **Controller → Service → Repository** seguindo o
 * Emitir prescrições digitais
 * Enviar documentos para pacientes
 * Visualizar histórico de atendimentos
+* Gerenciar especializações vinculadas ao perfil (via Admin)
+* Iniciar/aceitar chamadas de vídeo em tempo real
 
 **Administrador:**
 * Validar cadastros de médicos
@@ -368,6 +448,7 @@ O sistema utiliza o padrão **Controller → Service → Repository** seguindo o
 * Monitorar consultas e transações
 * Manter integridade e segurança do sistema
 * Gerar relatórios e auditoria
+* Manter catálogo de especializações (CRUD)
 
 ## 3.4 Arquitetura de Deployment
 
@@ -394,6 +475,15 @@ File Storage (S3/MinIO)
 Monitoring (Laravel Telescope)
 ```
 
+## 3.5 Rotas Principais Implementadas
+
+• Navegação autenticada: `GET /dashboard`, `GET /appointments`, `GET /consultations`, `GET /healthRecords`
+• Especializações (web): `Route::resource('specializations', ...)`
+• Especializações (API pública): `GET /api/specializations/list`, `GET /api/specializations/options`
+• Videoconferência: `POST /video-call/request/{user}`, `POST /video-call/request/status/{user}`
+• Autenticação e registro: `GET/POST /login`, `GET/POST /register`, `GET/POST /register/patient`, `GET/POST /register/doctor`
+• Configurações: `GET/PATCH /settings/profile`, `GET/PUT /settings/password`
+
 ---
 
 # 4. DOCUMENTO DE ESPECIFICAÇÃO DE INTERFACES (DEI)
@@ -405,5 +495,3 @@ Monitoring (Laravel Telescope)
 ---
 
 *Fim do documento.*
-
-
