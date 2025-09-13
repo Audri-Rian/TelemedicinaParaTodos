@@ -7,6 +7,11 @@ use App\Http\Controllers\AppointmentsController;
 use App\Http\Controllers\ConsultationsController;
 use App\Http\Controllers\HealthController;
 use App\Http\Controllers\SpecializationController;
+use App\Http\Controllers\Settings\ProfileController;
+use App\Http\Controllers\VideoCall\VideoCallController;
+use App\Models\User;
+use Illuminate\Foundation\Application;
+use Illuminate\Support\Facades\Auth;
 
 Route::get('/', function () {
     return Inertia::render('Welcome');
@@ -20,6 +25,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     
     // Rotas para especializações
     Route::resource('specializations', SpecializationController::class);
+    
+    // Rotas para videoconferência
+    Route::post('video-call/request/{user}', [VideoCallController::class, 'requestVideoCall'])->name('video-call.request');
+    Route::post('video-call/request/status/{user}', [VideoCallController::class, 'requestVideoCallStatus'])->name('video-call.request-status');
+    
 });
 
 // Rotas públicas para API de especializações

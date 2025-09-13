@@ -3,6 +3,11 @@ import { type ValidationRule } from '../useRealTimeValidation';
 /**
  * Validações compartilhadas para formulários de médico
  * Centraliza regras de validação reutilizáveis entre diferentes fluxos
+ * 
+ * Este composable fornece validações padronizadas para:
+ * - Registro de novos médicos
+ * - Atualização de perfis
+ * - Formulários administrativos
  */
 export const useDoctorFormValidation = () => {
   
