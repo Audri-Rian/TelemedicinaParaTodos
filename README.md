@@ -24,12 +24,15 @@ Gestão de histórico clínico, prescrições e possiblidades de interconsulta c
 
 Esta seção reúne os documentos essenciais para compreender a arquitetura, regras de negócio e funcionamento interno do sistema. Inclui:
 
-- **[Regras de negócio](docs/SystemRules.md)** — definição clara dos requisitos e fluxos operacionais da plataforma.
-- **[Descrição da arquitetura lógica](diagramas/)** — diagramas e explicações sobre módulos, camadas e seus relacionamentos.
-- **[Guia de instalação](docs/start.md)** — passo a passo para configurar o ambiente de desenvolvimento, instalação de dependências e execução local.
-- **[Visão por módulo](docs/FuncionalitsGuide.md)** — descrição das responsabilidades e interações entre os módulos do sistema.
-- **[Fluxo de comunicação entre componentes](docs/EstruturaArquivos.md)** — como serviços, controllers, eventos e repositórios se comunicam internamente.
-- **[Modelos de dados e relacionamentos](docs/BancoDeDados)** — entidades principais, relações e estrutura de banco de dados.
+- **[Regras do sistema](docs/Rules/SystemRules.md)** — requisitos, regras de negócio e fluxos operacionais.
+- **[Arquitetura (visão lógica)](docs/Architecture/Arquitetura.md)** — módulos, camadas e seus relacionamentos.
+- **[Guia de instalação](docs/Start.md)** — configuração do ambiente de desenvolvimento e execução local.
+- **[Guia de funcionalidades / RFs](docs/Architecture/FuncionalitsGuide.md)** — responsabilidades e interações entre módulos, casos de uso e rotas.
+- **[Modelos de dados e relacionamentos](docs/diagrama_banco_dados.md)** — entidades principais, relações e estrutura do banco.
+- **[Consultas (Appointments): estudo e lógica](docs/Appointments/AppointmentsImplementationStudy.md)** — visão técnica e checklist de implementação.
+- **[Consultas (Appointments): regras e fluxo](docs/Appointments/AppointmentsLogica.md)** — regras de negócio, transições e cenários.
+- **[Guia do Frontend (Vue)](docs/VueGuide.md)** — convenções, estrutura e boas práticas no frontend.
+- **[Diagramas](diagrams/)** — artefatos visuais (Draw.io/Mermaid) do projeto.
 
 ## Técnologias Utilizadas 🥵 👌
 
