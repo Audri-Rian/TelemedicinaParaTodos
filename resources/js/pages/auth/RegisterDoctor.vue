@@ -160,8 +160,8 @@ const handleSubmit = async () => {
 </script>
 
 <template>
-    <AuthBase title="Seja bem-vindo a Telemedicina para Todos"
-        description="Conecte-se com pacientes e ofereça cuidados médicos de qualidade.">
+    <AuthBase title="Registro de Médico"
+        description="Cadastre-se como médico.">
 
         <Head title="Registro de Médico" />
 
@@ -196,7 +196,7 @@ const handleSubmit = async () => {
                                 <h1
                                     class="text-lg lg:text-xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
                                     Registro de Médico</h1>
-                                <p class="text-xs text-gray-500 mt-1 font-medium">Junte-se à nossa plataforma médica</p>
+                                <p class="text-xs text-gray-500 mt-1 font-medium">Cadastre-se como médico</p>
                             </div>
 
                             <!-- Mensagem de sucesso -->
@@ -551,21 +551,16 @@ const handleSubmit = async () => {
                                             class="mt-1 h-4 w-4 text-primary bg-gray-100 border-gray-300 rounded focus:ring-primary focus:ring-2"
                                         />
                                         <div class="text-xs text-gray-600 leading-relaxed">
-                                            <label for="terms_accepted" class="cursor-pointer">
+                                            <label for="terms_accepted" class="cursor-pointer text-xs">
                                                 Concordo com os 
-                                                <a href="/terms" target="_blank" class="text-primary hover:text-primary/80 underline underline-offset-2 hover:underline-offset-4 transition-all duration-300">
+                                                <a href="/terms" target="_blank" class="text-primary hover:text-primary/80 underline underline-offset-2 hover:underline-offset-4 transition-all duration-300 text-xs">
                                                     Termos de Serviço
                                                 </a> 
                                                 e 
-                                                <a href="/privacy" target="_blank" class="text-primary hover:text-primary/80 underline underline-offset-2 hover:underline-offset-4 transition-all duration-300">
+                                                <a href="/privacy" target="_blank" class="text-primary hover:text-primary/80 underline underline-offset-2 hover:underline-offset-4 transition-all duration-300 text-xs">
                                                     Política de Privacidade
                                                 </a>
-                                                , incluindo o tratamento de dados pessoais conforme a 
-                                                <strong class="text-gray-700">Lei Geral de Proteção de Dados (LGPD)</strong>.
-                                                <br>
-                                                <span class="text-gray-500 mt-1 block">
-                                                    Seus dados serão utilizados exclusivamente para prestação de serviços médicos e comunicação relacionada ao atendimento.
-                                                </span>
+                                                .
                                             </label>
                                         </div>
                                     </div>
@@ -633,7 +628,7 @@ const handleSubmit = async () => {
 
                         <!-- Imagem central -->
                         <div class="relative z-10 flex items-center justify-center">
-                            <img src="/storage/photos/doctordoodle.png" alt="Doctor Doodle"
+                            <img src="/storage/DoctorDoodle.png" alt="Doctor Doodle"
                                 class="w-[420px] h-[420px] object-contain drop-shadow-2xl" />
                         </div>
                     </div>

@@ -11,7 +11,7 @@ interface Props {
 
 defineProps<Props>();
 
-const logoUrl = `/storage/photos/LogoTelemedicina.png?v=${import.meta.env.VITE_APP_VERSION}`;
+const logoUrl = `/storage/LogoTelemedicina.svg?v=${import.meta.env.VITE_APP_VERSION}`;
 </script>
 
 <template>

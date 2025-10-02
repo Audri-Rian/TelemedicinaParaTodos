@@ -84,8 +84,8 @@ const handleSubmit = async () => {
 </script>
 
 <template>
-    <AuthBase title="Seja bem-vindo a Telemedicina para Todos"
-        description="Sua jornada de saúde começa aqui. Registre-se para começar.">
+    <AuthBase title="Registro de Paciente"
+        description="Crie sua conta para começar.">
 
         <Head title="Registro de Paciente" />
 
@@ -116,8 +116,7 @@ const handleSubmit = async () => {
                                 <h1
                                     class="text-base lg:text-lg font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
                                     Registro de Paciente</h1>
-                                <p class="text-xs text-gray-500 font-medium">Junte-se à nossa comunidade
-                                    médica</p>
+                                <p class="text-xs text-gray-500 font-medium">Crie sua conta</p>
                             </div>
 
                             <!-- Mensagem de erro de rate limit -->
@@ -142,7 +141,7 @@ const handleSubmit = async () => {
                                     </Label>
                                     <div class="relative">
                                         <Input id="name" type="text" required autofocus :tabindex="1"
-                                            autocomplete="name" name="name" placeholder="Digite seu nome completo"
+                                            autocomplete="name" name="name" placeholder="Nome completo"
                                             :model-value="formData.name"
                                             @update:model-value="updateField('name', $event)"
                                             @blur="touchField('name')" :class="[
@@ -296,7 +295,7 @@ const handleSubmit = async () => {
                                     <div class="relative">
                                         <Input id="password" type="password" required :tabindex="6"
                                             autocomplete="new-password" name="password"
-                                            placeholder="Mínimo 8 caracteres" :model-value="formData.password"
+                                            placeholder="Senha" :model-value="formData.password"
                                             @update:model-value="updateField('password', $event)"
                                             @blur="touchField('password')" :class="[
                                                 'h-9 lg:h-10 bg-gradient-to-r from-gray-50/90 to-white/90 border-2 rounded-lg lg:rounded-xl px-3 lg:px-4 text-sm placeholder:text-gray-400 focus:bg-white focus:shadow-lg focus:shadow-primary/10 transition-all duration-300 hover:border-gray-300 hover:shadow-md',
@@ -324,7 +323,7 @@ const handleSubmit = async () => {
                                     <div class="relative">
                                         <Input id="password_confirmation" type="password" required :tabindex="7"
                                             autocomplete="new-password" name="password_confirmation"
-                                            placeholder="Digite a senha novamente"
+                                            placeholder="Confirmar senha"
                                             :model-value="formData.password_confirmation"
                                             @update:model-value="updateField('password_confirmation', $event)"
                                             @blur="touchField('password_confirmation')" :class="[
@@ -357,25 +356,18 @@ const handleSubmit = async () => {
                                             :aria-invalid="hasFieldError('consent_telemedicine') && isFieldTouched('consent_telemedicine')"
                                             :aria-describedby="hasFieldError('consent_telemedicine') && isFieldTouched('consent_telemedicine') ? 'consent_telemedicine-error' : undefined" />
                                         <div class="text-xs text-gray-600 leading-relaxed">
-                                            <label for="consent_telemedicine" class="cursor-pointer">
+                                            <label for="consent_telemedicine" class="cursor-pointer text-xs">
                                                 Concordo com os
                                                 <a href="/terms" target="_blank"
-                                                    class="text-primary hover:text-primary/80 underline underline-offset-2 hover:underline-offset-4 transition-all duration-300">
+                                                    class="text-primary hover:text-primary/80 underline underline-offset-2 hover:underline-offset-4 transition-all duration-300 text-xs">
                                                     Termos de Serviço
                                                 </a>
                                                 e
                                                 <a href="/privacy" target="_blank"
-                                                    class="text-primary hover:text-primary/80 underline underline-offset-2 hover:underline-offset-4 transition-all duration-300">
+                                                    class="text-primary hover:text-primary/80 underline underline-offset-2 hover:underline-offset-4 transition-all duration-300 text-xs">
                                                     Política de Privacidade
                                                 </a>
-                                                , incluindo o tratamento de dados pessoais conforme a
-                                                <strong class="text-gray-700">Lei Geral de Proteção de Dados
-                                                    (LGPD)</strong>.
-                                                <br>
-                                                <span class="text-gray-500 mt-1 block">
-                                                    Autorizo o uso da telemedicina e o tratamento dos meus dados
-                                                    exclusivamente para prestação de serviços médicos.
-                                                </span>
+                                                .
                                             </label>
                                         </div>
                                     </div>
@@ -444,7 +436,7 @@ const handleSubmit = async () => {
 
                         <!-- Imagem central -->
                         <div class="relative z-10 flex items-center justify-center">
-                            <img src="/storage/photos/patientdoodle.png" alt="Doctor Doodle"
+                            <img src="/storage/PatientDoodle.png" alt="Patient Doodle"
                                 class="w-[420px] h-[420px] object-contain drop-shadow-2xl" />
                         </div>
                     </div>
