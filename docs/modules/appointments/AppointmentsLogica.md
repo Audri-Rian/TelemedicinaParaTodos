@@ -114,6 +114,31 @@ Alguns requisitos essenciais:
   - [V] Geração automática de access_code
   - [V] Definição automática de status padrão
 
+## 🔗 Referências Cruzadas
+
+### Documentação Relacionada
+- **[📋 Visão Geral](../index/VisaoGeral.md)** - Índice central da documentação
+- **[📊 Matriz de Rastreabilidade](../index/MatrizRequisitos.md)** - Mapeamento requisito → implementação
+- **[📚 Glossário](../index/Glossario.md)** - Definições de termos técnicos
+- **[📜 Regras do Sistema](../requirements/SystemRules.md)** - Regras de negócio e compliance
+- **[🏗️ Arquitetura](../architecture/Arquitetura.md)** - Estrutura e padrões do sistema
+- **[🔧 Implementação de Consultas](AppointmentsImplementationStudy.md)** - Detalhes técnicos
+
+### Implementações Relacionadas
+- **[Appointment Model](../../app/Models/Appointments.php)** - Entidade de consultas
+- **[Appointment Service](../../app/Services/AppointmentService.php)** - Lógica de negócio
+- **[Appointment Observer](../../app/Observers/AppointmentsObserver.php)** - Eventos automáticos
+- **[Appointment Migration](../../database/migrations/2025_09_10_152050_create_appointments_table.php)** - Estrutura do banco
+- **[Appointment Tests](../../tests/Unit/AppointmentsTest.php)** - Testes unitários
+
+### Termos do Glossário
+- **[Appointment](../index/Glossario.md#a)** - Entidade que representa uma consulta médica
+- **[Consulta](../index/Glossario.md#c)** - Sessão médica entre médico e paciente
+- **[No-Show](../index/Glossario.md#n)** - Status quando paciente não comparece
+- **[Service](../index/Glossario.md#s)** - Camada de lógica de negócio
+
+---
+
 [#] Lógicas faltantes para completar os requisitos de Appointments
 
 1) Atributos computados e regras de negócio removidos da Model

@@ -41,3 +41,27 @@ Esse projeto tem como objetivo de criar uma platarforma de Telemedicina Moderna,
 - **Controle de acesso** baseado em roles
 - **Compliance LGPD** e regulamentações médicas
 - **Backup diário** com logs de auditoria
+
+## 🔗 Referências Cruzadas
+
+### Documentação Relacionada
+- **[📋 Visão Geral](../index/VisaoGeral.md)** - Índice central da documentação
+- **[📊 Matriz de Rastreabilidade](../index/MatrizRequisitos.md)** - Mapeamento requisito → implementação
+- **[📚 Glossário](../index/Glossario.md)** - Definições de termos técnicos
+- **[🏗️ Arquitetura](../architecture/Arquitetura.md)** - Estrutura e padrões do sistema
+- **[⚙️ Lógica de Consultas](../modules/appointments/AppointmentsLogica.md)** - Regras de agendamento
+- **[🔐 Autenticação](../modules/auth/RegistrationLogic.md)** - Fluxos de registro e login
+
+### Implementações Relacionadas
+- **[User Model](../../app/Models/User.php)** - Entidade base de usuários
+- **[Doctor Model](../../app/Models/Doctor.php)** - Entidade de médicos
+- **[Patient Model](../../app/Models/Patient.php)** - Entidade de pacientes
+- **[Auth Middleware](../../app/Http/Middleware/)** - Controle de acesso
+- **[Database Migrations](../../database/migrations/)** - Estrutura do banco
+
+### Termos do Glossário
+- **[User](../index/Glossario.md#u)** - Entidade base do sistema
+- **[Doctor](../index/Glossario.md#d)** - Entidade que representa um médico
+- **[Patient](../index/Glossario.md#p)** - Entidade que representa um paciente
+- **[LGPD](../index/Glossario.md#l)** - Lei Geral de Proteção de Dados
+- **[Soft Delete](../index/Glossario.md#s)** - Exclusão lógica para auditoria

@@ -6,33 +6,94 @@
 ![GitHub issues](https://img.shields.io/github/issues/Audri-Rian/TelemedicinaParaTodos?style=for-the-badge)
 ![GitHub pull requests](https://img.shields.io/github/issues-pr/Audri-Rian/TelemedicinaParaTodos?style=for-the-badge)
 
-Esse projeto tem como objetivo de criar uma platarforma de Telemedicina Moderna, segura e acessível desenvolvida com Laravel(PHP). Ele conecta médicos e pacientes de forma remota, oferecendo consultas online, agendamento inteligente, prontuários digitais e comunicação segura tudo em um único sistema integrado.
+## 📑 Sumário Navegável
+- [📋 Sobre o Projeto](#telemedicina-para-todos-)
+- [🎯 Idealização](#idealização-)
+- [📚 Documentação Estrutural](#-documentação-estrutural)
+- [🚀 Navegação Rápida](#-navegação-rápida)
+- [💻 Tecnologias Utilizadas](#técnologias-utilizadas-)
+- [👤 Autor](#autor-)
+- [🛠️ Como Rodar o Projeto](#️-como-rodar-o-projeto)
+- [📄 Licença](#licença-)
+
+Esse projeto nasceu para resolver um problema simples: ninguém gosta de perder horas em filas de consultório. A ideia aqui é criar uma plataforma de telemedicina moderna, segura e acessível, onde médicos e pacientes podem se encontrar sem sair de casa.
+
+Com ela, dá para agendar consultas de forma rápida, conversar por vídeo em tempo real e ainda ter prontuários digitais sempre à mão. Tudo isso num só lugar, sem complicação e com a praticidade que a tecnologia pode oferecer.
+
+No fim das contas, é sobre facilitar a vida: menos correria, mais cuidado e saúde na tela do seu computador ou celular. 
 
 ## Idealização 🐊👍
 
-Os Pacientes podem:
+Esse projeto nasceu da vontade de tornar a saúde mais próxima, prática e humana. Para entender melhor, imagine algumas pessoas que se beneficiariam do Telemedicina para Todos:
 
-Realizar consultas médicas sem sair de casa, reduzindo deslocamentos e tempo de espera. Estudos apontam que e-visits podem levar apenas 15 a 20 minutos comparado a 2 - 4 horas de consulta presencial, incluindo transporte e espera.
+👩‍🦳 Dona Maria, 67 anos (Paciente)
+Mora em uma cidade pequena e precisa de acompanhamento com um cardiologista que fica a 80 km de distância. Com a plataforma, ela pode realizar consultas sem sair de casa, economizando tempo, dinheiro e esforço com deslocamentos. Além disso, recebe notificações no celular lembrando o horário das consultas e tem sempre o histórico clínico organizado para mostrar ao médico.
 
-Já para os profissionais de saúde, a plataforma fornece:
+👨‍💼 João, 35 anos (Paciente ocupado)
+Trabalha em horário comercial e quase nunca consegue ir a um consultório sem faltar ao trabalho. Com a plataforma, ele agenda uma consulta online em horário flexível, participa de uma chamada de vídeo rápida e ainda recebe a prescrição digital direto no app. O que antes levava meio dia de ausência, agora pode ser resolvido em 20 minutos no intervalo do almoço.
 
-Consultas em tempo real via videoconferência e chat seguro;
-Agenda integrada com notificações automatizadas para reduzir faltas e otmizar tempo;
-Gestão de histórico clínico, prescrições e possiblidades de interconsulta com outros médicos.
+👩‍⚕️ Dra. Ana, 42 anos (Médica)
+É endocrinologista em um grande centro e atende dezenas de pacientes por semana. Com a agenda integrada do sistema, consegue reduzir faltas com lembretes automáticos, consultar rapidamente o histórico de cada paciente e até discutir casos com colegas médicos de forma segura. Isso otimiza seu tempo e melhora a qualidade do atendimento.
 
-## Documentação Estrutural 🐴 👍
+👨‍⚕️ Dr. Paulo, 29 anos (Recém-formado)
+Está começando a construir sua base de pacientes. A plataforma lhe oferece uma forma acessível de se conectar a novos pacientes pela internet, com agenda organizada, prontuários digitais e até a possibilidade de prescrever receitas de forma online, dando mais credibilidade e praticidade para seu trabalho.
 
-Esta seção reúne os documentos essenciais para compreender a arquitetura, regras de negócio e funcionamento interno do sistema. Inclui:
+**Em resumo:**
 
-- **[Regras do sistema](docs/Rules/SystemRules.md)** — requisitos, regras de negócio e fluxos operacionais.
-- **[Arquitetura (visão lógica)](docs/Architecture/Arquitetura.md)** — módulos, camadas e seus relacionamentos.
-- **[Guia de instalação](docs/Start.md)** — configuração do ambiente de desenvolvimento e execução local.
-- **[Guia de funcionalidades / RFs](docs/Architecture/FuncionalitsGuide.md)** — responsabilidades e interações entre módulos, casos de uso e rotas.
-- **[Modelos de dados e relacionamentos](docs/diagrama_banco_dados.md)** — entidades principais, relações e estrutura do banco.
-- **[Consultas (Appointments): estudo e lógica](docs/Appointments/AppointmentsImplementationStudy.md)** — visão técnica e checklist de implementação.
-- **[Consultas (Appointments): regras e fluxo](docs/Appointments/AppointmentsLogica.md)** — regras de negócio, transições e cenários.
-- **[Guia do Frontend (Vue)](docs/VueGuide.md)** — convenções, estrutura e boas práticas no frontend.
-- **[Diagramas](diagrams/)** — artefatos visuais (Draw.io/Mermaid) do projeto.
+• Pacientes ganham praticidade, acessibilidade e redução de tempo perdido.
+
+• Médicos ganham eficiência, organização e uma forma moderna de se conectar aos seus pacientes.
+
+> **A plataforma** não é só sobre tecnologia: é sobre quebrar barreiras e fazer a saúde chegar até onde antes era difícil.
+
+## 🐴 👍 Documentação Estrutural
+
+Esta seção reúne os documentos essenciais organizados em uma **estrutura hierárquica** para facilitar a navegação e compreensão do sistema. A documentação segue os princípios de **hiperdocumentação** com referenciamento cruzado contextual.
+
+### 🗂️ Índice Central
+- **[📋 Visão Geral](docs/index/VisaoGeral.md)** — **Documento mestre** com índice central e navegação guiada
+- **[📊 Matriz de Rastreabilidade](docs/index/MatrizRequisitos.md)** — Mapeamento completo requisito → implementação
+- **[📚 Glossário](docs/index/Glossario.md)** — Definições unificadas de termos técnicos e de negócio
+
+### 📜 Requisitos e Regras de Negócio
+- **[📋 Regras do Sistema](docs/requirements/SystemRules.md)** — Regras de negócio, compliance e segurança
+- **[⚙️ Guia de Funcionalidades](docs/requirements/FuncionalitsGuide.md)** — Requisitos funcionais e casos de uso detalhados
+- **[🔐 Lógica de Autenticação](docs/modules/auth/RegistrationLogic.md)** — Fluxos de registro e login
+
+### 🏗️ Arquitetura e Padrões
+- **[🏗️ Arquitetura do Sistema](docs/architecture/Arquitetura.md)** — Estrutura geral, camadas e padrões arquiteturais
+- **[🎨 Guia do Frontend](docs/architecture/VueGuide.md)** — Convenções Vue.js e estrutura do frontend
+- **[💻 Guia de Desenvolvimento](docs/architecture/DevGuide.md)** — Padrões de código e boas práticas
+
+### 💾 Modelo de Dados
+- **[🗄️ Diagrama do Banco de Dados](docs/database/diagrama_banco_dados.md)** — Estrutura das tabelas e relacionamentos
+- **[📁 Migrações](../database/migrations/)** — Implementação das estruturas no banco
+
+### ⚙️ Lógica de Domínio
+- **[📅 Lógica de Consultas](docs/modules/appointments/AppointmentsLogica.md)** — Regras de agendamento e fluxos de negócio
+- **[🔧 Implementação de Consultas](docs/modules/appointments/AppointmentsImplementationStudy.md)** — Detalhes técnicos e checklist
+- **[📹 Implementação de Videochamadas](docs/modules/videocall/VideoCallImplementation.md)** — Sistema de vídeo em tempo real
+- **[📋 Tarefas de Videochamadas](docs/modules/videocall/VideoCallTasks.md)** — Checklist de implementação
+
+### 🔧 Configuração e Instalação
+- **[🚀 Guia de Instalação](docs/setup/Start.md)** — Configuração do ambiente de desenvolvimento
+- **[⚙️ Regras do Cursor](docs/setup/CursorRulesGuide.md)** — Configurações do ambiente de desenvolvimento
+- **[📊 Diagramas](docs/diagrams/)** — Artefatos visuais (Draw.io/Mermaid) do projeto
+
+### 🚀 Navegação Rápida
+
+#### Por Papel do Usuário
+- **👨‍⚕️ Médicos**: [Regras de Negócio](docs/requirements/SystemRules.md) → [Funcionalidades](docs/requirements/FuncionalitsGuide.md) → [Arquitetura](docs/architecture/Arquitetura.md)
+- **👤 Pacientes**: [Visão Geral do Projeto](#idealização-) → [Funcionalidades](docs/requirements/FuncionalitsGuide.md) → [Regras](docs/requirements/SystemRules.md)
+- **💻 Desenvolvedores**: [Arquitetura](docs/architecture/Arquitetura.md) → [Guia de Dev](docs/architecture/DevGuide.md) → [Implementações](docs/modules/appointments/AppointmentsImplementationStudy.md)
+
+#### Por Tipo de Documentação
+- **📋 Requisitos**: [SystemRules.md](docs/requirements/SystemRules.md) + [FuncionalitsGuide.md](docs/requirements/FuncionalitsGuide.md)
+- **🏗️ Técnico**: [Arquitetura.md](docs/architecture/Arquitetura.md) + [VueGuide.md](docs/architecture/VueGuide.md)
+- **💾 Dados**: [diagrama_banco_dados.md](docs/database/diagrama_banco_dados.md)
+- **⚙️ Lógica**: [AppointmentsLogica.md](docs/modules/appointments/AppointmentsLogica.md) + [VideoCallImplementation.md](docs/modules/videocall/VideoCallImplementation.md)
+
+---
 
 ## Técnologias Utilizadas 🥵 👌
 
@@ -76,9 +137,30 @@ Apenas EU.
       </a>
 </table>
 
-## Como Rodar o Projeto. 😡👍
+## Como Começar 😡👍
 
-É so seguir os passos dessa documentação aqui patrão [Guia de instalação](docs/start.md)
+### Para Novos Desenvolvedores
+1. **Leia** o [README Principal](#telemedicina-para-todos-) para entender o projeto
+2. **Configure** o ambiente com o [Guia de Instalação](docs/setup/Start.md)
+3. **Estude** a [Arquitetura](docs/architecture/Arquitetura.md) do sistema
+4. **Consulte** o [Glossário](docs/index/Glossario.md) para termos técnicos
+5. **Explore** as implementações específicas conforme necessário
+
+### Para Stakeholders
+1. **Comece** com a [Visão Geral do Projeto](#idealização-)
+2. **Entenda** as [Regras de Negócio](docs/requirements/SystemRules.md)
+3. **Veja** as [Funcionalidades](docs/requirements/FuncionalitsGuide.md) disponíveis
+4. **Consulte** a [Matriz de Requisitos](docs/index/MatrizRequisitos.md) para rastreabilidade
+
+### Para Auditores
+1. **Acesse** a [Matriz de Rastreabilidade](docs/index/MatrizRequisitos.md)
+2. **Revise** as [Regras de Compliance](docs/requirements/SystemRules.md#segurança-e-compliance)
+3. **Verifique** os [Testes](../tests/) implementados
+4. **Analise** a [Documentação de Segurança](docs/requirements/SystemRules.md#segurança-e-compliance)
+
+## 🛠️ Como Rodar o Projeto
+
+Siga os passos detalhados no [Guia de Instalação](docs/setup/Start.md) para configurar o ambiente de desenvolvimento.
 
 ## Licença 📄
 
