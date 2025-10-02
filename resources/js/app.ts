@@ -7,6 +7,9 @@ import { createApp, h } from 'vue';
 import { initializeTheme } from './composables/useAppearance';
 import { configureEcho } from '@laravel/echo-vue';
 
+// Importar configuração do Axios
+import './lib/axios';
+
 configureEcho({
     broadcaster: 'reverb',
 });

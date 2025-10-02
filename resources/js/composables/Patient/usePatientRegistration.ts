@@ -1,12 +1,11 @@
 import { ref, computed } from 'vue';
-import { router } from '@inertiajs/vue3';
 import { useRealTimeValidation, type ValidationRule } from '../useRealTimeValidation';
 import { useRateLimit } from '../useRateLimit';
 import { usePatientFormValidation } from './usePatientFormValidation';
+import { useAuth, type RegisterCredentials } from '../useAuth';
 
 /**
  * Interface para dados de registro inicial do paciente
- * Contém apenas campos obrigatórios para criação da conta
  */
 export interface PatientRegistrationData {
   name: string;
@@ -34,10 +33,11 @@ const initialData: PatientRegistrationData = {
 };
 
 /**
- * Composable para gerenciar o registro inicial de pacientes
- * Focado apenas nos campos obrigatórios para criação da conta
+ * Composable para gerenciar o registro inicial de pacientes via API
  */
 export function usePatientRegistration() {
+  const { register, registerRateLimit, canRegister } = useAuth();
+
   const { 
     nameValidation,
     emailValidation,
@@ -64,7 +64,7 @@ export function usePatientRegistration() {
   const {
     formData,
     fields,
-    isSubmitting,
+    isSubmitting: isValidationSubmitting,
     hasErrors,
     isFormValid,
     allErrors,
@@ -75,33 +75,50 @@ export function usePatientRegistration() {
     resetForm
   } = useRealTimeValidation(initialData, validationRules);
 
-  // Rate limiting: 5 tentativas por 15 minutos, bloqueio por 1 hora
-  const rateLimit = useRateLimit({
-    maxAttempts: 5,
-    windowMs: 15 * 60 * 1000, // 15 minutos
-    blockDurationMs: 60 * 60 * 1000 // 1 hora
-  });
+  // Estado local
+  const submitError = ref<string | null>(null);
+  const showSuccessMessage = ref(false);
 
   // Computed properties específicas para registro
   const canSubmit = computed(() => {
-    return isFormValid.value && !isSubmitting.value && rateLimit.canAttempt.value;
+    return isFormValid.value && 
+           !isValidationSubmitting.value && 
+           canRegister.value;
   });
 
-  const submitError = computed(() => {
-    if (rateLimit.isBlocked.value) {
-      return rateLimit.getErrorMessage();
-    }
-    return null;
+  const isProcessing = computed(() => {
+    return isValidationSubmitting.value || registerRateLimit.isBlocked.value;
   });
+
+  // Função para converter data brasileira para ISO
+  const convertDateToISO = (dateString: string): string => {
+    if (!dateString) return '';
+    
+    // Remove espaços e verifica se está no formato dd/mm/aaaa
+    const cleanDate = dateString.trim();
+    const dateRegex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
+    const match = cleanDate.match(dateRegex);
+    
+    if (match) {
+      const [, day, month, year] = match;
+      return `${year}-${month}-${day}`;
+    }
+    
+    // Se já estiver no formato ISO, retorna como está
+    return cleanDate;
+  };
+
+  // Função para limpar formatação do telefone
+  const cleanPhoneNumber = (phoneString: string): string => {
+    if (!phoneString) return '';
+    
+    // Remove todos os caracteres não numéricos
+    return phoneString.replace(/\D/g, '');
+  };
 
   // Função para submeter formulário de registro
   const submitForm = async (): Promise<boolean> => {
     if (!canSubmit.value) {
-      return false;
-    }
-
-    // Verifica rate limit
-    if (!rateLimit.recordAttempt()) {
       return false;
     }
 
@@ -110,36 +127,49 @@ export function usePatientRegistration() {
       return false;
     }
 
-    // Usar Inertia.js para submissão
-    router.post('/register/patient', formData.value, {
-      onStart: () => {
-        isSubmitting.value = true;
-      },
-      onSuccess: () => {
-        // Sucesso - o Laravel já redireciona para dashboard
+    clearErrors();
+    submitError.value = null;
+
+    try {
+      const credentials: RegisterCredentials = {
+        name: formData.value.name,
+        email: formData.value.email,
+        password: formData.value.password,
+        password_confirmation: formData.value.password_confirmation,
+        user_type: 'patient',
+        date_of_birth: convertDateToISO(formData.value.date_of_birth),
+        phone_number: cleanPhoneNumber(formData.value.phone_number),
+        gender: formData.value.gender
+      };
+
+      const success = await register(credentials);
+      
+      if (success) {
+        showSuccessMessage.value = true;
         resetForm();
-        rateLimit.reset();
         return true;
-      },
-      onError: (errors) => {
-        // Mapear erros do backend para os campos do frontend
-        Object.keys(errors).forEach(field => {
+      }
+      
+      return false;
+    } catch (error: any) {
+      submitError.value = error.message;
+      
+      // Mapear erros específicos para campos
+      if (error.response?.data?.errors) {
+        const backendErrors = error.response.data.errors;
+        Object.keys(backendErrors).forEach(field => {
           const fieldKey = field as keyof PatientRegistrationData;
           if (fields.value[fieldKey]) {
-            fields.value[fieldKey].errors = Array.isArray(errors[field]) 
-              ? errors[field] 
-              : [errors[field]];
+            fields.value[fieldKey].errors = Array.isArray(backendErrors[field]) 
+              ? backendErrors[field] 
+              : [backendErrors[field]];
             fields.value[fieldKey].touched = true;
           }
         });
-        return false;
-      },
-      onFinish: () => {
-        isSubmitting.value = false;
       }
-    });
-
-    return true;
+      
+      return false;
+    }
   };
 
   // Função para obter mensagem de erro específica do campo
@@ -164,7 +194,7 @@ export function usePatientRegistration() {
     fields,
     
     // Estado
-    isSubmitting,
+    isSubmitting: isProcessing,
     hasErrors,
     isFormValid,
     canSubmit,
@@ -172,9 +202,10 @@ export function usePatientRegistration() {
     // Erros
     allErrors,
     submitError,
+    showSuccessMessage,
     
     // Rate limiting
-    rateLimit: rateLimit.getStatus(),
+    rateLimit: registerRateLimit,
     
     // Funções
     updateField,

@@ -1,12 +1,11 @@
 import { ref, computed, watch } from 'vue';
-import { router } from '@inertiajs/vue3';
 import { useRealTimeValidation, type ValidationRule } from '../useRealTimeValidation';
 import { useRateLimit } from '../useRateLimit';
 import { useDoctorFormValidation } from './useDoctorFormValidation';
+import { useAuth, type RegisterCredentials } from '../useAuth';
 
 /**
  * Interface para dados de registro inicial do médico
- * Contém apenas campos obrigatórios para criação da conta
  */
 export interface DoctorRegistrationData {
   name: string;
@@ -44,10 +43,11 @@ const initialData: DoctorRegistrationData = {
 };
 
 /**
- * Composable para gerenciar o registro inicial de médicos
- * Focado apenas nos campos obrigatórios para criação da conta
+ * Composable para gerenciar o registro inicial de médicos via API
  */
 export function useDoctorRegistration() {
+  const { register, registerRateLimit, canRegister } = useAuth();
+
   const { 
     nameValidation,
     emailValidation,
@@ -57,9 +57,15 @@ export function useDoctorRegistration() {
     specializationsValidation
   } = useDoctorFormValidation();
 
-  // Validação mockada para termos (não obrigatória)
+  // Validação para termos
   const termsValidation: ValidationRule = {
-    required: false
+    required: true,
+    custom: (value: boolean) => {
+      if (!value) {
+        return 'Você deve aceitar os termos de serviço';
+      }
+      return null;
+    }
   };
 
   // Regras de validação para campos obrigatórios
@@ -85,7 +91,7 @@ export function useDoctorRegistration() {
   const {
     formData: validationFormData,
     fields,
-    isSubmitting,
+    isSubmitting: isValidationSubmitting,
     hasErrors,
     isFormValid,
     allErrors,
@@ -98,6 +104,10 @@ export function useDoctorRegistration() {
 
   // FormData completo (incluindo terms_accepted)
   const formData = ref<DoctorRegistrationData>(initialData);
+
+  // Estado local
+  const submitError = ref<string | null>(null);
+  const showSuccessMessage = ref(false);
 
   // Sincronizar dados entre formData completo e validationFormData
   watch(() => formData.value.name, (newValue) => {
@@ -124,23 +134,16 @@ export function useDoctorRegistration() {
     validationFormData.value.specializations = newValue;
   }, { deep: true });
 
-  // Rate limiting: 5 tentativas por 15 minutos, bloqueio por 1 hora
-  const rateLimit = useRateLimit({
-    maxAttempts: 5,
-    windowMs: 15 * 60 * 1000, // 15 minutos
-    blockDurationMs: 60 * 60 * 1000 // 1 hora
-  });
-
   // Computed properties específicas para registro
   const canSubmit = computed(() => {
-    return isFormValid.value && !isSubmitting.value && rateLimit.canAttempt.value;
+    return isFormValid.value && 
+           !isValidationSubmitting.value && 
+           canRegister.value &&
+           formData.value.terms_accepted;
   });
 
-  const submitError = computed(() => {
-    if (rateLimit.isBlocked.value) {
-      return rateLimit.getErrorMessage();
-    }
-    return null;
+  const isProcessing = computed(() => {
+    return isValidationSubmitting.value || registerRateLimit.isBlocked.value;
   });
 
   // Função para submeter formulário de registro
@@ -149,46 +152,83 @@ export function useDoctorRegistration() {
       return false;
     }
 
-    // Verifica rate limit
-    if (!rateLimit.recordAttempt()) {
-      return false;
-    }
-
-    // Validação final
+    // Validação final dos campos obrigatórios
     if (!validateAll()) {
       return false;
     }
 
-    // Usar Inertia.js para submissão
-    router.post('/register/doctor', formData.value, {
-      onStart: () => {
-        isSubmitting.value = true;
-      },
-      onSuccess: () => {
-        // Sucesso - o Laravel já redireciona para dashboard
+    // Validação dos termos
+    if (!formData.value.terms_accepted) {
+      submitError.value = 'Você deve aceitar os termos de serviço';
+      return false;
+    }
+
+    clearErrors();
+    submitError.value = null;
+
+    try {
+      const credentials: RegisterCredentials = {
+        name: formData.value.name,
+        email: formData.value.email,
+        password: formData.value.password,
+        password_confirmation: formData.value.password_confirmation,
+        user_type: 'doctor',
+        crm: formData.value.crm,
+        specializations: formData.value.specializations
+      };
+
+      // Log detalhado para debug
+      console.group('🔍 DEBUG: Doctor Registration Request');
+      console.log('📤 Credentials being sent:', JSON.stringify(credentials, null, 2));
+      console.log('📊 Form data state:', JSON.stringify(formData.value, null, 2));
+      console.log('✅ Form validation state:', {
+        isFormValid: isFormValid.value,
+        canSubmit: canSubmit.value,
+        hasErrors: hasErrors.value,
+        termsAccepted: formData.value.terms_accepted
+      });
+      console.groupEnd();
+
+      const success = await register(credentials);
+      
+      if (success) {
+        showSuccessMessage.value = true;
         resetForm();
-        rateLimit.reset();
+        formData.value = { ...initialData };
         return true;
-      },
-      onError: (errors) => {
-        // Mapear erros do backend para os campos do frontend
-        Object.keys(errors).forEach(field => {
+      }
+      
+      return false;
+    } catch (error: any) {
+      // Log detalhado do erro para debug
+      console.group('❌ DEBUG: Doctor Registration Error');
+      console.error('🚨 Error object:', error);
+      console.error('📡 Response status:', error?.response?.status);
+      console.error('📡 Response data:', error?.response?.data);
+      console.error('📡 Response headers:', error?.response?.headers);
+      console.error('🔍 Error message:', error?.message);
+      console.error('🔍 Error stack:', error?.stack);
+      console.groupEnd();
+
+      submitError.value = error?.message || 'Erro ao registrar usuário';
+      
+      // Mapear erros específicos para campos
+      if (error?.response?.data?.errors) {
+        console.log('🎯 Backend validation errors:', error?.response?.data?.errors);
+        const backendErrors = error?.response?.data?.errors;
+        Object.keys(backendErrors).forEach(field => {
           const fieldKey = field as keyof RequiredDoctorFields;
           if (fields.value[fieldKey]) {
-            fields.value[fieldKey].errors = Array.isArray(errors[field]) 
-              ? errors[field] 
-              : [errors[field]];
+            fields.value[fieldKey].errors = Array.isArray(backendErrors[field]) 
+              ? backendErrors[field] 
+              : [backendErrors[field]];
             fields.value[fieldKey].touched = true;
           }
         });
-        return false;
-      },
-      onFinish: () => {
-        isSubmitting.value = false;
       }
-    });
-
-    return true;
+      
+      return false;
+    }
   };
 
   // Função para obter mensagem de erro específica do campo
@@ -213,7 +253,7 @@ export function useDoctorRegistration() {
     fields,
     
     // Estado
-    isSubmitting,
+    isSubmitting: isProcessing,
     hasErrors,
     isFormValid,
     canSubmit,
@@ -221,9 +261,10 @@ export function useDoctorRegistration() {
     // Erros
     allErrors,
     submitError,
+    showSuccessMessage,
     
     // Rate limiting
-    rateLimit: rateLimit.getStatus(),
+    rateLimit: registerRateLimit,
     
     // Funções
     updateField,

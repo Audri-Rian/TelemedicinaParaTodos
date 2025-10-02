@@ -15,6 +15,16 @@ class EnsureTokenIsValid
      */
     public function handle(Request $request, Closure $next): Response
     {
+        // Allow public routes (register, login, and specializations) to pass through
+        $publicRoutes = ['api/register', 'api/login', 'api/specializations'];
+        $currentRoute = $request->route()->getName() ?? $request->path();
+        
+        foreach ($publicRoutes as $publicRoute) {
+            if (str_contains($currentRoute, $publicRoute)) {
+                return $next($request);
+            }
+        }
+
         $user = $request->user();
         
         if (!$user) {
@@ -24,8 +34,8 @@ class EnsureTokenIsValid
             ], 401);
         }
 
-        // Check if user is active
-        if ($user->status !== 'active') {
+        // Check if user is active (only if status field exists)
+        if (isset($user->status) && $user->status !== 'active') {
             return response()->json([
                 'success' => false,
                 'message' => 'Account is not active'

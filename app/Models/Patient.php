@@ -180,8 +180,30 @@ class Patient extends Model
 
     public function setDateOfBirthAttribute($value): void
     {
+        \Log::info('Patient::setDateOfBirthAttribute - Valor recebido:', ['value' => $value]);
+        
         if ($value) {
-            $this->attributes['date_of_birth'] = Carbon::parse($value);
+            try {
+                // Se a data está no formato brasileiro (dd/mm/yyyy), converte para formato ISO
+                if (preg_match('/^\d{2}\/\d{2}\/\d{4}$/', $value)) {
+                    \Log::info('Patient::setDateOfBirthAttribute - Formato brasileiro detectado');
+                    $parts = explode('/', $value);
+                    $isoDate = $parts[2] . '-' . $parts[1] . '-' . $parts[0]; // yyyy-mm-dd
+                    \Log::info('Patient::setDateOfBirthAttribute - Data convertida:', ['iso_date' => $isoDate]);
+                    $this->attributes['date_of_birth'] = Carbon::parse($isoDate);
+                } else {
+                    \Log::info('Patient::setDateOfBirthAttribute - Formato padrão');
+                    $this->attributes['date_of_birth'] = Carbon::parse($value);
+                }
+                \Log::info('Patient::setDateOfBirthAttribute - Sucesso');
+            } catch (\Exception $e) {
+                \Log::error('Patient::setDateOfBirthAttribute - Erro:', [
+                    'value' => $value,
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
+                ]);
+                throw $e;
+            }
         }
     }
 

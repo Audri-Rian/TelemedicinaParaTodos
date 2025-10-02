@@ -43,11 +43,35 @@ const applyDateMask = (value: string) => {
   }
 };
 
+// Função para aplicar máscara de telefone brasileiro
+const applyPhoneMask = (value: string) => {
+  // Remove tudo que não é número
+  const numbers = value.replace(/\D/g, '');
+  
+  // Aplica a máscara (XX) XXXXX-XXXX ou (XX) XXXX-XXXX
+  if (numbers.length <= 2) {
+    return numbers;
+  } else if (numbers.length <= 6) {
+    return `(${numbers.slice(0, 2)}) ${numbers.slice(2)}`;
+  } else if (numbers.length <= 10) {
+    return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 6)}-${numbers.slice(6)}`;
+  } else {
+    return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7, 11)}`;
+  }
+};
+
 // Função para lidar com entrada de data
 const handleDateInput = (value: string | number) => {
   const stringValue = String(value);
   const maskedValue = applyDateMask(stringValue);
   updateField('date_of_birth', maskedValue);
+};
+
+// Função para lidar com entrada de telefone
+const handlePhoneInput = (value: string | number) => {
+  const stringValue = String(value);
+  const maskedValue = applyPhoneMask(stringValue);
+  updateField('phone_number', maskedValue);
 };
 
 // Função para lidar com submissão
@@ -249,7 +273,7 @@ const handleSubmit = async () => {
                                         <Input id="phone_number" type="tel" required :tabindex="5"
                                             name="phone_number" placeholder="(11) 99999-9999"
                                             :model-value="formData.phone_number"
-                                            @update:model-value="updateField('phone_number', $event)"
+                                            @update:model-value="handlePhoneInput"
                                             @blur="touchField('phone_number')" :class="[
                                                 'h-9 lg:h-10 bg-gradient-to-r from-gray-50/90 to-white/90 border-2 rounded-lg lg:rounded-xl px-3 lg:px-4 text-sm placeholder:text-gray-400 focus:bg-white focus:shadow-lg focus:shadow-primary/10 transition-all duration-300 hover:border-gray-300 hover:shadow-md',
                                                 hasFieldError('phone_number') && isFieldTouched('phone_number')
