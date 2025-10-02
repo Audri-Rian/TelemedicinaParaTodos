@@ -280,8 +280,10 @@ export function useAuth() {
       // Registrar tentativa de registro
       registerRateLimit.recordAttempt();
       
-      const errorMessage = error?.response?.data?.message || error?.message || 'Erro ao registrar usuário';
-      throw new Error(errorMessage);
+      // Criar erro customizado que mantém todos os dados da resposta
+      const customError = new Error(error?.response?.data?.message || error?.message || 'Erro ao registrar usuário') as any;
+      customError.response = error?.response;
+      throw customError;
     } finally {
       isLoading.value = false;
     }

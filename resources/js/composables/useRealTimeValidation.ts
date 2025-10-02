@@ -133,7 +133,12 @@ export function useRealTimeValidation<T extends Record<string, any>>(
     const field = fields.value[fieldName];
     if (field) {
       field.value = value;
-      // Não marcar como touched nem validar aqui - isso será feito no blur
+      // Se o campo já foi tocado e há mudança, limpar erros e revalidar imediatamente
+      if (field.touched) {
+        field.errors = [];
+        const newErrors = validateField(fieldName, value);
+        field.errors = newErrors;
+      }
     }
   };
 
@@ -180,7 +185,10 @@ export function useRealTimeValidation<T extends Record<string, any>>(
       (newValue, oldValue) => {
         // Só validar se o campo foi tocado e o valor realmente mudou
         if (fields.value[fieldKey].touched && newValue !== oldValue) {
-          fields.value[fieldKey].errors = validateField(fieldKey, newValue);
+          // Limpar erros anteriores e revalidar
+          fields.value[fieldKey].errors = [];
+          const newErrors = validateField(fieldKey, newValue);
+          fields.value[fieldKey].errors = newErrors;
         }
       }
     );
@@ -198,6 +206,14 @@ export function useRealTimeValidation<T extends Record<string, any>>(
     Object.keys(fields.value).forEach((key) => {
       fields.value[key as keyof T].errors = [];
       fields.value[key as keyof T].touched = false;
+    });
+  };
+
+  // Função para limpar apenas erros sem resetar touched state (útil após erros)
+  const clearBackendErrors = () => {
+    Object.keys(fields.value).forEach((key) => {
+      fields.value[key as keyof T].errors = [];
+      // Não alterar touched state para permitir validação imediata
     });
   };
 
@@ -224,6 +240,7 @@ export function useRealTimeValidation<T extends Record<string, any>>(
     touchField,
     validateAll,
     clearErrors,
+    clearBackendErrors,
     resetForm
   };
 }

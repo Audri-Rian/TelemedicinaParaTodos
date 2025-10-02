@@ -13,7 +13,7 @@ defineProps<{
     <div class="min-h-svh bg-background">
         <!-- Header com logo e nome no canto superior esquerdo -->
         <div class="absolute left-4 md:left-8 z-10">
-            <Link :href="home()"
+            <Link :href="home().url"
                 class="group flex items-center gap-2 md:gap-4 font-medium transition-all duration-300 hover:scale-105">
             <div
                 class="flex h-8 w-8 md:h-12 md:w-12 items-center justify-center rounded-lg md:rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 shadow-lg backdrop-blur-sm border border-white/20 group-hover:shadow-xl group-hover:from-primary/30 group-hover:to-primary/20 transition-all duration-300">

@@ -647,7 +647,7 @@ const handleSubmit = async () => {
                 </svg>
                 <p class="text-gray-600 text-xs lg:text-sm font-medium">
                     Já tem uma conta?
-                    <TextLink :href="login()"
+                    <TextLink :href="login().url"
                         class="text-black hover:text-black/80 font-bold underline underline-offset-4 hover:underline-offset-2 transition-all duration-300 ml-1"
                         :tabindex="9">
                         Faça login aqui

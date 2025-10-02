@@ -99,6 +99,7 @@ export function useDoctorRegistration() {
     touchField,
     validateAll,
     clearErrors,
+    clearBackendErrors,
     resetForm
   } = useRealTimeValidation(requiredData, validationRules);
 
@@ -163,7 +164,7 @@ export function useDoctorRegistration() {
       return false;
     }
 
-    clearErrors();
+    clearBackendErrors();
     submitError.value = null;
 
     try {
@@ -216,13 +217,55 @@ export function useDoctorRegistration() {
       if (error?.response?.data?.errors) {
         console.log('🎯 Backend validation errors:', error?.response?.data?.errors);
         const backendErrors = error?.response?.data?.errors;
+        
+        // Verificar se há erro específico de email já Cadastrado
+        if (backendErrors.email) {
+          const emailErrors = Array.isArray(backendErrors.email) 
+            ? backendErrors.email 
+            : [backendErrors.email];
+          
+          // Mapear mensagem de erro para português se necessário
+          const translatedErrors = emailErrors.map(err => {
+            const errorStr = String(err).toLowerCase();
+            if (errorStr.includes('already been taken') || errorStr.includes('already taken') || errorStr.includes('duplicate')) {
+              return 'Este e-mail já está cadastrado. Use outro e-mail ou faça login.';
+            }
+            return err;
+          });
+          
+          fields.value.email.errors = translatedErrors;
+          fields.value.email.touched = true;
+        }
+
+        // Verificar se há erro específico de CRM já cadastrado
+        if (backendErrors.crm) {
+          const crmErrors = Array.isArray(backendErrors.crm) 
+            ? backendErrors.crm 
+            : [backendErrors.crm];
+          
+          // Mapear mensagem de erro para português se necessário
+          const translatedErrors = crmErrors.map(err => {
+            const errorStr = String(err).toLowerCase();
+            if (errorStr.includes('already been taken') || errorStr.includes('already taken') || errorStr.includes('duplicate') || errorStr.includes('já está cadastrado')) {
+              return 'Este CRM já está cadastrado. Use outro CRM.';
+            }
+            return err;
+          });
+          
+          fields.value.crm.errors = translatedErrors;
+          fields.value.crm.touched = true;
+        }
+        
+        // Processar outros erros normalmente
         Object.keys(backendErrors).forEach(field => {
-          const fieldKey = field as keyof RequiredDoctorFields;
-          if (fields.value[fieldKey]) {
-            fields.value[fieldKey].errors = Array.isArray(backendErrors[field]) 
-              ? backendErrors[field] 
-              : [backendErrors[field]];
-            fields.value[fieldKey].touched = true;
+          if (field !== 'email' && field !== 'crm') { // Email e CRM já foram processados acima
+            const fieldKey = field as keyof RequiredDoctorFields;
+            if (fields.value[fieldKey]) {
+              fields.value[fieldKey].errors = Array.isArray(backendErrors[field]) 
+                ? backendErrors[field] 
+                : [backendErrors[field]];
+              fields.value[fieldKey].touched = true;
+            }
           }
         });
       }
@@ -274,6 +317,7 @@ export function useDoctorRegistration() {
     hasFieldError,
     isFieldTouched,
     clearErrors,
+    clearBackendErrors,
     resetForm
   };
 }

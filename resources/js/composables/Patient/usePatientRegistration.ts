@@ -72,6 +72,7 @@ export function usePatientRegistration() {
     touchField,
     validateAll,
     clearErrors,
+    clearBackendErrors,
     resetForm
   } = useRealTimeValidation(initialData, validationRules);
 
@@ -127,7 +128,7 @@ export function usePatientRegistration() {
       return false;
     }
 
-    clearErrors();
+    clearBackendErrors();
     submitError.value = null;
 
     try {
@@ -157,13 +158,36 @@ export function usePatientRegistration() {
       // Mapear erros específicos para campos
       if (error.response?.data?.errors) {
         const backendErrors = error.response.data.errors;
+        
+        // Verificar se há erro específico de email já cadastrado
+        if (backendErrors.email) {
+          const emailErrors = Array.isArray(backendErrors.email) 
+            ? backendErrors.email 
+            : [backendErrors.email];
+          
+          // Mapear mesangem de erro para português se necessário
+          const translatedErrors = emailErrors.map(err => {
+            const errorStr = String(err).toLowerCase();
+            if (errorStr.includes('already been taken') || errorStr.includes('already taken') || errorStr.includes('duplicate')) {
+              return 'Este e-mail já está cadastrado. Use outro e-mail ou faça login.';
+            }
+            return err;
+          });
+          
+          fields.value.email.errors = translatedErrors;
+          fields.value.email.touched = true;
+        }
+        
+        // Processar outros erros normalmente
         Object.keys(backendErrors).forEach(field => {
-          const fieldKey = field as keyof PatientRegistrationData;
-          if (fields.value[fieldKey]) {
-            fields.value[fieldKey].errors = Array.isArray(backendErrors[field]) 
-              ? backendErrors[field] 
-              : [backendErrors[field]];
-            fields.value[fieldKey].touched = true;
+          if (field !== 'email') { // Email já foi processado acima
+            const fieldKey = field as keyof PatientRegistrationData;
+            if (fields.value[fieldKey]) {
+              fields.value[fieldKey].errors = Array.isArray(backendErrors[field]) 
+                ? backendErrors[field] 
+                : [backendErrors[field]];
+              fields.value[fieldKey].touched = true;
+            }
           }
         });
       }
@@ -215,6 +239,7 @@ export function usePatientRegistration() {
     hasFieldError,
     isFieldTouched,
     clearErrors,
+    clearBackendErrors,
     resetForm
   };
 }

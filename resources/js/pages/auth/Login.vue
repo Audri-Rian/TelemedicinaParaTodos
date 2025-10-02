@@ -191,7 +191,7 @@ const {
 
                                 <div class="text-center text-sm">
                                     Don't have an account?{" "}
-                                    <TextLink :href="register()" class="underline underline-offset-4" :tabindex="5">
+                                    <TextLink :href="register().url" class="underline underline-offset-4" :tabindex="5">
                                         Sign up
                                     </TextLink>
                                 </div>

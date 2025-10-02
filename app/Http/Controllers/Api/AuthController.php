@@ -11,7 +11,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use App\Models\Doctor;
 
 class AuthController extends Controller
 {
@@ -40,7 +42,7 @@ class AuthController extends Controller
 
         // Validação específica por tipo de usuário
         if ($request->user_type === 'doctor') {
-            $baseRules['crm'] = 'required|string|max:20';
+            $baseRules['crm'] = 'required|string|max:20|unique:doctors,crm';
             // Temporariamente removendo validação de especializações para debug
             // $baseRules['specializations'] = 'required|array|min:1|max:5';
             // $baseRules['specializations.*'] = 'required|string|exists:specializations,id';
@@ -65,55 +67,98 @@ class AuthController extends Controller
             ], 422);
         }
 
-        // Create user
-        \Log::info('AuthController::register - Criando usuário...');
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-        ]);
-        \Log::info('AuthController::register - Usuário criado:', ['user_id' => $user->id]);
-
-        // Create user profile based on type
-        if ($request->user_type === 'doctor') {
-            \Log::info('AuthController::register - Criando perfil de médico:', [
-                'user_id' => $user->id,
-                'crm' => $request->crm,
-                'specializations' => $request->specializations ?? null
-            ]);
-            
-            $doctor = $user->doctor()->create([
-                'user_id' => $user->id,
-                'crm' => $request->crm,
-                'status' => 'active',
-            ]);
-            
-            // Attach specializations using N:N relationship
-            if ($request->specializations && is_array($request->specializations)) {
-                $doctor->specializations()->attach($request->specializations);
-                \Log::info('AuthController::register - Especializações vinculadas:', [
-                    'doctor_id' => $doctor->id,
-                    'specializations' => $request->specializations
+        // Usar transação para garantir consistência
+        try {
+            $user = DB::transaction(function () use ($request) {
+                // Create user
+                \Log::info('AuthController::register - Criando usuário...');
+                $user = User::create([
+                    'name' => $request->name,
+                    'email' => $request->email,
+                    'password' => Hash::make($request->password),
                 ]);
+                \Log::info('AuthController::register - Usuário criado:', ['user_id' => $user->id]);
+
+                // Create user profile based on type
+                if ($request->user_type === 'doctor') {
+                    \Log::info('AuthController::register - Criando perfil de médico:', [
+                        'user_id' => $user->id,
+                        'crm' => $request->crm,
+                        'specializations' => $request->specializations ?? null
+                    ]);
+                    
+                    $doctor = $user->doctor()->create([
+                        'user_id' => $user->id,
+                        'crm' => $request->crm,
+                        'status' => 'active',
+                    ]);
+                    
+                    // Attach specializations using N:N relationship
+                    if ($request->specializations && is_array($request->specializations)) {
+                        $doctor->specializations()->attach($request->specializations);
+                        \Log::info('AuthController::register - Especializações vinculadas:', [
+                            'doctor_id' => $doctor->id,
+                            'specializations' => $request->specializations
+                        ]);
+                    }
+                    
+                    \Log::info('AuthController::register - Médico criado:', ['doctor_id' => $doctor->id]);
+                } else {
+                    \Log::info('AuthController::register - Criando perfil de paciente:', [
+                        'user_id' => $user->id,
+                        'date_of_birth' => $request->date_of_birth,
+                        'gender' => $request->gender,
+                        'phone_number' => $request->phone_number
+                    ]);
+                    
+                    $patient = $user->patient()->create([
+                        'user_id' => $user->id,
+                        'date_of_birth' => $request->date_of_birth ?? null,
+                        'gender' => $request->gender ?? null,
+                        'phone_number' => $request->phone_number ?? null,
+                    ]);
+                    
+                    \Log::info('AuthController::register - Paciente criado:', ['patient_id' => $patient->id]);
+                }
+
+                return $user;
+            });
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Capture errors específicos do banco de dados
+            \Log::error('AuthController::register - Erro de banco de dados:', [
+                'error' => $e->getMessage(),
+                'error_code' => $e->getCode(),
+                'data' => $request->all()
+            ]);
+            
+            // Se for erro de CRM duplicado, retornar erro específico
+            if (str_contains($e->getMessage(), 'doctors_crm_unique') || str_contains($e->getMessage(), 'Duplicate entry')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation errors',
+                    'errors' => [
+                        'crm' => ['Este CRM já está cadastrado. Use outro CRM.']
+                    ]
+                ], 422);
             }
             
-            \Log::info('AuthController::register - Médico criado:', ['doctor_id' => $doctor->id]);
-        } else {
-            \Log::info('AuthController::register - Criando perfil de paciente:', [
-                'user_id' => $user->id,
-                'date_of_birth' => $request->date_of_birth,
-                'gender' => $request->gender,
-                'phone_number' => $request->phone_number
+            return response()->json([
+                'success' => false,
+                'message' => 'Database error occurred',
+                'error' => 'Erro interno do servidor. Tente novamente.'
+            ], 500);
+        } catch (\Exception $e) {
+            \Log::error('AuthController::register - Erro geral:', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'data' => $request->all()
             ]);
             
-            $patient = $user->patient()->create([
-                'user_id' => $user->id,
-                'date_of_birth' => $request->date_of_birth ?? null,
-                'gender' => $request->gender ?? null,
-                'phone_number' => $request->phone_number ?? null,
-            ]);
-            
-            \Log::info('AuthController::register - Paciente criado:', ['patient_id' => $patient->id]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Registration error',
+                'error' => 'Erro interno do servidor. Tente novamente.'
+            ], 500);
         }
 
         // Generate token
