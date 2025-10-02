@@ -7,10 +7,11 @@ import TextLink from '@/components/TextLink.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import AuthBase from '@/layouts/AuthLayout.vue';
 import { login } from '@/routes';
 import { Form, Head } from '@inertiajs/vue3';
-import { LoaderCircle } from 'lucide-vue-next';
+import { LoaderCircle, AlertCircle } from 'lucide-vue-next';
 
 // Composables
 const {
@@ -120,18 +121,11 @@ const handleSubmit = async () => {
                             </div>
 
                             <!-- Mensagem de erro de rate limit -->
-                            <div v-if="submitError"
-                                class="mb-2 p-2 bg-red-100 border border-red-400 text-red-700 rounded-lg" role="alert"
-                                aria-live="assertive">
-                                <div class="flex items-center">
-                                    <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd"
-                                            d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                                            clip-rule="evenodd"></path>
-                                    </svg>
-                                    {{ submitError }}
-                                </div>
-                            </div>
+                            <Alert v-if="submitError" variant="destructive" class="mb-2">
+                                <AlertCircle class="h-3 w-3" />
+                                <AlertTitle>Registration Error</AlertTitle>
+                                <AlertDescription>{{ submitError }}</AlertDescription>
+                            </Alert>
 
                             <form @submit.prevent="handleSubmit" class="space-y-2 lg:space-y-3">
 
@@ -411,12 +405,15 @@ const handleSubmit = async () => {
                                     </Button>
 
                                     <!-- Aviso de rate limit -->
-                                    <div v-if="rateLimit.remainingAttempts < 3 && rateLimit.remainingAttempts > 0"
-                                        id="rate-limit-warning" class="mt-2 text-sm text-orange-600 text-center"
-                                        role="alert" aria-live="polite">
-                                        ⚠️ Restam {{ rateLimit.remainingAttempts }} tentativa{{
-                                            rateLimit.remainingAttempts > 1 ? 's' : '' }}
-                                    </div>
+                                    <Alert v-if="rateLimit.remainingAttempts < 3 && rateLimit.remainingAttempts > 0"
+                                        id="rate-limit-warning" class="mt-2">
+                                        <AlertCircle class="h-3 w-3" />
+                                        <AlertTitle>Warning</AlertTitle>
+                                        <AlertDescription>
+                                            Restam {{ rateLimit.remainingAttempts }} tentativa{{
+                                                rateLimit.remainingAttempts > 1 ? 's' : '' }}
+                                        </AlertDescription>
+                                    </Alert>
                                 </div>
                             </form>
                         </div>
