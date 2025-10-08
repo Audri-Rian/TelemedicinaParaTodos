@@ -22,9 +22,9 @@ defineProps<{
             </div>
             <div class="flex flex-col">
                 <span
-                    class="text-sm md:text-xl font-bold text-gray-800 dark:text-white group-hover:text-primary transition-colors duration-300">Telemedicina
+                    class="text-sm md:text-xl font-bold text-gray-800 group-hover:text-primary transition-colors duration-300">Telemedicina
                     para Todos</span>
-                <span class="text-xs text-gray-500 dark:text-gray-400 font-medium hidden md:block">Cuidando da sua
+                <span class="text-xs text-gray-500 font-medium hidden md:block">Cuidando da sua
                     saúde</span>
             </div>
             </Link>
