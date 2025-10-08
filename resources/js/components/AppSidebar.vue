@@ -16,7 +16,7 @@ const mainNavItems: NavItem[] = [
         icon: Home,
     },
     {
-        title: 'Compromissos',
+        title: 'Agenda',
         href: appointments(),
         icon: Calendar,
     },

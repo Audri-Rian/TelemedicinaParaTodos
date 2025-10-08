@@ -545,7 +545,7 @@ const handleSubmit = async () => {
                                     />
                                 </div>
 
-                                <!-- Termos de Serviço e LGPD (Mockado) -->
+                                <!-- Termos de Serviço e LGPD -->
                                 <div class="space-y-2">
                                     <div class="flex items-start gap-3">
                                         <input 
@@ -565,12 +565,7 @@ const handleSubmit = async () => {
                                                 <a href="/privacy" target="_blank" class="text-primary hover:text-primary/80 underline underline-offset-2 hover:underline-offset-4 transition-all duration-300">
                                                     Política de Privacidade
                                                 </a>
-                                                , incluindo o tratamento de dados pessoais conforme a 
-                                                <strong class="text-gray-700">Lei Geral de Proteção de Dados (LGPD)</strong>.
-                                                <br>
-                                                <span class="text-gray-500 mt-1 block">
-                                                    Seus dados serão utilizados exclusivamente para prestação de serviços médicos e comunicação relacionada ao atendimento.
-                                                </span>
+                                                conforme a LGPD.
                                             </label>
                                         </div>
                                     </div>

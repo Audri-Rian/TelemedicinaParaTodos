@@ -350,14 +350,7 @@ const handleSubmit = async () => {
                                                     class="text-primary hover:text-primary/80 underline underline-offset-2 hover:underline-offset-4 transition-all duration-300">
                                                     Política de Privacidade
                                                 </a>
-                                                , incluindo o tratamento de dados pessoais conforme a
-                                                <strong class="text-gray-700">Lei Geral de Proteção de Dados
-                                                    (LGPD)</strong>.
-                                                <br>
-                                                <span class="text-gray-500 mt-1 block">
-                                                    Autorizo o uso da telemedicina e o tratamento dos meus dados
-                                                    exclusivamente para prestação de serviços médicos.
-                                                </span>
+                                                conforme a LGPD e autorizo o uso da telemedicina.
                                             </label>
                                         </div>
                                     </div>
