@@ -11,6 +11,7 @@ import AuthBase from '@/layouts/AuthLayout.vue';
 import { login } from '@/routes';
 import { Form, Head } from '@inertiajs/vue3';
 import { LoaderCircle } from 'lucide-vue-next';
+import patientDoodleImage from '@images/PatientDoodle.png';
 
 // Composables
 const {
@@ -416,7 +417,7 @@ const handleSubmit = async () => {
 
                         <!-- Imagem central -->
                         <div class="relative z-10 flex items-center justify-center">
-                            <img src="/storage/photos/patientdoodle.png" alt="Doctor Doodle"
+                            <img :src="patientDoodleImage" alt="Patient Doodle"
                                 class="w-[420px] h-[420px] object-contain drop-shadow-2xl" />
                         </div>
                     </div>

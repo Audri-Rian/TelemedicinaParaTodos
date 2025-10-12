@@ -12,6 +12,7 @@ import AuthBase from '@/layouts/AuthLayout.vue';
 import { login } from '@/routes';
 import { Form, Head } from '@inertiajs/vue3';
 import { LoaderCircle, ChevronDown, X } from 'lucide-vue-next';
+import doctorDoodleImage from '@images/DoctorDoodle.png';
 
 // Props do Inertia
 const props = defineProps<{
@@ -632,7 +633,7 @@ const handleSubmit = async () => {
 
                         <!-- Imagem central -->
                         <div class="relative z-10 flex items-center justify-center">
-                            <img src="/storage/photos/doctordoodle.png" alt="Doctor Doodle"
+                            <img :src="doctorDoodleImage" alt="Doctor Doodle"
                                 class="w-[420px] h-[420px] object-contain drop-shadow-2xl" />
                         </div>
                     </div>

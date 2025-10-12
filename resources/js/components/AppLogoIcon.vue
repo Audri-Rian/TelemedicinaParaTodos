@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { HTMLAttributes } from 'vue';
+import logoImage from '@images/brand/Logo.png';
 
 defineOptions({
     inheritAttrs: false,
@@ -10,16 +11,14 @@ interface Props {
 }
 
 defineProps<Props>();
-
-const logoUrl = `/storage/photos/LogoTelemedicina.png?v=${import.meta.env.VITE_APP_VERSION}`;
 </script>
 
 <template>
     <img 
-        :src="logoUrl" 
+        :src="logoImage" 
         alt="Logo Telemedicina" 
         width="200" 
-        height="100"
+        height="200"
         :class="className" 
         v-bind="$attrs"
         loading="eager"
