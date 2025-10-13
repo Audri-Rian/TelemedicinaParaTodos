@@ -1,6 +1,9 @@
 <script setup lang="ts">
-import { dashboard, login, register } from '@/routes';
+import { login, register } from '@/routes';
 import { Head, Link } from '@inertiajs/vue3';
+import { useRoleRoutes } from '@/composables/auth';
+
+const { dashboardRoute } = useRoleRoutes();
 </script>
 
 <template>
@@ -13,7 +16,7 @@ import { Head, Link } from '@inertiajs/vue3';
         class="flex min-h-screen flex-col items-center bg-[#FDFDFC] p-6 text-[#1b1b18] lg:justify-center lg:p-8">
         <header class="mb-6 w-full max-w-[335px] text-sm not-has-[nav]:hidden lg:max-w-4xl">
             <nav class="flex items-center justify-end gap-4">
-                <Link v-if="$page.props.auth.user" :href="dashboard()"
+                <Link v-if="$page.props.auth.user" :href="dashboardRoute()"
                     class="inline-block rounded-sm border border-[#19140035] px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#1915014a]">
                 Dashboard
                 </Link>

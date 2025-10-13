@@ -197,6 +197,10 @@ if ($user->isDoctor()) {
 
 ## Documentação Relacionada
 
-- **[Sistema de Controle de Acesso](./RoleBasedAccess.md)**: Documentação completa sobre middlewares, rotas protegidas e arquitetura de roles
-- **[Arquitetura do Sistema](../../Architecture/Arquitetura.md)**: Visão geral da arquitetura
-- **[Diagrama de Banco de Dados](../../database/README.md)**: Estrutura das tabelas users, doctors e patients
+### Autenticação e Controle de Acesso
+- **[Sistema de Controle de Acesso Backend](./RoleBasedAccess.md)** - Middlewares, rotas protegidas e arquitetura de roles (Backend)
+- **[Sistema de Roteamento Frontend](./FrontendRouting.md)** - Composables, proteção de rotas e navegação dinâmica (Frontend)
+
+### Documentação Geral
+- **[Arquitetura do Sistema](../../Architecture/Arquitetura.md)** - Visão geral da arquitetura
+- **[Diagrama de Banco de Dados](../../database/README.md)** - Estrutura das tabelas users, doctors e patients

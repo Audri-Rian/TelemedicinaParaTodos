@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
-import { dashboard, appointments } from '@/routes';
+import * as doctorRoutes from '@/routes/doctor';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/vue3';
 import { Calendar, History } from 'lucide-vue-next';
+import { onMounted } from 'vue';
+import { useRouteGuard } from '@/composables/auth';
 
 interface UpcomingAppointment {
     id: string;
@@ -44,6 +46,13 @@ const props = withDefaults(defineProps<Props>(), {
     monthlyStats: () => ({ total: 0, period: 'Este Mês' }),
     weeklyAppointments: () => [],
     monthlyAppointments: () => []
+});
+
+const { canAccessDoctorRoute } = useRouteGuard();
+
+// Verificar acesso ao montar componente
+onMounted(() => {
+    canAccessDoctorRoute();
 });
 
 // Dados fictícios para demonstração
@@ -106,7 +115,7 @@ const monthlyAppointments = props.monthlyAppointments.length > 0 ? props.monthly
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: 'Dashboard',
-        href: dashboard().url,
+        href: doctorRoutes.dashboard().url,
     },
 ];
 </script>
@@ -226,7 +235,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                         
                         <div class="space-y-3">
                             <Link 
-                                :href="appointments()"
+                                :href="doctorRoutes.appointments()"
                                 class="w-full bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-semibold py-3 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2"
                             >
                                 <Calendar class="w-5 h-5" />

@@ -3,34 +3,65 @@ import NavFooter from '@/components/NavFooter.vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
-import { dashboard, appointments, consultations, healthRecords } from '@/routes';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/vue3';
-import { BookOpen, Calendar, Folder, Home, Activity, Monitor} from 'lucide-vue-next';
+import { BookOpen, Calendar, Folder, Home, Activity, Monitor, Users } from 'lucide-vue-next';
 import AppLogo from './AppLogo.vue';
+import { useAuth } from '@/composables/auth';
+import { computed } from 'vue';
+import * as doctorRoutes from '@/routes/doctor';
+import * as patientRoutes from '@/routes/patient';
 
-const mainNavItems: NavItem[] = [
+const { isDoctor, isPatient } = useAuth();
+
+// Navegação para Médicos
+const doctorNavItems = computed<NavItem[]>(() => [
     {
-        title: 'Home',
-        href: dashboard(),
+        title: 'Dashboard',
+        href: doctorRoutes.dashboard(),
         icon: Home,
     },
     {
         title: 'Agenda',
-        href: appointments(),
+        href: doctorRoutes.appointments(),
         icon: Calendar,
     },
     {
-        title: 'Telemedicina',
-        href: consultations(),
+        title: 'Consultas',
+        href: doctorRoutes.consultations(),
         icon: Monitor,
     },
+]);
+
+// Navegação para Pacientes
+const patientNavItems = computed<NavItem[]>(() => [
     {
-        title: 'Registros de saúde',
-        href: healthRecords(),
+        title: 'Dashboard',
+        href: patientRoutes.dashboard(),
+        icon: Home,
+    },
+    {
+        title: 'Agendamentos',
+        href: patientRoutes.appointments(),
+        icon: Calendar,
+    },
+    {
+        title: 'Prontuário',
+        href: patientRoutes.healthRecords(),
         icon: Activity,
     },
-];
+]);
+
+// Selecionar navegação baseada no role
+const mainNavItems = computed(() => {
+    if (isDoctor.value) {
+        return doctorNavItems.value;
+    }
+    if (isPatient.value) {
+        return patientNavItems.value;
+    }
+    return [];
+});
 
 const footerNavItems: NavItem[] = [
     {
@@ -44,6 +75,17 @@ const footerNavItems: NavItem[] = [
         icon: BookOpen,
     },
 ];
+
+// Dashboard link baseado no role
+const dashboardLink = computed(() => {
+    if (isDoctor.value) {
+        return doctorRoutes.dashboard();
+    }
+    if (isPatient.value) {
+        return patientRoutes.dashboard();
+    }
+    return { url: '/', method: 'get' };
+});
 </script>
 
 <template>
@@ -52,7 +94,7 @@ const footerNavItems: NavItem[] = [
             <SidebarMenu>
                 <SidebarMenuItem>
                     <SidebarMenuButton size="lg" as-child>
-                        <Link :href="dashboard()">
+                        <Link :href="dashboardLink">
                             <AppLogo />
                         </Link>
                     </SidebarMenuButton>

@@ -1,8 +1,14 @@
-# Sistema de Controle de Acesso Baseado em Roles - TelemedicinaParaTodos
+# Sistema de Controle de Acesso Baseado em Roles (Backend) - TelemedicinaParaTodos
 
 ## Visão Geral
 
 O sistema implementa controle de acesso baseado em perfis de usuário através de relacionamentos 1:1 entre a tabela `users` e as tabelas `doctors` e `patients`. Não utiliza um sistema tradicional de roles/permissions, mas sim uma arquitetura de perfis específicos.
+
+**Este documento cobre apenas o BACKEND.** Para o sistema de roteamento no **Frontend**, consulte: [Sistema de Roteamento Frontend](./FrontendRouting.md)
+
+**Documentação relacionada:**
+- **[Sistema de Roteamento Frontend](./FrontendRouting.md)** - Composables, proteção de rotas e navegação no Vue.js
+- **[Lógica de Registro](./RegistrationLogic.md)** - Fluxo de registro de usuários
 
 ## Arquitetura
 
@@ -225,6 +231,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 O middleware `HandleInertiaRequests` compartilha automaticamente informações do usuário:
 
+**Arquivo:** `app/Http/Middleware/HandleInertiaRequests.php`
+
 ```php
 'auth' => [
     'user' => $request->user(),              // Dados básicos do usuário
@@ -235,28 +243,26 @@ O middleware `HandleInertiaRequests` compartilha automaticamente informações d
 ],
 ```
 
-### Uso no Frontend (Vue/Inertia)
+### Acesso no Frontend
 
+Estes dados ficam disponíveis no frontend via Inertia.js. Para detalhes completos sobre como usar no frontend, consulte: **[Sistema de Roteamento Frontend](./FrontendRouting.md)**
+
+**Resumo rápido:**
 ```vue
 <script setup>
-import { usePage } from '@inertiajs/vue3'
+import { useAuth } from '@/composables/auth'
 
-const page = usePage()
-const auth = page.props.auth
-
-// Verificar tipo de usuário
-if (auth.isDoctor) {
-    // Lógica para médico
-}
-
-if (auth.isPatient) {
-    // Lógica para paciente
-}
-
-// Acessar perfil específico
-const profile = auth.profile // Doctor ou Patient
+const { user, role, isDoctor, isPatient, profile, canAccess } = useAuth()
 </script>
+
+<template>
+    <!-- Uso simplificado -->
+    <div v-if="canAccess('doctor')">Conteúdo de médico</div>
+    <div v-if="canAccess('patient')">Conteúdo de paciente</div>
+</template>
 ```
+
+**Para implementação completa, veja:** [FrontendRouting.md](./FrontendRouting.md)
 
 ## Fluxo de Autenticação e Redirecionamento
 
@@ -455,9 +461,13 @@ $appointments = Appointments::byDoctor($doctor->id)->get();
 
 ## Referências
 
-- [Documentação de Registro](./RegistrationLogic.md)
-- [Arquitetura do Sistema](../../Architecture/Arquitetura.md)
-- [Diagrama de Banco de Dados](../../database/README.md)
+### Documentação de Autenticação
+- **[Sistema de Roteamento Frontend](./FrontendRouting.md)** - Composables, proteção de rotas e navegação no Vue.js
+- **[Lógica de Registro](./RegistrationLogic.md)** - Fluxo de registro de usuários e redirecionamentos
+
+### Documentação Geral
+- **[Arquitetura do Sistema](../../Architecture/Arquitetura.md)** - Visão geral da arquitetura
+- **[Diagrama de Banco de Dados](../../database/README.md)** - Estrutura das tabelas
 
 
 

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
-import { appointments } from '@/routes';
+import * as doctorRoutes from '@/routes/doctor';
 import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/vue3';
 import { ChevronLeft, ChevronRight, Plus, Lock } from 'lucide-vue-next';
@@ -8,11 +8,11 @@ import { ChevronLeft, ChevronRight, Plus, Lock } from 'lucide-vue-next';
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: 'Dashboard',
-        href: '/dashboard',
+        href: doctorRoutes.dashboard().url,
     },
     {
         title: 'Agenda',
-        href: appointments().url,
+        href: doctorRoutes.appointments().url,
     },
 ];
 
