@@ -33,7 +33,19 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        // Redirecionar baseado no tipo de usuário
+        $user = Auth::user();
+        
+        if ($user->isDoctor()) {
+            return redirect()->intended(route('doctor.dashboard', absolute: false));
+        }
+        
+        if ($user->isPatient()) {
+            return redirect()->intended(route('patient.dashboard', absolute: false));
+        }
+
+        // Fallback caso não tenha perfil definido
+        return redirect()->intended(route('home', absolute: false));
     }
 
     /**

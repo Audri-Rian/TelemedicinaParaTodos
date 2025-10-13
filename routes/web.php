@@ -17,19 +17,32 @@ Route::get('/', function () {
     return Inertia::render('Welcome');
 })->name('home');
 
-Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
-    Route::get('appointments', [AppointmentsController::class, 'index'])->name('appointments');
-    Route::get('consultations', [ConsultationsController::class, 'index'])->name('consultations');
-    Route::get('healthRecords', [HealthController::class, 'index'])->name('healthRecords');
+// Rotas para Médicos
+Route::middleware(['auth', 'verified', 'doctor'])->prefix('doctor')->name('doctor.')->group(function () {
+    Route::get('dashboard', [App\Http\Controllers\Doctor\DoctorDashboardController::class, 'index'])->name('dashboard');
+    Route::get('appointments', [App\Http\Controllers\Doctor\DoctorAppointmentsController::class, 'index'])->name('appointments');
+    Route::get('consultations', [App\Http\Controllers\Doctor\DoctorConsultationsController::class, 'index'])->name('consultations');
     
-    // Rotas para especializações
-    Route::resource('specializations', SpecializationController::class);
-    
-    // Rotas para videoconferência
+    // Rotas para videoconferência (médicos)
     Route::post('video-call/request/{user}', [VideoCallController::class, 'requestVideoCall'])->name('video-call.request');
     Route::post('video-call/request/status/{user}', [VideoCallController::class, 'requestVideoCallStatus'])->name('video-call.request-status');
+});
+
+// Rotas para Pacientes
+Route::middleware(['auth', 'verified', 'patient'])->prefix('patient')->name('patient.')->group(function () {
+    Route::get('dashboard', [App\Http\Controllers\Patient\PatientDashboardController::class, 'index'])->name('dashboard');
+    Route::get('appointments', [App\Http\Controllers\Patient\PatientAppointmentsController::class, 'index'])->name('appointments');
+    Route::get('health-records', [App\Http\Controllers\Patient\PatientHealthRecordsController::class, 'index'])->name('health-records');
     
+    // Rotas para videoconferência (pacientes)
+    Route::post('video-call/request/{user}', [VideoCallController::class, 'requestVideoCall'])->name('video-call.request');
+    Route::post('video-call/request/status/{user}', [VideoCallController::class, 'requestVideoCallStatus'])->name('video-call.request-status');
+});
+
+// Rotas compartilhadas (ambos os tipos de usuário)
+Route::middleware(['auth', 'verified'])->group(function () {
+    // Rotas para especializações
+    Route::resource('specializations', SpecializationController::class);
 });
 
 // Rotas públicas para API de especializações

@@ -11,10 +11,13 @@ O sistema de registro suporta diferentes tipos de usuários (pacientes e médico
 #### PatientRegistrationController
 - **Responsabilidade**: Gerencia registro de pacientes
 - **Métodos**: create() (formulário), store() (processamento)
+- **Redirecionamento**: `/patient/dashboard` após registro
 
 #### DoctorRegistrationController  
 - **Responsabilidade**: Gerencia registro de médicos
-- **Status**: Parcialmente implementado (falta store())
+- **Métodos**: create() (formulário), store() (processamento)
+- **Status**: Totalmente implementado
+- **Redirecionamento**: `/doctor/dashboard` após registro
 
 #### RegisteredUserController
 - **Responsabilidade**: Registro genérico (fallback)
@@ -43,8 +46,11 @@ O sistema de registro suporta diferentes tipos de usuários (pacientes e médico
 #### User
 - **Responsabilidade**: Modelo base de usuário
 - **Relacionamentos**: hasOne(Doctor), hasOne(Patient)
-- **Métodos**: isDoctor(), isPatient(), getRole()
-- **Campos**: name, email, password
+- **Métodos de Verificação**:
+  - `isDoctor()`: bool - Verifica se possui perfil de médico
+  - `isPatient()`: bool - Verifica se possui perfil de paciente
+  - `getRole()`: string - Retorna 'doctor', 'patient' ou 'user'
+- **Campos**: name, email, password (UUID como PK)
 
 #### Patient
 - **Responsabilidade**: Perfil específico de paciente
@@ -54,7 +60,10 @@ O sistema de registro suporta diferentes tipos de usuários (pacientes e médico
 
 #### Doctor
 - **Responsabilidade**: Perfil específico de médico
-- **Status**: Modelo existe, implementação pendente
+- **Relacionamento**: belongsTo(User), belongsToMany(Specialization)
+- **Campos**: crm, biography, license_number, license_expiry_date, status, availability_schedule, consultation_fee
+- **Recursos**: Soft deletes, scopes (active, available), accessors, mutators
+- **Status**: Totalmente implementado
 
 ### Rotas
 
@@ -77,11 +86,15 @@ O sistema de registro suporta diferentes tipos de usuários (pacientes e médico
 3. **Validação**: PatientRegistrationRequest valida dados
 4. **Processamento**: Cria User + Patient em transação
 5. **Login**: Autenticação automática
-6. **Redirecionamento**: Dashboard
+6. **Redirecionamento**: `/patient/dashboard` (rota protegida por middleware)
 
 ### Médicos
-- **Status**: Formulário implementado, processamento pendente
-- **Necessário**: DoctorRegistrationRequest, método store(), campos específicos
+1. **Seleção**: Usuário escolhe tipo de registro
+2. **Formulário**: Exibe campos específicos de médico (name, email, password, crm, specializations)
+3. **Validação**: DoctorRegistrationRequest valida dados
+4. **Processamento**: Cria User + Doctor + associa Specializations em transação
+5. **Login**: Autenticação automática
+6. **Redirecionamento**: `/doctor/dashboard` (rota protegida por middleware)
 
 ## Diagrama da Estrutura
 
@@ -96,22 +109,94 @@ graph TD
     F --> G[Validação]
     G --> H[Criação User + Patient]
     H --> I[Login Automático]
-    I --> J[Dashboard]
+    I --> J[/patient/dashboard]
     
-    D --> K[Formulário Médico]
-    K --> L[Processamento Pendente]
+    D --> K[DoctorRegistrationRequest]
+    K --> L[Validação]
+    L --> M[Criação User + Doctor + Specializations]
+    M --> I
+    I --> N[/doctor/dashboard]
     
-    E --> M[Registro Genérico]
-    M --> N[User Básico]
-    N --> I
+    E --> O[Registro Genérico]
+    O --> P[User Básico]
+    P --> I
+    I --> Q[/ home]
     
-    O[Login] --> P[LoginRequest]
-    P --> Q[Rate Limiting]
-    Q --> R[Autenticação]
-    R --> J
+    R[Login] --> S[LoginRequest]
+    S --> T[Rate Limiting]
+    T --> U[Autenticação]
+    U --> V{Tipo de User}
+    V -->|isDoctor| N
+    V -->|isPatient| J
+    V -->|Nenhum| Q
 ```
 Frontend (Vue) → Composable → API Call → Laravel Controller → Database
      ↓              ↓           ↓              ↓              ↓
-1. Validação    2. Rate      3. POST       4. Validação   5. User + Patient
+1. Validação    2. Rate      3. POST       4. Validação   5. User + Profile
    Client-side    Limit       /register/    Server-side    Created
-                  Check       patient
+                  Check       patient                      (Patient/Doctor)
+                              ou doctor
+                              
+## Sistema de Diferenciação de Usuários
+
+### Métodos de Verificação (Model User)
+
+```php
+// Verifica se é médico
+$user->isDoctor(): bool
+
+// Verifica se é paciente
+$user->isPatient(): bool
+
+// Retorna role como string
+$user->getRole(): string // 'doctor', 'patient' ou 'user'
+```
+
+### Middlewares de Proteção
+
+O sistema possui middlewares específicos para cada tipo de usuário:
+
+- **EnsureUserIsDoctor**: Protege rotas exclusivas para médicos
+- **EnsureUserIsPatient**: Protege rotas exclusivas para pacientes
+
+**Aliases registrados:**
+- `doctor` → `\App\Http\Middleware\EnsureUserIsDoctor::class`
+- `patient` → `\App\Http\Middleware\EnsureUserIsPatient::class`
+
+### Estrutura de Rotas
+
+#### Rotas de Médicos
+- Prefixo: `/doctor`
+- Middleware: `['auth', 'verified', 'doctor']`
+- Exemplos:
+  - `GET /doctor/dashboard`
+  - `GET /doctor/appointments`
+  - `GET /doctor/consultations`
+
+#### Rotas de Pacientes
+- Prefixo: `/patient`
+- Middleware: `['auth', 'verified', 'patient']`
+- Exemplos:
+  - `GET /patient/dashboard`
+  - `GET /patient/appointments`
+  - `GET /patient/health-records`
+
+### Redirecionamento Inteligente
+
+Após login ou registro, o sistema redireciona automaticamente baseado no tipo:
+
+```php
+if ($user->isDoctor()) {
+    redirect()->route('doctor.dashboard');
+} elseif ($user->isPatient()) {
+    redirect()->route('patient.dashboard');
+} else {
+    redirect()->route('home');
+}
+```
+
+## Documentação Relacionada
+
+- **[Sistema de Controle de Acesso](./RoleBasedAccess.md)**: Documentação completa sobre middlewares, rotas protegidas e arquitetura de roles
+- **[Arquitetura do Sistema](../../Architecture/Arquitetura.md)**: Visão geral da arquitetura
+- **[Diagrama de Banco de Dados](../../database/README.md)**: Estrutura das tabelas users, doctors e patients

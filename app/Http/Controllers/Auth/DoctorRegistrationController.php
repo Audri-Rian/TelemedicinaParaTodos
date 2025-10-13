@@ -57,7 +57,7 @@ class DoctorRegistrationController extends Controller
 
             Auth::login($user);
             
-            return redirect()->route('dashboard')
+            return redirect()->route('doctor.dashboard')
                 ->with('success', 'Conta de médico criada com sucesso! Bem-vindo à Telemedicina para Todos.');
                 
         } catch (\Exception $e) {

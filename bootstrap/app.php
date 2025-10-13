@@ -20,6 +20,11 @@ return Application::configure(basePath: dirname(__DIR__))
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
         ]);
+
+        $middleware->alias([
+            'doctor' => \App\Http\Middleware\EnsureUserIsDoctor::class,
+            'patient' => \App\Http\Middleware\EnsureUserIsPatient::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //
