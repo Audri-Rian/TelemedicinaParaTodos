@@ -17,9 +17,7 @@ defineProps<Props>();
     <img 
         :src="logoImage" 
         alt="Logo Telemedicina" 
-        width="200" 
-        height="200"
-        :class="className" 
+        :class="[className, 'w-14 h-14 md:w-18 md:h-16']" 
         v-bind="$attrs"
         loading="eager"
     />
