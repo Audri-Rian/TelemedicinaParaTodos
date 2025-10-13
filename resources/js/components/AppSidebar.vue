@@ -5,7 +5,7 @@ import NavUser from '@/components/NavUser.vue';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/vue3';
-import { BookOpen, Calendar, Folder, Home, Activity, Monitor, Users } from 'lucide-vue-next';
+import { BookOpen, Calendar, Folder, Home, Activity, Monitor, Users, History, FileText } from 'lucide-vue-next';
 import AppLogo from './AppLogo.vue';
 import { useAuth } from '@/composables/auth';
 import { computed } from 'vue';
@@ -27,9 +27,24 @@ const doctorNavItems = computed<NavItem[]>(() => [
         icon: Calendar,
     },
     {
+        title: 'Pacientes',
+        href: '/doctor/patients',
+        icon: Users,
+    },
+    {
         title: 'Consultas',
         href: doctorRoutes.consultations(),
         icon: Monitor,
+    },
+    {
+        title: 'Histórico',
+        href: '/doctor/history',
+        icon: History,
+    },
+    {
+        title: 'Documentos',
+        href: '/doctor/documents',
+        icon: FileText,
     },
 ]);
 

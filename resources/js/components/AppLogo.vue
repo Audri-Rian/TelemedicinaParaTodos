@@ -10,7 +10,7 @@ defineProps<Props>();
 </script>
 
 <template>
-    <div class="size-12">
+    <div class="size-14">
         <img 
             v-if="logoSrc" 
             :src="logoSrc" 
@@ -19,7 +19,7 @@ defineProps<Props>();
         <AppLogoIcon v-else class="" />
     </div>
     <div class="text-left">
-        <span class="ml-1 text-xl font-semibold">Telemedicina</span>
-        <p class="ml-1.5 text-gray-400 text-xs">Para todos</p>
+        <span class="ml-1 text-2xl font-semibold">Telemedicina</span>
+        <p class="ml-1.5 text-gray-400 text-sm">Para todos</p>
     </div>
 </template>

@@ -52,7 +52,7 @@ const calendarDays = [
 
             <!-- Botões de Ação -->
             <div class="flex justify-end gap-3">
-                <button class="bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-semibold py-2 px-4 rounded-lg transition-colors duration-200 flex items-center space-x-2">
+                <button class="bg-primary hover:bg-primary/90 text-gray-900 font-semibold py-2 px-4 rounded-lg transition-colors duration-200 flex items-center space-x-2">
                     <Plus class="w-4 h-4" />
                     <span>Adicionar Horário</span>
                 </button>
@@ -69,7 +69,7 @@ const calendarDays = [
                     <button class="text-gray-600 hover:text-gray-900 transition-colors duration-200">
                         Semanal
                     </button>
-                    <button class="text-gray-900 font-semibold border-b-2 border-yellow-400 pb-1">
+                    <button class="text-gray-900 font-semibold border-b-2 border-primary pb-1">
                         Mensal
                     </button>
                 </div>
@@ -102,7 +102,7 @@ const calendarDays = [
                                  :class="[
                                      'w-8 h-8 flex items-center justify-center rounded-full text-sm font-medium transition-colors duration-200 cursor-pointer',
                                      day === selectedDay 
-                                         ? 'bg-yellow-400 text-gray-900' 
+                                         ? 'bg-primary text-gray-900' 
                                          : 'text-gray-900 hover:bg-gray-100'
                                  ]">
                                 {{ day }}

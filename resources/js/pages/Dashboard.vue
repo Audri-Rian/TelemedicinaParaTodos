@@ -141,7 +141,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                         
                         <div class="overflow-hidden rounded-lg border border-gray-200">
                             <table class="min-w-full divide-y divide-gray-200">
-                                <thead class="bg-yellow-50">
+                                <thead class="bg-primary/10">
                                     <tr>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                             Paciente
@@ -192,7 +192,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                                     <span class="text-xs text-gray-600 w-8">{{ day.day }}</span>
                                     <div class="flex-1 bg-gray-200 rounded-full h-2">
                                         <div 
-                                            class="bg-yellow-400 h-2 rounded-full transition-all duration-300"
+                                            class="bg-primary h-2 rounded-full transition-all duration-300"
                                             :style="{ width: `${Math.max(10, (day.count / day.max) * 100)}%` }"
                                         ></div>
                                     </div>
@@ -217,7 +217,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                                     <span class="text-xs text-gray-600 w-8">{{ week.week }}</span>
                                     <div class="flex-1 bg-gray-200 rounded-full h-2">
                                         <div 
-                                            class="bg-yellow-400 h-2 rounded-full transition-all duration-300"
+                                            class="bg-primary h-2 rounded-full transition-all duration-300"
                                             :style="{ width: `${Math.max(10, (week.count / week.max) * 100)}%` }"
                                         ></div>
                                     </div>
@@ -236,14 +236,14 @@ const breadcrumbs: BreadcrumbItem[] = [
                         <div class="space-y-3">
                             <Link 
                                 :href="doctorRoutes.appointments()"
-                                class="w-full bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-semibold py-3 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2"
+                                class="w-full bg-primary hover:bg-primary/90 text-gray-900 font-semibold py-3 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2"
                             >
                                 <Calendar class="w-5 h-5" />
                                 <span>Gerenciar Agenda</span>
                             </Link>
                             
                             <button 
-                                class="w-full bg-yellow-100 hover:bg-yellow-200 text-gray-900 font-semibold py-3 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2"
+                                class="w-full bg-primary/20 hover:bg-primary/30 text-gray-900 font-semibold py-3 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2"
                             >
                                 <History class="w-5 h-5" />
                                 <span>Ver Histórico Completo</span>

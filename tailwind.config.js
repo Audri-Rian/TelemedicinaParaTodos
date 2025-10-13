@@ -13,7 +13,7 @@ module.exports = {
           tertiary: "#8C8C5E",  // Cinza escuro Tailwind
         },
         fontFamily: {
-          sans: ["Spline Sans", "ui-sans-serif", "system-ui", "sans-serif"],
+          sans: ["Nunito", "ui-sans-serif", "system-ui", "sans-serif"],
           display: ["Knewave", "cursive"],
           lato: ["Lato", "sans-serif"],
           montserrat: ["Montserrat", "sans-serif"],
@@ -21,6 +21,7 @@ module.exports = {
           raleway: ["Raleway", "sans-serif"],
           spline: ["Spline Sans", "sans-serif"],
           "spline-bold": ["Spline Sans", "sans-serif"],
+          playwrite: ["Playwrite DE SAS", "cursive"],
         },
       },
     },
