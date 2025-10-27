@@ -71,7 +71,10 @@ O **Telemedicina para Todos** é uma plataforma moderna de telemedicina que cone
 - **[Guia de Instalação](../setup/Start.md)** - Como configurar o ambiente de desenvolvimento
 - **[Regras do Cursor](../setup/CursorRulesGuide.md)** - Configurações do ambiente de desenvolvimento
 
-### 6. 📚 Referências
+### 6. ☁️ Cloud e Escalabilidade
+- **[Estratégia AWS Cloud](../aws/CloudScalabilityStrategy.md)** - Roadmap completo para migração e escalabilidade na nuvem
+
+### 7. 📚 Referências
 - **[Glossário](Glossario.md)** - Definições de termos técnicos e de negócio
 - **[README Principal](../../README.md)** - Visão geral do projeto no GitHub
 
@@ -83,12 +86,14 @@ O **Telemedicina para Todos** é uma plataforma moderna de telemedicina que cone
 - **👨‍⚕️ Médicos**: [Regras de Negócio](../requirements/SystemRules.md) → [Funcionalidades](../requirements/FuncionalitsGuide.md) → [Arquitetura](../architecture/Arquitetura.md)
 - **👤 Pacientes**: [Visão Geral do Projeto](../../README.md) → [Funcionalidades](../requirements/FuncionalitsGuide.md) → [Regras](../requirements/SystemRules.md)
 - **💻 Desenvolvedores**: [Arquitetura](../architecture/Arquitetura.md) → [Guia de Dev](../architecture/DevGuide.md) → [Implementações](../modules/appointments/AppointmentsImplementationStudy.md)
+- **☁️ DevOps/Cloud**: [Estratégia AWS](../aws/CloudScalabilityStrategy.md) → [Arquitetura](../architecture/Arquitetura.md) → [Configuração](../setup/Start.md)
 
 ### Por Tipo de Documentação
 - **📋 Requisitos**: [SystemRules.md](../requirements/SystemRules.md) + [FuncionalitsGuide.md](../requirements/FuncionalitsGuide.md)
 - **🏗️ Técnico**: [Arquitetura.md](../architecture/Arquitetura.md) + [VueGuide.md](../architecture/VueGuide.md)
 - **💾 Dados**: [diagrama_banco_dados.md](../database/diagrama_banco_dados.md)
 - **⚙️ Lógica**: [AppointmentsLogica.md](../modules/appointments/AppointmentsLogica.md) + [VideoCallImplementation.md](../modules/videocall/VideoCallImplementation.md)
+- **☁️ Cloud**: [CloudScalabilityStrategy.md](../aws/CloudScalabilityStrategy.md)
 
 ---
 
@@ -100,6 +105,12 @@ O **Telemedicina para Todos** é uma plataforma moderna de telemedicina que cone
 3. Estude a [Arquitetura](../architecture/Arquitetura.md) do sistema
 4. Consulte o [Glossário](Glossario.md) para termos técnicos
 5. Explore as implementações específicas conforme necessário
+
+### Para DevOps/Cloud Engineers
+1. Comece com a [Estratégia AWS Cloud](../aws/CloudScalabilityStrategy.md)
+2. Entenda a [Arquitetura](../architecture/Arquitetura.md) atual do sistema
+3. Revise os [Requisitos](../requirements/SystemRules.md) de segurança e compliance
+4. Configure o ambiente de desenvolvimento com o [Guia de Instalação](../setup/Start.md)
 
 ### Para Stakeholders
 1. Comece com a [Visão Geral do Projeto](../../README.md)
@@ -123,6 +134,7 @@ O **Telemedicina para Todos** é uma plataforma moderna de telemedicina que cone
 | ✅ Consultas | Completo | [AppointmentsLogica.md](Appointments/AppointmentsLogica.md) |
 | ✅ Videochamadas | Em Desenvolvimento | [VideoCallTasks.md](VideoCall/VideoCallTasks.md) |
 | ✅ Arquitetura | Completo | [Arquitetura.md](Architecture/Arquitetura.md) |
+| ✅ Cloud/AWS | Completo | [CloudScalabilityStrategy.md](../aws/CloudScalabilityStrategy.md) |
 | 🔄 Prontuários | Planejado | *Em breve* |
 | 🔄 Prescrições | Planejado | *Em breve* |
 

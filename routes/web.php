@@ -2,7 +2,6 @@
 
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
-use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\AppointmentsController;
 use App\Http\Controllers\ConsultationsController;
 use App\Http\Controllers\HealthController;
@@ -16,6 +15,21 @@ use Illuminate\Support\Facades\Auth;
 Route::get('/', function () {
     return Inertia::render('Welcome');
 })->name('home');
+
+// Rota para capturar /dashboard e redirecionar baseado no papel do usuário
+Route::middleware(['auth', 'verified'])->get('/dashboard', function () {
+    $user = auth()->user();
+    
+    if ($user->isDoctor()) {
+        return redirect()->route('doctor.dashboard');
+    }
+    
+    if ($user->isPatient()) {
+        return redirect()->route('patient.dashboard');
+    }
+    
+    return redirect()->route('home');
+})->name('dashboard');
 
 // Rotas para Médicos
 Route::middleware(['auth', 'verified', 'doctor'])->prefix('doctor')->name('doctor.')->group(function () {

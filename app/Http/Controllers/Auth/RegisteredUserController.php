@@ -46,6 +46,15 @@ class RegisteredUserController extends Controller
 
         Auth::login($user);
 
-        return to_route('dashboard');
+        // Redirect based on user role
+        if ($user->isDoctor()) {
+            return to_route('doctor.dashboard');
+        }
+        
+        if ($user->isPatient()) {
+            return to_route('patient.dashboard');
+        }
+        
+        return to_route('home');
     }
 }
