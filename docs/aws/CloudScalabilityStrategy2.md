@@ -11,9 +11,21 @@ Este documento apresenta uma **estratégia avançada e estruturada** para prepar
 - [📊 Diagramas de Arquitetura](#-diagramas-de-arquitetura)
 - [🔧 Preparação Local do Projeto](#-preparação-local-do-projeto)
 - [☁️ Infraestrutura AWS](#️-infraestrutura-aws)
+  - [Tabela de Portas](#tabela-de-portas)
+  - [Security Groups por Camada](#security-groups-por-camada)
+  - [RTO/RPO e Matriz de Criticidade](#rtorpo-e-matriz-de-criticidade)
+  - [Estratégia de Assets](#️-estratégia-de-assets-versioning--headers)
+  - [Estratégia de Filas](#️-estratégia-de-filas-queue-strategy)
 - [🔄 Pipeline CI/CD](#-pipeline-cicd)
+  - [CodeBuild Specification](#3-codebuild-specification)
+  - [CodeDeploy AppSpec](#4-codedeploy-appspec)
 - [📹 Sistema de Videoconsultas na AWS](#-sistema-de-videoconsultas-na-aws)
+  - [WebRTC em Produção - Checklist](#5-webrtc-em-produção---checklist)
 - [🔒 Segurança e Compliance](#-segurança-e-compliance)
+  - [Métricas e Alarmes por Serviço](#️-métricas-e-alarmes-por-serviço)
+  - [Política de Retenção de Logs](#️-política-de-retenção-de-logs-e-classificação-lgpd)
+  - [Runbooks Operacionais](#5-runbooks-operacionais)
+  - [Cheatsheet de Deploy](#6-cheatsheet-de-deploy-ec2--codedeploy)
 - [📈 Estratégia de Escalabilidade](#-estratégia-de-escalabilidade)
 - [💰 Otimização de Custos](#-otimização-de-custos)
 - [🎯 Roadmap de Implementação](#-roadmap-de-implementação)
@@ -471,6 +483,153 @@ npm run format:check
 - **Security Groups**: Firewall por instância
 - **Route Tables**: Roteamento de tráfego
 
+#### **Tabela de Portas**
+
+| Serviço | Protocolo | Porta | Origem | Destino | Observações |
+|---------|-----------|-------|--------|---------|-------------|
+| **ALB** | HTTP | 80 | 0.0.0.0/0 | ALB | Redireciona para HTTPS |
+| **ALB** | HTTPS | 443 | 0.0.0.0/0 | ALB | SSL/TLS terminado no ALB |
+| **ALB** | WebSocket | 443 | 0.0.0.0/0 | ALB | Upgrade HTTP para WS |
+| **EC2** | HTTP | 8080 | ALB SG | EC2 SG | Internal app |
+| **EC2** | TCP | 22 | Admin IP | EC2 SG | SSH para admin |
+| **RDS** | PostgreSQL | 5432 | EC2 SG | RDS SG | Database |
+| **Redis** | Redis | 6379 | EC2 SG | Redis SG | Cache e Queue |
+| **TURN/STUN** | UDP | 3478 | Internet | TURN SG | CoTurn STUN/TURN |
+| **TURN/STUN** | TCP | 5349 | Internet | TURN SG | CoTurn TLS |
+| **TURN/STUN** | UDP | 49152-65535 | Internet | TURN SG | RTP/RTCP range |
+| **Health Check** | HTTP | 8080 | ALB | EC2 SG | Endpoint /health |
+
+#### **Security Groups por Camada**
+
+**ALB Security Group:**
+```yaml
+Inbound:
+  - Type: HTTP
+    Port: 80
+    Source: 0.0.0.0/0
+    Purpose: Redirect to HTTPS
+  - Type: HTTPS
+    Port: 443
+    Source: 0.0.0.0/0
+    Purpose: Application traffic
+
+Outbound:
+  - Type: ALL
+    Port: ALL
+    Destination: EC2 Security Group
+    Purpose: Forward to EC2
+```
+
+**EC2 Security Group:**
+```yaml
+Inbound:
+  - Type: HTTP
+    Port: 8080
+    Source: ALB Security Group
+    Purpose: Application traffic from ALB
+  - Type: TCP
+    Port: 22
+    Source: Admin IP (CIDR específico)
+    Purpose: SSH administration
+
+Outbound:
+  - Type: PostgreSQL
+    Port: 5432
+    Destination: RDS Security Group
+    Purpose: Database access
+  - Type: Redis
+    Port: 6379
+    Destination: Redis Security Group
+    Purpose: Cache access
+  - Type: HTTPS
+    Port: 443
+    Destination: 0.0.0.0/0
+    Purpose: External API calls
+  - Type: HTTPS
+    Port: 443
+    Destination: 0.0.0.0/0
+    Purpose: S3 access
+```
+
+**RDS Security Group:**
+```yaml
+Inbound:
+  - Type: PostgreSQL
+    Port: 5432
+    Source: EC2 Security Group
+    Purpose: Database access from app
+
+Outbound:
+  - Type: ALL
+    Port: ALL
+    Destination: EC2 Security Group
+    Purpose: Query responses
+```
+
+**Redis Security Group:**
+```yaml
+Inbound:
+  - Type: Redis
+    Port: 6379
+    Source: EC2 Security Group
+    Purpose: Cache access from app
+
+Outbound:
+  - Type: ALL
+    Port: ALL
+    Destination: EC2 Security Group
+    Purpose: Cache responses
+```
+
+**TURN Security Group:**
+```yaml
+Inbound:
+  - Type: UDP
+    Port: 3478
+    Source: 0.0.0.0/0
+    Purpose: STUN/TURN requests
+  - Type: TCP
+    Port: 5349
+    Source: 0.0.0.0/0
+    Purpose: STUN/TURN over TLS
+  - Type: UDP
+    Port: 49152-65535
+    Source: 0.0.0.0/0
+    Purpose: RTP/RTCP media stream
+
+Outbound:
+  - Type: ALL
+    Port: ALL
+    Destination: 0.0.0.0/0
+    Purpose: TURN relay traffic
+```
+
+#### **NACL (Network ACL) - Regras por Subnet**
+
+**Public Subnet NACL (ALB e NAT Gateway):**
+```yaml
+Inbound Rules:
+  - Rule 100: Allow HTTP from anywhere
+  - Rule 110: Allow HTTPS from anywhere
+  - Rule 120: Allow ephemeral ports for responses
+
+Outbound Rules:
+  - Rule 100: Allow HTTP to internet
+  - Rule 110: Allow HTTPS to internet
+```
+
+**Private Subnet NACL (EC2, RDS, Redis):**
+```yaml
+Inbound Rules:
+  - Rule 100: Allow from ALB subnet
+  - Rule 110: Allow from NAT Gateway subnet
+  - Rule 120: Allow internal subnet communication
+
+Outbound Rules:
+  - Rule 100: Allow to NAT Gateway
+  - Rule 110: Allow to internal subnets
+```
+
 #### **EC2 (Elastic Compute Cloud)**
 - **Instance Type**: `t3.medium` ou `t3.large` (início)
 - **AMI**: Amazon Linux 2023 ou Ubuntu 22.04
@@ -521,6 +680,70 @@ npm run format:check
 - **Compression**: Gzip e Brotli habilitados
 - **Custom Headers**: Security headers (CSP, HSTS)
 
+#### **Estratégia de Assets (Versioning + Headers)**
+
+**Versionamento de Assets:**
+- Assets estáticos versionados via Laravel Mix/Vite
+- Nomes como `app-abc123.js` para cache busting
+- Upload automático para S3 durante deploy
+
+**CloudFront Headers:**
+```yaml
+Security Headers:
+  - X-Frame-Options: DENY
+  - X-Content-Type-Options: nosniff
+  - X-XSS-Protection: 1; mode=block
+  - Strict-Transport-Security: max-age=31536000; includeSubDomains
+  - Content-Security-Policy: default-src 'self'
+
+Cache Headers:
+  - Cache-Control: public, max-age=31536000, immutable
+  - ETag: enabled
+  - Compression: Gzip + Brotli
+
+CORS Headers (para API):
+  - Access-Control-Allow-Origin: https://telemedicina.example.com
+  - Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS
+```
+
+**ETags e Cache-Control:**
+- Assets imutáveis: `max-age=1 year, immutable`
+- Assets dinâmicos: `max-age=5 minutes, must-revalidate`
+- API responses: `no-cache, no-store`
+
+#### **Estratégia de Filas (Queue Strategy)**
+
+**Fase Atual (Redis):**
+```env
+QUEUE_CONNECTION=redis
+REDIS_HOST=telemedicina-cache.xxxxx.cache.amazonaws.com
+```
+
+**Jobs em Redis:**
+- Email notifications
+- Relatórios
+- Exports
+- Backups
+
+**Fase Futura (SQS - Fase 3/4):**
+- Migração gradual de jobs críticos para SQS
+- Dead Letter Queue (DLQ) para jobs falhos
+- Parallel processing com workers dedicados
+
+**Configuração Inicial:**
+```bash
+# Supervisord para workers
+[program:laravel-worker]
+process_name=%(program_name)s_%(process_num)02d
+command=php /var/www/html/artisan queue:work redis --sleep=3 --tries=3 --max-time=3600
+autostart=true
+autorestart=true
+user=nginx
+numprocs=4
+redirect_stderr=true
+stdout_logfile=/var/www/html/storage/logs/worker.log
+```
+
 #### **Application Load Balancer**
 - **Scheme**: Internet-facing
 - **Type**: Application Load Balancer (Layer 7)
@@ -539,6 +762,60 @@ npm run format:check
 
 #### **Princípio do Menor Privilégio**
 Cada role tem **apenas** as permissões necessárias para sua função.
+
+#### **Padrões de Naming e Tagging**
+
+**Convenção de Naming:**
+```
+{project}-{environment}-{resource-type}-{region}
+```
+
+**Exemplos:**
+- VPC: `telemedicina-prod-vpc-us-east-1`
+- EC2: `telemedicina-prod-ec2-app-01`
+- RDS: `telemedicina-prod-rds-primary`
+- ALB: `telemedicina-prod-alb-main`
+- S3 Bucket: `telemedicina-prod-assets`
+- Redis: `telemedicina-prod-redis-cluster`
+
+**Tags Obrigatórias:**
+```yaml
+Owner: devops-team@company.com
+Environment: production|staging|development
+CostCenter: telemedicina
+Project: TelemedicinaParaTodos
+ManagedBy: infrastructure-as-code
+Backup: true|false
+```
+
+**Tags Opcionais:**
+```yaml
+Version: 1.0.0
+Tier: frontend|backend|database
+DataClassification: sensitive|confidential|public
+```
+
+### **3. RTO/RPO e Matriz de Criticidade**
+
+**RTO (Recovery Time Objective)** = Tempo máximo aceitável de indisponibilidade  
+**RPO (Recovery Point Objective)** = Perda máxima aceitável de dados
+
+| Componente | Crítico | RTO | RPO | Backup Strategy | HA Strategy |
+|------------|---------|-----|-----|-----------------|-------------|
+| **Laravel App** | Alto | 15 min | 0 (realtime) | Code artifact em S3 | Multi-AZ + Auto Scaling |
+| **RDS Database** | Crítico | 5 min | 5 min | Automated daily + Snapshots | Multi-AZ + Read Replicas |
+| **Uploads (S3)** | Alto | 15 min | 1 hora | Versioning + Cross-region replication | S3 Cross-region |
+| **Redis Cache** | Baixo | 30 min | N/A (cache-only) | ElastiCache Backup diário | Redis Cluster |
+| **Session Data** | Médio | 15 min | N/A | ElastiCache Backup | Redis Replicas |
+| **Logs** | Baixo | 1 hora | 24 horas | S3 + Glacier | CloudWatch Logs retention |
+| **TURN/STUN** | Alto | 15 min | N/A | Image snapshot | Multi-AZ |
+| **WebSocket (Reverb)** | Alto | 10 min | 0 (realtime) | Code artifact | Redis Pub/Sub scaling |
+
+**Matriz de Criticidade:**
+- **Crítico**: Impacto direto na operação médica (RDS, Core App)
+- **Alto**: Impacta experiência do usuário (App, TURN, Uploads)
+- **Médio**: Funcionalidade auxiliar (Session, Cache)
+- **Baixo**: Observabilidade e analytics (Logs, Metrics)
 
 ---
 
@@ -620,23 +897,37 @@ version: 0.2
 phases:
   pre_build:
     commands:
-      - echo Logging in to Amazon ECR...
       - echo Build started on `date`
+      - echo Installing Node.js...
+      - curl -sL https://deb.nodesource.com/setup_20.x | bash -
+      - apt-get install -y nodejs
+      - echo "Node version:"
+      - node -v
+      - echo "NPM version:"
+      - npm -v
   build:
     commands:
-      - echo Build started on `date`
+      - echo Installing Composer dependencies...
       - composer install --no-dev --optimize-autoloader
+      - echo Installing NPM dependencies...
       - npm ci
+      - echo Building frontend assets...
       - npm run build
+      - echo Running PHPUnit tests...
       - php artisan test
+      - echo Optimizing Laravel...
+      - php artisan config:cache
+      - php artisan route:cache
+      - php artisan view:cache
   post_build:
     commands:
       - echo Build completed on `date`
       - echo Creating deployment package...
-      - zip -r deploy.zip . -x "node_modules/*" ".git/*"
+      - zip -r deploy.zip . -x "node_modules/*" ".git/*" "tests/*" ".env.example"
 artifacts:
   files:
     - deploy.zip
+  name: deployment-artifact
 ```
 
 ### **4. CodeDeploy AppSpec**
@@ -655,23 +946,187 @@ permissions:
     owner: nginx
     group: nginx
     mode: 755
+  - object: /var/www/html/storage
+    owner: nginx
+    group: nginx
+    mode: 775
+  - object: /var/www/html/bootstrap/cache
+    owner: nginx
+    group: nginx
+    mode: 775
 
 hooks:
   ApplicationStop:
-    - location: scripts/stop.sh
+    - location: scripts/application_stop.sh
       timeout: 300
+      runas: root
   BeforeInstall:
     - location: scripts/before_install.sh
       timeout: 300
+      runas: root
   AfterInstall:
     - location: scripts/after_install.sh
       timeout: 600
+      runas: root
   ApplicationStart:
-    - location: scripts/start.sh
+    - location: scripts/application_start.sh
       timeout: 300
+      runas: root
   ValidateService:
-    - location: scripts/validate.sh
+    - location: scripts/validate_service.sh
       timeout: 300
+      runas: root
+```
+
+**Scripts de Deploy:**
+
+**`scripts/application_stop.sh`** (Parar serviços):
+```bash
+#!/bin/bash
+set -e
+
+echo "🛑 Stopping application services..."
+
+# Parar filas de processos
+supervisorctl stop laravel-worker:* || true
+
+# Parar Reverb WebSocket
+supervisorctl stop laravel-reverb:* || true
+
+# Reload nginx (graceful)
+systemctl reload nginx || true
+
+# Parar PHP-FPM (será reiniciado pelo supervisor)
+systemctl stop php-fpm || true
+
+echo "✅ Application stopped successfully"
+```
+
+**`scripts/before_install.sh`** (Backup e preparação):
+```bash
+#!/bin/bash
+set -e
+
+echo "📋 Preparing installation..."
+
+# Backup .env atual
+if [ -f /var/www/html/.env ]; then
+    cp /var/www/html/.env /var/www/html/.env.backup.$(date +%Y%m%d_%H%M%S)
+    echo "✅ .env backed up"
+fi
+
+# Limpar diretório de cache
+rm -rf /var/www/html/bootstrap/cache/* || true
+rm -rf /var/www/html/storage/framework/cache/* || true
+rm -rf /var/www/html/storage/framework/sessions/* || true
+rm -rf /var/www/html/storage/framework/views/* || true
+
+echo "✅ Pre-installation completed"
+```
+
+**`scripts/after_install.sh`** (Instalação e otimização):
+```bash
+#!/bin/bash
+set -e
+
+echo "📦 Installing application..."
+
+cd /var/www/html
+
+# Restaurar .env do backup ou usar novo
+if [ -f .env.backup.* ]; then
+    LATEST_BACKUP=$(ls -t .env.backup.* | head -1)
+    cp "$LATEST_BACKUP" .env
+    echo "✅ .env restored from backup"
+fi
+
+# Configurar permissões
+chown -R nginx:nginx /var/www/html
+chmod -R 755 /var/www/html
+chmod -R 775 /var/www/html/storage
+chmod -R 775 /var/www/html/bootstrap/cache
+
+# Rodar migrations (forçar para produção)
+php artisan migrate --force || echo "⚠️ Migration failed, continuing..."
+
+# Otimizar Laravel
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+php artisan event:cache
+php artisan optimize
+
+# Limpar caches antigos
+php artisan cache:clear
+php artisan config:clear
+php artisan route:clear
+
+# Recriar cache otimizado
+php artisan config:cache
+php artisan route:cache
+
+echo "✅ Post-installation completed"
+```
+
+**`scripts/application_start.sh`** (Iniciar serviços):
+```bash
+#!/bin/bash
+set -e
+
+echo "🚀 Starting application services..."
+
+# Iniciar PHP-FPM
+systemctl start php-fpm || systemctl restart php-fpm
+systemctl enable php-fpm
+
+# Reload nginx para aplicar configurações
+systemctl reload nginx || systemctl restart nginx
+
+# Iniciar filas Laravel
+supervisorctl start laravel-worker:* || supervisorctl start all
+
+# Iniciar Reverb WebSocket
+supervisorctl start laravel-reverb:* || supervisorctl start all
+
+# Verificar serviços
+systemctl is-active --quiet php-fpm && echo "✅ PHP-FPM started"
+systemctl is-active --quiet nginx && echo "✅ Nginx started"
+
+echo "✅ Application started successfully"
+```
+
+**`scripts/validate_service.sh`** (Validar deploy):
+```bash
+#!/bin/bash
+set -e
+
+echo "🔍 Validating service..."
+
+# Aguardar alguns segundos para serviços iniciarem
+sleep 5
+
+# Health check local
+LOCAL_HEALTH=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/health || echo "000")
+
+if [ "$LOCAL_HEALTH" = "200" ]; then
+    echo "✅ Local health check passed"
+else
+    echo "❌ Local health check failed (HTTP $LOCAL_HEALTH)"
+    exit 1
+fi
+
+# Health check no ALB (opcional)
+if [ -n "$ALB_TARGET_URL" ]; then
+    ALB_HEALTH=$(curl -s -o /dev/null -w "%{http_code}" "$ALB_TARGET_URL/health" || echo "000")
+    
+    if [ "$ALB_HEALTH" = "200" ]; then
+        echo "✅ ALB health check passed"
+    else
+        echo "⚠️ ALB health check failed (HTTP $ALB_HEALTH)"
+    fi
+fi
+
+echo "✅ Validation completed successfully"
 ```
 
 ---
@@ -727,6 +1182,87 @@ Qualquer usuário encerra → Evento de encerramento → Conexão P2P é fechada
 REVERB_SCALING_ENABLED=true
 REVERB_SCALING_CHANNEL=reverb
 REDIS_URL=redis://telemedicina-cache.xxxxx.cache.amazonaws.com:6379
+```
+
+### **5. WebRTC em Produção - Checklist**
+
+**CoTurn Configuration:**
+```bash
+# /etc/turnserver.conf
+listening-port=3478
+tls-listening-port=5349
+listening-ip=0.0.0.0
+external-ip=PRIVATE_IP/PUBLIC_IP
+
+# Credentials (geradas dinamicamente pelo Laravel, TTL 1h)
+static-auth-secret=YOUR_SECRET
+lt-cred-mech
+use-auth-secret
+realm=telemedicina.example.com
+
+# Security
+fingerprint
+cert=/etc/turnserver/cert.pem
+pkey=/etc/turnserver/key.pem
+
+# RTP port range
+min-port=49152
+max-port=65535
+```
+
+**Security Groups:**
+- ✅ UDP 3478: STUN/TURN
+- ✅ TCP 5349: STUN/TURN over TLS
+- ✅ UDP 49152-65535: RTP/RTCP stream
+
+**Credenciais Dinâmicas:**
+```php
+// No Laravel, gerar TURN credentials com TTL de 1h
+function generateTurnCredentials(): array {
+    $username = bin2hex(random_bytes(16));
+    $password = bin2hex(random_bytes(16));
+    $ttl = 3600; // 1 hora
+    $timestamp = time() + $ttl;
+    $credential = hash_hmac('sha1', $username . ':' . $timestamp, config('app.turn_secret'));
+    
+    return [
+        'urls' => ['turn:telemedicina.example.com:3478'],
+        'username' => $timestamp . ':' . $username,
+        'credential' => $credential,
+    ];
+}
+```
+
+**Monitoramento:**
+- ✅ TURN Request Rate: Taxa de requisições STUN/TURN
+- ✅ TURN Failure Rate: % de falhas
+- ✅ Fallback Rate: Quanto maior, mais custo de bandwidth
+- ✅ Relay Bandwidth: Monitorar uso de relay
+
+**Checklist de Produção:**
+```yaml
+Configuração:
+  ✅ CoTurn instalado e rodando
+  ✅ Certificados TLS configurados (porta 5349)
+  ✅ UDP 3478 acessível publicamente
+  ✅ RTP port range 49152-65535 aberto
+  ✅ Security group permitindo tráfego
+
+Credentials:
+  ✅ Credenciais giradas automaticamente
+  ✅ TTL de 1 hora para segurança
+  ✅ Método lt-cred-mech habilitado
+  ✅ Realm configurado
+
+Segurança:
+  ✅ Fingerprint habilitado
+  ✅ TLS obrigatório (porta 5349)
+  ✅ Secrets rotacionados periodicamente
+
+Monitoramento:
+  ✅ Taxa de fallback monitorada
+  ✅ Alarmes para alta falha rate
+  ✅ Bandwidth monitorado
 ```
 
 ---
@@ -820,10 +1356,166 @@ REDIS_URL=redis://telemedicina-cache.xxxxx.cache.amazonaws.com:6379
 
 ### **3. Monitoramento e Alertas**
 
-#### **CloudWatch**
-- **Métricas**: CPU, memória, disco, rede, requisições HTTP
-- **Logs**: Aplicação, Nginx, PHP-FPM, Reverb
-- **Alarms**: Alertas quando métricas ultrapassam thresholds
+#### **Métricas e Alarmes por Serviço**
+
+**EC2 Instances:**
+```yaml
+Métricas:
+  - CPUUtilization (p95 > 80%)
+  - NetworkIn/Out
+  - StatusCheckFailed
+  - DiskReadOps, DiskWriteOps
+
+Alarmes:
+  - CPU > 80% por 5 minutos: Alertar equipe
+  - CPU > 90% por 3 minutos: Auto Scaling out
+  - StatusCheckFailed: Auto replace instance
+  - Disk > 80%: Alertar para limpeza
+```
+
+**PHP-FPM:**
+```yaml
+Métricas via CloudWatch Agent:
+  - ActiveProcesses
+  - IdleProcesses
+  - MaxActiveProcesses
+  - SlowRequests (> 5s)
+
+Alarmes:
+  - SlowRequests > 10/min: Performance alert
+  - ActiveProcesses = MaxActiveProcesses: Pool exhaustion
+```
+
+**Laravel Queue:**
+```yaml
+Métricas:
+  - FailedJobs (rate)
+  - QueueDepth
+  - JobDuration (avg)
+
+Alarmes:
+  - FailedJobs > 50/min: Queue troubleshooting
+  - QueueDepth > 1000: Scale workers
+  - JobDuration > 5min (avg): Optimize jobs
+```
+
+**RDS PostgreSQL:**
+```yaml
+Métricas:
+  - CPUUtilization
+  - DatabaseConnections
+  - ReadLatency, WriteLatency (p95/p99)
+  - FreeStorageSpace
+
+Alarmes:
+  - CPU > 75%: Monitor queries
+  - DatabaseConnections > 80% of max: Connection pool alert
+  - Latency p99 > 1s: Query optimization
+  - FreeStorageSpace < 10GB: Storage alert
+```
+
+**ElastiCache Redis:**
+```yaml
+Métricas:
+  - CPUUtilization
+  - NetworkBytesIn/Out
+  - Evictions
+  - CacheHits/Misses
+
+Alarmes:
+  - CPU > 80%: Scale cluster
+  - Evictions > 1000/min: Cache pressure
+  - CacheHitRate < 80%: Cache efficiency
+```
+
+**Application Load Balancer:**
+```yaml
+Métricas:
+  - TargetResponseTime (p95/p99)
+  - HTTPCode_Target_5XX_Count
+  - UnHealthyHostCount
+  - ActiveConnectionCount
+
+Alarmes:
+  - 5XX > 10/min: Application errors
+  - ResponseTime p99 > 2s: Performance alert
+  - UnHealthyHosts > 1: Health check alert
+```
+
+**WebSocket (Reverb):**
+```yaml
+Métricas Customizadas:
+  - ActiveConnections
+  - ConnectionErrors
+  - MessageThroughput
+
+Alarmes:
+  - ConnectionErrors > 5/min: Reverb restart
+  - ActiveConnections > 95% of limit: Scale Reverb
+```
+
+**TURN Server:**
+```yaml
+Métricas:
+  - TURNRequestRate
+  - TURNFailureRate
+  - TURNRelayBandwidth
+
+Alarmes:
+  - TURNFailureRate > 5%: TURN troubleshooting
+  - RelayBandwidth > 80%: Scale TURN capacity
+  - Monitor fallback rate: High fallback = network issues
+```
+
+#### **CloudWatch Logs**
+- **Aplicação**: `/var/www/html/storage/logs/laravel.log`
+- **Nginx**: `/var/log/nginx/access.log`, `error.log`
+- **PHP-FPM**: `/var/log/php-fpm/error.log`
+- **Reverb**: `/var/www/html/storage/logs/reverb.log`
+- **Workers**: `/var/www/html/storage/logs/worker.log`
+
+#### **Política de Retenção de Logs e Classificação LGPD**
+
+**Classificação LGPD:**
+
+**Sensíveis (Dados Pessoais):**
+- Logs de autenticação (who logged in)
+- Logs de acesso a dados médicos
+- Logs de transações financeiras
+- Logs de uploads de documentos
+- Retenção: **7 anos** (conforme legislação médica)
+- Encryption: Obrigatória
+- Access: Restrito
+
+**Não Sensíveis:**
+- Logs de performance
+- Logs de sistema (CPU, memória)
+- Logs de infraestrutura
+- Retenção: **90 dias**
+- Encryption: Recomendada
+- Access: Time DevOps
+
+**Retenção por Tipo:**
+```yaml
+Logs de Aplicação (Laravel):
+  - Production: 7 anos (S3 + Glacier)
+  - Staging: 90 dias (CloudWatch)
+  - Development: 30 dias (local)
+
+Logs de Infraestrutura:
+  - CloudWatch Logs: 90 dias
+  - S3 Long-term: 1 ano (Glacier)
+  
+Logs de Segurança:
+  - AWS CloudTrail: Indefinido (conforme compliance)
+  - WAF Logs: 1 ano
+  - VPC Flow Logs: 60 dias
+
+Backups de Banco:
+  - RDS Automated: 7 dias (conforme RPO)
+  - Snapshots Manuais: 30 dias
+  - Cross-region replicas: Indefinido
+```
 
 #### **AWS X-Ray**
 - Rastreamento distribuído de requisições
@@ -851,6 +1543,295 @@ REDIS_URL=redis://telemedicina-cache.xxxxx.cache.amazonaws.com:6379
 - Testes de segurança regulares (trimestral)
 - Bug bounty program (opcional)
 - Relatórios de vulnerabilidades
+
+### **5. Runbooks Operacionais**
+
+#### **Runbook 1: Deploy em Produção**
+
+**Pré-requisitos:**
+- Código validado e testado
+- Pipeline CI/CD configurado
+- Secrets Manager com variáveis atualizadas
+
+**Comandos:**
+```bash
+# 1. Trigger manual via AWS Console ou CLI
+aws codepipeline start-pipeline-execution --name telemedicina-prod-pipeline
+
+# 2. Monitorar no CodePipeline console
+# 3. Verificar health checks após deploy
+curl https://telemedicina.example.com/health
+
+# 4. Verificar métricas no CloudWatch
+# 5. Smoke tests de funcionalidades críticas
+```
+
+**Rollback (se necessário):**
+```bash
+# 1. Identificar versão anterior no CodeDeploy
+aws deploy list-deployments \
+  --application-name telemedicina \
+  --deployment-group-name production
+
+# 2. Rollback para versão anterior
+aws deploy stop-deployment \
+  --deployment-id <current-deployment-id>
+
+# 3. Ou redeploy da versão anterior
+# 4. Verificar saúde da aplicação
+```
+
+**Pós-Deploy:**
+- ✅ Verificar logs de erro
+- ✅ Monitorar métricas por 30 minutos
+- ✅ Validar funcionalidades críticas
+- ✅ Notificar equipe de sucesso
+
+#### **Runbook 2: Rollback de Incidente**
+
+**Quando usar:**
+- Deploy com falhas críticas
+- Erros 5xx > 10/min
+- Queda de performance > 50%
+- Health check failures
+
+**Passos:**
+```bash
+# 1. Parar pipeline atual (se em execução)
+# 2. Identificar commit anterior funcional
+git log --oneline -10
+
+# 3. Criar deployment da versão anterior
+aws deploy create-deployment \
+  --application-name telemedicina \
+  --deployment-group-name production \
+  --s3-location bucket=telemedicina-deployments,key=<previous-version>.zip
+
+# 4. Monitorar health checks
+# 5. Validar aplicação funcional
+```
+
+#### **Runbook 3: Tratamento de Incidente**
+
+**Classificação:**
+- **P1 - Crítico**: Aplicação indisponível
+- **P2 - Alto**: Funcionalidade principal quebrada
+- **P3 - Médio**: Funcionalidade secundária afetada
+- **P4 - Baixo**: Melhorias e questionamentos
+
+**Processo:**
+```yaml
+1. Detecção:
+   - CloudWatch Alarms
+   - Monitoramento externo (UptimeRobot)
+   - Reporte de usuário
+
+2. Análise Rápida:
+   - CloudWatch Dashboards
+   - Check health endpoint
+   - Verificar logs recentes
+
+3. Ação Imediata:
+   - P1/P2: Escalar instâncias
+   - P1: Rollback automático
+   - P3/P4: Investigação assíncrona
+
+4. Comunicação:
+   - P1/P2: Slack/Email imediato
+   - Criar incident ticket
+
+5. Resolução:
+   - Hotfix ou rollback
+   - Validar solução
+   - Documentar causa raiz
+```
+
+**Comandos Úteis:**
+```bash
+# Check application logs
+ssh user@ec2-instance
+tail -f /var/www/html/storage/logs/laravel.log
+
+# Check nginx error logs
+tail -f /var/log/nginx/error.log
+
+# Check PHP-FPM status
+systemctl status php-fpm
+
+# Check queue workers
+supervisorctl status laravel-worker:*
+
+# Check RDS connections
+aws rds describe-db-instances --db-instance-identifier telemedicina-prod-db
+
+# Check Redis cluster
+aws elasticache describe-cache-clusters \
+  --cache-cluster-id telemedicina-prod-redis
+```
+
+#### **Runbook 4: Restauração de Backup**
+
+**Backup RDS:**
+```bash
+# 1. Listar backups disponíveis
+aws rds describe-db-snapshots \
+  --db-instance-identifier telemedicina-prod-db
+
+# 2. Restaurar de snapshot
+aws rds restore-db-instance-from-db-snapshot \
+  --db-instance-identifier telemedicina-prod-db-restored \
+  --db-snapshot-identifier <snapshot-id>
+
+# 3. Ajustar security groups
+aws rds modify-db-instance \
+  --db-instance-identifier telemedicina-prod-db-restored \
+  --vpc-security-group-ids sg-xxxxx
+
+# 4. Atualizar variáveis de ambiente
+# 5. Testar conexão
+# 6. Validar dados
+```
+
+**Backup S3:**
+```bash
+# Listar versões de arquivos
+aws s3api list-object-versions \
+  --bucket telemedicina-uploads-prod \
+  --prefix documents/
+
+# Restaurar versão específica
+aws s3api get-object \
+  --bucket telemedicina-uploads-prod \
+  --key documents/user-123.pdf \
+  --version-id <version-id> \
+  restored-file.pdf
+
+# Copiar para production
+aws s3 cp restored-file.pdf \
+  s3://telemedicina-uploads-prod/documents/user-123.pdf
+```
+
+**Disaster Recovery:**
+```yaml
+RTO Crítico: 5 minutos
+RPO Crítico: 5 minutos
+
+Cenário 1: Perda de instância EC2
+  - Auto Scaling criar nova instância
+  - Código restaurado do S3
+  - Tempo estimado: 5 min
+
+Cenário 2: Perda de RDS
+  - Restaurar de snapshot
+  - Atualizar endpoint em .env
+  - Tempo estimado: 30-60 min
+
+Cenário 3: Perda de região AWS
+  - Failover para região secundária
+  - Restaurar de cross-region backup
+  - Tempo estimado: 1-2 horas
+```
+
+### **6. Cheatsheet de Deploy (EC2 + CodeDeploy)**
+
+```bash
+# ============================================
+# DEPLOY MANUAL (Emergência ou Teste)
+# ============================================
+
+# 1. Preparar artefato localmente
+./scripts/build.sh  # ou build.bat no Windows
+
+# 2. Upload para S3
+aws s3 cp deploy.zip s3://telemedicina-deployments/v1.0.0.zip
+
+# 3. Criar deployment via CodeDeploy
+aws deploy create-deployment \
+  --application-name telemedicina \
+  --deployment-group-name production \
+  --s3-location bucket=telemedicina-deployments,key=v1.0.0.zip,bundleType=zip
+
+# 4. Monitorar
+aws deploy get-deployment --deployment-id <deployment-id>
+
+# ============================================
+# DEPLOY AUTOMATIZADO (CI/CD Pipeline)
+# ============================================
+
+# 1. Push para branch main
+git push origin main
+
+# 2. Pipeline executa automaticamente:
+#    - CodeBuild: testes + build
+#    - CodeDeploy: deploy
+#    - Health checks
+#    - Notificação
+
+# 3. Monitorar via AWS Console
+
+# ============================================
+# ROLLBACK
+# ============================================
+
+# Listar deployments
+aws deploy list-deployments \
+  --application-name telemedicina \
+  --deployment-group-name production
+
+# Rollback para versão anterior
+aws deploy stop-deployment --deployment-id <current-id>
+
+# Ou criar redeploy de versão específica
+aws deploy create-deployment \
+  --application-name telemedicina \
+  --deployment-group-name production \
+  --s3-location bucket=telemedicina-deployments,key=v0.9.0.zip
+
+# ============================================
+# TROUBLESHOOTING
+# ============================================
+
+# Verificar status de deployment
+aws deploy get-deployment --deployment-id <id>
+
+# Ver logs do CodeDeploy Agent
+tail -f /var/log/aws/codedeploy-agent/codedeploy-agent.log
+
+# Verificar scripts de deploy
+ls -la /var/www/html/scripts/
+chmod +x /var/www/html/scripts/*.sh
+
+# Testar health check
+curl http://localhost:8080/health
+curl http://localhost:8080/api/health
+
+# Verificar serviços
+systemctl status php-fpm
+systemctl status nginx
+supervisorctl status all
+
+# ============================================
+# ATALHOS ÚTEIS
+# ============================================
+
+# SSH para instância
+ssh -i ~/.ssh/telemedicina.pem ec2-user@<instance-ip>
+
+# Verificar logs
+tail -f /var/www/html/storage/logs/laravel.log
+tail -f /var/www/html/storage/logs/worker.log
+
+# Clear cache
+cd /var/www/html
+php artisan cache:clear
+php artisan config:clear
+php artisan route:clear
+
+# Restart services
+sudo systemctl restart php-fpm
+sudo systemctl reload nginx
+supervisorctl restart all
+```
 
 ---
 
