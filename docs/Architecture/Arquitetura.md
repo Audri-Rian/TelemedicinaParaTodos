@@ -156,7 +156,7 @@ resources/js/
 │   ├── Doctor/Dashboard.vue   # Dashboard do médico
 │   ├── Patient/               # Páginas do paciente
 │   │   ├── Dashboard.vue
-│   │   ├── Appointments.vue
+│   │   ├── SearchConsultations.vue
 │   │   ├── Consultations.vue
 │   │   └── HealthRecords.vue
 │   └── settings/              # Configurações

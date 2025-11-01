@@ -177,7 +177,7 @@ const { routes } = useRoleRoutes();
 <template>
     <nav>
         <Link :href="routes.dashboard()">Dashboard</Link>
-        <Link :href="routes.appointments()">Appointments</Link>
+        <Link :href="routes.searchConsultations()">Search Consultations</Link>
         <!-- Qualquer nova rota funciona automaticamente! -->
         <Link :href="routes.newFeature()">New Feature</Link>
     </nav>
@@ -403,7 +403,7 @@ doctorRoutes.consultations();  // /doctor/consultations
 import * as patientRoutes from '@/routes/patient';
 
 patientRoutes.dashboard();      // /patient/dashboard
-patientRoutes.appointments();   // /patient/appointments
+patientRoutes.searchConsultations();   // /patient/search-consultations
 patientRoutes.healthRecords();  // /patient/health-records
 ```
 
@@ -433,7 +433,7 @@ const doctorNavItems = computed(() => [
 // Navegação para Pacientes
 const patientNavItems = computed(() => [
     { title: 'Dashboard', href: patientRoutes.dashboard(), icon: Home },
-    { title: 'Agendamentos', href: patientRoutes.appointments(), icon: Calendar },
+    { title: 'Pesquisar Médicos', href: patientRoutes.searchConsultations(), icon: Stethoscope },
     { title: 'Prontuário', href: patientRoutes.healthRecords(), icon: Activity },
 ]);
 
@@ -510,7 +510,7 @@ resources/js/pages/
 ```
 resources/js/pages/Patient/
 ├── Dashboard.vue              # → canAccessPatientRoute()
-├── Appointments.vue           # → canAccessPatientRoute()
+├── SearchConsultations.vue           # → canAccessPatientRoute()
 └── ...
 ```
 
@@ -649,7 +649,7 @@ const { dashboardRoute, appointmentsRoute, consultationsRoute } = useRoleRoutes(
 const { routes } = useRoleRoutes();
 
 <Link :href="routes.dashboard()">Dashboard</Link>
-<Link :href="routes.appointments()">Appointments</Link>
+<Link :href="routes.searchConsultations()">Search Consultations</Link>
 <Link :href="routes.consultations()">Consultations</Link>
 ```
 
@@ -680,7 +680,7 @@ onMounted(() => {
 | `AppHeader.vue` | `useRoleRoutes` | Logo redireciona para dashboard correto |
 | `Dashboard.vue` | `useRouteGuard` | Proteção de acesso (médicos) |
 | `Patient/Dashboard.vue` | `useRouteGuard` | Proteção de acesso (pacientes) |
-| `Patient/Appointments.vue` | `useRouteGuard` | Proteção de acesso |
+| `Patient/SearchConsultations.vue` | `useRouteGuard` | Proteção de acesso |
 | `Welcome.vue` | `useRoleRoutes` | Link dinâmico para dashboard |
 
 ---
@@ -730,7 +730,7 @@ const menuItems = computed(() => {
     if (canAccess('patient')) {
         return [
             { label: 'Meu Painel', href: routes.dashboard() },
-            { label: 'Agendamentos', href: routes.appointments() },
+            { label: 'Pesquisar Médicos', href: routes.searchConsultations() },
             { label: 'Prontuário', href: routes.healthRecords() },
         ];
     }
@@ -1078,7 +1078,7 @@ resources/js/
 │   │   └── ScheduleManagement.vue
 │   └── Patient/
 │       ├── Dashboard.vue         # Usa: useRouteGuard
-│       └── Appointments.vue      # Usa: useRouteGuard
+│       └── SearchConsultations.vue      # Usa: useRouteGuard
 └── routes/
     ├── doctor/
     │   └── index.ts              # Rotas de médicos

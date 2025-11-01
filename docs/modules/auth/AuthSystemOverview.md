@@ -81,7 +81,7 @@ app/
 │       │
 │       └── Patient/                 # Controllers de pacientes
 │           ├── PatientDashboardController.php
-│           ├── PatientAppointmentsController.php
+│           ├── PatientSearchConsultationsController.php
 │           └── PatientHealthRecordsController.php
 │
 └── routes/
@@ -110,7 +110,7 @@ resources/js/
 │   │   └── ScheduleManagement.vue
 │   └── Patient/                     # Páginas de pacientes
 │       ├── Dashboard.vue
-│       └── Appointments.vue
+│       └── SearchConsultations.vue
 │
 └── routes/                          # Rotas geradas (Wayfinder)
     ├── doctor/
@@ -347,7 +347,7 @@ php artisan serve
 | **Médico** | `/doctor/appointments` | `DoctorAppointmentsController` | `auth, verified, doctor` |
 | **Médico** | `/doctor/consultations` | `DoctorConsultationsController` | `auth, verified, doctor` |
 | **Paciente** | `/patient/dashboard` | `PatientDashboardController` | `auth, verified, patient` |
-| **Paciente** | `/patient/appointments` | `PatientAppointmentsController` | `auth, verified, patient` |
+| **Paciente** | `/patient/search-consultations` | `PatientSearchConsultationsController` | `auth, verified, patient` |
 | **Paciente** | `/patient/health-records` | `PatientHealthRecordsController` | `auth, verified, patient` |
 
 ### Frontend (Vue.js)
@@ -357,7 +357,7 @@ php artisan serve
 | **Médico** | `Dashboard.vue` | `canAccessDoctorRoute()` |
 | **Médico** | `Doctor/ScheduleManagement.vue` | N/A |
 | **Paciente** | `Patient/Dashboard.vue` | `canAccessPatientRoute()` |
-| **Paciente** | `Patient/Appointments.vue` | `canAccessPatientRoute()` |
+| **Paciente** | `Patient/SearchConsultations.vue` | `canAccessPatientRoute()` |
 
 ---
 

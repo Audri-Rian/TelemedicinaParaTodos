@@ -19,6 +19,7 @@ import {
 import * as patientRoutes from '@/routes/patient';
 import { onMounted, ref, computed } from 'vue';
 import { useRouteGuard } from '@/composables/auth';
+import { usePage } from '@inertiajs/vue3';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -93,6 +94,10 @@ const props = withDefaults(defineProps<Props>(), {
 const { canAccessPatientRoute } = useRouteGuard();
 const { getInitials } = useInitials();
 
+// Obter usuário autenticado
+const page = usePage();
+const authUser = computed(() => page.props.auth?.user);
+
 // Estados locais
 const searchQuery = ref('');
 const specialtyFilter = ref('');
@@ -140,58 +145,147 @@ const breadcrumbs: BreadcrumbItem[] = [
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-6 bg-gray-50">
-            <!-- Próxima Consulta Section -->
-            <div class="bg-gray-50 rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-                <!-- Foto do Médico (Seção Superior) -->
-                <div class="bg-gray-100 flex justify-center items-center py-8 px-6">
-                    <Avatar class="w-48 h-48 md:w-56 md:h-56">
-                        <AvatarImage 
-                            v-if="nextAppointment?.doctor_image" 
-                            :src="nextAppointment.doctor_image" 
-                            :alt="nextAppointment?.doctor_name || 'Dr. Carlos Andrade'" 
-                        />
-                        <AvatarFallback class="bg-white text-gray-900 text-6xl" :delay-ms="600">
-                            {{ nextAppointment ? getInitials(nextAppointment.doctor_name) : 'CA' }}
-                        </AvatarFallback>
-                    </Avatar>
+            <!-- Seção de Boas-vindas e Próxima Consulta -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Seção de Boas-vindas (Esquerda) -->
+                <div class="lg:col-span-2 bg-gradient-to-br from-primary/10 to-primary/5 rounded-lg shadow-sm border border-gray-200 p-8">
+                    <div class="flex flex-col h-full justify-between">
+                        <div>
+                            <h1 class="text-3xl font-bold text-gray-900 mb-3">
+                                Olá, {{ authUser?.name?.split(' ')[0] || 'Bem-vindo' }}! 👋
+                            </h1>
+                            <p class="text-lg text-gray-700 mb-4">
+                                Bem-vindo ao <span class="font-semibold text-primary">Telemedicina Para Todos</span>, sua plataforma completa de saúde digital.
+                            </p>
+                            <p class="text-base text-gray-600 mb-6">
+                                Agende consultas online, converse com médicos especialistas e gerencie sua saúde de forma prática e segura, tudo no conforto da sua casa.
+                            </p>
+
+                            <!-- Lista de Médicos Disponíveis -->
+                            <div class="mb-6">
+                                <h3 class="text-sm font-semibold text-gray-700 mb-3">Médicos Disponíveis Agora:</h3>
+                                <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                    <!-- Dra. Ana Costa -->
+                                    <Link 
+                                        :href="patientRoutes.searchConsultations()"
+                                        class="bg-white/80 hover:bg-white rounded-lg p-3 border border-gray-200 hover:border-primary/30 hover:shadow-md transition cursor-pointer group">
+                                        <div class="flex items-center gap-3">
+                                            <Avatar class="w-10 h-10 shrink-0">
+                                                <AvatarFallback class="bg-amber-50 text-gray-900 text-sm group-hover:bg-primary/20 transition" :delay-ms="600">
+                                                    AC
+                                                </AvatarFallback>
+                                            </Avatar>
+                                            <div class="min-w-0 flex-1">
+                                                <p class="font-semibold text-gray-900 text-sm truncate">Dra. Ana Costa</p>
+                                                <p class="text-xs text-emerald-700 truncate">Dermatologista</p>
+                                            </div>
+                                        </div>
+                                    </Link>
+
+                                    <!-- Dr. Pedro Martins -->
+                                    <Link 
+                                        :href="patientRoutes.searchConsultations()"
+                                        class="bg-white/80 hover:bg-white rounded-lg p-3 border border-gray-200 hover:border-primary/30 hover:shadow-md transition cursor-pointer group">
+                                        <div class="flex items-center gap-3">
+                                            <Avatar class="w-10 h-10 shrink-0">
+                                                <AvatarFallback class="bg-primary/20 text-gray-900 text-sm group-hover:bg-primary/30 transition" :delay-ms="600">
+                                                    PM
+                                                </AvatarFallback>
+                                            </Avatar>
+                                            <div class="min-w-0 flex-1">
+                                                <p class="font-semibold text-gray-900 text-sm truncate">Dr. Pedro Martins</p>
+                                                <p class="text-xs text-emerald-700 truncate">Clínico Geral</p>
+                                            </div>
+                                        </div>
+                                    </Link>
+
+                                    <!-- Dr. Carlos Andrade -->
+                                    <Link 
+                                        :href="patientRoutes.searchConsultations()"
+                                        class="bg-white/80 hover:bg-white rounded-lg p-3 border border-gray-200 hover:border-primary/30 hover:shadow-md transition cursor-pointer group">
+                                        <div class="flex items-center gap-3">
+                                            <Avatar class="w-10 h-10 shrink-0">
+                                                <AvatarFallback class="bg-blue-50 text-gray-900 text-sm group-hover:bg-primary/20 transition" :delay-ms="600">
+                                                    CA
+                                                </AvatarFallback>
+                                            </Avatar>
+                                            <div class="min-w-0 flex-1">
+                                                <p class="font-semibold text-gray-900 text-sm truncate">Dr. Carlos Andrade</p>
+                                                <p class="text-xs text-emerald-700 truncate">Cardiologista</p>
+                                            </div>
+                                        </div>
+                                    </Link>
+                                </div>
+                                <p class="text-xs text-gray-500 mt-3 italic">
+                                    Clique em qualquer médico para agendar uma consulta
+                                </p>
+                            </div>
+                        </div>
+                        
+                        <Link 
+                            :href="patientRoutes.searchConsultations()"
+                            class="inline-flex items-center justify-center bg-primary hover:bg-primary/90 text-gray-900 font-semibold py-3 px-8 rounded-lg transition shadow-md hover:shadow-lg">
+                            <Calendar class="w-5 h-5 mr-2" />
+                            <span>Agendar Nova Consulta</span>
+                        </Link>
+                    </div>
                 </div>
 
-                <!-- Informações da Consulta (Seção Inferior) -->
-                <div class="bg-white p-6">
-                    <p class="text-sm text-gray-500 mb-2">Próxima Consulta</p>
-                    <h2 class="text-3xl font-bold text-gray-900 mb-2">
-                        {{ nextAppointment ? `Dr. ${nextAppointment.doctor_name}` : 'Dr. Carlos Andrade' }}
-                    </h2>
-                    <p class="text-base text-gray-700 mb-4">
-                        {{ nextAppointment ? (nextAppointment.doctor_specialty || 'Especialista') : 'Cardiologista' }} • 
-                        {{ nextAppointment ? (nextAppointment.scheduled_date || nextAppointment.scheduled_at) : '25 de Outubro' }}, 
-                        {{ nextAppointment ? (nextAppointment.scheduled_time || '') : '14:30' }}
-                        <span>{{ nextAppointment?.duration || ' (30 min)' }}</span>
-                    </p>
-                    <p class="text-sm text-gray-500 mb-6">
-                        A consulta será realizada por videochamada. Prepare-se com antecedência.
-                    </p>
+                <!-- Próxima Consulta Section (Direita) - Reduzida -->
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                    <!-- Foto do Médico (Seção Superior - Menor) -->
+                    <div class="bg-gray-100 flex justify-center items-center py-4 px-4">
+                        <Avatar class="w-24 h-24 md:w-28 md:h-28">
+                            <AvatarImage 
+                                v-if="nextAppointment?.doctor_image" 
+                                :src="nextAppointment.doctor_image" 
+                                :alt="nextAppointment?.doctor_name || 'Dr. Carlos Andrade'" 
+                            />
+                            <AvatarFallback class="bg-white text-gray-900 text-3xl" :delay-ms="600">
+                                {{ nextAppointment ? getInitials(nextAppointment.doctor_name) : 'CA' }}
+                            </AvatarFallback>
+                        </Avatar>
+                    </div>
 
-                    <!-- Botões de Ação -->
-                    <div class="flex flex-wrap gap-3">
-                        <Link 
-                            :href="patientRoutes.videoCall()"
-                            class="bg-primary hover:bg-primary/90 text-gray-900 font-semibold py-3 px-6 rounded-lg transition flex items-center space-x-2">
-                            <Video class="w-5 h-5" />
-                            <span>Entrar na videochamada</span>
-                        </Link>
-                        
-                        <Link 
-                            :href="patientRoutes.appointments()"
-                            class="bg-primary/20 hover:bg-primary/30 text-gray-900 font-semibold py-3 px-6 rounded-lg transition flex items-center space-x-2">
-                            <Calendar class="w-5 h-5" />
-                            <span>Reagendar</span>
-                        </Link>
-                        
-                        <button 
-                            class="text-gray-600 hover:text-gray-900 font-semibold py-3 px-4 transition">
-                            Cancelar
-                        </button>
+                    <!-- Informações da Consulta (Seção Inferior) -->
+                    <div class="bg-white p-4">
+                        <p class="text-xs text-gray-500 mb-1">Próxima Consulta</p>
+                        <h2 class="text-xl font-bold text-gray-900 mb-1">
+                            {{ nextAppointment ? `Dr. ${nextAppointment.doctor_name}` : 'Dr. Carlos Andrade' }}
+                        </h2>
+                        <p class="text-sm text-gray-700 mb-3">
+                            {{ nextAppointment ? (nextAppointment.doctor_specialty || 'Especialista') : 'Cardiologista' }} • 
+                            {{ nextAppointment ? (nextAppointment.scheduled_date || nextAppointment.scheduled_at) : '25 de Outubro' }}, 
+                            {{ nextAppointment ? (nextAppointment.scheduled_time || '') : '14:30' }}
+                            <span>{{ nextAppointment?.duration || ' (30 min)' }}</span>
+                        </p>
+                        <p class="text-xs text-gray-500 mb-4">
+                            Por videochamada
+                        </p>
+
+                        <!-- Botões de Ação -->
+                        <div class="flex flex-col gap-2">
+                            <Link 
+                                :href="patientRoutes.videoCall()"
+                                class="bg-primary hover:bg-primary/90 text-gray-900 font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center space-x-2 text-sm">
+                                <Video class="w-4 h-4" />
+                                <span>Entrar na videochamada</span>
+                            </Link>
+                            
+                            <div class="flex gap-2">
+                                <Link 
+                                    :href="patientRoutes.searchConsultations()"
+                                    class="flex-1 bg-primary/20 hover:bg-primary/30 text-gray-900 font-semibold py-2 px-3 rounded-lg transition flex items-center justify-center space-x-1 text-xs">
+                                    <Calendar class="w-3 h-3" />
+                                    <span>Reagendar</span>
+                                </Link>
+                                
+                                <button 
+                                    class="flex-1 text-gray-600 hover:text-gray-900 font-semibold py-2 px-3 text-xs transition rounded-lg hover:bg-gray-100">
+                                    Cancelar
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -199,7 +293,7 @@ const breadcrumbs: BreadcrumbItem[] = [
             <!-- Cards de Acesso Rápido -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <Link 
-                    :href="patientRoutes.appointments()"
+                    :href="patientRoutes.searchConsultations()"
                     class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition cursor-pointer">
                     <div class="flex flex-col items-center text-center">
                         <div class="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-4">
@@ -294,7 +388,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                                 <p class="text-sm text-emerald-700">Dermatologista</p>
                             </div>
                             <Link 
-                                :href="patientRoutes.appointments()"
+                                :href="patientRoutes.searchConsultations()"
                                 class="shrink-0 bg-primary/30 hover:bg-primary/40 text-gray-900 p-3 rounded-lg transition flex items-center justify-center">
                                 <Calendar class="w-5 h-5" />
                             </Link>
@@ -314,7 +408,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                                 <p class="text-sm text-emerald-700">Clínico Geral</p>
                             </div>
                             <Link 
-                                :href="patientRoutes.appointments()"
+                                :href="patientRoutes.searchConsultations()"
                                 class="shrink-0 bg-primary/30 hover:bg-primary/40 text-gray-900 p-3 rounded-lg transition flex items-center justify-center">
                                 <Calendar class="w-5 h-5" />
                             </Link>
@@ -340,7 +434,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                                     <p class="text-sm text-emerald-700">{{ doctor.specialty }}</p>
                                 </div>
                                 <Link 
-                                    :href="patientRoutes.appointments()"
+                                    :href="patientRoutes.searchConsultations()"
                                     class="shrink-0 bg-primary/30 hover:bg-primary/40 text-gray-900 p-3 rounded-lg transition flex items-center justify-center">
                                     <Calendar class="w-5 h-5" />
                                 </Link>

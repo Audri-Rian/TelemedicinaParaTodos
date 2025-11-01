@@ -178,7 +178,7 @@ O sistema possui middlewares específicos para cada tipo de usuário:
 - Middleware: `['auth', 'verified', 'patient']`
 - Exemplos:
   - `GET /patient/dashboard`
-  - `GET /patient/appointments`
+  - `GET /patient/search-consultations`
   - `GET /patient/health-records`
 
 ### Redirecionamento Inteligente

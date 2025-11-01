@@ -25,13 +25,13 @@ type UserRole = keyof typeof routesByRole;
  * <script setup>
  * import { useRoleRoutes } from '@/composables/auth/useRoleRoutes';
  * 
- * const { dashboardRoute, appointmentsRoute, routes } = useRoleRoutes();
+ * const { dashboardRoute, appointmentsRoute, searchConsultationsRoute, routes } = useRoleRoutes();
  * </script>
  * 
  * <template>
  *   <Link :href="dashboardRoute()">Dashboard</Link>
  *   <!-- Ou acesso direto ao namespace de rotas -->
- *   <Link :href="routes.appointments()">Appointments</Link>
+ *   <Link :href="routes.searchConsultations()">Search Consultations</Link>
  * </template>
  * ```
  */
@@ -56,11 +56,21 @@ export function useRoleRoutes() {
     };
     
     /**
-     * Retorna a rota de appointments baseado no tipo de usuário
+     * Retorna a rota de appointments baseado no tipo de usuário (médicos)
      */
     const appointmentsRoute = (): RouteDefinition<'get'> | null => {
         if ('appointments' in routes && typeof routes.appointments === 'function') {
             return routes.appointments();
+        }
+        return null;
+    };
+    
+    /**
+     * Retorna a rota de searchConsultations baseado no tipo de usuário (pacientes)
+     */
+    const searchConsultationsRoute = (): RouteDefinition<'get'> | null => {
+        if ('searchConsultations' in routes && typeof routes.searchConsultations === 'function') {
+            return routes.searchConsultations();
         }
         return null;
     };
@@ -101,6 +111,7 @@ export function useRoleRoutes() {
         // Rotas individuais (backward compatibility)
         dashboardRoute,
         appointmentsRoute,
+        searchConsultationsRoute,
         consultationsRoute,
         healthRecordsRoute,
         

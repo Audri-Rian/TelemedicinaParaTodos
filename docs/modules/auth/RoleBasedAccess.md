@@ -168,14 +168,14 @@ Route::middleware(['auth', 'verified', 'doctor'])->prefix('doctor')->name('docto
 ```php
 Route::middleware(['auth', 'verified', 'patient'])->prefix('patient')->name('patient.')->group(function () {
     Route::get('dashboard', [PatientDashboardController::class, 'index'])->name('dashboard');
-    Route::get('appointments', [PatientAppointmentsController::class, 'index'])->name('appointments');
+    Route::get('search-consultations', [PatientSearchConsultationsController::class, 'index'])->name('search-consultations');
     Route::get('health-records', [PatientHealthRecordsController::class, 'index'])->name('health-records');
 });
 ```
 
 **Rotas disponíveis:**
 - `GET /patient/dashboard` → `route('patient.dashboard')`
-- `GET /patient/appointments` → `route('patient.appointments')`
+- `GET /patient/search-consultations` → `route('patient.search-consultations')`
 - `GET /patient/health-records` → `route('patient.health-records')`
 
 ### Rotas Compartilhadas
@@ -217,10 +217,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
 - **Dados:** Consultas próximas, histórico, estatísticas básicas
 - **View:** `Patient/Dashboard`
 
-#### PatientAppointmentsController
-- **Responsabilidade:** Listagem e agendamento de consultas
-- **Dados:** Agendamentos do paciente, médicos disponíveis
-- **View:** `Patient/Appointments`
+#### PatientSearchConsultationsController
+- **Responsabilidade:** Busca e listagem de médicos disponíveis
+- **Dados:** Médicos disponíveis para consulta
+- **View:** `Patient/SearchConsultations`
 
 #### PatientHealthRecordsController
 - **Responsabilidade:** Exibição de prontuário médico
@@ -387,7 +387,7 @@ foreach ($appointments as $app) {
 ```php
 // ✅ Correto
 route('doctor.dashboard')
-route('patient.appointments')
+route('patient.search-consultations')
 
 // ❌ Incorreto
 route('doctorDashboard')

@@ -89,7 +89,7 @@ const { routes } = useRoleRoutes();
 
 <template>
     <Link :href="routes.dashboard()">Dashboard</Link>
-    <Link :href="routes.appointments()">Appointments</Link>
+    <Link :href="routes.searchConsultations()">Search Consultations</Link>
 </template>
 ```
 

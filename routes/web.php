@@ -50,7 +50,9 @@ Route::middleware(['auth', 'verified', 'doctor'])->prefix('doctor')->name('docto
 // Rotas para Pacientes
 Route::middleware(['auth', 'verified', 'patient'])->prefix('patient')->name('patient.')->group(function () {
     Route::get('dashboard', [App\Http\Controllers\Patient\PatientDashboardController::class, 'index'])->name('dashboard');
-    Route::get('appointments', [App\Http\Controllers\Patient\PatientAppointmentsController::class, 'index'])->name('appointments');
+    Route::get('search-consultations', [App\Http\Controllers\Patient\PatientSearchConsultationsController::class, 'index'])->name('search-consultations');
+    Route::get('schedule-consultation', [App\Http\Controllers\Patient\ScheduleConsultationController::class, 'index'])->name('schedule-consultation');
+    Route::get('doctor-perfil', [App\Http\Controllers\Patient\DoctorPerfilController::class, 'index'])->name('doctor-perfil');
     Route::get('messages', [App\Http\Controllers\Patient\PatientMessagesController::class, 'index'])->name('messages');
     Route::get('video-call', [App\Http\Controllers\Patient\PatientVideoCallController::class, 'index'])->name('video-call');
     Route::get('health-records', [App\Http\Controllers\Patient\PatientHealthRecordsController::class, 'index'])->name('health-records');
