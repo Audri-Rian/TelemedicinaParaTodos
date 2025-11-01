@@ -1,0 +1,90 @@
+version: '3.8'
+
+services:
+  # ===================================
+  # Banco de Dados PostgreSQL
+  # ===================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: telemedicina_postgres
+    restart: always
+    environment:
+      POSTGRES_DB: telemedicina
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: secret
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ===================================
+  # Redis
+  # ===================================
+  redis:
+    image: redis:7-alpine
+    container_name: telemedicina_redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ===================================
+  # Aplicação Laravel (PHP-FPM)
+  # ===================================
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: telemedicina_app
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/var/www/html
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_KEY: base64:Vr23j63EFvgERAmlx3eUK4dwSNdCrvmyeYMerRPUD5s=
+      APP_URL: http://localhost:8000
+
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: telemedicina
+      DB_USERNAME: postgres
+      DB_PASSWORD: secret
+
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: null
+      QUEUE_CONNECTION: redis
+
+      CACHE_DRIVER: redis
+      SESSION_DRIVER: database
+      SESSION_LIFETIME: 120
+
+    command: >
+      sh -c "php artisan migrate --force &&
+             php artisan serve --host=0.0.0.0 --port=8000"
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
