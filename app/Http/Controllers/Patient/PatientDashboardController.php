@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 use App\Models\Appointments;
 use App\Models\Patient;
+use App\Models\Doctor;
 
 class PatientDashboardController extends Controller
 {
@@ -24,17 +25,30 @@ class PatientDashboardController extends Controller
         }
 
         // Consultas próximas (próximas 3)
-        $upcomingAppointments = Appointments::with(['patient.user', 'doctor.user'])
+        $upcomingAppointments = Appointments::with(['patient.user', 'doctor.user', 'doctor.specializations'])
             ->byPatient($patient->id)
             ->upcoming()
             ->orderBy('scheduled_at')
             ->limit(3)
             ->get()
             ->map(function ($appointment) {
+                $specialty = $appointment->doctor->specializations->first()?->name ?? 'Especialista';
+                $months = [
+                    1 => 'Janeiro', 2 => 'Fevereiro', 3 => 'Março', 4 => 'Abril',
+                    5 => 'Maio', 6 => 'Junho', 7 => 'Julho', 8 => 'Agosto',
+                    9 => 'Setembro', 10 => 'Outubro', 11 => 'Novembro', 12 => 'Dezembro'
+                ];
+                $monthName = $months[$appointment->scheduled_at->month] ?? 'Mês';
+                
                 return [
                     'id' => $appointment->id,
                     'doctor_name' => $appointment->doctor->user->name,
+                    'doctor_specialty' => $specialty,
+                    'doctor_image' => $appointment->doctor->user->avatar ?? null,
                     'scheduled_at' => $appointment->scheduled_at->format('d/m/Y H:i'),
+                    'scheduled_date' => $appointment->scheduled_at->format('d') . ' de ' . $monthName,
+                    'scheduled_time' => $appointment->scheduled_at->format('H:i'),
+                    'duration' => '30 min',
                     'status' => $this->translateStatus($appointment->status),
                     'status_class' => $this->getStatusClass($appointment->status),
                 ];
@@ -62,6 +76,46 @@ class PatientDashboardController extends Controller
             ->where('status', 'completed')
             ->count();
 
+        // Médicos disponíveis
+        $doctors = Doctor::with(['user', 'specializations'])
+            ->active()
+            ->available()
+            ->limit(10)
+            ->get()
+            ->map(function ($doctor) {
+                return [
+                    'id' => $doctor->id,
+                    'name' => $doctor->user->name,
+                    'specialty' => $doctor->specializations->first()?->name ?? 'Especialista',
+                    'image' => $doctor->user->avatar ?? null,
+                ];
+            });
+
+        // Lembretes (mockados por enquanto - pode ser expandido no futuro)
+        $reminders = [
+            [
+                'id' => '1',
+                'title' => 'Tomar medicamento X',
+                'time' => 'Próxima dose às 18:00',
+                'icon' => 'medication',
+            ],
+            [
+                'id' => '2',
+                'title' => 'Jejum para exame',
+                'message' => 'Lembre-se do jejum de 8h amanhã',
+                'icon' => 'exam',
+            ],
+        ];
+
+        // Dicas de saúde (mockadas por enquanto)
+        $healthTips = [
+            [
+                'id' => '1',
+                'title' => 'Importância da hidratação diária',
+                'description' => 'Descubra os benefícios de se manter hidratado ao longo do dia para sua saúde e bem-estar.',
+            ],
+        ];
+
         return Inertia::render('Patient/Dashboard', [
             'upcomingAppointments' => $upcomingAppointments,
             'recentAppointments' => $recentAppointments,
@@ -69,6 +123,9 @@ class PatientDashboardController extends Controller
                 'total' => $totalAppointments,
                 'completed' => $completedAppointments,
             ],
+            'doctors' => $doctors,
+            'reminders' => $reminders,
+            'healthTips' => $healthTips,
         ]);
     }
 

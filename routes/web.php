@@ -51,6 +51,8 @@ Route::middleware(['auth', 'verified', 'doctor'])->prefix('doctor')->name('docto
 Route::middleware(['auth', 'verified', 'patient'])->prefix('patient')->name('patient.')->group(function () {
     Route::get('dashboard', [App\Http\Controllers\Patient\PatientDashboardController::class, 'index'])->name('dashboard');
     Route::get('appointments', [App\Http\Controllers\Patient\PatientAppointmentsController::class, 'index'])->name('appointments');
+    Route::get('messages', [App\Http\Controllers\Patient\PatientMessagesController::class, 'index'])->name('messages');
+    Route::get('video-call', [App\Http\Controllers\Patient\PatientVideoCallController::class, 'index'])->name('video-call');
     Route::get('health-records', [App\Http\Controllers\Patient\PatientHealthRecordsController::class, 'index'])->name('health-records');
     
     // Rotas para videoconferência (pacientes)

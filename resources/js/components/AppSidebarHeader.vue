@@ -10,11 +10,13 @@ import {
     DropdownMenuSeparator, 
     DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import type { BreadcrumbItemType } from '@/types';
-import { Bell, Calendar, CheckCircle, FileText, UserPlus, User } from 'lucide-vue-next';
+import { Bell, Calendar, CheckCircle, FileText, UserPlus } from 'lucide-vue-next';
 import { ref, computed } from 'vue';
 import { usePage } from '@inertiajs/vue3';
 import UserMenuContent from '@/components/UserMenuContent.vue';
+import { getInitials } from '@/composables/useInitials';
 
 withDefaults(
     defineProps<{
@@ -145,8 +147,13 @@ const auth = computed(() => page.props.auth);
 
             <DropdownMenu>
                 <DropdownMenuTrigger as-child>
-                    <Button variant="ghost" size="icon" class="h-10 w-10 rounded-full bg-primary hover:bg-primary/90">
-                        <User class="h-5 w-5 text-gray-900" />
+                    <Button variant="ghost" size="icon" class="h-10 w-10 rounded-full bg-primary hover:bg-primary/90 p-0">
+                        <Avatar class="h-10 w-10 rounded-full">
+                            <AvatarImage :src="auth.user.avatar" :alt="auth.user.name" />
+                            <AvatarFallback class="bg-primary text-gray-900 font-semibold" :delay-ms="600">
+                                {{ getInitials(auth.user?.name) }}
+                            </AvatarFallback>
+                        </Avatar>
                     </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" class="w-56">

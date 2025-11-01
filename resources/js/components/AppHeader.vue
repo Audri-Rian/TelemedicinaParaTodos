@@ -170,7 +170,7 @@ const rightNavItems: NavItem[] = [
                             >
                                 <Avatar class="size-8 overflow-hidden rounded-full">
                                     <AvatarImage v-if="auth.user.avatar" :src="auth.user.avatar" :alt="auth.user.name" />
-                                    <AvatarFallback class="rounded-lg bg-neutral-200 font-semibold text-black">
+                                    <AvatarFallback class="rounded-lg bg-neutral-200 font-semibold text-black" :delay-ms="600">
                                         {{ getInitials(auth.user?.name) }}
                                     </AvatarFallback>
                                 </Avatar>
