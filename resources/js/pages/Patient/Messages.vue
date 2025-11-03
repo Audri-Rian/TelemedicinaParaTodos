@@ -2,7 +2,7 @@
 import AppLayout from '@/layouts/AppLayout.vue';
 import * as patientRoutes from '@/routes/patient';
 import { type BreadcrumbItem } from '@/types';
-import { Head } from '@inertiajs/vue3';
+import { Head, router } from '@inertiajs/vue3';
 import { Search, MessageCircle, Send } from 'lucide-vue-next';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useInitials } from '@/composables/useInitials';
@@ -103,21 +103,24 @@ const selectConversation = (conversation: typeof conversations.value[0]) => {
     // Resetar mensagens não lidas
     conversation.unread = 0;
 };
+
+const goToDoctorProfile = (conversation: typeof conversations.value[0], event?: Event) => {
+    if (event) {
+        event.stopPropagation();
+    }
+    const baseUrl = patientRoutes.doctorPerfil().url;
+    const url = `${baseUrl}?doctorId=${conversation.id}`;
+    router.visit(url);
+};
 </script>
 
 <template>
     <Head title="Mensagens" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex h-full flex-1 flex-col gap-6 overflow-hidden rounded-xl p-6 bg-gray-50">
-            <!-- Header -->
-            <div class="flex flex-col gap-1">
-                <h1 class="text-3xl font-bold text-gray-900">Mensagens</h1>
-                <p class="text-gray-600">Converse com seus médicos</p>
-            </div>
-
+        <div class="flex h-full flex-1 flex-col overflow-hidden">
             <!-- Container principal de mensagens -->
-            <div class="flex flex-1 gap-4 overflow-hidden bg-white rounded-lg shadow-sm border border-gray-200">
+            <div class="flex flex-1 overflow-hidden bg-white">
                 <!-- Lista de conversas -->
                 <div class="w-1/3 border-r border-gray-200 flex flex-col">
                     <!-- Barra de busca -->
@@ -144,7 +147,10 @@ const selectConversation = (conversation: typeof conversations.value[0]) => {
                                 selectedConversation?.id === conversation.id ? 'bg-primary/10 border-l-4 border-l-primary' : ''
                             ]"
                         >
-                            <Avatar class="h-12 w-12 flex-shrink-0">
+                            <Avatar 
+                                class="h-12 w-12 flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-primary transition-all"
+                                @click.stop="goToDoctorProfile(conversation)"
+                            >
                                 <AvatarImage :src="conversation.doctorAvatar" :alt="conversation.doctorName" />
                                 <AvatarFallback class="bg-gray-200 text-gray-600" :delay-ms="600">
                                     {{ getInitials(conversation.doctorName) }}
@@ -152,7 +158,10 @@ const selectConversation = (conversation: typeof conversations.value[0]) => {
                             </Avatar>
                             <div class="flex-1 min-w-0">
                                 <div class="flex items-center justify-between mb-1">
-                                    <h3 class="font-semibold text-gray-900 truncate">
+                                    <h3 
+                                        class="font-semibold text-gray-900 truncate cursor-pointer hover:text-primary transition-colors"
+                                        @click.stop="goToDoctorProfile(conversation)"
+                                    >
                                         {{ conversation.doctorName }}
                                     </h3>
                                     <span class="text-xs text-gray-500 flex-shrink-0 ml-2">
@@ -188,14 +197,22 @@ const selectConversation = (conversation: typeof conversations.value[0]) => {
                     <div v-else class="flex flex-col flex-1">
                         <!-- Header da conversa -->
                         <div class="p-4 border-b border-gray-200 flex items-center gap-3">
-                            <Avatar class="h-10 w-10">
+                            <Avatar 
+                                class="h-10 w-10 cursor-pointer hover:ring-2 hover:ring-primary transition-all"
+                                @click="goToDoctorProfile(selectedConversation)"
+                            >
                                 <AvatarImage :src="selectedConversation.doctorAvatar" :alt="selectedConversation.doctorName" />
                                 <AvatarFallback class="bg-gray-200 text-gray-600" :delay-ms="600">
                                     {{ getInitials(selectedConversation.doctorName) }}
                                 </AvatarFallback>
                             </Avatar>
-                            <div>
-                                <h3 class="font-semibold text-gray-900">{{ selectedConversation.doctorName }}</h3>
+                            <div class="flex-1">
+                                <h3 
+                                    class="font-semibold text-gray-900 cursor-pointer hover:text-primary transition-colors"
+                                    @click="goToDoctorProfile(selectedConversation)"
+                                >
+                                    {{ selectedConversation.doctorName }}
+                                </h3>
                                 <p class="text-sm text-gray-500">Online</p>
                             </div>
                         </div>

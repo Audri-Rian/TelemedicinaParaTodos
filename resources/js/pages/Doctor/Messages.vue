@@ -109,15 +109,9 @@ const selectConversation = (conversation: typeof conversations.value[0]) => {
     <Head title="Mensagens" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex h-full flex-1 flex-col gap-6 overflow-hidden rounded-xl p-6 bg-gray-50">
-            <!-- Header -->
-            <div class="flex flex-col gap-1">
-                <h1 class="text-3xl font-bold text-gray-900">Mensagens</h1>
-                <p class="text-gray-600">Gerencie suas conversas com pacientes</p>
-            </div>
-
+        <div class="flex h-full flex-1 flex-col overflow-hidden">
             <!-- Container principal de mensagens -->
-            <div class="flex flex-1 gap-4 overflow-hidden bg-white rounded-lg shadow-sm border border-gray-200">
+            <div class="flex flex-1 overflow-hidden bg-white">
                 <!-- Lista de conversas -->
                 <div class="w-1/3 border-r border-gray-200 flex flex-col">
                     <!-- Barra de busca -->
