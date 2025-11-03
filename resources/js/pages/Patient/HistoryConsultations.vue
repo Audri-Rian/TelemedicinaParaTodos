@@ -3,7 +3,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/vue3';
 import * as patientRoutes from '@/routes/patient';
-import { onMounted, ref, computed } from 'vue';
+import { onMounted, ref, computed, watch } from 'vue';
 import { useRouteGuard } from '@/composables/auth';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -85,13 +85,44 @@ const allConsultations = [
         specialty: 'Neurologia',
         avatar: null,
         status: 'completed'
+    },
+    {
+        id: 7,
+        date: '15 OUT 2024',
+        time: '10:00',
+        doctorName: 'Dra. Ana Silva',
+        specialty: 'Cardiologia',
+        avatar: null,
+        status: 'upcoming'
+    },
+    {
+        id: 8,
+        date: '20 OUT 2024',
+        time: '14:30',
+        doctorName: 'Dr. Paulo Costa',
+        specialty: 'Dermatologia',
+        avatar: null,
+        status: 'upcoming'
     }
 ];
+
+// Calcular consultas filtradas
+const filteredConsultations = computed(() => {
+    if (activeFilter.value === 'completed') {
+        return allConsultations.filter(c => c.status === 'completed');
+    } else if (activeFilter.value === 'cancelled') {
+        return allConsultations.filter(c => c.status === 'cancelled');
+    } else if (activeFilter.value === 'upcoming') {
+        return allConsultations.filter(c => c.status === 'upcoming');
+    }
+    // Se 'all', retorna todas
+    return allConsultations;
+});
 
 // Calcular consultas paginadas
 const consultations = computed(() => {
     const startIndex = (currentPage.value - 1) * itemsPerPage;
-    return allConsultations.slice(startIndex, startIndex + itemsPerPage);
+    return filteredConsultations.value.slice(startIndex, startIndex + itemsPerPage);
 });
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -104,6 +135,11 @@ const breadcrumbs: BreadcrumbItem[] = [
         href: patientRoutes.historyConsultations().url,
     },
 ];
+
+// Resetar página quando o filtro mudar
+watch(activeFilter, () => {
+    currentPage.value = 1;
+});
 
 // Verificar acesso ao montar componente
 onMounted(() => {
@@ -139,24 +175,28 @@ onMounted(() => {
                 </div>
 
                 <!-- Card 2: Última Consulta -->
-                <div class="bg-white rounded-lg border border-gray-200 p-6">
-                    <h3 class="text-sm font-medium text-gray-600 mb-1">
-                        Última Consulta em
-                    </h3>
-                    <p class="text-3xl font-bold text-gray-900">
-                        25/08/2024
-                    </p>
-                </div>
+                <Link :href="patientRoutes.consultationDetails()" class="block">
+                    <div class="bg-white rounded-lg border border-gray-200 p-6 hover:border-primary hover:shadow-md transition-all cursor-pointer">
+                        <h3 class="text-sm font-medium text-gray-600 mb-1">
+                            Última Consulta em
+                        </h3>
+                        <p class="text-3xl font-bold text-gray-900">
+                            25/08/2024
+                        </p>
+                    </div>
+                </Link>
 
                 <!-- Card 3: Próxima Agendada -->
-                <div class="bg-white rounded-lg border border-gray-200 p-6">
-                    <h3 class="text-sm font-medium text-gray-600 mb-1">
-                        Próxima Agendada
-                    </h3>
-                    <p class="text-3xl font-bold text-gray-900">
-                        15/10/2024
-                    </p>
-                </div>
+                <Link :href="patientRoutes.nextConsultation()" class="block">
+                    <div class="bg-white rounded-lg border border-gray-200 p-6 hover:border-primary hover:shadow-md transition-all cursor-pointer">
+                        <h3 class="text-sm font-medium text-gray-600 mb-1">
+                            Próxima Agendada
+                        </h3>
+                        <p class="text-3xl font-bold text-gray-900">
+                            15/10/2024
+                        </p>
+                    </div>
+                </Link>
             </div>
 
             <!-- Navigation/Filter Section -->
@@ -217,8 +257,8 @@ onMounted(() => {
                     class="bg-white rounded-lg border border-gray-200 p-4 flex items-center gap-4"
                 >
                     <!-- Avatar -->
-                    <Avatar class="h-16 w-16 flex-shrink-0">
-                        <AvatarImage :src="consultation.avatar" />
+                    <Avatar class="h-16 w-16 shrink-0">
+                        <AvatarImage v-if="consultation.avatar" :src="consultation.avatar" />
                         <AvatarFallback class="bg-primary/10 text-primary text-lg font-semibold">
                             {{ getInitials(consultation.doctorName) }}
                         </AvatarFallback>
@@ -256,15 +296,18 @@ onMounted(() => {
                         </span>
 
                         <!-- View Details Button -->
-                        <Button
-                            :variant="consultation.status === 'completed' ? 'default' : 'outline'"
+                        <Button 
+                            as-child
+                            :variant="consultation.status === 'completed' || consultation.status === 'upcoming' ? 'default' : 'outline'"
                             :class="[
-                                consultation.status === 'completed'
+                                consultation.status === 'completed' || consultation.status === 'upcoming'
                                     ? 'bg-primary hover:bg-primary/90 text-gray-900'
                                     : 'border border-gray-300 text-gray-900 hover:bg-gray-50'
                             ]"
                         >
-                            Ver detalhes
+                            <Link :href="consultation.status === 'upcoming' ? patientRoutes.nextConsultation() : patientRoutes.consultationDetails()">
+                                Ver detalhes
+                            </Link>
                         </Button>
 
                         <!-- More Options -->
@@ -281,7 +324,7 @@ onMounted(() => {
                     :page="currentPage" 
                     :default-page="1"
                     :items-per-page="itemsPerPage"
-                    :total="allConsultations.length"
+                    :total="filteredConsultations.length"
                     @update:page="currentPage = $event"
                     class="flex items-center gap-1"
                 >
