@@ -13,7 +13,7 @@ class PatientHealthRecordsController extends Controller
     {
         $patient = Auth::user()->patient;
 
-        return Inertia::render('HealthRecords', [
+        return Inertia::render('Patient/HealthRecords', [
             'patient' => $patient,
         ]);
     }
