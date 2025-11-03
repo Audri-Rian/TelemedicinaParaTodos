@@ -79,6 +79,11 @@ const patientNavItems = computed<NavItem[]>(() => [
         icon: Video,
     },
     {
+        title: 'Histórico de Consultas',
+        href: patientRoutes.historyConsultations(),
+        icon: History,
+    },
+    {
         title: 'Prontuário',
         href: patientRoutes.healthRecords(),
         icon: Activity,

@@ -55,6 +55,7 @@ Route::middleware(['auth', 'verified', 'patient'])->prefix('patient')->name('pat
     Route::get('doctor-perfil', [App\Http\Controllers\Patient\DoctorPerfilController::class, 'index'])->name('doctor-perfil');
     Route::get('messages', [App\Http\Controllers\Patient\PatientMessagesController::class, 'index'])->name('messages');
     Route::get('video-call', [App\Http\Controllers\Patient\PatientVideoCallController::class, 'index'])->name('video-call');
+    Route::get('history-consultations', [App\Http\Controllers\Patient\PatientHistoryConsultationsController::class, 'index'])->name('history-consultations');
     Route::get('health-records', [App\Http\Controllers\Patient\PatientHealthRecordsController::class, 'index'])->name('health-records');
     
     // Rotas para videoconferência (pacientes)

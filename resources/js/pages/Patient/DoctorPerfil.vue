@@ -4,7 +4,7 @@ import { type BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/vue3';
 import { 
     Star, Bookmark, Heart, ChevronLeft, ChevronRight, 
-    GraduationCap, Briefcase, CheckCircle2 
+    GraduationCap, Briefcase, CheckCircle2, MessageCircle 
 } from 'lucide-vue-next';
 import * as patientRoutes from '@/routes/patient';
 import { onMounted, ref } from 'vue';
@@ -150,6 +150,16 @@ const breadcrumbs: BreadcrumbItem[] = [
                                         <Heart class="h-4 w-4 text-gray-700" />
                                     </button>
                                 </div>
+                            </div>
+
+                            <!-- Message Button -->
+                            <div class="mt-3">
+                                <Button as-child variant="outline" class="w-full bg-white hover:bg-gray-50 border-primary text-primary font-medium">
+                                    <Link :href="patientRoutes.messages()">
+                                        <MessageCircle class="h-4 w-4 mr-2" />
+                                        Enviar Mensagem
+                                    </Link>
+                                </Button>
                             </div>
 
                             <!-- Tags -->
