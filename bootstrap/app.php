@@ -5,6 +5,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
+use Illuminate\Support\Facades\Log;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -27,5 +28,38 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        //
+        // Renderizar página de erro customizada para erros HTTP
+        $exceptions->render(function (\Symfony\Component\HttpKernel\Exception\HttpExceptionInterface $e, \Illuminate\Http\Request $request) {
+            // Verificar se a requisição espera uma resposta JSON (API)
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => $e->getMessage() ?: 'Erro na requisição',
+                    'status' => $e->getStatusCode(),
+                ], $e->getStatusCode());
+            }
+
+            // Para requisições web, usar Inertia para renderizar a página de erro customizada
+            if ($request->is('*')) {
+                return \Inertia\Inertia::render('Error', [
+                    'status' => $e->getStatusCode(),
+                    'message' => $e->getMessage() ?: 'Algo deu errado',
+                ])->toResponse($request)->setStatusCode($e->getStatusCode());
+            }
+        });
+
+        // Log de erros para monitoramento e métricas
+        $exceptions->report(function (\Throwable $e) {
+            // Log detalhado em produção para monitoramento
+            if (app()->environment('production')) {
+                Log::error('Erro capturado', [
+                    'message' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'trace' => $e->getTraceAsString(),
+                    'url' => request()->url(),
+                    'method' => request()->method(),
+                    'user_id' => auth()->id(),
+                ]);
+            }
+        });
     })->create();

@@ -5,6 +5,7 @@ import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import type { DefineComponent } from 'vue';
 import { createApp, h } from 'vue';
 import { configureEcho } from '@laravel/echo-vue';
+import { router } from '@inertiajs/vue3';
 
 configureEcho({
     broadcaster: 'reverb',
@@ -23,4 +24,14 @@ createInertiaApp({
     progress: {
         color: '#4B5563',
     },
+});
+
+// Handler global de erros do Inertia para requisições que falharam
+router.on('error', (event) => {
+    // Se o erro retornar uma resposta de erro HTTP (4xx, 5xx)
+    // o Laravel já vai renderizar a página de erro customizada
+    // Este handler é apenas para erros de rede/conexão
+    if (event.detail.errors) {
+        console.error('Erro na requisição:', event.detail.errors);
+    }
 });
