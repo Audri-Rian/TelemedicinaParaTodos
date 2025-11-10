@@ -420,5 +420,5 @@ class AppointmentService
 
         return in_array($newStatus, $allowedTransitions[$currentStatus] ?? []);
     }
-
+}
 

@@ -18,9 +18,29 @@ class ProfileController extends Controller
      */
     public function edit(Request $request): Response
     {
+        $user = $request->user();
+        
+        // Carregar o relacionamento patient explicitamente
+        $patient = $user->patient;
+
         return Inertia::render('settings/Profile', [
-            'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
+            'mustVerifyEmail' => $user instanceof MustVerifyEmail,
             'status' => $request->session()->get('status'),
+            'patient' => $patient ? [
+                'id' => $patient->id,
+                'emergency_contact' => $patient->emergency_contact,
+                'emergency_phone' => $patient->emergency_phone,
+                'medical_history' => $patient->medical_history,
+                'allergies' => $patient->allergies,
+                'current_medications' => $patient->current_medications,
+                'blood_type' => $patient->blood_type,
+                'height' => $patient->height ? (float) $patient->height : null,
+                'weight' => $patient->weight ? (float) $patient->weight : null,
+                'insurance_provider' => $patient->insurance_provider,
+                'insurance_number' => $patient->insurance_number,
+                'consent_telemedicine' => (bool) $patient->consent_telemedicine,
+            ] : null,
+            'bloodTypes' => \App\Models\Patient::BLOOD_TYPES,
         ]);
     }
 
@@ -29,15 +49,45 @@ class ProfileController extends Controller
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
-        $request->user()->fill($request->validated());
+        $user = $request->user();
+        $validated = $request->validated();
 
-        if ($request->user()->isDirty('email')) {
-            $request->user()->email_verified_at = null;
+        // Atualizar dados do User
+        $userData = [
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+        ];
+
+        $user->fill($userData);
+
+        if ($user->isDirty('email')) {
+            $user->email_verified_at = null;
         }
 
-        $request->user()->save();
+        $user->save();
 
-        return to_route('profile.edit');
+        // Atualizar dados do Patient se o usuário for paciente
+        if ($user->isPatient() && $user->patient) {
+            $patientData = [
+                'emergency_contact' => $validated['emergency_contact'] ?? null,
+                'emergency_phone' => $validated['emergency_phone'] ?? null,
+                'medical_history' => $validated['medical_history'] ?? null,
+                'allergies' => $validated['allergies'] ?? null,
+                'current_medications' => $validated['current_medications'] ?? null,
+                'blood_type' => $validated['blood_type'] ?? null,
+                'height' => $validated['height'] ?? null,
+                'weight' => $validated['weight'] ?? null,
+                'insurance_provider' => $validated['insurance_provider'] ?? null,
+                'insurance_number' => $validated['insurance_number'] ?? null,
+                'consent_telemedicine' => isset($validated['consent_telemedicine']) 
+                    ? filter_var($validated['consent_telemedicine'], FILTER_VALIDATE_BOOLEAN) 
+                    : false,
+            ];
+
+            $user->patient->update($patientData);
+        }
+
+        return to_route('profile.edit')->with('status', 'profile-updated');
     }
 
     /**

@@ -20,9 +20,10 @@ class DatabaseSeeder extends Seeder
             'email' => 'test@example.com',
         ]);
 
-        // Executar seeder de especializações
+        // Executar seeders na ordem correta
         $this->call([
             SpecializationSeeder::class,
+            DoctorSeeder::class,
         ]);
     }
 }

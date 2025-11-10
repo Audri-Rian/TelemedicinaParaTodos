@@ -8,6 +8,7 @@ import Peer from 'peerjs';
 import Echo from 'laravel-echo';
 import Pusher from 'pusher-js';
 import * as patientRoutes from '@/routes/patient';
+import * as appointmentsRoutes from '@/routes/appointments';
 import { useRouteGuard } from '@/composables/auth';
 
 const { canAccessPatientRoute } = useRouteGuard();
@@ -65,6 +66,54 @@ const remoteVideoRef = ref<HTMLVideoElement | null>(null);
 const localVideoRef = ref<HTMLVideoElement | null>(null);
 const localStreamRef = ref<MediaStream | null>(null);
 
+const startBackendAppointment = async (): Promise<boolean> => {
+    if (!selectedUser.value?.appointment?.id) {
+        return false;
+    }
+
+    try {
+        await axios.post(appointmentsRoutes.start.url({ appointment: selectedUser.value.appointment.id }));
+        selectedUser.value = {
+            ...selectedUser.value,
+            appointment: {
+                ...selectedUser.value.appointment,
+                status: 'in_progress',
+            },
+            canStartCall: true,
+            timeWindowMessage: 'Consulta em andamento',
+        };
+
+        return true;
+    } catch (error: any) {
+        const message = error?.response?.data?.message;
+        if (message) {
+            alert(message);
+        }
+        return false;
+    }
+};
+
+const finalizeBackendAppointment = async () => {
+    if (!selectedUser.value?.appointment?.id) {
+        return;
+    }
+
+    try {
+        await axios.post(appointmentsRoutes.end.url({ appointment: selectedUser.value.appointment.id }));
+        selectedUser.value = {
+            ...selectedUser.value,
+            appointment: selectedUser.value.appointment
+                ? {
+                    ...selectedUser.value.appointment,
+                    status: 'completed',
+                }
+                : null,
+        };
+    } catch (error) {
+        // silencioso
+    }
+};
+
 // Função para iniciar uma chamada
 const callUser = async () => {
     if (!selectedUser.value || !peer.value || !peer.value.id) {
@@ -72,13 +121,19 @@ const callUser = async () => {
     }
     
     // Verificar se tem agendamento e se pode iniciar chamada
-    if (!selectedUser.value.hasAppointment) {
+    if (!selectedUser.value.hasAppointment || !selectedUser.value.appointment) {
         alert('Você precisa ter um agendamento com este médico para iniciar a chamada.');
         return;
     }
     
-    if (!selectedUser.value.canStartCall) {
+    if (!selectedUser.value.canStartCall && selectedUser.value.appointment.status !== 'in_progress') {
         alert(selectedUser.value.timeWindowMessage || 'Você só pode iniciar a chamada dentro da janela de tempo permitida (10 minutos antes ou depois do agendamento).');
+        return;
+    }
+    
+    const started = await startBackendAppointment();
+
+    if (!started && selectedUser.value.appointment?.status !== 'in_progress') {
         return;
     }
     
@@ -122,7 +177,7 @@ const callUser = async () => {
 };
 
 // Função para encerrar a chamada
-const endCall = () => {
+const endCall = async () => {
     if (peerCall.value) {
         peerCall.value.close();
         peerCall.value = null;
@@ -142,6 +197,8 @@ const endCall = () => {
     if (remoteVideoRef.value) {
         remoteVideoRef.value.srcObject = null;
     }
+    
+    await finalizeBackendAppointment();
     
     isCalling.value = false;
     isMuted.value = false;

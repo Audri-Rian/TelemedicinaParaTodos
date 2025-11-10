@@ -6,6 +6,7 @@ use App\Http\Requests\RescheduleAppointmentRequest;
 use App\Http\Requests\StoreAppointmentRequest;
 use App\Http\Requests\UpdateAppointmentRequest;
 use App\Models\Appointments;
+use App\Models\Doctor;
 use App\Services\AppointmentService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -78,6 +79,20 @@ class AppointmentsController extends Controller
             $data = $request->validated();
             $appointment = $this->appointmentService->create($data, $request->user());
 
+            $user = $request->user();
+            
+            // Redirecionar baseado no tipo de usuário
+            if ($user->isPatient()) {
+                return redirect()
+                    ->route('patient.consultation-details', $appointment)
+                    ->with('success', 'Agendamento criado com sucesso.');
+            } elseif ($user->isDoctor()) {
+                return redirect()
+                    ->route('appointments.show', $appointment)
+                    ->with('success', 'Agendamento criado com sucesso.');
+            }
+            
+            // Fallback para rota genérica
             return redirect()
                 ->route('appointments.show', $appointment)
                 ->with('success', 'Agendamento criado com sucesso.');
@@ -220,6 +235,87 @@ class AppointmentsController extends Controller
         return response()->json([
             'message' => 'Consulta reagendada com sucesso.',
             'appointment' => $appointment->fresh(),
+        ]);
+    }
+
+    /**
+     * Verificar disponibilidade de horários para um médico em uma data específica
+     */
+    public function availability(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'doctor_id' => ['required', 'exists:doctors,id'],
+            'date' => ['required', 'date', 'after_or_equal:today'],
+        ]);
+
+        $doctor = Doctor::findOrFail($validated['doctor_id']);
+
+        if (!$doctor->isActive()) {
+            return response()->json([
+                'message' => 'Médico não está ativo.',
+                'doctor_id' => $doctor->id,
+                'date' => $validated['date'],
+                'available_slots' => [],
+                'schedule' => null,
+            ], 422);
+        }
+
+        $date = Carbon::parse($validated['date']);
+        $now = Carbon::now();
+        $dayOfWeek = strtolower($date->format('l'));
+
+        $schedule = $doctor->availability_schedule ?? [];
+        $daySchedule = $schedule[$dayOfWeek] ?? null;
+
+        if (empty($daySchedule) || empty($daySchedule['slots'])) {
+            return response()->json([
+                'doctor_id' => $doctor->id,
+                'date' => $date->format('Y-m-d'),
+                'available_slots' => [],
+                'schedule' => $daySchedule,
+            ]);
+        }
+
+        $existingAppointments = Appointments::query()
+            ->where('doctor_id', $doctor->id)
+            ->whereDate('scheduled_at', $date->toDateString())
+            ->whereIn('status', [
+                Appointments::STATUS_SCHEDULED,
+                Appointments::STATUS_RESCHEDULED,
+                Appointments::STATUS_IN_PROGRESS,
+            ])
+            ->pluck('scheduled_at')
+            ->map(fn (Carbon $scheduledAt) => $scheduledAt->format('H:i'))
+            ->all();
+
+        // Filtrar slots ocupados e slots passados (se for hoje)
+        $availableSlots = array_filter($daySchedule['slots'], function($slot) use ($existingAppointments, $date, $now) {
+            // Remover slots ocupados
+            if (in_array($slot, $existingAppointments)) {
+                return false;
+            }
+            
+            // Se for hoje, remover apenas slots que já passaram
+            if ($date->isToday()) {
+                try {
+                    $slotDateTime = Carbon::createFromFormat('Y-m-d H:i', $date->format('Y-m-d') . ' ' . $slot);
+                    // Mostrar slots que são no futuro (pelo menos 5 minutos à frente)
+                    $minAllowedTime = $now->copy()->addMinutes(5);
+                    return $slotDateTime->greaterThan($minAllowedTime);
+                } catch (\Exception $e) {
+                    // Se houver erro ao criar a data, manter o slot
+                    return true;
+                }
+            }
+            
+            return true;
+        });
+
+        return response()->json([
+            'doctor_id' => $doctor->id,
+            'date' => $date->format('Y-m-d'),
+            'available_slots' => array_values($availableSlots),
+            'schedule' => $daySchedule,
         ]);
     }
 }

@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
-import { Head } from '@inertiajs/vue3';
-import { Search, ChevronDown, Video, Circle, Star, Heart, Brain, Eye, Bone, Apple, Calendar, Clock, Baby, Stethoscope, Pill, Activity, Microscope, Syringe } from 'lucide-vue-next';
+import { Head, router } from '@inertiajs/vue3';
+import { Search, Video, Circle, Heart, Brain, Eye, Bone, Apple, Calendar, Clock, Baby, Stethoscope, Pill, Activity, Microscope, Syringe } from 'lucide-vue-next';
 import * as patientRoutes from '@/routes/patient';
-import { onMounted, ref, computed } from 'vue';
+import { onMounted, ref, computed, watch } from 'vue';
 import { useRouteGuard } from '@/composables/auth';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -12,73 +12,89 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useInitials } from '@/composables/useInitials';
 import { Link } from '@inertiajs/vue3';
+import DoctorCard from '@/components/DoctorCard.vue';
+
+interface DoctorSpecialization {
+    id: string;
+    name: string;
+}
+
+interface DoctorUser {
+    name: string;
+    email?: string;
+    avatar?: string | null;
+}
 
 interface Doctor {
     id: string;
-    user: {
-        name: string;
-        email?: string;
-        avatar?: string;
-    };
-    specializations?: Array<{
-        id: string;
-        name: string;
-    }>;
-    rating?: number;
-    reviews_count?: number;
-    description?: string;
+    crm?: string;
     status?: string;
+    consultation_fee?: number | null;
+    biography?: string | null;
+    availability_schedule?: Record<string, { start?: string; end?: string; slots?: string[] }> | null;
+    available_slots_for_day?: string[] | null;
+    user: DoctorUser;
+    specializations: DoctorSpecialization[];
 }
 
 interface Specialization {
     id: string;
     name: string;
-    doctors_count?: number;
 }
 
-interface Appointment {
+interface AppointmentSummary {
     id: string;
-    doctor: {
-        user: {
-            name: string;
-        };
-        specializations?: Array<{
-            name: string;
-        }>;
-    };
-    scheduled_at: string;
     status: string;
+    scheduled_at: string | null;
+    doctor: {
+        id: string;
+        name: string;
+        specializations: (string | null)[];
+    };
+}
+
+interface PaginationLink {
+    url: string | null;
+    label: string;
+    active: boolean;
+}
+
+interface PaginatedDoctors {
+    data: Doctor[];
+    links?: PaginationLink[];
+    current_page?: number;
+    last_page?: number;
+    total?: number;
+}
+
+interface Filters {
+    search?: string;
+    specialization_id?: string;
+    date?: string;
 }
 
 interface Props {
-    appointments?: Appointment[];
-    availableDoctors?: Doctor[];
-    specializations?: Specialization[];
+    appointments?: AppointmentSummary[];
+    availableDoctors: PaginatedDoctors;
+    specializations: Specialization[];
+    filters?: Filters;
 }
 
-const props = withDefaults(defineProps<Props>(), {
-    appointments: () => [],
-    availableDoctors: () => [],
-    specializations: () => [],
-});
+const props = defineProps<Props>();
 
 const { canAccessPatientRoute } = useRouteGuard();
 const { getInitials } = useInitials();
 
-// Estado da busca e filtros
-const searchQuery = ref('');
-const selectedSpecialty = ref<string | null>(null);
-const selectedInsurance = ref<string | null>(null);
-const selectedDate = ref<string | null>(null);
+const searchQuery = ref(props.filters?.search ?? '');
+const selectedSpecialty = ref<string | null>(props.filters?.specialization_id ?? null);
+const selectedDate = ref<string | null>(props.filters?.date ?? null);
 const telemedicineOnly = ref(false);
 const availableNow = ref(false);
 
-// Verificar acesso ao montar componente
 onMounted(() => {
     canAccessPatientRoute();
 });
 
-// Ícones para especializações
 const specializationIcons: Record<string, any> = {
     'Cardiologia': Heart,
     'Dermatologia': Eye,
@@ -98,111 +114,107 @@ const getSpecializationIcon = (name: string) => {
     return icon;
 };
 
-// Médicos estáticos de exemplo
-const exampleDoctors: Doctor[] = [
-    {
-        id: 'example-1',
-        user: {
-            name: 'Dr. Ana Costa',
-            email: 'ana.costa@example.com',
-        },
-        specializations: [{ id: '1', name: 'Cardiologista' }],
-        rating: 4.9,
-        reviews_count: 124,
-        description: 'Especialista em saúde do coração com mais de 10 anos de experiência.',
-        status: 'active',
-    },
-    {
-        id: 'example-2',
-        user: {
-            name: 'Dr. Bruno Alves',
-            email: 'bruno.alves@example.com',
-        },
-        specializations: [{ id: '2', name: 'Dermatologista' }],
-        rating: 4.8,
-        reviews_count: 98,
-        description: 'Tratamentos de pele, cabelo e unhas. Foco em dermatologia clínica.',
-        status: 'active',
-    },
-    {
-        id: 'example-3',
-        user: {
-            name: 'Dr. Carlos Lima',
-            email: 'carlos.lima@example.com',
-        },
-        specializations: [{ id: '3', name: 'Clínico Geral' }],
-        rating: 5.0,
-        reviews_count: 210,
-        description: 'Atendimento geral para todas as idades, com foco em medicina preventiva.',
-        status: 'active',
-    },
-    {
-        id: 'example-4',
-        user: {
-            name: 'Dra. Maria Silva',
-            email: 'maria.silva@example.com',
-        },
-        specializations: [{ id: '4', name: 'Pediatra' }],
-        rating: 4.9,
-        reviews_count: 156,
-        description: 'Especializada em cuidados com crianças e adolescentes há mais de 8 anos.',
-        status: 'active',
-    },
-    {
-        id: 'example-5',
-        user: {
-            name: 'Dr. João Santos',
-            email: 'joao.santos@example.com',
-        },
-        specializations: [{ id: '5', name: 'Ortopedista' }],
-        rating: 4.7,
-        reviews_count: 89,
-        description: 'Especialista em cirurgia ortopédica e tratamento de lesões esportivas.',
-        status: 'active',
-    },
-    {
-        id: 'example-6',
-        user: {
-            name: 'Dra. Fernanda Oliveira',
-            email: 'fernanda.oliveira@example.com',
-        },
-        specializations: [{ id: '6', name: 'Psicóloga' }],
-        rating: 4.9,
-        reviews_count: 203,
-        description: 'Terapia cognitivo-comportamental e apoio psicológico para todas as idades.',
-        status: 'active',
-    },
-];
+const doctors = computed<Doctor[]>(() => props.availableDoctors?.data ?? []);
+const paginationLinks = computed<PaginationLink[]>(() => props.availableDoctors?.links ?? []);
 
-// Filtrar médicos baseado nos filtros
 const filteredDoctors = computed(() => {
-    // Combinar médicos do backend com médicos estáticos de exemplo
-    let doctors = [...(props.availableDoctors || []), ...exampleDoctors];
-    
-    if (searchQuery.value.trim()) {
-        const query = searchQuery.value.toLowerCase();
-        doctors = doctors.filter(doctor => 
-            doctor.user.name.toLowerCase().includes(query) ||
-            doctor.specializations?.some(spec => spec.name.toLowerCase().includes(query))
-        );
-    }
-    
-    if (selectedSpecialty.value) {
-        doctors = doctors.filter(doctor => 
-            doctor.specializations?.some(spec => spec.id === selectedSpecialty.value)
-        );
-    }
-    
+    let list = doctors.value.slice();
+
     if (telemedicineOnly.value) {
-        // Filtrar médicos que atendem online (assumindo que todos atendem online por enquanto)
+        // Placeholder para futuras implementações. Atualmente, todos atendem online.
+        list = list;
     }
-    
-    if (availableNow.value) {
-        // Filtrar médicos disponíveis agora (assumindo que todos estão disponíveis por enquanto)
+
+    if (availableNow.value && selectedDate.value) {
+        list = list.filter((doctor) => (doctor.available_slots_for_day ?? []).length > 0);
     }
-    
-    return doctors;
+
+    return list;
 });
+
+const buildQueryParams = () => {
+    const queryParams: Record<string, any> = {};
+
+    if (searchQuery.value.trim()) {
+        queryParams.search = searchQuery.value.trim();
+    }
+
+    if (selectedSpecialty.value) {
+        queryParams.specialization_id = selectedSpecialty.value;
+    }
+
+    if (selectedDate.value) {
+        queryParams.date = selectedDate.value;
+    }
+
+    return queryParams;
+};
+
+const applyFilters = () => {
+    router.get(patientRoutes.searchConsultations.url(), buildQueryParams(), {
+        preserveState: true,
+        preserveScroll: true,
+        replace: true,
+    });
+};
+
+let searchTimeout: ReturnType<typeof setTimeout> | null = null;
+watch(searchQuery, () => {
+    if (searchTimeout) {
+        clearTimeout(searchTimeout);
+    }
+    searchTimeout = setTimeout(() => {
+        applyFilters();
+    }, 500);
+});
+
+watch(selectedSpecialty, () => {
+    applyFilters();
+});
+
+watch(selectedDate, () => {
+    applyFilters();
+});
+
+const changePage = (link: PaginationLink) => {
+    if (!link.url || link.active) {
+        return;
+    }
+
+    router.get(link.url, {}, {
+        preserveState: true,
+        preserveScroll: true,
+    });
+};
+
+const resetFilters = () => {
+    searchQuery.value = '';
+    selectedSpecialty.value = null;
+    selectedDate.value = null;
+    telemedicineOnly.value = false;
+    availableNow.value = false;
+    applyFilters();
+};
+
+const selectSpecialization = (specializationId: string) => {
+    selectedSpecialty.value = specializationId;
+};
+
+const formatDateLabel = (dateString: string | null) => {
+    if (!dateString) {
+        return '';
+    }
+
+    try {
+        return new Intl.DateTimeFormat('pt-BR', {
+            day: '2-digit',
+            month: 'long',
+            year: 'numeric',
+        }).format(new Date(`${dateString}T00:00:00`));
+    } catch (error) {
+        return dateString;
+    }
+};
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -239,54 +251,51 @@ const breadcrumbs: BreadcrumbItem[] = [
 
             <!-- Filtros -->
             <div class="flex flex-wrap items-center justify-between gap-4 w-[90%] mx-auto">
-                <!-- Grupo Esquerdo: Dropdowns -->
-                <div class="flex flex-wrap items-center gap-4">
-                    <!-- Dropdown Especialidade -->
-                    <div class="relative">
-                        <Button
-                            variant="outline"
-                            class="h-10 px-4 bg-gray-50 hover:bg-gray-100 border-gray-200 text-gray-700 rounded-lg"
+                <!-- Filtros principais -->
+                <div class="flex flex-wrap items-end gap-4">
+                    <div class="flex flex-col">
+                        <label for="specialization" class="text-sm font-medium text-gray-700 mb-1">Especialidade</label>
+                        <select
+                            id="specialization"
+                            v-model="selectedSpecialty"
+                            class="h-10 min-w-[200px] rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
                         >
-                            <span>Especialidade</span>
-                            <ChevronDown class="ml-2 h-4 w-4" />
-                        </Button>
+                            <option :value="null">Todas</option>
+                            <option v-for="specialization in specializations" :key="specialization.id" :value="specialization.id">
+                                {{ specialization.name }}
+                            </option>
+                        </select>
                     </div>
-
-                    <!-- Dropdown Convênio -->
-                    <div class="relative">
-                        <Button
-                            variant="outline"
-                            class="h-10 px-4 bg-gray-50 hover:bg-gray-100 border-gray-200 text-gray-700 rounded-lg"
-                        >
-                            <span>Convênio</span>
-                            <ChevronDown class="ml-2 h-4 w-4" />
-                        </Button>
+                    <div class="flex flex-col">
+                        <label for="filter-date" class="text-sm font-medium text-gray-700 mb-1">Data</label>
+                        <Input
+                            id="filter-date"
+                            type="date"
+                            v-model="selectedDate"
+                            class="h-10 w-40 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+                        />
                     </div>
-
-                    <!-- Dropdown Data -->
-                    <div class="relative">
+                    <div class="flex items-center">
                         <Button
-                            variant="outline"
-                            class="h-10 px-4 bg-gray-50 hover:bg-gray-100 border-gray-200 text-gray-700 rounded-lg"
+                            variant="ghost"
+                            class="text-sm text-gray-600 hover:text-primary"
+                            @click="resetFilters"
                         >
-                            <span>Data</span>
-                            <ChevronDown class="ml-2 h-4 w-4" />
+                            Limpar filtros
                         </Button>
                     </div>
                 </div>
 
-                <!-- Grupo Direito: Checkboxes -->
+                <!-- Filtros auxiliares -->
                 <div class="flex flex-wrap items-center gap-4">
-                    <!-- Checkbox Telemedicina -->
                     <div class="flex items-center space-x-2">
                         <Checkbox id="telemedicine" v-model:checked="telemedicineOnly" />
                         <label for="telemedicine" class="text-sm text-gray-700 cursor-pointer">Telemedicina</label>
                     </div>
 
-                    <!-- Checkbox Atende Agora -->
                     <div class="flex items-center space-x-2">
                         <Checkbox id="available-now" v-model:checked="availableNow" />
-                        <label for="available-now" class="text-sm text-gray-700 cursor-pointer">Atende Agora</label>
+                        <label for="available-now" class="text-sm text-gray-700 cursor-pointer">Disponível na data</label>
                     </div>
                 </div>
             </div>
@@ -298,6 +307,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                     <button
                         v-for="specialization in specializations.slice(0, 6)"
                         :key="specialization.id"
+                        @click="selectSpecialization(specialization.id)"
                         class="flex flex-col items-center justify-center gap-3 p-6 bg-primary/10 hover:bg-primary/20 rounded-2xl transition-colors cursor-pointer group"
                     >
                         <component
@@ -314,72 +324,47 @@ const breadcrumbs: BreadcrumbItem[] = [
                 <h2 class="text-2xl font-bold text-gray-900 text-center">Precisa de atendimento agora?</h2>
                 
                 <div v-if="filteredDoctors.length > 0" class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-7xl mx-auto">
-                    <div
-                        v-for="doctor in filteredDoctors.slice(0, 6)"
+                    <DoctorCard
+                        v-for="doctor in filteredDoctors"
                         :key="doctor.id"
-                        class="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-lg transition-shadow"
+                        :doctor="doctor"
+                        :selected-date="selectedDate"
+                        class="hover:shadow-lg transition-shadow"
                     >
-                        <!-- Avatar e Informações Básicas -->
-                        <div class="flex items-start gap-4 mb-4">
-                            <Avatar class="h-16 w-16">
-                                <AvatarImage :src="doctor.user.avatar || undefined" />
-                                <AvatarFallback class="bg-primary/10 text-primary text-lg font-semibold">
-                                    {{ getInitials(doctor.user?.name) }}
-                                </AvatarFallback>
-                            </Avatar>
-                            
-                            <div class="flex-1 min-w-0">
-                                <h3 class="font-bold text-lg text-gray-900 mb-1">{{ doctor.user.name }}</h3>
-                                <p class="text-sm text-gray-600 mb-2">
-                                    {{ doctor.specializations?.[0]?.name || 'Especialista' }}
-                                </p>
-                                
-                                <!-- Avaliação -->
-                                <div class="flex items-center gap-1">
-                                    <Star class="h-4 w-4 text-primary fill-primary" />
-                                    <span class="text-sm font-medium text-gray-900">
-                                        {{ doctor.rating || '4.9' }} ({{ doctor.reviews_count || '124' }})
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Descrição -->
-                        <p class="text-sm text-gray-600 mb-4 line-clamp-2">
-                            {{ doctor.description || 'Especialista com vasta experiência em atendimento médico.' }}
-                        </p>
-
-                        <!-- Badges de Disponibilidade -->
-                        <div class="flex flex-wrap gap-2 mb-4">
-                            <span class="inline-flex items-center gap-1 px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-medium">
-                                <Video class="h-3 w-3" />
-                                Atende Online
-                            </span>
-                            <span class="inline-flex items-center gap-1 px-3 py-1 bg-green-50 text-green-700 rounded-full text-xs font-medium">
-                                <Circle class="h-3 w-3 fill-green-500 text-green-500" />
-                                Disponível Agora
-                            </span>
-                        </div>
-
-                        <!-- Botões de Ação -->
-                        <div class="flex gap-2">
+                        <template #actions="{ doctor: doctorFromSlot }">
                             <Button as-child class="flex-1 bg-primary hover:bg-primary/90 text-gray-900 font-semibold">
-                                <Link :href="patientRoutes.scheduleConsultation()">
+                                <Link :href="patientRoutes.scheduleConsultation({ query: { doctor_id: doctorFromSlot.id, date: selectedDate ?? undefined } })">
                                     Agendar Consulta
                                 </Link>
                             </Button>
                             <Button as-child variant="outline" class="flex-1 border-gray-200 text-gray-700">
-                                <Link :href="patientRoutes.doctorPerfil()">
+                                <Link :href="patientRoutes.doctorPerfil({ query: { doctor_id: doctorFromSlot.id } })">
                                     Ver Perfil
                                 </Link>
                             </Button>
-                        </div>
-                    </div>
+                        </template>
+                    </DoctorCard>
                 </div>
 
                 <div v-else class="text-center py-12">
                     <Search class="h-16 w-16 text-gray-300 mx-auto mb-4" />
                     <p class="text-gray-500 text-lg">Nenhum médico encontrado com os filtros selecionados</p>
+                </div>
+
+                <div v-if="paginationLinks.length > 0" class="flex flex-wrap items-center justify-center gap-2">
+                    <button
+                        v-for="link in paginationLinks"
+                        :key="link.label"
+                        type="button"
+                        @click="changePage(link)"
+                        :disabled="!link.url"
+                        class="px-3 py-1.5 rounded-lg text-sm"
+                        :class="[
+                            link.active ? 'bg-primary text-white' : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-100',
+                            !link.url ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
+                        ]"
+                        v-html="link.label"
+                    />
                 </div>
             </div>
         </div>

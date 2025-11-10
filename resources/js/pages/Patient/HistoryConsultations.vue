@@ -3,12 +3,11 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/vue3';
 import * as patientRoutes from '@/routes/patient';
-import { onMounted, ref, computed, watch } from 'vue';
+import { onMounted, ref, computed } from 'vue';
+import { router } from '@inertiajs/vue3';
 import { useRouteGuard } from '@/composables/auth';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { MoreVertical } from 'lucide-vue-next';
-import { useInitials } from '@/composables/useInitials';
 import { 
     PaginationEllipsis, 
     PaginationFirst, 
@@ -19,110 +18,137 @@ import {
     PaginationPrev, 
     PaginationRoot 
 } from 'reka-ui';
+import AppointmentSummary from '@/components/AppointmentSummary.vue';
+
+interface Appointment {
+    id: string;
+    status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'rescheduled' | 'no_show';
+    scheduled_at: string;
+    doctor: {
+        id: string;
+        user: {
+            id: string;
+            name: string;
+            avatar?: string | null;
+        };
+        specializations: Array<{ id: string; name: string }>;
+    };
+}
+
+interface PaginatedAppointments {
+    data: Appointment[];
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+    links?: any[];
+}
+
+interface Props {
+    appointments: PaginatedAppointments;
+    stats: {
+        total: number;
+        upcoming: number;
+        completed: number;
+        cancelled: number;
+    };
+    filters?: {
+        status?: string;
+    };
+}
+
+const props = defineProps<Props>();
 
 const { canAccessPatientRoute } = useRouteGuard();
-const { getInitials } = useInitials();
 
-// Estado para o filtro ativo
-const activeFilter = ref<'upcoming' | 'completed' | 'cancelled' | 'all'>('completed');
-
-// Estado de paginação
-const currentPage = ref(1);
-const itemsPerPage = 5;
-
-// Dados das consultas (estáticos por enquanto)
-const allConsultations = [
-    {
-        id: 1,
-        date: '25 AGO 2024',
-        time: '10:30',
-        doctorName: 'Dr. Carlos Andrade',
-        specialty: 'Cardiologia',
-        avatar: null,
-        status: 'completed'
-    },
-    {
-        id: 2,
-        date: '12 JUL 2024',
-        time: '14:00',
-        doctorName: 'Dra. Sofia Oliveira',
-        specialty: 'Dermatologia',
-        avatar: null,
-        status: 'completed'
-    },
-    {
-        id: 3,
-        date: '05 JUN 2024',
-        time: '09:15',
-        doctorName: 'Dr. Ricardo Lima',
-        specialty: 'Clínico Geral',
-        avatar: null,
-        status: 'cancelled'
-    },
-    {
-        id: 4,
-        date: '28 MAI 2024',
-        time: '11:00',
-        doctorName: 'Dr. Felipe Santos',
-        specialty: 'Ortopedia',
-        avatar: null,
-        status: 'completed'
-    },
-    {
-        id: 5,
-        date: '15 MAI 2024',
-        time: '16:30',
-        doctorName: 'Dra. Patrícia Costa',
-        specialty: 'Pediatria',
-        avatar: null,
-        status: 'completed'
-    },
-    {
-        id: 6,
-        date: '02 ABR 2024',
-        time: '08:00',
-        doctorName: 'Dr. Rafael Gomes',
-        specialty: 'Neurologia',
-        avatar: null,
-        status: 'completed'
-    },
-    {
-        id: 7,
-        date: '15 OUT 2024',
-        time: '10:00',
-        doctorName: 'Dra. Ana Silva',
-        specialty: 'Cardiologia',
-        avatar: null,
-        status: 'upcoming'
-    },
-    {
-        id: 8,
-        date: '20 OUT 2024',
-        time: '14:30',
-        doctorName: 'Dr. Paulo Costa',
-        specialty: 'Dermatologia',
-        avatar: null,
-        status: 'upcoming'
-    }
-];
-
-// Calcular consultas filtradas
-const filteredConsultations = computed(() => {
-    if (activeFilter.value === 'completed') {
-        return allConsultations.filter(c => c.status === 'completed');
-    } else if (activeFilter.value === 'cancelled') {
-        return allConsultations.filter(c => c.status === 'cancelled');
-    } else if (activeFilter.value === 'upcoming') {
-        return allConsultations.filter(c => c.status === 'upcoming');
-    }
-    // Se 'all', retorna todas
-    return allConsultations;
+const stats = computed(() => props.stats ?? {
+    total: 0,
+    upcoming: 0,
+    completed: 0,
+    cancelled: 0,
+});
+const pagination = computed(() => props.appointments ?? {
+    data: [],
+    current_page: 1,
+    last_page: 1,
+    per_page: 10,
+    total: 0,
 });
 
-// Calcular consultas paginadas
+// Estado para o filtro ativo (inicializar com filtro do back-end ou padrão)
+const activeFilter = ref<'upcoming' | 'completed' | 'cancelled' | 'all'>(() => {
+    if (props.filters?.status) {
+        return props.filters.status as any;
+    }
+    return 'all';
+});
+
+// Aplicar filtro e fazer requisição
+const applyFilter = (filter: 'upcoming' | 'completed' | 'cancelled' | 'all') => {
+    activeFilter.value = filter;
+    const queryParams: Record<string, any> = {};
+    
+    if (filter !== 'all') {
+        queryParams.status = filter;
+    }
+    
+    router.get(patientRoutes.historyConsultations.url(), queryParams, {
+        preserveState: true,
+        preserveScroll: true,
+    });
+};
+
+// Formatar data para exibição
+const formatDate = (dateString: string): string => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('pt-BR', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+    }).toUpperCase();
+};
+
+const formatTime = (dateString: string): string => {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString('pt-BR', {
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+};
+
+// Mapear status para badge
+const getStatusBadge = (status: string) => {
+    const statusMap: Record<string, { label: string; class: string }> = {
+        scheduled: { label: 'Agendada', class: 'bg-yellow-100 text-yellow-700' },
+        in_progress: { label: 'Em Andamento', class: 'bg-blue-100 text-blue-700' },
+        completed: { label: 'Concluída', class: 'bg-green-100 text-green-700' },
+        cancelled: { label: 'Cancelada', class: 'bg-red-100 text-red-700' },
+        rescheduled: { label: 'Reagendada', class: 'bg-purple-100 text-purple-700' },
+        no_show: { label: 'Não Compareceu', class: 'bg-gray-100 text-gray-700' },
+    };
+    return statusMap[status] || statusMap.scheduled;
+};
+
+// Navegar para página
+const goToPage = (page: number) => {
+    const queryParams: Record<string, any> = { page };
+    
+    if (activeFilter.value !== 'all') {
+        queryParams.status = activeFilter.value;
+    }
+    
+    router.get(patientRoutes.historyConsultations.url(), queryParams, {
+        preserveState: true,
+        preserveScroll: true,
+    });
+};
+
+// Dados das consultas do back-end
 const consultations = computed(() => {
-    const startIndex = (currentPage.value - 1) * itemsPerPage;
-    return filteredConsultations.value.slice(startIndex, startIndex + itemsPerPage);
+    if (!pagination.value || !pagination.value.data) {
+        return [];
+    }
+    return pagination.value.data.filter((consultation: any) => consultation && consultation.id);
 });
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -136,10 +162,6 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-// Resetar página quando o filtro mudar
-watch(activeFilter, () => {
-    currentPage.value = 1;
-});
 
 // Verificar acesso ao montar componente
 onMounted(() => {
@@ -163,47 +185,53 @@ onMounted(() => {
             </div>
 
             <!-- Summary Cards Section -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 <!-- Card 1: Total de Consultas -->
                 <div class="bg-white rounded-lg border border-gray-200 p-6">
                     <h3 class="text-sm font-medium text-gray-600 mb-1">
                         Total de Consultas
                     </h3>
                     <p class="text-3xl font-bold text-gray-900">
-                        12
+                        {{ stats.total }}
                     </p>
                 </div>
 
-                <!-- Card 2: Última Consulta -->
-                <Link :href="patientRoutes.consultationDetails()" class="block">
-                    <div class="bg-white rounded-lg border border-gray-200 p-6 hover:border-primary hover:shadow-md transition-all cursor-pointer">
-                        <h3 class="text-sm font-medium text-gray-600 mb-1">
-                            Última Consulta em
-                        </h3>
-                        <p class="text-3xl font-bold text-gray-900">
-                            25/08/2024
-                        </p>
-                    </div>
-                </Link>
+                <!-- Card 2: Concluídas -->
+                <div class="bg-white rounded-lg border border-gray-200 p-6">
+                    <h3 class="text-sm font-medium text-gray-600 mb-1">
+                        Concluídas
+                    </h3>
+                    <p class="text-3xl font-bold text-gray-900">
+                        {{ stats.completed }}
+                    </p>
+                </div>
 
-                <!-- Card 3: Próxima Agendada -->
-                <Link :href="patientRoutes.nextConsultation()" class="block">
-                    <div class="bg-white rounded-lg border border-gray-200 p-6 hover:border-primary hover:shadow-md transition-all cursor-pointer">
-                        <h3 class="text-sm font-medium text-gray-600 mb-1">
-                            Próxima Agendada
-                        </h3>
-                        <p class="text-3xl font-bold text-gray-900">
-                            15/10/2024
-                        </p>
-                    </div>
-                </Link>
+                <!-- Card 3: Próximas -->
+                <div class="bg-white rounded-lg border border-gray-200 p-6">
+                    <h3 class="text-sm font-medium text-gray-600 mb-1">
+                        Próximas
+                    </h3>
+                    <p class="text-3xl font-bold text-gray-900">
+                        {{ stats.upcoming }}
+                    </p>
+                </div>
+                
+                <!-- Card 4: Canceladas -->
+                <div class="bg-white rounded-lg border border-gray-200 p-6">
+                    <h3 class="text-sm font-medium text-gray-600 mb-1">
+                        Canceladas
+                    </h3>
+                    <p class="text-3xl font-bold text-gray-900">
+                        {{ stats.cancelled }}
+                    </p>
+                </div>
             </div>
 
             <!-- Navigation/Filter Section -->
             <div class="bg-secondary/50 rounded-lg border border-gray-200 p-4">
                 <div class="grid grid-cols-4 gap-2">
                     <button
-                        @click="activeFilter = 'upcoming'"
+                        @click="applyFilter('upcoming')"
                         :class="[
                             'py-3 rounded-lg font-medium transition-colors',
                             activeFilter === 'upcoming'
@@ -214,7 +242,7 @@ onMounted(() => {
                         Próximas
                     </button>
                     <button
-                        @click="activeFilter = 'completed'"
+                        @click="applyFilter('completed')"
                         :class="[
                             'py-3 rounded-lg font-medium transition-colors',
                             activeFilter === 'completed'
@@ -225,7 +253,7 @@ onMounted(() => {
                         Concluídas
                     </button>
                     <button
-                        @click="activeFilter = 'cancelled'"
+                        @click="applyFilter('cancelled')"
                         :class="[
                             'py-3 rounded-lg font-medium transition-colors',
                             activeFilter === 'cancelled'
@@ -236,7 +264,7 @@ onMounted(() => {
                         Canceladas
                     </button>
                     <button
-                        @click="activeFilter = 'all'"
+                        @click="applyFilter('all')"
                         :class="[
                             'py-3 rounded-lg font-medium transition-colors',
                             activeFilter === 'all'
@@ -251,81 +279,55 @@ onMounted(() => {
 
             <!-- Content Area -->
             <div class="mt-6 space-y-4">
-                <div
+                <AppointmentSummary
                     v-for="consultation in consultations"
                     :key="consultation.id"
-                    class="bg-white rounded-lg border border-gray-200 p-4 flex items-center gap-4"
+                    :appointment="{
+                        id: consultation.id,
+                        status: consultation.status,
+                        scheduled_at: consultation.scheduled_at,
+                        doctor: {
+                            id: consultation.doctor?.id ?? '',
+                            name: consultation.doctor?.user?.name ?? 'Médico não informado',
+                            specializations: consultation.doctor?.specializations?.map((spec: any) => typeof spec === 'string' ? spec : spec.name) ?? [],
+                        },
+                    }"
                 >
-                    <!-- Avatar -->
-                    <Avatar class="h-16 w-16 shrink-0">
-                        <AvatarImage v-if="consultation.avatar" :src="consultation.avatar" />
-                        <AvatarFallback class="bg-primary/10 text-primary text-lg font-semibold">
-                            {{ getInitials(consultation.doctorName) }}
-                        </AvatarFallback>
-                    </Avatar>
-
-                    <!-- Details -->
-                    <div class="flex-1 min-w-0">
-                        <div class="flex items-center gap-2 mb-1">
-                            <span class="text-sm font-medium text-primary">
-                                {{ consultation.date }}, {{ consultation.time }}
-                            </span>
+                    <template #actions>
+                        <div class="flex items-center gap-2">
+                            <Button 
+                                as-child
+                                :variant="['completed', 'scheduled', 'rescheduled'].includes(consultation.status) ? 'default' : 'outline'"
+                                :class="[
+                                    ['completed', 'scheduled', 'rescheduled'].includes(consultation.status)
+                                        ? 'bg-primary hover:bg-primary/90 text-gray-900'
+                                        : 'border border-gray-300 text-gray-900 hover:bg-gray-50'
+                                ]"
+                            >
+                                <Link :href="patientRoutes.consultationDetails({ appointment: consultation.id })">
+                                    Ver detalhes
+                                </Link>
+                            </Button>
+                            <button class="p-1.5 rounded-full hover:bg-gray-100 transition-colors">
+                                <MoreVertical class="h-5 w-5 text-gray-600" />
+                            </button>
                         </div>
-                        <h3 class="text-base font-bold text-gray-900 mb-0.5">
-                            {{ consultation.doctorName }}
-                        </h3>
-                        <p class="text-sm text-gray-600">
-                            {{ consultation.specialty }}
-                        </p>
-                    </div>
+                    </template>
+                </AppointmentSummary>
 
-                    <!-- Actions -->
-                    <div class="flex items-center gap-2">
-                        <!-- Status Badge -->
-                        <span
-                            :class="[
-                                'px-3 py-1 rounded-full text-xs font-medium',
-                                consultation.status === 'completed'
-                                    ? 'bg-green-100 text-green-700'
-                                    : consultation.status === 'cancelled'
-                                    ? 'bg-red-100 text-red-700'
-                                    : 'bg-yellow-100 text-yellow-700'
-                            ]"
-                        >
-                            {{ consultation.status === 'completed' ? 'Concluída' : consultation.status === 'cancelled' ? 'Cancelada' : 'Agendada' }}
-                        </span>
-
-                        <!-- View Details Button -->
-                        <Button 
-                            as-child
-                            :variant="consultation.status === 'completed' || consultation.status === 'upcoming' ? 'default' : 'outline'"
-                            :class="[
-                                consultation.status === 'completed' || consultation.status === 'upcoming'
-                                    ? 'bg-primary hover:bg-primary/90 text-gray-900'
-                                    : 'border border-gray-300 text-gray-900 hover:bg-gray-50'
-                            ]"
-                        >
-                            <Link :href="consultation.status === 'upcoming' ? patientRoutes.nextConsultation() : patientRoutes.consultationDetails()">
-                                Ver detalhes
-                            </Link>
-                        </Button>
-
-                        <!-- More Options -->
-                        <button class="p-1.5 rounded-full hover:bg-gray-100 transition-colors">
-                            <MoreVertical class="h-5 w-5 text-gray-600" />
-                        </button>
-                    </div>
+                <div v-if="consultations.length === 0" class="rounded-lg border border-dashed border-gray-300 bg-gray-50 py-12 text-center text-gray-500">
+                    Nenhuma consulta encontrada para o filtro selecionado.
                 </div>
             </div>
 
             <!-- Pagination -->
-            <div class="mt-6 flex justify-end">
+            <div v-if="(pagination?.total ?? 0) > pagination?.per_page" class="mt-6 flex justify-end">
                 <PaginationRoot 
-                    :page="currentPage" 
+                    :page="pagination?.current_page ?? 1" 
                     :default-page="1"
-                    :items-per-page="itemsPerPage"
-                    :total="filteredConsultations.length"
-                    @update:page="currentPage = $event"
+                    :items-per-page="pagination?.per_page ?? 10"
+                    :total="pagination?.total ?? 0"
+                    @update:page="goToPage"
                     class="flex items-center gap-1"
                 >
                     <PaginationList v-slot="{ items }" class="flex items-center gap-0.5">

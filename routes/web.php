@@ -56,7 +56,7 @@ Route::middleware(['auth', 'verified', 'patient'])->prefix('patient')->name('pat
     Route::get('messages', [App\Http\Controllers\Patient\PatientMessagesController::class, 'index'])->name('messages');
     Route::get('video-call', [App\Http\Controllers\Patient\PatientVideoCallController::class, 'index'])->name('video-call');
     Route::get('history-consultations', [App\Http\Controllers\Patient\PatientHistoryConsultationsController::class, 'index'])->name('history-consultations');
-    Route::get('consultation-details', [App\Http\Controllers\Patient\PatientConsultationDetailsController::class, 'index'])->name('consultation-details');
+    Route::get('consultation-details/{appointment}', [App\Http\Controllers\Patient\PatientConsultationDetailsController::class, 'show'])->name('consultation-details');
     Route::get('next-consultation', [App\Http\Controllers\Patient\PatientNextConsultationController::class, 'index'])->name('next-consultation');
     Route::get('health-records', [App\Http\Controllers\Patient\PatientHealthRecordsController::class, 'index'])->name('health-records');
     
@@ -78,6 +78,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('appointments/{appointment}/end', [AppointmentsController::class, 'end'])->name('appointments.end');
     Route::post('appointments/{appointment}/cancel', [AppointmentsController::class, 'cancel'])->name('appointments.cancel');
     Route::post('appointments/{appointment}/reschedule', [AppointmentsController::class, 'reschedule'])->name('appointments.reschedule');
+
+    Route::get('api/appointments/availability', [AppointmentsController::class, 'availability'])->name('appointments.availability');
 });
 
 // Rotas públicas para API de especializações

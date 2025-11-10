@@ -2,6 +2,7 @@
 
 namespace App\Observers;
 
+use App\Events\AppointmentStatusChanged;
 use App\Models\AppointmentLog;
 use App\Models\Appointments;
 
@@ -67,6 +68,8 @@ class AppointmentsObserver
                     auth()->id()
                 );
             }
+
+            event(new AppointmentStatusChanged($appointment->fresh()));
         } else {
             // Mudanças em outros campos (não status)
             $appointment->logEvent(

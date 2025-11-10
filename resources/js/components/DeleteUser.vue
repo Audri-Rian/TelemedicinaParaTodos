@@ -25,15 +25,15 @@ const passwordInput = ref<InstanceType<typeof Input> | null>(null);
 
 <template>
     <div class="space-y-6">
-        <HeadingSmall title="Delete account" description="Delete your account and all of its resources" />
+        <HeadingSmall title="Excluir conta" description="Exclua sua conta e todos os seus recursos" />
         <div class="space-y-4 rounded-lg border border-red-100 bg-red-50 p-4">
             <div class="relative space-y-0.5 text-red-600">
-                <p class="font-medium">Warning</p>
-                <p class="text-sm">Please proceed with caution, this cannot be undone.</p>
+                <p class="font-medium">Aviso</p>
+                <p class="text-sm">Por favor, proceda com cautela, esta ação não pode ser desfeita.</p>
             </div>
             <Dialog>
                 <DialogTrigger as-child>
-                    <Button variant="destructive">Delete account</Button>
+                    <Button variant="destructive">Excluir conta</Button>
                 </DialogTrigger>
                 <DialogContent>
                     <Form
@@ -47,16 +47,16 @@ const passwordInput = ref<InstanceType<typeof Input> | null>(null);
                         v-slot="{ errors, processing, reset, clearErrors }"
                     >
                         <DialogHeader class="space-y-3">
-                            <DialogTitle>Are you sure you want to delete your account?</DialogTitle>
+                            <DialogTitle>Tem certeza de que deseja excluir sua conta?</DialogTitle>
                             <DialogDescription>
-                                Once your account is deleted, all of its resources and data will also be permanently deleted. Please enter your
-                                password to confirm you would like to permanently delete your account.
+                                Uma vez que sua conta for excluída, todos os seus recursos e dados também serão permanentemente excluídos. Por favor, digite sua
+                                senha para confirmar que deseja excluir permanentemente sua conta.
                             </DialogDescription>
                         </DialogHeader>
 
                         <div class="grid gap-2">
-                            <Label for="password" class="sr-only">Password</Label>
-                            <Input id="password" type="password" name="password" ref="passwordInput" placeholder="Password" />
+                            <Label for="password" class="sr-only">Senha</Label>
+                            <Input id="password" type="password" name="password" ref="passwordInput" placeholder="Senha" />
                             <InputError :message="errors.password" />
                         </div>
 
@@ -71,11 +71,11 @@ const passwordInput = ref<InstanceType<typeof Input> | null>(null);
                                         }
                                     "
                                 >
-                                    Cancel
+                                    Cancelar
                                 </Button>
                             </DialogClose>
 
-                            <Button type="submit" variant="destructive" :disabled="processing"> Delete account </Button>
+                            <Button type="submit" variant="destructive" :disabled="processing"> Excluir conta </Button>
                         </DialogFooter>
                     </Form>
                 </DialogContent>
