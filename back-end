@@ -1,0 +1,109 @@
+# Plano de Implementação do Back-end
+
+## Contexto Atual
+- Back-end Laravel entrega apenas autenticação básica e algumas rotas Inertia sem dados reais: controllers retornam layouts estáticos enquanto o frontend (`resources/js/pages/*`) usa mocks.
+- Ferramentas estratégicas já descritas na documentação (`docs/architecture/Arquitetura.md`, `docs/modules/*`, `docs/requirements/FuncionalitsGuide.md`) ainda não foram materializadas em código.
+- Sistema de videochamada atual (`app/Http/Controllers/VideoCall/VideoCallController`) é apenas um broadcast de PeerID sem vínculo com `appointments`, políticas ou auditoria — será substituído integralmente.
+
+## Roadmap Prioritário por Domínio
+
+### 1. Core, Infraestrutura e Governança
+- Criar `config/telemedicine.php` consolidando parâmetros de janela da consulta (lead/duration/grace), limites de upload, toggles de gravação e flags de debug mencionados em `docs/modules/videocall/VideoCallTasks.md`.
+- Ajustar `.env.example` e `README` com variáveis obrigatórias (Reverb, Redis, fila, storage) e garantir que queues/broadcasting são iniciados via Supervisor/documentação.
+- Implementar `App\Providers\AuthServiceProvider` registrando novas policies (AppointmentPolicy, ConversationPolicy, MedicalRecordPolicy) e broadcasting channels `appointments.{uuid}` / `users.{uuid}` conforme checklist de videochamada.
+- Consolidar migrations pendentes:
+  - Criar tabelas auxiliares (ver se já existem) para `appointment_availabilities`, `doctor_availability_exceptions`, `patient_emergency_contacts`.
+  - Adicionar índices faltantes (status, scheduled_at) e colunas mencionadas nos docs (metadata JSON, consent flags).
+- Configurar tasks de manutenção (`app/Console/Kernel.php`): jobs para marcar `no_show`, finalizar chamadas zumbis, limpar locks e enviar lembretes (baseado em `VideoCallTasks` seção 8).
+
+### 2. Usuários, Perfis Médicos e Catálogo
+- Revisar `app/Models/User.php`, `Doctor.php`, `Patient.php` para garantir casts/computed attributes alinhados às regras de `docs/requirements/SystemRules.md` (status, licenças, consentimento LGPD).
+- Implementar fluxos CRUD para perfis:
+  - Doctors: endpoints (FormRequest + controller) para atualizar biografia, CRM, especializações, agenda padrão & fee (alimentar telas `Doctor/Profile`, `Doctor/ScheduleManagement.vue`).
+  - Patients: endpoints para completar dados clínicos, consentimento e contatos de emergência (consumidos por `Patient/HealthRecords.vue`).
+- Configurar segunda etapa de autenticação voltada ao paciente (2FA ativado no perfil):
+  - Criar tabela/colunas para armazenar método (OTP via email/app, token backup), data de ativação e estado.
+  - Expor endpoints protegidos para habilitar/desabilitar e verificar códigos (com rate limiting e `FormRequest`).
+  - Adaptar frontend (`Settings/Profile.vue` ou página dedicada) para fluxo de ativação: exibir QR Code/seed, confirmar código, gerar códigos de recuperação.
+  - Atualizar middleware/Auth para exigir segundo fator nas rotas sensíveis (prontuário, videoconferência) quando ativo e registrar logs de verificação.
+- Disponibilizar API de busca de médicos: filtro por especialização, faixa de preço, avaliação futura, localização (alimentar `Patient/SearchConsultations.vue`). Utilizar `Doctor::scopeBySpecialization`, adicionar repository/service agregando disponibilidade.
+- Criar seeds coerentes (SpecializationSeeder já existe) e factories ampliadas para gerar availability, metadata clínica e usuários de teste.
+
+### 3. Agenda e Consultas (`appointments`)
+- Implementar `AppointmentsController` completo:
+  - Listagens paginadas por tipo de usuário (`Doctor/Consultations.vue`, `Patient/NextConsultation.vue`, `Patient/HistoryConsultations.vue`) via `AppointmentService`.
+  - Rotas POST/PUT/DELETE para criar, reagendar, cancelar e confirmar consultas com validação (`StoreAppointmentRequest`, `UpdateAppointmentRequest`).
+- Ampliar `AppointmentService` com regras de conflito de horário, bloqueio por status, anotação de motivos e geração de logs (`AppointmentLog`).
+- Registrar `AppointmentsObserver` para gerar `access_code`, preenchimento automático de `metadata` (callId, preferências de mídia) e disparos de eventos de domínio.
+- Criar `AppointmentPolicy` (permissões request/accept/start/end/cancel) assegurando que apenas paciente/médico vinculados dentro da janela autorizada interajam.
+- Implementar scheduling de disponibilidades:
+  - CRUD de blocos (`appointment_availabilities`) conectado ao calendário do médico (`Doctor/ScheduleManagement.vue`).
+  - Rotina para materializar slots livres consumidos pelo paciente (`ScheduleConsultation.vue`), respeitando bloqueios/feriados/exceções.
+- Disponibilizar endpoints REST/JSON para auto-complete de horários e confirmação (utilizados pelos formulários Vue via axios ou Inertia form submissions).
+
+### 4. Videoconferência (reimplementação total)
+- Criar módulo dedicado `App\Http\Controllers\Appointments\VideoCallController` (ou `AppointmentCallController`) com endpoints:
+  - `POST /appointments/{appointment}/call/request`
+  - `POST /appointments/{appointment}/call/accept`
+  - `POST /appointments/{appointment}/call/start`
+  - `POST /appointments/{appointment}/call/end`
+  - (Opcional) `/cancel` e `/busy`
+  Todos autorizados via `AppointmentPolicy` e validados por `CallRequestFormRequest`.
+- Armazenar `callId` + mapas de peer IDs em `appointments.metadata`; se necessário, criar tabela `appointment_call_events` seguindo checklist (evento + payload + timestamps) para auditoria.
+- Substituir eventos `RequestVideoCall` / `RequestVideoCallStatus` por eventos nomeados (`AppointmentCallRequested`, `AppointmentCallAccepted`, `AppointmentCallStarted`, `AppointmentCallEnded`, `AppointmentCallCancelled`) com `broadcastWith` minimalista.
+- Implementar locking com Redis (`Cache::lock("appointment:{$id}:call")`) para impedir múltiplas sessões simultâneas; liberar lock no `end` e via job de timeout.
+- Configurar `routes/channels.php` com canais `private('appointments.{appointmentId}')` e `private('users.{userId}')`, garantindo payload filtrado por `callId`.
+- Ajustar `Consultations.vue` (e equivalente em `Patient/VideoCall.vue`) para consumir o novo fluxo: enviar `appointmentId`, aguardar eventos padronizados, obedecer máquina de estados (idle → ringing_out → ...). Remover lógica atual que chama Peer diretamente sem callId.
+- Implementar integração com MediaRecorder opcional (upload para S3/MinIO) salvando `video_recording_url` quando habilitado.
+- Criar testes feature cobrindo request/accept/start/end com eventos fake e validação de policy.
+
+### 5. Mensageria em Tempo Real (`ChatModal.vue`, `Doctor/Message.vue`, `Patient/Messages.vue`)
+- Projetar modelos `Conversation`, `ConversationParticipant` e `Message` (UUID, soft delete, metadata, suporte a attachments).
+- Criar serviço `MessagingService` responsável por:
+  - Abrir conversas entre médico/paciente (vínculo opcional a `appointments`).
+  - Publicar mensagens via eventos (`MessageSent`, `ConversationUpdated`) e WebSockets (`private('conversations.{uuid}')`).
+  - Marcar recebimento/leitura (badges de unread com contagem).
+- Expor endpoints REST:
+  - Listagem de conversas (`GET /api/conversations`).
+  - Criação de conversa (`POST /api/conversations`).
+  - Envio de mensagem (`POST /api/conversations/{conversation}/messages`).
+  - Atualização de leitura (`POST /api/conversations/{conversation}/read`).
+  Aplicar `ConversationPolicy`.
+- Adaptar componentes Vue para consumir dados reais via Inertia props (lista inicial) e WebSockets (Echo) em vez de mocks estáticos.
+- Implementar migração para anexos (armazenar path no storage seguro) com validação de tamanho/mime.
+- Adicionar jobs para notificar via email/push quando destinatário offline.
+
+### 6. Prontuário, Documentos e Prescrições
+- Criar módulo `MedicalRecord`:
+  - Tabela `medical_records` (patient_id, doctor_id, appointment_id opcional, summary, vitals JSON, attachments, visibility).
+  - API para pacientes lerem registros vinculados (paginado) e médicos criarem/atualizarem via `MedicalRecordController`.
+  - UI `Patient/HealthRecords.vue` e `Doctor/PatientDetails.vue` devem receber dados reais — atualizar controllers Inertia para montar DTOs.
+- Implementar `Prescription` (medications, dosage, instructions, signature metadata) e `Document` (file, type, expiry). Rotas para upload/download com política de segurança (storage privado, URLs temporárias).
+- Fornecer exportação em PDF: utilizar queues para gerar prontuário consolidado (Snappy/Dompdf) com logs de auditoria.
+- Garantir consentimento LGPD registrado (`patients.consent_telemedicine`) antes de exibir dados — bloquear acesso e solicitar consentimento se ausente.
+
+### 7. Notificações, Comunicação e Observabilidade
+- Configurar `Notification` classes:
+  - Lembrete de consulta (email + push) >24h e >1h antes do horário.
+  - Cancelamento/reagendamento.
+  - Mensagens não lidas e novas prescrições.
+- Integrar com canal broadcast `users.{id}` para toasts em tempo real.
+- Adicionar logs estruturados (`appointmentId`, `callId`, `userId`, `event`, `context`) utilizando Monolog channels dedicados.
+- Instrumentar métricas (Prometheus ou Laravel Horizon + custom metrics) cobrindo indicadores citados nos docs (taxa de conexão, tempo médio até conectar, timeout rate).
+- Configurar backups automatizados (mysqldump + storage) e rotina de verificação.
+
+### 8. Qualidade, Segurança e Testes
+- Expandir suíte de testes:
+  - Feature tests para roteamento por perfil, fluxo completo de agendamento, chamada de vídeo, mensageria.
+  - Unit tests para services (AppointmentService, MessagingService, MedicalRecordService).
+  - Tests de policies garantindo 403 em casos inválidos.
+- Implantar validações de entrada rigorosas (`FormRequest`) em todos endpoints descritos; aplicar rate limiting (`throttle`) em video call request e messaging.
+- Revisar middleware: criar `EnsureDoctorActive`, `EnsurePatientCompletedProfile`, `EnsureConsentAccepted` aplicados nas rotas críticas.
+- Configurar `larastan`/`phpstan` e `pint` no pipeline CI; adicionar GitHub Actions ou outra automação para rodar testes e análise estática.
+- Planejar pentest básico (OWASP top 10), incluindo verificação de autorização em canais de broadcast.
+
+## Próximos Passos Recomendados
+1. Validar backlog com stakeholders e priorizar entregas essenciais (agenda → videochamada → mensageria).
+2. Criar milestones no GitHub alinhadas aos tópicos acima e vincular tarefas do frontend correspondentes.
+3. Manter documentação viva no diretório `docs/` atualizando checklists (`VideoCallTasks.md`, `AppointmentsImplementationStudy.md`) conforme cada entrega for concluída.
+

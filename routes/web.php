@@ -69,6 +69,15 @@ Route::middleware(['auth', 'verified', 'patient'])->prefix('patient')->name('pat
 Route::middleware(['auth', 'verified'])->group(function () {
     // Rotas para especializações
     Route::resource('specializations', SpecializationController::class);
+    
+    // Rotas para appointments
+    Route::resource('appointments', AppointmentsController::class);
+    
+    // Rotas customizadas para appointments
+    Route::post('appointments/{appointment}/start', [AppointmentsController::class, 'start'])->name('appointments.start');
+    Route::post('appointments/{appointment}/end', [AppointmentsController::class, 'end'])->name('appointments.end');
+    Route::post('appointments/{appointment}/cancel', [AppointmentsController::class, 'cancel'])->name('appointments.cancel');
+    Route::post('appointments/{appointment}/reschedule', [AppointmentsController::class, 'reschedule'])->name('appointments.reschedule');
 });
 
 // Rotas públicas para API de especializações

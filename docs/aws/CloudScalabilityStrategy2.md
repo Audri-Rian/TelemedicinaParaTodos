@@ -804,6 +804,7 @@ DataClassification: sensitive|confidential|public
 |------------|---------|-----|-----|-----------------|-------------|
 | **Laravel App** | Alto | 15 min | 0 (realtime) | Code artifact em S3 | Multi-AZ + Auto Scaling |
 | **RDS Database** | Crítico | 5 min | 5 min | Automated daily + Snapshots | Multi-AZ + Read Replicas |
+| **appointment_logs** | Crítico | 5 min | 5 min | Incluído em RDS backups + Exportação mensal S3 | Multi-AZ + S3 Cross-region |
 | **Uploads (S3)** | Alto | 15 min | 1 hora | Versioning + Cross-region replication | S3 Cross-region |
 | **Redis Cache** | Baixo | 30 min | N/A (cache-only) | ElastiCache Backup diário | Redis Cluster |
 | **Session Data** | Médio | 15 min | N/A | ElastiCache Backup | Redis Replicas |
@@ -812,10 +813,10 @@ DataClassification: sensitive|confidential|public
 | **WebSocket (Reverb)** | Alto | 10 min | 0 (realtime) | Code artifact | Redis Pub/Sub scaling |
 
 **Matriz de Criticidade:**
-- **Crítico**: Impacto direto na operação médica (RDS, Core App)
+- **Crítico**: Impacto direto na operação médica (RDS, appointment_logs, Core App)
 - **Alto**: Impacta experiência do usuário (App, TURN, Uploads)
 - **Médio**: Funcionalidade auxiliar (Session, Cache)
-- **Baixo**: Observabilidade e analytics (Logs, Metrics)
+- **Baixo**: Observabilidade e analytics (Logs gerais, Metrics)
 
 ---
 
@@ -1474,6 +1475,8 @@ Alarmes:
 - **Reverb**: `/var/www/html/storage/logs/reverb.log`
 - **Workers**: `/var/www/html/storage/logs/worker.log`
 
+**Nota**: Os logs de agendamentos (`appointment_logs`) são armazenados no RDS e exportados para S3/Glacier conforme política de retenção. Métricas e alertas são configurados no CloudWatch (ver seção "Estrutura de Logs de Agendamentos" abaixo).
+
 #### **Política de Retenção de Logs e Classificação LGPD**
 
 **Classificação LGPD:**
@@ -1481,11 +1484,12 @@ Alarmes:
 **Sensíveis (Dados Pessoais):**
 - Logs de autenticação (who logged in)
 - Logs de acesso a dados médicos
+- **Logs de agendamentos (appointment_logs)**: Registram ciclo de vida completo de consultas médicas (created, started, ended, cancelled, rescheduled, no_show)
 - Logs de transações financeiras
 - Logs de uploads de documentos
-- Retenção: **7 anos** (conforme legislação médica)
-- Encryption: Obrigatória
-- Access: Restrito
+- Retenção: **7 anos** (conforme legislação médica brasileira)
+- Encryption: Obrigatória (RDS encryption at rest + TLS in transit)
+- Access: Restrito (apenas médicos, pacientes envolvidos e administradores)
 
 **Não Sensíveis:**
 - Logs de performance
@@ -1515,7 +1519,120 @@ Backups de Banco:
   - RDS Automated: 7 dias (conforme RPO)
   - Snapshots Manuais: 30 dias
   - Cross-region replicas: Indefinido
+
+Logs de Agendamentos (appointment_logs):
+  - RDS (ativo): 2 anos (acesso rápido)
+  - S3 (arquivo): 5 anos adicionais (total 7 anos)
+  - Glacier (long-term): Após 7 anos, arquivar
+  - Classificação: Dados Sensíveis (LGPD)
+  - Encryption: Obrigatória (at rest e in transit)
 ```
+
+#### **Estrutura de Logs de Agendamentos (appointment_logs)**
+
+**Tabela `appointment_logs`:**
+```sql
+CREATE TABLE appointment_logs (
+    id UUID PRIMARY KEY,
+    appointment_id UUID NOT NULL REFERENCES appointments(id) ON DELETE CASCADE,
+    user_id UUID NULLABLE REFERENCES users(id) ON DELETE SET NULL,
+    event VARCHAR(255) NOT NULL,  -- created, cancelled, started, ended, rescheduled, no_show, updated, deleted
+    payload JSONB NULLABLE,        -- Dados contextuais do evento
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL,
+    
+    -- Índices para performance e consultas
+    INDEX idx_appointment_id (appointment_id),
+    INDEX idx_user_id (user_id),
+    INDEX idx_event (event),
+    INDEX idx_created_at (created_at),
+    INDEX idx_appointment_event (appointment_id, event)
+);
+```
+
+**Classificação LGPD:**
+- **Categoria**: Dados Sensíveis (dados de saúde)
+- **Justificativa**: Registram ações médicas e ciclo de vida de consultas
+- **Retenção Obrigatória**: **7 anos** (conforme legislação médica brasileira)
+- **Encryption**: Obrigatória (RDS encryption at rest + TLS in transit)
+- **Acesso**: Restrito a médicos, pacientes envolvidos e administradores
+
+**Estratégia de Armazenamento em Camadas:**
+
+**Camada 1: RDS (Acesso Ativo - 0 a 2 anos)**
+- Logs recentes permanecem no RDS para consultas rápidas
+- Índices otimizados para queries frequentes
+- Backup diário automático incluído
+- Performance: Queries em < 100ms
+
+**Camada 2: S3 Standard (Arquivo - 2 a 7 anos)**
+- Exportação mensal de logs antigos (> 2 anos) para S3
+- Formato: Parquet ou JSON comprimido (gzip)
+- Estrutura: `s3://telemedicina-logs-prod/appointment-logs/YYYY/MM/appointment_logs_YYYYMM.json.gz`
+- Acesso: Via Athena ou Lambda para consultas históricas
+- Custo: ~$0.023/GB/mês
+
+**Camada 3: S3 Glacier (Long-term - Após 7 anos)**
+- Após 7 anos, mover para Glacier Deep Archive
+- Retenção: Indefinida (compliance médico)
+- Acesso: Sob demanda (3-12 horas para restore)
+- Custo: ~$0.00099/GB/mês
+
+**Job de Exportação Automática:**
+```php
+// app/Console/Commands/ExportAppointmentLogs.php
+// Executar mensalmente via Laravel Scheduler
+
+public function handle()
+{
+    $twoYearsAgo = now()->subYears(2);
+    
+    // Exportar logs antigos para S3
+    $logs = AppointmentLog::where('created_at', '<', $twoYearsAgo)
+        ->whereNull('exported_to_s3_at')
+        ->chunk(1000, function ($logs) {
+            $json = $logs->toJson();
+            $filename = "appointment-logs/" . now()->format('Y/m') . "/logs_" . now()->format('Ymd_His') . ".json.gz";
+            
+            Storage::disk('s3')->put($filename, gzencode($json));
+            
+            // Marcar como exportado (adicionar coluna exported_to_s3_at)
+            AppointmentLog::whereIn('id', $logs->pluck('id'))
+                ->update(['exported_to_s3_at' => now()]);
+        });
+}
+```
+
+**Configuração CloudWatch para appointment_logs:**
+```yaml
+Métricas Customizadas:
+  - AppointmentLogsCreated (count/min)
+  - AppointmentLogsByEvent (count by event type)
+  - AppointmentLogsSize (bytes)
+
+Alarmes:
+  - AppointmentLogsCreated > 1000/min: Pico de atividade
+  - AppointmentLogsSize > 10GB: Alertar para exportação
+  - ExportJobFailed: Falha na exportação mensal
+
+Dashboards:
+  - Taxa de cancelamentos por dia
+  - Duração média de consultas
+  - Taxa de no-show
+  - Eventos por tipo (created, started, ended, cancelled)
+```
+
+**Segurança e Acesso:**
+- **IAM Policy**: Apenas roles específicas podem acessar logs
+- **Auditoria**: CloudTrail registra todas as consultas a logs
+- **Anonimização**: Após 7 anos, opção de anonimizar dados pessoais mantendo estatísticas
+- **Backup**: Incluído nos backups automáticos do RDS
+- **Cross-region Replication**: S3 logs replicados para região secundária
+
+**Integração com Monitoramento:**
+- Logs de appointments alimentam dashboards de métricas de negócio
+- Alertas baseados em padrões (ex: alta taxa de cancelamento)
+- Relatórios automáticos mensais para gestão
 
 #### **AWS X-Ray**
 - Rastreamento distribuído de requisições

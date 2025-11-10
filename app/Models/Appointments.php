@@ -56,7 +56,19 @@ class Appointments extends Model
 
     public function logs()
     {
-        return $this->hasMany(AppointmentLog::class);
+        return $this->hasMany(AppointmentLog::class, 'appointment_id');
+    }
+
+    /**
+     * Helper method para criar log de evento
+     */
+    public function logEvent(string $event, ?array $payload = null, ?string $userId = null): AppointmentLog
+    {
+        return $this->logs()->create([
+            'event' => $event,
+            'payload' => $payload,
+            'user_id' => $userId ?? auth()->id(),
+        ]);
     }
 
     // Scopes para filtros
