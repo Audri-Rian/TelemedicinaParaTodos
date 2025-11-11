@@ -8,6 +8,8 @@ use App\Http\Controllers\HealthController;
 use App\Http\Controllers\SpecializationController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\VideoCall\VideoCallController;
+use App\Http\Controllers\TermsOfServiceController;
+use App\Http\Controllers\PrivacyPolicyController;
 use App\Models\User;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Auth;
@@ -92,6 +94,10 @@ Route::prefix('api')->group(function () {
 Route::get('font-test', function () {
     return Inertia::render('FontTest');
 })->name('font-test');
+
+// Rotas públicas para Termos de Serviço e Política de Privacidade
+Route::get('terms', [TermsOfServiceController::class, 'index'])->name('terms');
+Route::get('privacy', [PrivacyPolicyController::class, 'index'])->name('privacy');
 
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';

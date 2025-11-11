@@ -159,9 +159,9 @@ defineProps<{
             <!-- Terms and Privacy -->
             <div class="px-6 text-center text-sm text-muted-foreground">
                 By clicking continue, you agree to our 
-                <a href="#" class="underline underline-offset-4 hover:text-primary">Terms of Service</a>
+                <a href="/terms" target="_blank" class="underline underline-offset-4 hover:text-primary">Terms of Service</a>
                 and 
-                <a href="#" class="underline underline-offset-4 hover:text-primary">Privacy Policy</a>.
+                <a href="/privacy" target="_blank" class="underline underline-offset-4 hover:text-primary">Privacy Policy</a>.
             </div>
         </div>
     </AuthBase>
