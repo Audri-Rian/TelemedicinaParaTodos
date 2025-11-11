@@ -22,7 +22,7 @@ defineProps<{
 
 <template>
     <AuthBase title="" description="">
-        <Head title="Log in" />
+        <Head title="Entrar" />
 
         <!-- Background decorativo moderno -->
         <BackgroundDecorativo variant="patient" intensity="medium" :enable-animations="true" />
@@ -39,9 +39,9 @@ defineProps<{
                         <div class="flex flex-col gap-6">
                             <!-- Header -->
                             <div class="flex flex-col items-center gap-2 text-center">
-                                <h1 class="text-2xl font-bold">Welcome back</h1>
+                                <h1 class="text-2xl font-bold">Bem-vindo de volta</h1>
                                 <p class="text-balance text-muted-foreground">
-                                    Login to your Telemedicina Para Todos account
+                                    Entre na sua conta Telemedicina Para Todos
                                 </p>
                             </div>
 
@@ -52,7 +52,7 @@ defineProps<{
 
                             <!-- Email Field -->
                             <div class="grid gap-2">
-                                <Label for="email">Email</Label>
+                                <Label for="email">E-mail</Label>
                                 <Input
                                     id="email"
                                     type="email"
@@ -61,7 +61,7 @@ defineProps<{
                                     autofocus
                                     :tabindex="1"
                                     autocomplete="email"
-                                    placeholder="m@example.com"
+                                    placeholder="seu@email.com"
                                 />
                                 <InputError :message="errors.email" />
                             </div>
@@ -69,14 +69,14 @@ defineProps<{
                             <!-- Password Field -->
                             <div class="grid gap-2">
                                 <div class="flex items-center">
-                                    <Label for="password">Password</Label>
+                                    <Label for="password">Senha</Label>
                                     <TextLink 
                                         v-if="canResetPassword" 
                                         :href="request()" 
                                         class="ml-auto text-sm underline-offset-2 hover:underline" 
                                         :tabindex="5"
                                     >
-                                        Forgot your password?
+                                        Esqueceu sua senha?
                                     </TextLink>
                                 </div>
                                 <Input
@@ -86,6 +86,7 @@ defineProps<{
                                     required
                                     :tabindex="2"
                                     autocomplete="current-password"
+                                    placeholder="Digite sua senha"
                                 />
                                 <InputError :message="errors.password" />
                             </div>
@@ -93,7 +94,7 @@ defineProps<{
                             <!-- Submit Button -->
                             <Button type="submit" class="w-full" :tabindex="4" :disabled="processing">
                                 <LoaderCircle v-if="processing" class="h-4 w-4 animate-spin mr-2" />
-                                Login
+                                Entrar
                             </Button>
 
                             <!-- Separator -->
@@ -102,7 +103,7 @@ defineProps<{
                                     <Separator />
                                 </div>
                                 <div class="relative flex justify-center text-xs uppercase">
-                                    <span class="bg-card px-2 text-muted-foreground">Or continue with</span>
+                                    <span class="bg-card px-2 text-muted-foreground">Ou continue com</span>
                                 </div>
                             </div>
 
@@ -115,7 +116,7 @@ defineProps<{
                                             fill="currentColor"
                                         />
                                     </svg>
-                                    <span class="sr-only">Login with Apple</span>
+                                    <span class="sr-only">Entrar com Apple</span>
                                 </Button>
                                 <Button variant="outline" type="button">
                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-5 w-5">
@@ -124,7 +125,7 @@ defineProps<{
                                             fill="currentColor"
                                         />
                                     </svg>
-                                    <span class="sr-only">Login with Google</span>
+                                    <span class="sr-only">Entrar com Google</span>
                                 </Button>
                                 <Button variant="outline" type="button">
                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-5 w-5">
@@ -133,14 +134,14 @@ defineProps<{
                                             fill="currentColor"
                                         />
                                     </svg>
-                                    <span class="sr-only">Login with Meta</span>
+                                    <span class="sr-only">Entrar com Meta</span>
                                 </Button>
                             </div>
 
                             <!-- Sign Up Link -->
                             <div class="text-center text-sm text-muted-foreground">
-                                Don't have an account? 
-                                <TextLink :href="register()" :tabindex="5">Sign up</TextLink>
+                                Não tem uma conta? 
+                                <TextLink :href="register()" :tabindex="5">Cadastre-se</TextLink>
                             </div>
                         </div>
                     </Form>
@@ -149,7 +150,7 @@ defineProps<{
                     <div class="relative hidden bg-muted md:block">
                         <img
                             src="/placeholder.svg"
-                            alt="Medical consultation"
+                            alt="Consulta médica"
                             class="absolute inset-0 h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
                         />
                     </div>
@@ -158,10 +159,10 @@ defineProps<{
 
             <!-- Terms and Privacy -->
             <div class="px-6 text-center text-sm text-muted-foreground">
-                By clicking continue, you agree to our 
-                <a href="/terms" target="_blank" class="underline underline-offset-4 hover:text-primary">Terms of Service</a>
-                and 
-                <a href="/privacy" target="_blank" class="underline underline-offset-4 hover:text-primary">Privacy Policy</a>.
+                Ao continuar, você concorda com nossos 
+                <a href="/terms" target="_blank" class="underline underline-offset-4 hover:text-primary">Termos de Serviço</a>
+                e 
+                <a href="/privacy" target="_blank" class="underline underline-offset-4 hover:text-primary">Política de Privacidade</a>.
             </div>
         </div>
     </AuthBase>
