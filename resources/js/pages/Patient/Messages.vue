@@ -2,11 +2,11 @@
 import AppLayout from '@/layouts/AppLayout.vue';
 import * as patientRoutes from '@/routes/patient';
 import { type BreadcrumbItem } from '@/types';
-import { Head, router } from '@inertiajs/vue3';
+import { Head, router, usePage } from '@inertiajs/vue3';
 import { Search, MessageCircle, Send } from 'lucide-vue-next';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useInitials } from '@/composables/useInitials';
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useRouteGuard } from '@/composables/auth';
 
 const { canAccessPatientRoute } = useRouteGuard();
@@ -27,37 +27,42 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-// Dados mock das conversas
-const conversations = ref([
-    {
-        id: 1,
-        doctorName: 'Dr. Carlos Mendes',
-        doctorAvatar: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=150&h=150&fit=crop&crop=face',
-        lastMessage: 'Olá! Posso agendar sua consulta para amanhã às 14h?',
-        time: '10:30',
-        unread: 2,
-    },
-    {
-        id: 2,
-        doctorName: 'Dra. Ana Oliveira',
-        doctorAvatar: 'https://images.unsplash.com/photo-1594824476969-48dfc0d13b41?w=150&h=150&fit=crop&crop=face',
-        lastMessage: 'Obrigado pela consulta! Até a próxima.',
-        time: '09:15',
+// Dados das conversas vindos do backend
+const page = usePage();
+const conversationsData = page.props.conversations as Array<{
+    id: number;
+    doctorName: string;
+    doctorEmail: string;
+    doctorAvatar: string | null;
+}> || [];
+
+// Mapear dados do backend para o formato esperado pela interface
+const conversations = ref(
+    conversationsData.map((conv) => ({
+        id: conv.id,
+        doctorName: conv.doctorName,
+        doctorAvatar: conv.doctorAvatar,
+        lastMessage: 'Nenhuma mensagem ainda',
+        time: '',
         unread: 0,
-    },
-    {
-        id: 3,
-        doctorName: 'Dr. Pedro Santos',
-        doctorAvatar: 'https://images.unsplash.com/photo-1582750433449-648ed127bb54?w=150&h=150&fit=crop&crop=face',
-        lastMessage: 'Você tem alguma dúvida sobre o tratamento?',
-        time: 'Ontem',
-        unread: 1,
-    },
-]);
+    }))
+);
 
 // Estado da conversa selecionada
 const selectedConversation = ref<typeof conversations.value[0] | null>(null);
 const searchQuery = ref('');
+
+// Filtrar conversas baseado na busca
+const filteredConversations = computed(() => {
+    if (!searchQuery.value.trim()) {
+        return conversations.value;
+    }
+    
+    const query = searchQuery.value.toLowerCase();
+    return conversations.value.filter(conv => 
+        conv.doctorName.toLowerCase().includes(query)
+    );
+});
 
 // Mensagens mock da conversa selecionada
 const messages = ref([
@@ -138,8 +143,16 @@ const goToDoctorProfile = (conversation: typeof conversations.value[0], event?: 
 
                     <!-- Lista de conversas -->
                     <div class="flex-1 overflow-y-auto">
+                        <div v-if="conversations.length === 0" class="p-4 text-center text-gray-500">
+                            <MessageCircle class="w-12 h-12 mx-auto mb-2 text-gray-300" />
+                            <p class="font-medium">Nenhuma conversa disponível</p>
+                            <p class="text-sm mt-1">Você precisa ter consultas com médicos para iniciar conversas</p>
+                        </div>
+                        <div v-else-if="filteredConversations.length === 0" class="p-4 text-center text-gray-500">
+                            <p>Nenhuma conversa encontrada</p>
+                        </div>
                         <div
-                            v-for="conversation in conversations"
+                            v-for="conversation in filteredConversations"
                             :key="conversation.id"
                             @click="selectConversation(conversation)"
                             :class="[
