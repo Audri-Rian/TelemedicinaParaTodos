@@ -18,3 +18,10 @@ Route::middleware('auth')->group(function () {
         ->middleware('throttle:6,1')
         ->name('password.update');
 });
+
+// Rotas de avatar
+Route::middleware('auth')->prefix('api/avatar')->name('avatar.')->group(function () {
+    Route::post('upload', [\App\Http\Controllers\AvatarController::class, 'upload'])->name('upload');
+    Route::delete('delete', [\App\Http\Controllers\AvatarController::class, 'delete'])->name('delete');
+    Route::get('show', [\App\Http\Controllers\AvatarController::class, 'show'])->name('show');
+});

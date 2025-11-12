@@ -99,5 +99,22 @@ Route::get('font-test', function () {
 Route::get('terms', [TermsOfServiceController::class, 'index'])->name('terms');
 Route::get('privacy', [PrivacyPolicyController::class, 'index'])->name('privacy');
 
+// Rota para servir arquivos do storage (avatars)
+Route::get('storage/avatars/{userId}/{filename}', function ($userId, $filename) {
+    $path = "avatars/{$userId}/{$filename}";
+    $disk = \Illuminate\Support\Facades\Storage::disk('public');
+    
+    if (!$disk->exists($path)) {
+        abort(404);
+    }
+    
+    $file = $disk->get($path);
+    $mimeType = $disk->mimeType($path);
+    
+    return response($file, 200)
+        ->header('Content-Type', $mimeType)
+        ->header('Cache-Control', 'public, max-age=31536000');
+})->where(['userId' => '[^/]+', 'filename' => '[^/]+'])->name('storage.avatar');
+
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';

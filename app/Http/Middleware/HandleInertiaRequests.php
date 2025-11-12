@@ -38,16 +38,26 @@ class HandleInertiaRequests extends Middleware
     {
         [$message, $author] = str(Inspiring::quotes()->random())->explode('-');
 
+        $user = $request->user();
+        
         return [
             ...parent::share($request),
             'name' => config('app.name'),
             'quote' => ['message' => trim($message), 'author' => trim($author)],
             'auth' => [
-                'user' => $request->user(),
-                'role' => $request->user()?->getRole(),
-                'isDoctor' => $request->user()?->isDoctor() ?? false,
-                'isPatient' => $request->user()?->isPatient() ?? false,
-                'profile' => $request->user()?->doctor ?? $request->user()?->patient,
+                'user' => $user ? [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'avatar' => $user->getAvatarUrl(true), // Usar thumbnail para sidebar
+                    'email_verified_at' => $user->email_verified_at,
+                    'created_at' => $user->created_at,
+                    'updated_at' => $user->updated_at,
+                ] : null,
+                'role' => $user?->getRole(),
+                'isDoctor' => $user?->isDoctor() ?? false,
+                'isPatient' => $user?->isPatient() ?? false,
+                'profile' => $user?->doctor ?? $user?->patient,
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];

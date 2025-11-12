@@ -2,7 +2,8 @@
 import { update } from '@/actions/App/Http/Controllers/Settings/ProfileController';
 import { edit } from '@/routes/profile';
 import { send } from '@/routes/verification';
-import { Form, Head, Link, usePage } from '@inertiajs/vue3';
+import { Form, Head, Link, usePage, router } from '@inertiajs/vue3';
+import * as avatarRoutes from '@/routes/avatar';
 
 import DeleteUser from '@/components/DeleteUser.vue';
 import HeadingSmall from '@/components/HeadingSmall.vue';
@@ -17,7 +18,8 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { ref, computed } from 'vue';
-import { AlertCircle } from 'lucide-vue-next';
+import { AlertCircle, Upload, X, User as UserIcon, Loader2 } from 'lucide-vue-next';
+import axios from 'axios';
 
 interface Patient {
     id: string;
@@ -39,6 +41,8 @@ interface Props {
     status?: string;
     patient?: Patient | null;
     bloodTypes?: string[];
+    avatarUrl?: string | null;
+    avatarThumbnailUrl?: string | null;
 }
 
 const props = defineProps<Props>();
@@ -51,7 +55,7 @@ const breadcrumbItems: BreadcrumbItem[] = [
 ];
 
 const page = usePage();
-const user = page.props.auth.user;
+const user = (page.props.auth as any).user;
 const auth = page.props.auth as { isPatient: boolean; role: string | null };
 
 // Estado para consentimento de telemedicina
@@ -62,6 +66,140 @@ const isSecondStageComplete = computed(() => {
     if (!props.patient) return false;
     return !!(props.patient.emergency_contact && props.patient.emergency_phone);
 });
+
+// Estados para upload de avatar
+const avatarUrl = ref<string | null>(props.avatarUrl ?? null);
+const avatarThumbnailUrl = ref<string | null>(props.avatarThumbnailUrl ?? null);
+const previewUrl = ref<string | null>(null);
+const isUploading = ref(false);
+const uploadError = ref<string | null>(null);
+const uploadSuccess = ref(false);
+const fileInputRef = ref<HTMLInputElement | null>(null);
+
+// Função para selecionar arquivo
+const selectFile = () => {
+    fileInputRef.value?.click();
+};
+
+// Função para preview da imagem antes de upload
+const handleFileSelect = (event: Event) => {
+    const target = event.target as HTMLInputElement;
+    const file = target.files?.[0];
+    
+    if (!file) return;
+    
+    // Validar tipo de arquivo
+    if (!file.type.startsWith('image/')) {
+        uploadError.value = 'Por favor, selecione uma imagem válida.';
+        return;
+    }
+    
+    // Validar tamanho (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+        uploadError.value = 'A imagem não pode ser maior que 5MB.';
+        return;
+    }
+    
+    uploadError.value = null;
+    
+    // Criar preview
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        previewUrl.value = e.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+};
+
+// Função para fazer upload
+const uploadAvatar = async () => {
+    const file = fileInputRef.value?.files?.[0];
+    if (!file) return;
+    
+    isUploading.value = true;
+    uploadError.value = null;
+    uploadSuccess.value = false;
+    
+    try {
+        const formData = new FormData();
+        formData.append('avatar', file);
+        
+        const response = await axios.post(avatarRoutes.upload.url(), formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        });
+        
+        if (response.data.success) {
+            avatarUrl.value = response.data.avatar_url;
+            avatarThumbnailUrl.value = response.data.avatar_thumbnail_url;
+            previewUrl.value = null;
+            uploadSuccess.value = true;
+            
+            // Recarregar a página para atualizar os dados
+            router.reload({ only: ['avatarUrl', 'avatarThumbnailUrl'] });
+            
+            // Limpar input
+            if (fileInputRef.value) {
+                fileInputRef.value.value = '';
+            }
+            
+            // Limpar mensagem de sucesso após 3 segundos
+            setTimeout(() => {
+                uploadSuccess.value = false;
+            }, 3000);
+        } else {
+            uploadError.value = response.data.message || 'Erro ao fazer upload do avatar.';
+        }
+    } catch (error: any) {
+        uploadError.value = error.response?.data?.message || 'Erro ao fazer upload do avatar. Tente novamente.';
+    } finally {
+        isUploading.value = false;
+    }
+};
+
+// Função para remover avatar
+const deleteAvatar = async () => {
+    if (!confirm('Tem certeza que deseja remover seu avatar?')) {
+        return;
+    }
+    
+    isUploading.value = true;
+    uploadError.value = null;
+    
+    try {
+        const response = await axios.delete((avatarRoutes as any).delete.url());
+        
+        if (response.data.success) {
+            avatarUrl.value = null;
+            avatarThumbnailUrl.value = null;
+            previewUrl.value = null;
+            uploadSuccess.value = true;
+            
+            // Recarregar a página
+            router.reload({ only: ['avatarUrl', 'avatarThumbnailUrl'] });
+            
+            // Limpar mensagem de sucesso após 3 segundos
+            setTimeout(() => {
+                uploadSuccess.value = false;
+            }, 3000);
+        } else {
+            uploadError.value = response.data.message || 'Erro ao remover avatar.';
+        }
+    } catch (error: any) {
+        uploadError.value = error.response?.data?.message || 'Erro ao remover avatar. Tente novamente.';
+    } finally {
+        isUploading.value = false;
+    }
+};
+
+// Função para cancelar preview
+const cancelPreview = () => {
+    previewUrl.value = null;
+    uploadError.value = null;
+    if (fileInputRef.value) {
+        fileInputRef.value.value = '';
+    }
+};
 </script>
 
 <template>
@@ -70,6 +208,101 @@ const isSecondStageComplete = computed(() => {
 
         <SettingsLayout>
             <div class="flex flex-col space-y-6">
+                <!-- Seção de Avatar -->
+                <div class="space-y-4 rounded-lg border border-gray-200 bg-white p-6">
+                    <HeadingSmall title="Foto de Perfil" description="Adicione uma foto para personalizar seu perfil" />
+                    
+                    <div class="flex items-start gap-6">
+                        <!-- Preview do Avatar -->
+                        <div class="relative">
+                            <div class="relative h-32 w-32 overflow-hidden rounded-full border-2 border-gray-200 bg-gray-100">
+                                <img
+                                    v-if="previewUrl || avatarThumbnailUrl || avatarUrl"
+                                    :src="previewUrl || avatarThumbnailUrl || avatarUrl || ''"
+                                    alt="Avatar"
+                                    class="h-full w-full object-cover"
+                                />
+                                <div
+                                    v-else
+                                    class="flex h-full w-full items-center justify-center bg-gradient-to-br from-blue-400 to-blue-600 text-white"
+                                >
+                                    <UserIcon class="h-12 w-12" />
+                                </div>
+                                
+                                <!-- Overlay de loading -->
+                                <div
+                                    v-if="isUploading"
+                                    class="absolute inset-0 flex items-center justify-center bg-black/50"
+                                >
+                                    <Loader2 class="h-6 w-6 animate-spin text-white" />
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Ações -->
+                        <div class="flex flex-1 flex-col gap-3">
+                            <div class="flex flex-wrap gap-3">
+                                <!-- Input de arquivo oculto -->
+                                <input
+                                    ref="fileInputRef"
+                                    type="file"
+                                    accept="image/jpeg,image/png,image/webp"
+                                    class="hidden"
+                                    @change="handleFileSelect"
+                                />
+                                
+                                <!-- Botão de selecionar/upload -->
+                                <Button
+                                    type="button"
+                                    variant="default"
+                                    :disabled="isUploading"
+                                    @click="previewUrl ? uploadAvatar() : selectFile()"
+                                >
+                                    <Upload class="mr-2 h-4 w-4" />
+                                    {{ previewUrl ? 'Confirmar Upload' : 'Selecionar Imagem' }}
+                                </Button>
+                                
+                                <!-- Botão de cancelar preview -->
+                                <Button
+                                    v-if="previewUrl"
+                                    type="button"
+                                    variant="outline"
+                                    :disabled="isUploading"
+                                    @click="cancelPreview"
+                                >
+                                    <X class="mr-2 h-4 w-4" />
+                                    Cancelar
+                                </Button>
+                                
+                                <!-- Botão de remover -->
+                                <Button
+                                    v-if="avatarUrl && !previewUrl"
+                                    type="button"
+                                    variant="destructive"
+                                    :disabled="isUploading"
+                                    @click="deleteAvatar"
+                                >
+                                    <X class="mr-2 h-4 w-4" />
+                                    Remover
+                                </Button>
+                            </div>
+                            
+                            <!-- Mensagens de feedback -->
+                            <div v-if="uploadError" class="rounded-md bg-red-50 p-3 text-sm text-red-800">
+                                {{ uploadError }}
+                            </div>
+                            
+                            <div v-if="uploadSuccess" class="rounded-md bg-green-50 p-3 text-sm text-green-800">
+                                Avatar atualizado com sucesso!
+                            </div>
+                            
+                            <p class="text-xs text-gray-500">
+                                Formatos aceitos: JPEG, PNG, WebP. Tamanho máximo: 5MB.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
                 <HeadingSmall title="Informações do Perfil" description="Atualize seu nome e endereço de e-mail" />
 
                 <Form v-bind="update.form()" class="space-y-6" v-slot="{ errors, processing, recentlySuccessful }">
@@ -307,7 +540,7 @@ const isSecondStageComplete = computed(() => {
                                 <Checkbox
                                     id="consent_telemedicine"
                                     :checked="consentTelemedicineValue"
-                                    @update:checked="(checked) => consentTelemedicineValue = checked"
+                                    @update:checked="(checked: boolean) => consentTelemedicineValue = checked"
                                 />
                             </div>
                             <div class="grid gap-1">

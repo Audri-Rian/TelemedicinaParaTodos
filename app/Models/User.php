@@ -21,6 +21,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'avatar_path',
     ];
 
     /**
@@ -100,5 +101,30 @@ class User extends Authenticatable
         }
         
         return 'user';
+    }
+
+    /**
+     * Get the avatar URL.
+     *
+     * @param bool $thumbnail Se deve retornar thumbnail
+     * @return string|null
+     */
+    public function getAvatarUrl(bool $thumbnail = false): ?string
+    {
+        if (!$this->avatar_path) {
+            return null;
+        }
+
+        return app(\App\Services\AvatarService::class)->getAvatarUrl($this->avatar_path, $thumbnail);
+    }
+
+    /**
+     * Check if user has an avatar.
+     *
+     * @return bool
+     */
+    public function hasAvatar(): bool
+    {
+        return !empty($this->avatar_path);
     }
 }
