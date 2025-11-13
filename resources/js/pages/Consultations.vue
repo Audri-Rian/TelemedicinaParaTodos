@@ -1,270 +1,156 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, usePage } from '@inertiajs/vue3';
-import { ref, onMounted, onUnmounted, nextTick } from 'vue';
 import axios from 'axios';
-import Peer from 'peerjs';
-import Echo from 'laravel-echo';
-import Pusher from 'pusher-js';
+import { ref, onMounted, onUnmounted } from 'vue';
+import { useVideoCall } from '@/composables/useVideoCall';
+import * as appointmentsRoutes from '@/routes/appointments';
 
 defineOptions({
     layout: AppLayout,
 });
 
-// Interfaces TypeScript
+interface Appointment {
+    id: string;
+    scheduled_at: string;
+    formatted_date: string;
+    formatted_time: string;
+    status: string;
+}
+
 interface User {
     id: number;
     name: string;
     email: string;
+    hasAppointment?: boolean;
+    canStartCall?: boolean;
+    appointment?: Appointment | null;
+    timeWindowMessage?: string | null;
 }
 
 interface AuthUser {
     user: User;
 }
 
-// Props e dados da página
 const page = usePage();
 const auth = page.props.auth as AuthUser;
-const users = page.props.users as User[] || [];
+const users = (page.props.users as User[]) || [];
 
-// Estados reativos
 const selectedUser = ref<User | null>(null);
-const peer = ref<Peer | null>(null);
-const peerCall = ref<any>(null);
-const isCalling = ref(false);
 
-// Refs para elementos de vídeo
-const remoteVideoRef = ref<HTMLVideoElement | null>(null);
-const localVideoRef = ref<HTMLVideoElement | null>(null);
-const localStreamRef = ref<MediaStream | null>(null);
+const {
+    isCalling,
+    hasRemoteStream,
+    remoteVideoRef,
+    localVideoRef,
+    callUser: initiateCall,
+    endCall: endVideoCall,
+    initialize,
+    cleanup,
+} = useVideoCall({
+    routePrefix: '/doctor',
+    onCallReceived: (user) => {
+        const matchedUser = users.find((item) => item.id === user.id);
+        selectedUser.value = matchedUser ? { ...matchedUser } : (user as User);
+    },
+    onCallEnd: async () => {
+        await finalizeBackendAppointment();
+    },
+});
 
-// Função para iniciar uma chamada
+const startBackendAppointment = async (): Promise<boolean> => {
+    if (!selectedUser.value?.appointment?.id) {
+        return false;
+    }
+
+    try {
+        await axios.post(
+            appointmentsRoutes.start.url({ appointment: selectedUser.value.appointment.id }),
+        );
+
+        selectedUser.value = {
+            ...selectedUser.value,
+            appointment: selectedUser.value.appointment
+                ? {
+                      ...selectedUser.value.appointment,
+                      status: 'in_progress',
+                  }
+                : null,
+            canStartCall: true,
+            timeWindowMessage: 'Consulta em andamento',
+        };
+
+        return true;
+    } catch (error: any) {
+        return false;
+    }
+};
+
+const finalizeBackendAppointment = async () => {
+    if (!selectedUser.value?.appointment?.id) {
+        return;
+    }
+
+    try {
+        await axios.post(
+            appointmentsRoutes.end.url({ appointment: selectedUser.value.appointment.id }),
+        );
+
+        selectedUser.value = {
+            ...selectedUser.value,
+            appointment: selectedUser.value.appointment
+                ? {
+                      ...selectedUser.value.appointment,
+                      status: 'completed',
+                  }
+                : null,
+            canStartCall: false,
+            timeWindowMessage: 'Consulta finalizada',
+        };
+    } catch (error) {
+        // silencioso
+    }
+};
+
 const callUser = async () => {
-    if (!selectedUser.value || !peer.value || !peer.value.id) {
+    if (!selectedUser.value) {
         return;
     }
-    
-    try {
-        const payload = {
-            peerId: peer.value.id
-        };
-        
-        await axios.post(`/video-call/request/${selectedUser.value.id}`, payload);
-        
-        isCalling.value = true;
-        
-        // Aguardar o stream local estar pronto antes de continuar
-        await displayLocalVideo();
-        
-        // Configurar listener para quando o destinatário aceitar
-        peer.value.on('call', (call) => {
-            peerCall.value = call;
-            
-            // Responder à chamada com o stream local
-            if (localStreamRef.value) {
-                call.answer(localStreamRef.value);
-            }
-            
-            // Escutar o stream do destinatário
-            call.on('stream', (remoteStream) => {
-                if (remoteVideoRef.value) {
-                    remoteVideoRef.value.srcObject = remoteStream;
-                }
-            });
-            
-            // Destinatário encerrou a chamada
-            call.on('close', () => {
-                endCall();
-            });
-        });
-    } catch (error: any) {
-        // silencioso
-    }
-};
 
-// Função para encerrar a chamada
-const endCall = () => {
-    if (peerCall.value) {
-        peerCall.value.close();
-        peerCall.value = null;
-    }
-    
-    if (localStreamRef.value) {
-        localStreamRef.value.getTracks().forEach(track => {
-            track.stop();
-        });
-        localStreamRef.value = null;
-    }
-    
-    if (localVideoRef.value) {
-        localVideoRef.value.srcObject = null;
-    }
-    
-    if (remoteVideoRef.value) {
-        remoteVideoRef.value.srcObject = null;
-    }
-    
-    isCalling.value = false;
-};
-
-// Função para exibir vídeo local
-const displayLocalVideo = async (): Promise<void> => {
-    try {
-        const stream = await navigator.mediaDevices.getUserMedia({ 
-            video: true, 
-            audio: true 
-        });
-        
-        if (localVideoRef.value) {
-            localVideoRef.value.srcObject = stream;
-        }
-        
-        localStreamRef.value = stream;
-    } catch (error: any) {
-        throw error;
-    }
-};
-
-// Função quando o destinatário aceita a chamada
-const recipientAcceptCall = async (e: any) => {
-    if (!peer.value) {
+    if (!selectedUser.value.hasAppointment || !selectedUser.value.appointment) {
+        alert('É necessário um agendamento ativo para iniciar a chamada.');
         return;
     }
-    
-    try {
-        // Primeiro, obter o stream local
-        await displayLocalVideo();
-        
-        // Enviar sinal que o destinatário aceitou a chamada
-        const statusPayload = { 
-            peerId: peer.value.id, 
-            status: 'accept' 
-        };
-        
-        await axios.post(`/video-call/request/status/${e.user.fromUser.id}`, statusPayload);
-        
-        // Configurar listener para chamadas recebidas
-        peer.value.on('call', (call) => {
-            peerCall.value = call;
-            
-            // Aceitar chamada se for do usuário correto
-            if (e.user.peerId === call.peer) {
-                // Responder à chamada com o stream local já obtido
-                if (localStreamRef.value) {
-                    call.answer(localStreamRef.value);
-                }
-                
-                // Escutar o stream do chamador
-                call.on('stream', (remoteStream) => {
-                    if (remoteVideoRef.value) {
-                        remoteVideoRef.value.srcObject = remoteStream;
-                    }
-                });
-                
-                // Chamador encerrou a chamada
-                call.on('close', () => {
-                    endCall();
-                });
-            }
-        });
-    } catch (error: any) {
-        // silencioso
-    }
-};
 
-// Função para criar conexão
-const createConnection = (e: any) => {
-    if (!peer.value || !localStreamRef.value) {
+    if (!selectedUser.value.canStartCall && selectedUser.value.appointment.status !== 'in_progress') {
+        alert(
+            selectedUser.value.timeWindowMessage ||
+                'A chamada só pode ser iniciada dentro da janela permitida (10 minutos antes ou depois do agendamento).',
+        );
         return;
     }
-    
-    const receiverId = e.user.peerId;
-    
-    try {
-        // Iniciar a chamada com o stream local já obtido
-        const call = peer.value.call(receiverId, localStreamRef.value);
-        peerCall.value = call;
-        
-        // Escutar o stream do receptor
-        call.on('stream', (remoteStream) => {
-            if (remoteVideoRef.value) {
-                remoteVideoRef.value.srcObject = remoteStream;
-            }
-        });
-        
-        // Receptor encerrou a chamada
-        call.on('close', () => {
-            endCall();
-        });
-    } catch (error) {
-        // silencioso
+
+    const started = await startBackendAppointment();
+
+    if (!started && selectedUser.value.appointment?.status !== 'in_progress') {
+        alert('Não foi possível iniciar a consulta. Verifique o agendamento.');
+        return;
     }
+
+    await initiateCall(selectedUser.value);
 };
 
-// Função para conectar WebSocket
-const connectWebSocket = () => {
-    try {
-        // Configurar Echo com Reverb
-        const echo = new Echo({
-            broadcaster: 'reverb',
-            key: import.meta.env.VITE_REVERB_APP_KEY,
-            wsHost: import.meta.env.VITE_REVERB_HOST,
-            wsPort: import.meta.env.VITE_REVERB_PORT,
-            wssPort: import.meta.env.VITE_REVERB_PORT,
-            forceTLS: (import.meta.env.VITE_REVERB_SCHEME ?? 'https') === 'https',
-            enabledTransports: ['ws', 'wss'],
-        });
-        
-        // Requisição de videoconferência
-        echo.private(`video-call.${auth.user.id}`)
-            .listen('RequestVideoCall', (e: any) => {
-                selectedUser.value = e.user.fromUser;
-                isCalling.value = true;
-                
-                recipientAcceptCall(e);
-            });
-        
-        // Status da chamada aceito
-        echo.private(`video-call.${auth.user.id}`)
-            .listen('RequestVideoCallStatus', (e: any) => {
-                createConnection(e);
-            });
-        
-        // Armazenar instância do Echo para cleanup
-        (window as any).echoInstance = echo;
-        
-    } catch (error) {
-        // silencioso
-    }
+const endCall = async () => {
+    endVideoCall();
+    await finalizeBackendAppointment();
 };
 
-// Lifecycle hooks
-onMounted(async () => {
-    // Inicializar PeerJS
-    peer.value = new Peer();
-    
-    peer.value.on('open', () => {
-        // Conectar WebSocket após PeerJS estar pronto
-        connectWebSocket();
-    });
+onMounted(() => {
+    initialize();
 });
 
 onUnmounted(() => {
-    // Limpar recursos
-    if (typeof window !== 'undefined' && (window as any).echoInstance) {
-        (window as any).echoInstance.disconnect();
-        (window as any).echoInstance = null;
-    }
-    
-    if (localStreamRef.value) {
-        localStreamRef.value.getTracks().forEach(track => {
-            track.stop();
-        });
-    }
-    
-    if (peerCall.value) {
-        peerCall.value.close();
-    }
+    cleanup();
 });
 </script>
 
@@ -296,6 +182,12 @@ onUnmounted(() => {
                     <div class="ml-4">
                         <div class="font-semibold">{{ user.name }}</div>
                         <div class="text-sm text-gray-500">{{ user.email }}</div>
+                        <div
+                            class="text-xs mt-1"
+                            :class="user.canStartCall ? 'text-green-600' : 'text-gray-500'"
+                        >
+                            {{ user.timeWindowMessage || 'Sem agendamento' }}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -321,7 +213,13 @@ onUnmounted(() => {
                             <button
                                 v-if="!isCalling"
                                 @click="callUser"
-                                class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-blue-600 transition-colors"
+                                :disabled="!selectedUser.canStartCall"
+                                :class="[
+                                    'px-4 py-2 rounded-lg transition-colors',
+                                    selectedUser.canStartCall
+                                        ? 'bg-primary text-white hover:bg-blue-600'
+                                        : 'bg-gray-300 text-gray-500 cursor-not-allowed',
+                                ]"
                             >
                                 Iniciar Consulta
                             </button>
@@ -332,6 +230,12 @@ onUnmounted(() => {
                             >
                                 Encerrar Chamada
                             </button>
+                            <p
+                                v-if="!isCalling && selectedUser && !selectedUser.canStartCall"
+                                class="text-xs text-gray-500 mt-2"
+                            >
+                                {{ selectedUser.timeWindowMessage || 'Sem agendamento disponível.' }}
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -347,6 +251,12 @@ onUnmounted(() => {
                             muted 
                             class="border-2 border-gray-800 w-full rounded-lg"
                         ></video>
+                        <div
+                            v-if="!hasRemoteStream"
+                            class="absolute inset-0 flex items-center justify-center bg-gray-900/70 text-white font-semibold rounded-lg"
+                        >
+                            Aguardando conexão...
+                        </div>
                         <video 
                             id="localVideo" 
                             ref="localVideoRef" 
@@ -359,7 +269,7 @@ onUnmounted(() => {
                     </div>
                     
                     <div v-if="!isCalling" class="h-full flex justify-center items-center text-gray-800 font-bold">
-                        Nenhuma Consulta em Andamento.
+                        {{ selectedUser?.timeWindowMessage || 'Nenhuma Consulta em Andamento.' }}
                     </div>
                 </div>
             </div>

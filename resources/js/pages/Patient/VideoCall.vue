@@ -4,12 +4,10 @@ import { Head, usePage } from '@inertiajs/vue3';
 import { type BreadcrumbItem } from '@/types';
 import { ref, onMounted, onUnmounted } from 'vue';
 import axios from 'axios';
-import Peer from 'peerjs';
-import Echo from 'laravel-echo';
-import Pusher from 'pusher-js';
 import * as patientRoutes from '@/routes/patient';
 import * as appointmentsRoutes from '@/routes/appointments';
 import { useRouteGuard } from '@/composables/auth';
+import { useVideoCall } from '@/composables/useVideoCall';
 
 const { canAccessPatientRoute } = useRouteGuard();
 
@@ -52,19 +50,34 @@ const page = usePage();
 const auth = page.props.auth as AuthUser;
 const users = page.props.users as User[] || [];
 
-// Estados reativos
+// Estados locais para UI
 const selectedUser = ref<User | null>(null);
-const peer = ref<Peer | null>(null);
-const peerCall = ref<any>(null);
-const isCalling = ref(false);
 const isMuted = ref(false);
 const isVideoEnabled = ref(true);
-const hasRemoteStream = ref(false);
 
-// Refs para elementos de vídeo
-const remoteVideoRef = ref<HTMLVideoElement | null>(null);
-const localVideoRef = ref<HTMLVideoElement | null>(null);
-const localStreamRef = ref<MediaStream | null>(null);
+// Usar o composable de videochamadas
+const {
+    isCalling,
+    hasRemoteStream,
+    remoteVideoRef,
+    localVideoRef,
+    localStreamRef,
+    callUser: initiateCall,
+    endCall: endVideoCall,
+    initialize,
+    cleanup,
+} = useVideoCall({
+    routePrefix: '/patient',
+    onCallReceived: (user) => {
+        // Sincronizar selectedUser quando uma chamada é recebida
+        selectedUser.value = user as User;
+    },
+    onCallEnd: async () => {
+        await finalizeBackendAppointment();
+        isMuted.value = false;
+        isVideoEnabled.value = true;
+    },
+});
 
 const startBackendAppointment = async (): Promise<boolean> => {
     if (!selectedUser.value?.appointment?.id) {
@@ -114,9 +127,9 @@ const finalizeBackendAppointment = async () => {
     }
 };
 
-// Função para iniciar uma chamada
+// Função para iniciar uma chamada com validações de agendamento
 const callUser = async () => {
-    if (!selectedUser.value || !peer.value || !peer.value.id) {
+    if (!selectedUser.value) {
         return;
     }
     
@@ -137,73 +150,13 @@ const callUser = async () => {
         return;
     }
     
-    try {
-        const payload = {
-            peerId: peer.value.id
-        };
-        
-        await axios.post(`/patient/video-call/request/${selectedUser.value.id}`, payload);
-        
-        isCalling.value = true;
-        
-        // Aguardar o stream local estar pronto antes de continuar
-        await displayLocalVideo();
-        
-        // Configurar listener para quando o destinatário aceitar
-        peer.value.on('call', (call) => {
-            peerCall.value = call;
-            
-            // Responder à chamada com o stream local
-            if (localStreamRef.value) {
-                call.answer(localStreamRef.value);
-            }
-            
-            // Escutar o stream do destinatário
-            call.on('stream', (remoteStream) => {
-                if (remoteVideoRef.value) {
-                    remoteVideoRef.value.srcObject = remoteStream;
-                    hasRemoteStream.value = true;
-                }
-            });
-            
-            // Destinatário encerrou a chamada
-            call.on('close', () => {
-                endCall();
-            });
-        });
-    } catch (error: any) {
-        // silencioso
-    }
+    // Usar a função do composable para iniciar a chamada
+    await initiateCall(selectedUser.value);
 };
 
 // Função para encerrar a chamada
 const endCall = async () => {
-    if (peerCall.value) {
-        peerCall.value.close();
-        peerCall.value = null;
-    }
-    
-    if (localStreamRef.value) {
-        localStreamRef.value.getTracks().forEach(track => {
-            track.stop();
-        });
-        localStreamRef.value = null;
-    }
-    
-    if (localVideoRef.value) {
-        localVideoRef.value.srcObject = null;
-    }
-    
-    if (remoteVideoRef.value) {
-        remoteVideoRef.value.srcObject = null;
-    }
-    
-    await finalizeBackendAppointment();
-    
-    isCalling.value = false;
-    isMuted.value = false;
-    isVideoEnabled.value = true;
-    hasRemoteStream.value = false;
+    await endVideoCall();
 };
 
 // Função para alternar mute/desmute
@@ -228,169 +181,18 @@ const toggleVideo = () => {
     }
 };
 
-// Função para exibir vídeo local
-const displayLocalVideo = async (): Promise<void> => {
-    try {
-        const stream = await navigator.mediaDevices.getUserMedia({ 
-            video: true, 
-            audio: true 
-        });
-        
-        if (localVideoRef.value) {
-            localVideoRef.value.srcObject = stream;
-        }
-        
-        localStreamRef.value = stream;
-    } catch (error: any) {
-        throw error;
-    }
-};
-
-// Função quando o destinatário aceita a chamada
-const recipientAcceptCall = async (e: any) => {
-    if (!peer.value) {
-        return;
-    }
-    
-    try {
-        // Primeiro, obter o stream local
-        await displayLocalVideo();
-        
-        // Enviar sinal que o destinatário aceitou a chamada
-        const statusPayload = { 
-            peerId: peer.value.id, 
-            status: 'accept' 
-        };
-        
-        await axios.post(`/patient/video-call/request/status/${e.user.fromUser.id}`, statusPayload);
-        
-        // Configurar listener para chamadas recebidas
-        peer.value.on('call', (call) => {
-            peerCall.value = call;
-            
-            // Aceitar chamada se for do usuário correto
-            if (e.user.peerId === call.peer) {
-                // Responder à chamada com o stream local já obtido
-                if (localStreamRef.value) {
-                    call.answer(localStreamRef.value);
-                }
-                
-                // Escutar o stream do chamador
-                call.on('stream', (remoteStream) => {
-                    if (remoteVideoRef.value) {
-                        remoteVideoRef.value.srcObject = remoteStream;
-                        hasRemoteStream.value = true;
-                    }
-                });
-                
-                // Chamador encerrou a chamada
-                call.on('close', () => {
-                    endCall();
-                });
-            }
-        });
-    } catch (error: any) {
-        // silencioso
-    }
-};
-
-// Função para criar conexão
-const createConnection = (e: any) => {
-    if (!peer.value || !localStreamRef.value) {
-        return;
-    }
-    
-    const receiverId = e.user.peerId;
-    
-    try {
-        // Iniciar a chamada com o stream local já obtido
-        const call = peer.value.call(receiverId, localStreamRef.value);
-        peerCall.value = call;
-        
-        // Escutar o stream do receptor
-        call.on('stream', (remoteStream) => {
-            if (remoteVideoRef.value) {
-                remoteVideoRef.value.srcObject = remoteStream;
-                hasRemoteStream.value = true;
-            }
-        });
-        
-        // Receptor encerrou a chamada
-        call.on('close', () => {
-            endCall();
-        });
-    } catch (error) {
-        // silencioso
-    }
-};
-
-// Função para conectar WebSocket
-const connectWebSocket = () => {
-    try {
-        // Configurar Echo com Reverb
-        const echo = new Echo({
-            broadcaster: 'reverb',
-            key: import.meta.env.VITE_REVERB_APP_KEY,
-            wsHost: import.meta.env.VITE_REVERB_HOST,
-            wsPort: import.meta.env.VITE_REVERB_PORT,
-            wssPort: import.meta.env.VITE_REVERB_PORT,
-            forceTLS: (import.meta.env.VITE_REVERB_SCHEME ?? 'https') === 'https',
-            enabledTransports: ['ws', 'wss'],
-        });
-        
-        // Requisição de videoconferência
-        echo.private(`video-call.${auth.user.id}`)
-            .listen('RequestVideoCall', (e: any) => {
-                selectedUser.value = e.user.fromUser;
-                isCalling.value = true;
-                
-                recipientAcceptCall(e);
-            });
-        
-        // Status da chamada aceito
-        echo.private(`video-call.${auth.user.id}`)
-            .listen('RequestVideoCallStatus', (e: any) => {
-                createConnection(e);
-            });
-        
-        // Armazenar instância do Echo para cleanup
-        (window as any).echoInstance = echo;
-        
-    } catch (error) {
-        // silencioso
-    }
-};
-
 // Lifecycle hooks
 onMounted(async () => {
     // Verificar acesso ao montar componente
     canAccessPatientRoute();
     
-    // Inicializar PeerJS
-    peer.value = new Peer();
-    
-    peer.value.on('open', () => {
-        // Conectar WebSocket após PeerJS estar pronto
-        connectWebSocket();
-    });
+    // Inicializar videochamadas
+    initialize();
 });
 
 onUnmounted(() => {
-    // Limpar recursos
-    if (typeof window !== 'undefined' && (window as any).echoInstance) {
-        (window as any).echoInstance.disconnect();
-        (window as any).echoInstance = null;
-    }
-    
-    if (localStreamRef.value) {
-        localStreamRef.value.getTracks().forEach(track => {
-            track.stop();
-        });
-    }
-    
-    if (peerCall.value) {
-        peerCall.value.close();
-    }
+    // Limpar recursos usando o composable
+    cleanup();
 });
 </script>
 

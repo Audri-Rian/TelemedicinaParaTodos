@@ -132,6 +132,15 @@ const filteredDoctors = computed(() => {
     return list;
 });
 
+// Médicos exibidos na seção "Precisa de atendimento agora?" - limitado a 6 por página
+const displayedDoctors = computed(() => {
+    let list = filteredDoctors.value;
+    
+    // Limita a exibição a 6 médicos por página (a paginação do backend já retorna 6)
+    // Mas aplicamos os filtros locais primeiro
+    return list.slice(0, 6);
+});
+
 const buildQueryParams = () => {
     const queryParams: Record<string, any> = {};
 
@@ -323,9 +332,9 @@ const breadcrumbs: BreadcrumbItem[] = [
             <div class="space-y-12">
                 <h2 class="text-2xl font-bold text-gray-900 text-center">Precisa de atendimento agora?</h2>
                 
-                <div v-if="filteredDoctors.length > 0" class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-7xl mx-auto">
+                <div v-if="displayedDoctors.length > 0" class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-7xl mx-auto">
                     <DoctorCard
-                        v-for="doctor in filteredDoctors"
+                        v-for="doctor in displayedDoctors"
                         :key="doctor.id"
                         :doctor="doctor"
                         :selected-date="selectedDate"

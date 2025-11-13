@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Carbon\Carbon;
 
 class Doctor extends Model
@@ -47,6 +49,24 @@ class Doctor extends Model
     {
         return $this->belongsToMany(Specialization::class, 'doctor_specialization')
                     ->withTimestamps();
+    }
+
+    // Relacionamento com ServiceLocation
+    public function serviceLocations(): HasMany
+    {
+        return $this->hasMany(ServiceLocation::class, 'doctor_id');
+    }
+
+    // Relacionamento com AvailabilitySlot
+    public function availabilitySlots(): HasMany
+    {
+        return $this->hasMany(AvailabilitySlot::class, 'doctor_id');
+    }
+
+    // Relacionamento com BlockedDate
+    public function blockedDates(): HasMany
+    {
+        return $this->hasMany(\App\Models\Doctor\BlockedDate::class, 'doctor_id');
     }
 
     // Scopes para filtros

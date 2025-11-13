@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Patient;
 
 use App\Http\Controllers\Controller;
 use App\Models\Doctor;
-use App\Models\Appointments;
+use App\Services\Doctor\ScheduleService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -12,6 +12,10 @@ use Inertia\Response;
 
 class ScheduleConsultationController extends Controller
 {
+    public function __construct(
+        protected ScheduleService $scheduleService
+    ) {}
+
     public function index(Request $request): Response
     {
         $doctorId = $request->get('doctor_id');
@@ -69,72 +73,42 @@ class ScheduleConsultationController extends Controller
     
     /**
      * Calcular datas disponíveis para os próximos 30 dias
+     * Usa o novo sistema de ScheduleService que considera:
+     * - Slots recorrentes (por dia da semana)
+     * - Slots específicos (por data)
+     * - Datas bloqueadas
+     * - Appointments já agendados
      */
     private function getAvailableDates(Doctor $doctor): array
     {
-        $availableDates = [];
-        $schedule = $doctor->availability_schedule ?? [];
         $now = Carbon::now();
         $startDate = $now->copy()->startOfDay();
         $endDate = $now->copy()->addDays(30)->endOfDay();
         
-        // Buscar todos os appointments do médico no período
-        $existingAppointments = Appointments::query()
-            ->where('doctor_id', $doctor->id)
-            ->whereBetween('scheduled_at', [$startDate, $endDate])
-            ->whereIn('status', [
-                Appointments::STATUS_SCHEDULED,
-                Appointments::STATUS_RESCHEDULED,
-                Appointments::STATUS_IN_PROGRESS
-            ])
-            ->get()
-            ->groupBy(function($apt) {
-                return $apt->scheduled_at->format('Y-m-d');
-            })
-            ->map(function($group) {
-                return $group->map(fn($apt) => $apt->scheduled_at->format('H:i'))->toArray();
-            })
-            ->toArray();
-        
+        $availableDates = [];
         $currentDate = $startDate->copy();
         
+        // Iterar por cada dia no período
         while ($currentDate <= $endDate) {
-            $dayOfWeek = strtolower($currentDate->format('l')); // monday, tuesday, etc.
+            // Usar ScheduleService que já considera datas bloqueadas e appointments
+            $availability = $this->scheduleService->getAvailabilityForDate($doctor, $currentDate);
             
-            // Verificar se médico trabalha neste dia
-            if (isset($schedule[$dayOfWeek]) && $schedule[$dayOfWeek] !== null) {
-                $daySchedule = $schedule[$dayOfWeek];
-                $allSlots = $daySchedule['slots'] ?? [];
+            // Se a data não está bloqueada e tem slots disponíveis
+            if (!$availability['is_blocked'] && !empty($availability['available_slots'])) {
+                // Extrair apenas os horários (strings) dos slots
+                $timeSlots = array_map(function($slot) {
+                    return $slot['time'] ?? null;
+                }, $availability['available_slots']);
                 
-                // Filtrar slots já ocupados
-                $dateKey = $currentDate->format('Y-m-d');
-                $occupiedSlots = $existingAppointments[$dateKey] ?? [];
-                $availableSlots = array_filter($allSlots, function($slot) use ($occupiedSlots, $dateKey, $now) {
-                    // Remover slots ocupados
-                    if (in_array($slot, $occupiedSlots)) {
-                        return false;
-                    }
-                    
-                    // Se for hoje, remover apenas slots que já passaram
-                    if ($dateKey === $now->format('Y-m-d')) {
-                        try {
-                            $slotDateTime = Carbon::createFromFormat('Y-m-d H:i', $dateKey . ' ' . $slot);
-                            // Mostrar slots que são no futuro (pelo menos 5 minutos à frente)
-                            $minAllowedTime = $now->copy()->addMinutes(5);
-                            return $slotDateTime->greaterThan($minAllowedTime);
-                        } catch (\Exception $e) {
-                            // Se houver erro ao criar a data, manter o slot
-                            return true;
-                        }
-                    }
-                    
-                    return true;
-                });
+                // Filtrar nulls e ordenar
+                $timeSlots = array_filter($timeSlots, fn($time) => $time !== null);
+                $timeSlots = array_values($timeSlots);
+                sort($timeSlots);
                 
-                if (!empty($availableSlots)) {
+                if (!empty($timeSlots)) {
                     $availableDates[] = [
-                        'date' => $dateKey,
-                        'available_slots' => array_values($availableSlots),
+                        'date' => $currentDate->format('Y-m-d'),
+                        'available_slots' => $timeSlots,
                     ];
                 }
             }

@@ -47,6 +47,27 @@ Route::middleware(['auth', 'verified', 'doctor'])->prefix('doctor')->name('docto
     // Rotas para videoconferência (médicos)
     Route::post('video-call/request/{user}', [VideoCallController::class, 'requestVideoCall'])->name('video-call.request');
     Route::post('video-call/request/status/{user}', [VideoCallController::class, 'requestVideoCallStatus'])->name('video-call.request-status');
+    
+    // Rotas para configuração de agenda (médicos)
+    Route::get('schedule', function () {
+        return redirect()->route('doctor.schedule.show', ['doctor' => auth()->user()->doctor->id]);
+    })->name('schedule');
+    Route::get('doctors/{doctor}/schedule', [App\Http\Controllers\Doctor\DoctorScheduleController::class, 'show'])->name('schedule.show');
+    Route::post('doctors/{doctor}/schedule/save', [App\Http\Controllers\Doctor\DoctorScheduleController::class, 'save'])->name('schedule.save');
+    
+    // Rotas para locais de atendimento (médicos)
+    Route::post('doctors/{doctor}/locations', [App\Http\Controllers\Doctor\DoctorServiceLocationController::class, 'store'])->name('locations.store');
+    Route::put('doctors/{doctor}/locations/{location}', [App\Http\Controllers\Doctor\DoctorServiceLocationController::class, 'update'])->name('locations.update');
+    Route::delete('doctors/{doctor}/locations/{location}', [App\Http\Controllers\Doctor\DoctorServiceLocationController::class, 'destroy'])->name('locations.destroy');
+    
+    // Rotas para slots de disponibilidade (médicos)
+    Route::post('doctors/{doctor}/availability', [App\Http\Controllers\Doctor\DoctorAvailabilitySlotController::class, 'store'])->name('availability.store');
+    Route::put('doctors/{doctor}/availability/{slot}', [App\Http\Controllers\Doctor\DoctorAvailabilitySlotController::class, 'update'])->name('availability.update');
+    Route::delete('doctors/{doctor}/availability/{slot}', [App\Http\Controllers\Doctor\DoctorAvailabilitySlotController::class, 'destroy'])->name('availability.destroy');
+    
+    // Rotas para datas bloqueadas (médicos)
+    Route::post('doctors/{doctor}/blocked-dates', [App\Http\Controllers\Doctor\DoctorBlockedDateController::class, 'store'])->name('blocked-dates.store');
+    Route::delete('doctors/{doctor}/blocked-dates/{blockedDate}', [App\Http\Controllers\Doctor\DoctorBlockedDateController::class, 'destroy'])->name('blocked-dates.destroy');
 });
 
 // Rotas para Pacientes
@@ -88,6 +109,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 Route::prefix('api')->group(function () {
     Route::get('specializations/list', [SpecializationController::class, 'list'])->name('api.specializations.list');
     Route::get('specializations/options', [SpecializationController::class, 'options'])->name('api.specializations.options');
+    
+    // Rotas públicas para disponibilidade de médicos (pacientes podem consultar)
+    Route::get('doctors/{doctor}/availability/{date}', [App\Http\Controllers\Doctor\DoctorAvailabilitySlotController::class, 'getByDate'])->name('api.doctors.availability.date');
 });
 
 

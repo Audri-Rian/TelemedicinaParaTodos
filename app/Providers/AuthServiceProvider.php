@@ -3,7 +3,13 @@
 namespace App\Providers;
 
 use App\Models\Appointments;
+use App\Models\ServiceLocation;
+use App\Models\AvailabilitySlot;
+use App\Models\Doctor\BlockedDate;
 use App\Policies\AppointmentPolicy;
+use App\Policies\Doctor\ServiceLocationPolicy;
+use App\Policies\Doctor\AvailabilitySlotPolicy;
+use App\Policies\Doctor\BlockedDatePolicy;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 
 class AuthServiceProvider extends ServiceProvider
@@ -15,6 +21,9 @@ class AuthServiceProvider extends ServiceProvider
      */
     protected $policies = [
         Appointments::class => AppointmentPolicy::class,
+        ServiceLocation::class => ServiceLocationPolicy::class,
+        AvailabilitySlot::class => AvailabilitySlotPolicy::class,
+        BlockedDate::class => BlockedDatePolicy::class,
     ];
 
     /**

@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\User;
 use App\Models\Doctor;
 use App\Models\Specialization;
+use App\Services\AvailabilityService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use Carbon\Carbon;
@@ -16,6 +17,8 @@ class DoctorSeeder extends Seeder
      */
     public function run(): void
     {
+        $availabilityService = new AvailabilityService();
+        
         // Buscar especializações existentes
         $specializations = Specialization::all()->keyBy('name');
 
@@ -212,7 +215,7 @@ class DoctorSeeder extends Seeder
                 'email_verified_at' => now(),
             ]);
 
-            // Gerar availability_schedule
+            // Gerar availability_schedule (mantido para compatibilidade)
             $availabilitySchedule = $this->generateAvailabilitySchedule(
                 $doctorData['start_time'],
                 $doctorData['end_time'],
@@ -225,11 +228,67 @@ class DoctorSeeder extends Seeder
                 'crm' => $doctorData['crm'],
                 'biography' => $doctorData['biography'],
                 'status' => $doctorData['status'],
-                'availability_schedule' => $availabilitySchedule,
+                'availability_schedule' => $availabilitySchedule, // Mantido para compatibilidade
                 'consultation_fee' => $doctorData['consultation_fee'],
                 'license_number' => 'LIC-' . strtoupper(substr(md5($doctorData['crm']), 0, 8)),
                 'license_expiry_date' => Carbon::now()->addYears(3),
             ]);
+
+            // Criar locais de atendimento padrão
+            $teleconsultationLocation = $availabilityService->createServiceLocation(
+                $doctor,
+                'Teleconsulta',
+                \App\Models\ServiceLocation::TYPE_TELECONSULTATION,
+                null,
+                null,
+                'Consulta realizada por videoconferência'
+            );
+
+            $officeLocation = $availabilityService->createServiceLocation(
+                $doctor,
+                'Consultório Principal',
+                \App\Models\ServiceLocation::TYPE_OFFICE,
+                'Endereço do consultório',
+                null,
+                null
+            );
+
+            // Criar slots de disponibilidade recorrentes
+            $days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+            if ($doctorData['include_saturday']) {
+                $days[] = 'saturday';
+            }
+
+            foreach ($days as $day) {
+                // Sábado geralmente tem horário reduzido (manhã)
+                if ($day === 'saturday') {
+                    $dayStart = '08:00';
+                    $dayEnd = '12:00';
+                } else {
+                    $dayStart = $doctorData['start_time'];
+                    $dayEnd = $doctorData['end_time'];
+                }
+
+                // Criar slot para teleconsulta
+                $availabilityService->createRecurringSlot(
+                    $doctor,
+                    $day,
+                    $dayStart,
+                    $dayEnd,
+                    $teleconsultationLocation->id
+                );
+
+                // Criar slot para consultório (apenas dias úteis)
+                if ($day !== 'saturday') {
+                    $availabilityService->createRecurringSlot(
+                        $doctor,
+                        $day,
+                        $dayStart,
+                        $dayEnd,
+                        $officeLocation->id
+                    );
+                }
+            }
 
             // Vincular especializações
             foreach ($doctorData['specializations'] as $specializationName) {

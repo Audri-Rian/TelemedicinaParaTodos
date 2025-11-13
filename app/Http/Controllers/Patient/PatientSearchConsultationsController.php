@@ -22,8 +22,7 @@ class PatientSearchConsultationsController extends Controller
 
         $doctorsQuery = Doctor::query()
             ->with(['user', 'specializations'])
-            ->active()
-            ->available();
+            ->active();
 
         if (!empty($filters['specialization_id'])) {
             $doctorsQuery->bySpecialization($filters['specialization_id']);
@@ -54,7 +53,7 @@ class PatientSearchConsultationsController extends Controller
 
         $availableDoctors = $doctorsQuery
             ->orderByDesc('created_at')
-            ->paginate(12)
+            ->paginate(6)
             ->withQueryString()
             ->through(function (Doctor $doctor) use ($parsedDate) {
                 $schedule = $doctor->availability_schedule ?? [];
