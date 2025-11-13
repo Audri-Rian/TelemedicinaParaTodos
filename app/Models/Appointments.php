@@ -144,7 +144,8 @@ class Appointments extends Model
     public function getFormattedDurationAttribute(): string
     {
         $duration = $this->duration;
-        if (!$duration) return 'Não disponível';
+        // Duração padrão de 45 minutos quando não houver dados de início/fim
+        if (!$duration) return '45min';
         
         $hours = floor($duration / 60);
         $minutes = $duration % 60;

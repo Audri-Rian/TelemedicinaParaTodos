@@ -6,10 +6,12 @@ use App\Models\Appointments;
 use App\Models\ServiceLocation;
 use App\Models\AvailabilitySlot;
 use App\Models\Doctor\BlockedDate;
+use App\Models\TimelineEvent;
 use App\Policies\AppointmentPolicy;
 use App\Policies\Doctor\ServiceLocationPolicy;
 use App\Policies\Doctor\AvailabilitySlotPolicy;
 use App\Policies\Doctor\BlockedDatePolicy;
+use App\Policies\TimelineEventPolicy;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 
 class AuthServiceProvider extends ServiceProvider
@@ -24,6 +26,7 @@ class AuthServiceProvider extends ServiceProvider
         ServiceLocation::class => ServiceLocationPolicy::class,
         AvailabilitySlot::class => AvailabilitySlotPolicy::class,
         BlockedDate::class => BlockedDatePolicy::class,
+        TimelineEvent::class => TimelineEventPolicy::class,
     ];
 
     /**

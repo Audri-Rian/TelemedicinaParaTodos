@@ -48,7 +48,7 @@ class PatientDashboardController extends Controller
                     'scheduled_at' => $appointment->scheduled_at->format('d/m/Y H:i'),
                     'scheduled_date' => $appointment->scheduled_at->format('d') . ' de ' . $monthName,
                     'scheduled_time' => $appointment->scheduled_at->format('H:i'),
-                    'duration' => '30 min',
+                    'duration' => '45 min',
                     'status' => $this->translateStatus($appointment->status),
                     'status_class' => $this->getStatusClass($appointment->status),
                 ];

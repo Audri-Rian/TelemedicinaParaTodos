@@ -96,7 +96,10 @@ const { getInitials } = useInitials();
 
 // Obter usuário autenticado
 const page = usePage();
-const authUser = computed(() => page.props.auth?.user);
+const authUser = computed(() => {
+    const props = page.props as any;
+    return props?.auth?.user || null;
+});
 
 // Estados locais
 const searchQuery = ref('');
@@ -148,7 +151,7 @@ const breadcrumbs: BreadcrumbItem[] = [
             <!-- Seção de Boas-vindas e Próxima Consulta -->
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <!-- Seção de Boas-vindas (Esquerda) -->
-                <div class="lg:col-span-2 bg-gradient-to-br from-primary/10 to-primary/5 rounded-lg shadow-sm border border-gray-200 p-8">
+                <div class="lg:col-span-2 bg-linear-to-br from-primary/10 to-primary/5 rounded-lg shadow-sm border border-gray-200 p-8">
                     <div class="flex flex-col h-full justify-between">
                         <div>
                             <h1 class="text-3xl font-bold text-gray-900 mb-3">
@@ -257,7 +260,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                             {{ nextAppointment ? (nextAppointment.doctor_specialty || 'Especialista') : 'Cardiologista' }} • 
                             {{ nextAppointment ? (nextAppointment.scheduled_date || nextAppointment.scheduled_at) : '25 de Outubro' }}, 
                             {{ nextAppointment ? (nextAppointment.scheduled_time || '') : '14:30' }}
-                            <span>{{ nextAppointment?.duration || ' (30 min)' }}</span>
+                            <span>{{ nextAppointment?.duration || ' (45 min)' }}</span>
                         </p>
                         <p class="text-xs text-gray-500 mb-4">
                             Por videochamada

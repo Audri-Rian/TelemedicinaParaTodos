@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { update } from '@/actions/App/Http/Controllers/Settings/ProfileController';
+import { update as updateRoute } from '@/actions/App/Http/Controllers/Settings/ProfileController';
 import { edit } from '@/routes/profile';
 import { send } from '@/routes/verification';
-import { Form, Head, Link, usePage, router } from '@inertiajs/vue3';
+import { useForm, Head, Link, usePage, router } from '@inertiajs/vue3';
 import * as avatarRoutes from '@/routes/avatar';
 
 import DeleteUser from '@/components/DeleteUser.vue';
@@ -58,8 +58,43 @@ const page = usePage();
 const user = (page.props.auth as any).user;
 const auth = page.props.auth as { isPatient: boolean; role: string | null };
 
-// Estado para consentimento de telemedicina
-const consentTelemedicineValue = ref(props.patient?.consent_telemedicine ?? false);
+// Criar o formulário usando useForm do Inertia
+const form = useForm({
+    name: user.name || '',
+    email: user.email || '',
+    emergency_contact: props.patient?.emergency_contact || '',
+    emergency_phone: props.patient?.emergency_phone || '',
+    medical_history: props.patient?.medical_history || '',
+    allergies: props.patient?.allergies || '',
+    current_medications: props.patient?.current_medications || '',
+    blood_type: props.patient?.blood_type || '',
+    height: props.patient?.height || '',
+    weight: props.patient?.weight || '',
+    insurance_provider: props.patient?.insurance_provider || '',
+    insurance_number: props.patient?.insurance_number || '',
+    consent_telemedicine: props.patient?.consent_telemedicine ?? false,
+});
+
+// Função para atualizar consentimento de telemedicina
+const updateConsentTelemedicine = (checked: boolean) => {
+    form.consent_telemedicine = checked;
+};
+
+// Estado para mensagem de sucesso
+const recentlySuccessful = ref(false);
+
+// Função para enviar o formulário
+const submit = () => {
+    form.patch(updateRoute.url(), {
+        preserveScroll: true,
+        onSuccess: () => {
+            recentlySuccessful.value = true;
+            setTimeout(() => {
+                recentlySuccessful.value = false;
+            }, 2000);
+        },
+    });
+};
 
 // Verificar se segunda etapa está completa
 const isSecondStageComplete = computed(() => {
@@ -305,36 +340,36 @@ const cancelPreview = () => {
                 
                 <HeadingSmall title="Informações do Perfil" description="Atualize seu nome e endereço de e-mail" />
 
-                <Form v-bind="update.form()" class="space-y-6" v-slot="{ errors, processing, recentlySuccessful }">
+                <form @submit.prevent="submit" class="space-y-6">
                     <!-- Primeira Etapa: Informações Básicas -->
                     <div class="space-y-6">
                         <div class="grid gap-2">
                             <Label for="name">Nome</Label>
-                            <Input
-                                id="name"
-                                class="mt-1 block w-full"
-                                name="name"
-                                :default-value="user.name"
-                                required
-                                autocomplete="name"
-                                placeholder="Nome completo"
-                            />
-                            <InputError class="mt-2" :message="errors.name" />
+                                <Input
+                                    id="name"
+                                    class="mt-1 block w-full"
+                                    name="name"
+                                    v-model="form.name"
+                                    required
+                                    autocomplete="name"
+                                    placeholder="Nome completo"
+                                />
+                            <InputError class="mt-2" :message="form.errors.name" />
                         </div>
 
                         <div class="grid gap-2">
                             <Label for="email">Endereço de e-mail</Label>
-                            <Input
-                                id="email"
-                                type="email"
-                                class="mt-1 block w-full"
-                                name="email"
-                                :default-value="user.email"
-                                required
-                                autocomplete="username"
-                                placeholder="Endereço de e-mail"
-                            />
-                            <InputError class="mt-2" :message="errors.email" />
+                                <Input
+                                    id="email"
+                                    type="email"
+                                    class="mt-1 block w-full"
+                                    name="email"
+                                    v-model="form.email"
+                                    required
+                                    autocomplete="username"
+                                    placeholder="Endereço de e-mail"
+                                />
+                            <InputError class="mt-2" :message="form.errors.email" />
                         </div>
 
                         <div v-if="mustVerifyEmail && !user.email_verified_at">
@@ -385,10 +420,10 @@ const cancelPreview = () => {
                                     <Input
                                         id="emergency_contact"
                                         name="emergency_contact"
-                                        :default-value="props.patient?.emergency_contact ?? ''"
+                                        v-model="form.emergency_contact"
                                         placeholder="Nome completo do contato"
                                     />
-                                    <InputError class="mt-2" :message="errors.emergency_contact" />
+                                    <InputError class="mt-2" :message="form.errors.emergency_contact" />
                                 </div>
 
                                 <div class="grid gap-2">
@@ -397,10 +432,10 @@ const cancelPreview = () => {
                                         id="emergency_phone"
                                         name="emergency_phone"
                                         type="tel"
-                                        :default-value="props.patient?.emergency_phone ?? ''"
+                                        v-model="form.emergency_phone"
                                         placeholder="(00) 00000-0000"
                                     />
-                                    <InputError class="mt-2" :message="errors.emergency_phone" />
+                                    <InputError class="mt-2" :message="form.errors.emergency_phone" />
                                 </div>
                             </div>
                         </div>
@@ -415,11 +450,11 @@ const cancelPreview = () => {
                                     <Textarea
                                         id="medical_history"
                                         name="medical_history"
-                                        :default-value="props.patient?.medical_history ?? ''"
+                                        v-model="form.medical_history"
                                         placeholder="Descreva seu histórico médico, cirurgias, condições crônicas, etc."
                                         :rows="4"
                                     />
-                                    <InputError class="mt-2" :message="errors.medical_history" />
+                                    <InputError class="mt-2" :message="form.errors.medical_history" />
                                 </div>
 
                                 <div class="grid gap-2">
@@ -427,11 +462,11 @@ const cancelPreview = () => {
                                     <Textarea
                                         id="allergies"
                                         name="allergies"
-                                        :default-value="props.patient?.allergies ?? ''"
+                                        v-model="form.allergies"
                                         placeholder="Liste suas alergias (medicamentos, alimentos, etc.)"
                                         :rows="3"
                                     />
-                                    <InputError class="mt-2" :message="errors.allergies" />
+                                    <InputError class="mt-2" :message="form.errors.allergies" />
                                 </div>
 
                                 <div class="grid gap-2">
@@ -439,11 +474,11 @@ const cancelPreview = () => {
                                     <Textarea
                                         id="current_medications"
                                         name="current_medications"
-                                        :default-value="props.patient?.current_medications ?? ''"
+                                        v-model="form.current_medications"
                                         placeholder="Liste os medicamentos que você está tomando atualmente"
                                         :rows="3"
                                     />
-                                    <InputError class="mt-2" :message="errors.current_medications" />
+                                    <InputError class="mt-2" :message="form.errors.current_medications" />
                                 </div>
                             </div>
                         </div>
@@ -458,14 +493,14 @@ const cancelPreview = () => {
                                     <Select
                                         id="blood_type"
                                         name="blood_type"
-                                        :default-value="props.patient?.blood_type ?? ''"
+                                        v-model="form.blood_type"
                                     >
                                         <option value="">Selecione...</option>
                                         <option v-for="bloodType in props.bloodTypes" :key="bloodType" :value="bloodType">
                                             {{ bloodType }}
                                         </option>
                                     </Select>
-                                    <InputError class="mt-2" :message="errors.blood_type" />
+                                    <InputError class="mt-2" :message="form.errors.blood_type" />
                                 </div>
 
                                 <div class="grid gap-2">
@@ -477,10 +512,10 @@ const cancelPreview = () => {
                                         step="0.01"
                                         min="50"
                                         max="250"
-                                        :default-value="props.patient?.height ?? ''"
+                                        v-model="form.height"
                                         placeholder="Ex: 175"
                                     />
-                                    <InputError class="mt-2" :message="errors.height" />
+                                    <InputError class="mt-2" :message="form.errors.height" />
                                 </div>
 
                                 <div class="grid gap-2">
@@ -492,10 +527,10 @@ const cancelPreview = () => {
                                         step="0.01"
                                         min="1"
                                         max="500"
-                                        :default-value="props.patient?.weight ?? ''"
+                                        v-model="form.weight"
                                         placeholder="Ex: 70.5"
                                     />
-                                    <InputError class="mt-2" :message="errors.weight" />
+                                    <InputError class="mt-2" :message="form.errors.weight" />
                                 </div>
                             </div>
                         </div>
@@ -510,10 +545,10 @@ const cancelPreview = () => {
                                     <Input
                                         id="insurance_provider"
                                         name="insurance_provider"
-                                        :default-value="props.patient?.insurance_provider ?? ''"
+                                        v-model="form.insurance_provider"
                                         placeholder="Nome da operadora"
                                     />
-                                    <InputError class="mt-2" :message="errors.insurance_provider" />
+                                    <InputError class="mt-2" :message="form.errors.insurance_provider" />
                                 </div>
 
                                 <div class="grid gap-2">
@@ -521,10 +556,10 @@ const cancelPreview = () => {
                                     <Input
                                         id="insurance_number"
                                         name="insurance_number"
-                                        :default-value="props.patient?.insurance_number ?? ''"
+                                        v-model="form.insurance_number"
                                         placeholder="Número da carteirinha"
                                     />
-                                    <InputError class="mt-2" :message="errors.insurance_number" />
+                                    <InputError class="mt-2" :message="form.errors.insurance_number" />
                                 </div>
                             </div>
                         </div>
@@ -532,15 +567,10 @@ const cancelPreview = () => {
                         <!-- Consentimento para Telemedicina -->
                         <div class="flex items-start gap-3 rounded-lg border border-gray-200 bg-gray-50 p-4">
                             <div class="flex items-center">
-                                <input
-                                    type="hidden"
-                                    name="consent_telemedicine"
-                                    :value="consentTelemedicineValue ? '1' : '0'"
-                                />
                                 <Checkbox
                                     id="consent_telemedicine"
-                                    :checked="consentTelemedicineValue"
-                                    @update:checked="(checked: boolean) => consentTelemedicineValue = checked"
+                                    :checked="form.consent_telemedicine"
+                                    @update:checked="updateConsentTelemedicine"
                                 />
                             </div>
                             <div class="grid gap-1">
@@ -550,13 +580,13 @@ const cancelPreview = () => {
                                 <p class="text-xs text-gray-600">
                                     Autorizo a realização de consultas médicas por meio de telemedicina, conforme a legislação vigente.
                                 </p>
-                                <InputError class="mt-2" :message="errors.consent_telemedicine" />
+                                <InputError class="mt-2" :message="form.errors.consent_telemedicine" />
                             </div>
                         </div>
                     </div>
 
                     <div class="flex items-center gap-4">
-                        <Button :disabled="processing">Salvar</Button>
+                        <Button type="submit" :disabled="form.processing">Salvar</Button>
 
                         <Transition
                             enter-active-class="transition ease-in-out"
@@ -567,7 +597,7 @@ const cancelPreview = () => {
                             <p v-show="recentlySuccessful" class="text-sm text-neutral-600">Salvo.</p>
                         </Transition>
                     </div>
-                </Form>
+                </form>
             </div>
 
             <DeleteUser />

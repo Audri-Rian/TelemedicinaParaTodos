@@ -103,6 +103,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('appointments/{appointment}/reschedule', [AppointmentsController::class, 'reschedule'])->name('appointments.reschedule');
 
     Route::get('api/appointments/availability', [AppointmentsController::class, 'availability'])->name('appointments.availability');
+    
+    // Rotas para timeline events (educação, cursos, certificados, projetos)
+    Route::prefix('api')->group(function () {
+        Route::get('timeline-events', [App\Http\Controllers\TimelineEventController::class, 'index'])->name('api.timeline-events.index');
+        Route::post('timeline-events', [App\Http\Controllers\TimelineEventController::class, 'store'])->name('api.timeline-events.store');
+        Route::get('timeline-events/{timelineEvent}', [App\Http\Controllers\TimelineEventController::class, 'show'])->name('api.timeline-events.show');
+        Route::put('timeline-events/{timelineEvent}', [App\Http\Controllers\TimelineEventController::class, 'update'])->name('api.timeline-events.update');
+        Route::delete('timeline-events/{timelineEvent}', [App\Http\Controllers\TimelineEventController::class, 'destroy'])->name('api.timeline-events.destroy');
+    });
 });
 
 // Rotas públicas para API de especializações

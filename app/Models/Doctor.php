@@ -19,6 +19,7 @@ class Doctor extends Model
         'user_id',
         'crm',
         'biography',
+        'language',
         'license_number',
         'license_expiry_date',
         'status',
@@ -28,6 +29,7 @@ class Doctor extends Model
 
     protected $casts = [
         'availability_schedule' => 'array',
+        'language' => 'array',
         'license_expiry_date' => 'date',
         'consultation_fee' => 'decimal:2',
         'status' => 'string',

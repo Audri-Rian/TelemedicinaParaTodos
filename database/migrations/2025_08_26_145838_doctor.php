@@ -16,6 +16,7 @@ return new class extends Migration
             $table->uuid('user_id')->unique();
             $table->string('crm', 20)->nullable()->unique()->index();
             $table->text('biography')->nullable();
+            $table->json('language')->nullable();
             $table->string('license_number', 50)->nullable()->unique();
             $table->date('license_expiry_date')->nullable();
             $table->enum('status', ['active', 'inactive', 'suspended'])->default('active');

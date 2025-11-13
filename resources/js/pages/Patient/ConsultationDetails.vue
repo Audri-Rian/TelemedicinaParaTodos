@@ -161,7 +161,8 @@ const duration = computed(() => {
         }
         return `${mins}min`;
     }
-    return 'Não disponível';
+    // Duração padrão de 45 minutos quando não houver dados de início/fim
+    return '45 min';
 });
 
 // Estado da modal de cancelamento

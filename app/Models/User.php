@@ -72,6 +72,14 @@ class User extends Authenticatable
     }
 
     /**
+     * Get the timeline events associated with the user.
+     */
+    public function timelineEvents()
+    {
+        return $this->hasMany(TimelineEvent::class);
+    }
+
+    /**
      * Check if the user is a doctor.
      */
     public function isDoctor(): bool

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { store } from '@/actions/App/Http/Controllers/Auth/AuthenticatedSessionController';
+import { store as storeRoute } from '@/actions/App/Http/Controllers/Auth/AuthenticatedSessionController';
 import BackgroundDecorativo from '@/components/BackgroundDecorativo.vue';
 import InputError from '@/components/InputError.vue';
 import TextLink from '@/components/TextLink.vue';
@@ -11,13 +11,27 @@ import { Separator } from '@/components/ui/separator';
 import AuthBase from '@/layouts/AuthLayout.vue';
 import { register } from '@/routes';
 import { request } from '@/routes/password';
-import { Form, Head } from '@inertiajs/vue3';
+import { useForm, Head } from '@inertiajs/vue3';
 import { LoaderCircle } from 'lucide-vue-next';
 
 defineProps<{
     status?: string;
     canResetPassword: boolean;
 }>();
+
+// Criar o formulário usando useForm do Inertia
+const form = useForm({
+    email: '',
+    password: '',
+    remember: false,
+});
+
+// Função para enviar o formulário
+const submit = () => {
+    form.post(storeRoute.url(), {
+        onFinish: () => form.reset('password'),
+    });
+};
 </script>
 
 <template>
@@ -30,10 +44,8 @@ defineProps<{
         <div class="relative flex flex-col gap-6 z-10">
             <Card class="overflow-hidden p-0">
                 <CardContent class="grid p-0 md:grid-cols-2">
-                    <Form 
-                        v-bind="store.form()" 
-                        :reset-on-success="['password']" 
-                        v-slot="{ errors, processing }" 
+                    <form 
+                        @submit.prevent="submit"
                         class="p-6 md:p-8"
                     >
                         <div class="flex flex-col gap-6">
@@ -56,14 +68,14 @@ defineProps<{
                                 <Input
                                     id="email"
                                     type="email"
-                                    name="email"
+                                    v-model="form.email"
                                     required
                                     autofocus
                                     :tabindex="1"
                                     autocomplete="email"
                                     placeholder="seu@email.com"
                                 />
-                                <InputError :message="errors.email" />
+                                <InputError :message="form.errors.email" />
                             </div>
 
                             <!-- Password Field -->
@@ -82,18 +94,18 @@ defineProps<{
                                 <Input
                                     id="password"
                                     type="password"
-                                    name="password"
+                                    v-model="form.password"
                                     required
                                     :tabindex="2"
                                     autocomplete="current-password"
                                     placeholder="Digite sua senha"
                                 />
-                                <InputError :message="errors.password" />
+                                <InputError :message="form.errors.password" />
                             </div>
 
                             <!-- Submit Button -->
-                            <Button type="submit" class="w-full" :tabindex="4" :disabled="processing">
-                                <LoaderCircle v-if="processing" class="h-4 w-4 animate-spin mr-2" />
+                            <Button type="submit" class="w-full" :tabindex="4" :disabled="form.processing">
+                                <LoaderCircle v-if="form.processing" class="h-4 w-4 animate-spin mr-2" />
                                 Entrar
                             </Button>
 
@@ -144,7 +156,7 @@ defineProps<{
                                 <TextLink :href="register()" :tabindex="5">Cadastre-se</TextLink>
                             </div>
                         </div>
-                    </Form>
+                    </form>
 
                     <!-- Image Section -->
                     <div class="relative hidden bg-muted md:block">
