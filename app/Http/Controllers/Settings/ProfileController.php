@@ -22,12 +22,44 @@ class ProfileController extends Controller
         
         // Carregar o relacionamento patient explicitamente
         $patient = $user->patient;
+        
+        // Carregar timeline events se for doctor
+        $timelineEvents = [];
+        if ($user->isDoctor()) {
+            $timelineEvents = $user->timelineEvents()
+                ->ordered()
+                ->get()
+                ->map(function ($event) {
+                    return [
+                        'id' => $event->id,
+                        'type' => $event->type,
+                        'type_label' => $event->type_label,
+                        'title' => $event->title,
+                        'subtitle' => $event->subtitle,
+                        'start_date' => $event->start_date->format('Y-m-d'),
+                        'end_date' => $event->end_date?->format('Y-m-d'),
+                        'description' => $event->description,
+                        'media_url' => $event->media_url,
+                        'degree_type' => $event->degree_type?->value,
+                        'is_public' => $event->is_public,
+                        'extra_data' => $event->extra_data,
+                        'order_priority' => $event->order_priority,
+                        'formatted_start_date' => $event->formatted_start_date,
+                        'formatted_end_date' => $event->formatted_end_date,
+                        'date_range' => $event->date_range,
+                        'duration' => $event->duration,
+                        'is_in_progress' => $event->is_in_progress,
+                    ];
+                })
+                ->toArray();
+        }
 
         return Inertia::render('settings/Profile', [
             'mustVerifyEmail' => $user instanceof MustVerifyEmail,
             'status' => $request->session()->get('status'),
             'avatarUrl' => $user->getAvatarUrl(),
             'avatarThumbnailUrl' => $user->getAvatarUrl(true),
+            'timelineCompleted' => $user->timeline_completed ?? false,
             'patient' => $patient ? [
                 'id' => $patient->id,
                 'emergency_contact' => $patient->emergency_contact,
@@ -42,6 +74,7 @@ class ProfileController extends Controller
                 'insurance_number' => $patient->insurance_number,
                 'consent_telemedicine' => (bool) $patient->consent_telemedicine,
             ] : null,
+            'timelineEvents' => $timelineEvents,
             'bloodTypes' => \App\Models\Patient::BLOOD_TYPES,
         ]);
     }

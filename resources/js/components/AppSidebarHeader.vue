@@ -149,7 +149,7 @@ const auth = computed(() => page.props.auth);
                 <DropdownMenuTrigger as-child>
                     <Button variant="ghost" size="icon" class="h-10 w-10 rounded-full bg-primary hover:bg-primary/90 p-0">
                         <Avatar class="h-10 w-10 rounded-full">
-                            <AvatarImage :src="auth.user.avatar" :alt="auth.user.name" />
+                            <AvatarImage v-if="auth.user?.avatar" :src="auth.user.avatar" :alt="auth.user.name" />
                             <AvatarFallback class="bg-primary text-gray-900 font-semibold" :delay-ms="600">
                                 {{ getInitials(auth.user?.name) }}
                             </AvatarFallback>

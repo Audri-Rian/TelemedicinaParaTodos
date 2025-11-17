@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Builder;
 use Carbon\Carbon;
+use App\Enums\DegreeType;
 
 class TimelineEvent extends Model
 {
@@ -23,6 +24,8 @@ class TimelineEvent extends Model
         'end_date',
         'description',
         'media_url',
+        'degree_type',
+        'is_public',
         'extra_data',
         'order_priority',
     ];
@@ -32,6 +35,8 @@ class TimelineEvent extends Model
         'end_date' => 'date',
         'extra_data' => 'array',
         'order_priority' => 'integer',
+        'degree_type' => DegreeType::class,
+        'is_public' => 'boolean',
     ];
 
     // Constantes para tipos
@@ -72,6 +77,16 @@ class TimelineEvent extends Model
     public function scopeCompleted(Builder $query): void
     {
         $query->whereNotNull('end_date');
+    }
+
+    public function scopePublic(Builder $query): void
+    {
+        $query->where('is_public', true);
+    }
+
+    public function scopePrivate(Builder $query): void
+    {
+        $query->where('is_public', false);
     }
 
     // Accessors

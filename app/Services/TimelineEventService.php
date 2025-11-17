@@ -29,7 +29,7 @@ class TimelineEventService
      */
     public function createEvent(User $user, array $data): TimelineEvent
     {
-        return TimelineEvent::create([
+        $event = TimelineEvent::create([
             'user_id' => $user->id,
             'type' => $data['type'],
             'title' => $data['title'],
@@ -38,9 +38,18 @@ class TimelineEventService
             'end_date' => $data['end_date'] ?? null,
             'description' => $data['description'] ?? null,
             'media_url' => $data['media_url'] ?? null,
+            'degree_type' => $data['degree_type'] ?? null,
+            'is_public' => $data['is_public'] ?? true,
             'extra_data' => $data['extra_data'] ?? null,
             'order_priority' => $data['order_priority'] ?? 0,
         ]);
+
+        // Marcar timeline como completada se o usuário ainda não marcou
+        if (!$user->timeline_completed) {
+            $user->update(['timeline_completed' => true]);
+        }
+
+        return $event;
     }
 
     /**
@@ -56,6 +65,8 @@ class TimelineEventService
             'end_date' => $data['end_date'] ?? $event->end_date,
             'description' => $data['description'] ?? $event->description,
             'media_url' => $data['media_url'] ?? $event->media_url,
+            'degree_type' => $data['degree_type'] ?? $event->degree_type,
+            'is_public' => isset($data['is_public']) ? $data['is_public'] : $event->is_public,
             'extra_data' => $data['extra_data'] ?? $event->extra_data,
             'order_priority' => $data['order_priority'] ?? $event->order_priority,
         ]);

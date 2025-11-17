@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { update } from '@/actions/App/Http/Controllers/Settings/PasswordController';
+import { update as updateRoute } from '@/actions/App/Http/Controllers/Settings/PasswordController';
 import InputError from '@/components/InputError.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
 import { edit } from '@/routes/password';
-import { Form, Head } from '@inertiajs/vue3';
+import { useForm, Head } from '@inertiajs/vue3';
 import { ref } from 'vue';
 
 import HeadingSmall from '@/components/HeadingSmall.vue';
@@ -22,6 +22,31 @@ const breadcrumbItems: BreadcrumbItem[] = [
 
 const passwordInput = ref<HTMLInputElement | null>(null);
 const currentPasswordInput = ref<HTMLInputElement | null>(null);
+
+// Criar o formulário usando useForm do Inertia
+const form = useForm({
+    current_password: '',
+    password: '',
+    password_confirmation: '',
+});
+
+// Estado para mensagem de sucesso
+const recentlySuccessful = ref(false);
+
+// Função para enviar o formulário
+const submit = () => {
+    form.put(updateRoute.url(), {
+        preserveScroll: true,
+        onSuccess: () => {
+            recentlySuccessful.value = true;
+            setTimeout(() => {
+                recentlySuccessful.value = false;
+            }, 2000);
+            // Resetar apenas os campos de senha
+            form.reset('password', 'password_confirmation', 'current_password');
+        },
+    });
+};
 </script>
 
 <template>
@@ -32,16 +57,7 @@ const currentPasswordInput = ref<HTMLInputElement | null>(null);
             <div class="space-y-6">
                 <HeadingSmall title="Atualizar senha" description="Certifique-se de que sua conta está usando uma senha longa e aleatória para manter-se segura" />
 
-                <Form
-                    v-bind="update.form()"
-                    :options="{
-                        preserveScroll: true,
-                    }"
-                    reset-on-success
-                    :reset-on-error="['password', 'password_confirmation', 'current_password']"
-                    class="space-y-6"
-                    v-slot="{ errors, processing, recentlySuccessful }"
-                >
+                <form @submit.prevent="submit" class="space-y-6">
                     <div class="grid gap-2">
                         <Label for="current_password">Senha atual</Label>
                         <Input
@@ -49,11 +65,12 @@ const currentPasswordInput = ref<HTMLInputElement | null>(null);
                             ref="currentPasswordInput"
                             name="current_password"
                             type="password"
+                            v-model="form.current_password"
                             class="mt-1 block w-full"
                             autocomplete="current-password"
                             placeholder="Senha atual"
                         />
-                        <InputError :message="errors.current_password" />
+                        <InputError :message="form.errors.current_password" />
                     </div>
 
                     <div class="grid gap-2">
@@ -63,11 +80,12 @@ const currentPasswordInput = ref<HTMLInputElement | null>(null);
                             ref="passwordInput"
                             name="password"
                             type="password"
+                            v-model="form.password"
                             class="mt-1 block w-full"
                             autocomplete="new-password"
                             placeholder="Nova senha"
                         />
-                        <InputError :message="errors.password" />
+                        <InputError :message="form.errors.password" />
                     </div>
 
                     <div class="grid gap-2">
@@ -76,15 +94,16 @@ const currentPasswordInput = ref<HTMLInputElement | null>(null);
                             id="password_confirmation"
                             name="password_confirmation"
                             type="password"
+                            v-model="form.password_confirmation"
                             class="mt-1 block w-full"
                             autocomplete="new-password"
                             placeholder="Confirmar senha"
                         />
-                        <InputError :message="errors.password_confirmation" />
+                        <InputError :message="form.errors.password_confirmation" />
                     </div>
 
                     <div class="flex items-center gap-4">
-                        <Button :disabled="processing">Salvar senha</Button>
+                        <Button type="submit" :disabled="form.processing">Salvar senha</Button>
 
                         <Transition
                             enter-active-class="transition ease-in-out"
@@ -95,7 +114,7 @@ const currentPasswordInput = ref<HTMLInputElement | null>(null);
                             <p v-show="recentlySuccessful" class="text-sm text-neutral-600">Salvo.</p>
                         </Transition>
                     </div>
-                </Form>
+                </form>
             </div>
         </SettingsLayout>
     </AppLayout>

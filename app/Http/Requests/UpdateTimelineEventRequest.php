@@ -5,6 +5,7 @@ namespace App\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use App\Models\TimelineEvent;
+use App\Enums\DegreeType;
 
 class UpdateTimelineEventRequest extends FormRequest
 {
@@ -23,7 +24,14 @@ class UpdateTimelineEventRequest extends FormRequest
      */
     public function rules(): array
     {
-        return [
+        $type = $this->input('type');
+        
+        // Se o tipo não foi atualizado, usar o tipo atual do modelo
+        if (!$type && $this->route('timelineEvent')) {
+            $type = $this->route('timelineEvent')->type;
+        }
+        
+        $rules = [
             'type' => [
                 'sometimes',
                 'required',
@@ -41,9 +49,38 @@ class UpdateTimelineEventRequest extends FormRequest
             'end_date' => ['nullable', 'date', 'date_format:Y-m-d', 'after_or_equal:start_date'],
             'description' => ['nullable', 'string', 'max:5000'],
             'media_url' => ['nullable', 'string', 'url', 'max:500'],
+            'degree_type' => [
+                'nullable',
+                'string',
+                Rule::in(DegreeType::values()),
+            ],
+            'is_public' => ['nullable', 'boolean'],
             'extra_data' => ['nullable', 'array'],
             'order_priority' => ['nullable', 'integer', 'min:0'],
         ];
+
+        // Regras específicas por tipo
+        if ($type === TimelineEvent::TYPE_EDUCATION) {
+            // Education exige institution (subtitle) e course (title)
+            if ($this->has('subtitle')) {
+                $rules['subtitle'] = ['required', 'string', 'max:255'];
+            }
+            if ($this->has('title')) {
+                $rules['title'] = ['required', 'string', 'max:255'];
+            }
+        } elseif ($type === TimelineEvent::TYPE_CERTIFICATE) {
+            // Certificados exige media_url
+            if ($this->has('media_url')) {
+                $rules['media_url'] = ['required', 'string', 'url', 'max:500'];
+            }
+        } elseif ($type === TimelineEvent::TYPE_PROJECT) {
+            // Projeto exige description
+            if ($this->has('description')) {
+                $rules['description'] = ['required', 'string', 'max:5000'];
+            }
+        }
+
+        return $rules;
     }
 
     /**

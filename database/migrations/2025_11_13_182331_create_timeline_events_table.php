@@ -21,6 +21,8 @@ return new class extends Migration
             $table->date('end_date')->nullable();
             $table->text('description')->nullable();
             $table->string('media_url')->nullable();
+            $table->enum('degree_type', ['fundamental', 'medio', 'graduacao', 'pos', 'curso_livre', 'certificacao', 'projeto'])->nullable();
+            $table->boolean('is_public')->default(true);
             $table->json('extra_data')->nullable();
             $table->integer('order_priority')->default(0);
             $table->timestamps();

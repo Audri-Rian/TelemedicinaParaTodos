@@ -8,17 +8,26 @@ import * as avatarRoutes from '@/routes/avatar';
 import DeleteUser from '@/components/DeleteUser.vue';
 import HeadingSmall from '@/components/HeadingSmall.vue';
 import InputError from '@/components/InputError.vue';
+import Timeline from '@/components/Timeline.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select } from '@/components/ui/select';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import AppLayout from '@/layouts/AppLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
 import { type BreadcrumbItem } from '@/types';
-import { ref, computed } from 'vue';
-import { AlertCircle, Upload, X, User as UserIcon, Loader2 } from 'lucide-vue-next';
+import { ref, computed, watch } from 'vue';
+import { AlertCircle, Upload, X, User as UserIcon, Loader2, Plus, Pencil, Trash2, CheckCircle } from 'lucide-vue-next';
 import axios from 'axios';
 
 interface Patient {
@@ -36,6 +45,27 @@ interface Patient {
     consent_telemedicine?: boolean;
 }
 
+interface TimelineEvent {
+    id: string;
+    type: 'education' | 'course' | 'certificate' | 'project';
+    type_label: string;
+    title: string;
+    subtitle?: string;
+    start_date: string;
+    end_date?: string;
+    description?: string;
+    media_url?: string;
+    degree_type?: string;
+    is_public: boolean;
+    extra_data?: Record<string, any>;
+    order_priority: number;
+    formatted_start_date: string;
+    formatted_end_date?: string;
+    date_range: string;
+    duration?: string;
+    is_in_progress: boolean;
+}
+
 interface Props {
     mustVerifyEmail: boolean;
     status?: string;
@@ -43,6 +73,8 @@ interface Props {
     bloodTypes?: string[];
     avatarUrl?: string | null;
     avatarThumbnailUrl?: string | null;
+    timelineEvents?: TimelineEvent[];
+    timelineCompleted?: boolean;
 }
 
 const props = defineProps<Props>();
@@ -56,7 +88,7 @@ const breadcrumbItems: BreadcrumbItem[] = [
 
 const page = usePage();
 const user = (page.props.auth as any).user;
-const auth = page.props.auth as { isPatient: boolean; role: string | null };
+const auth = page.props.auth as { isPatient: boolean; isDoctor: boolean; role: string | null };
 
 // Criar o formulário usando useForm do Inertia
 const form = useForm({
@@ -98,9 +130,166 @@ const submit = () => {
 
 // Verificar se segunda etapa está completa
 const isSecondStageComplete = computed(() => {
-    if (!props.patient) return false;
-    return !!(props.patient.emergency_contact && props.patient.emergency_phone);
+    if (auth?.isPatient || auth?.role === 'patient') {
+        if (!props.patient) return false;
+        return !!(props.patient.emergency_contact && props.patient.emergency_phone);
+    }
+    if (auth?.isDoctor || auth?.role === 'doctor') {
+        return props.timelineCompleted ?? false;
+    }
+    return false;
 });
+
+// Estados para timeline (doutor)
+const timelineEvents = ref<TimelineEvent[]>(props.timelineEvents || []);
+const isTimelineModalOpen = ref(false);
+const editingEventId = ref<string | null>(null);
+const isSubmittingTimeline = ref(false);
+
+// Formulário de timeline
+const timelineForm = ref({
+    type: 'education' as 'education' | 'course' | 'certificate' | 'project',
+    title: '',
+    subtitle: '',
+    start_date: '',
+    end_date: '',
+    description: '',
+    media_url: '',
+    degree_type: '',
+    is_public: true,
+    order_priority: 0,
+});
+
+const timelineFormErrors = ref<Record<string, string[]>>({});
+
+// Opções para tipos de evento
+const eventTypeOptions = [
+    { value: 'education', label: 'Educação' },
+    { value: 'course', label: 'Curso' },
+    { value: 'certificate', label: 'Certificado' },
+    { value: 'project', label: 'Projeto' },
+];
+
+// Opções para degree_type
+const degreeTypeOptions = [
+    { value: 'fundamental', label: 'Ensino Fundamental' },
+    { value: 'medio', label: 'Ensino Médio' },
+    { value: 'graduacao', label: 'Graduação' },
+    { value: 'pos', label: 'Pós-Graduação' },
+    { value: 'curso_livre', label: 'Curso Livre' },
+    { value: 'certificacao', label: 'Certificação' },
+    { value: 'projeto', label: 'Projeto' },
+];
+
+// Resetar formulário de timeline
+const resetTimelineForm = () => {
+    timelineForm.value = {
+        type: 'education',
+        title: '',
+        subtitle: '',
+        start_date: '',
+        end_date: '',
+        description: '',
+        media_url: '',
+        degree_type: '',
+        is_public: true,
+        order_priority: 0,
+    };
+    timelineFormErrors.value = {};
+    editingEventId.value = null;
+};
+
+// Abrir modal para criar novo evento
+const openCreateTimelineModal = () => {
+    resetTimelineForm();
+    isTimelineModalOpen.value = true;
+};
+
+// Abrir modal para editar evento
+const openEditTimelineModal = (eventId: string) => {
+    const event = timelineEvents.value.find(e => e.id === eventId);
+    if (event) {
+        timelineForm.value = {
+            type: event.type,
+            title: event.title,
+            subtitle: event.subtitle || '',
+            start_date: event.start_date,
+            end_date: event.end_date || '',
+            description: event.description || '',
+            media_url: event.media_url || '',
+            degree_type: event.degree_type || '',
+            is_public: event.is_public,
+            order_priority: event.order_priority,
+        };
+        editingEventId.value = eventId;
+        isTimelineModalOpen.value = true;
+    }
+};
+
+// Fechar modal
+const closeTimelineModal = () => {
+    isTimelineModalOpen.value = false;
+    resetTimelineForm();
+};
+
+// Salvar evento (criar ou atualizar)
+const saveTimelineEvent = async () => {
+    isSubmittingTimeline.value = true;
+    timelineFormErrors.value = {};
+
+    try {
+        const url = editingEventId.value
+            ? `/api/timeline-events/${editingEventId.value}`
+            : '/api/timeline-events';
+        
+        const method = editingEventId.value ? 'put' : 'post';
+        
+        const response = await axios[method](url, timelineForm.value);
+
+        if (response.data.success) {
+            // Recarregar a página para atualizar os eventos e timeline_completed
+            router.reload({
+                only: ['timelineEvents', 'timelineCompleted'],
+            });
+            closeTimelineModal();
+        }
+    } catch (error: any) {
+        if (error.response?.data?.errors) {
+            timelineFormErrors.value = error.response.data.errors;
+        } else {
+            alert(error.response?.data?.message || 'Erro ao salvar evento. Tente novamente.');
+        }
+    } finally {
+        isSubmittingTimeline.value = false;
+    }
+};
+
+// Deletar evento
+const deleteTimelineEvent = async (eventId: string) => {
+    if (!confirm('Tem certeza que deseja deletar este evento?')) {
+        return;
+    }
+
+    try {
+        const response = await axios.delete(`/api/timeline-events/${eventId}`);
+
+        if (response.data.success) {
+            // Recarregar a página para atualizar os eventos
+            router.reload({
+                only: ['timelineEvents', 'timelineCompleted'],
+            });
+        }
+    } catch (error: any) {
+        alert(error.response?.data?.message || 'Erro ao deletar evento. Tente novamente.');
+    }
+};
+
+// Atualizar timelineEvents quando props mudarem
+watch(() => props.timelineEvents, (newEvents) => {
+    if (newEvents) {
+        timelineEvents.value = newEvents;
+    }
+}, { immediate: true });
 
 // Estados para upload de avatar
 const avatarUrl = ref<string | null>(props.avatarUrl ?? null);
@@ -259,7 +448,7 @@ const cancelPreview = () => {
                                 />
                                 <div
                                     v-else
-                                    class="flex h-full w-full items-center justify-center bg-gradient-to-br from-blue-400 to-blue-600 text-white"
+                                    class="flex h-full w-full items-center justify-center bg-linear-to-br from-blue-400 to-blue-600 text-white"
                                 >
                                     <UserIcon class="h-12 w-12" />
                                 </div>
@@ -598,9 +787,232 @@ const cancelPreview = () => {
                         </Transition>
                     </div>
                 </form>
+
+                <!-- Segunda Etapa: Timeline (Apenas para Doutores) -->
+                <div v-if="auth?.isDoctor || auth?.role === 'doctor'" class="space-y-6 border-t pt-6">
+                    <div class="flex items-center gap-2">
+                        <HeadingSmall 
+                            title="Segunda Etapa de Autenticação - Timeline Profissional" 
+                            description="Registre sua educação, cursos, certificados e projetos para completar seu perfil"
+                        />
+                        <div v-if="!isSecondStageComplete" class="flex items-center gap-2 text-yellow-600">
+                            <AlertCircle class="h-5 w-5" />
+                            <span class="text-sm font-medium">Incompleto</span>
+                        </div>
+                        <div v-else class="flex items-center gap-2 text-green-600">
+                            <CheckCircle class="h-5 w-5" />
+                            <span class="text-sm font-medium">Completo</span>
+                        </div>
+                    </div>
+
+                    <!-- Aviso sobre segunda etapa não obrigatória -->
+                    <div v-if="!isSecondStageComplete" class="rounded-lg border border-blue-200 bg-blue-50 p-4">
+                        <p class="text-sm text-blue-800">
+                            <strong>Nota:</strong> A segunda etapa de autenticação não é obrigatória, mas recomendamos que você complete seu perfil adicionando sua formação acadêmica e experiência profissional. Isso ajuda os pacientes a conhecerem melhor sua trajetória.
+                        </p>
+                    </div>
+
+                    <!-- Botão para adicionar evento -->
+                    <div class="flex justify-end">
+                        <Button type="button" @click="openCreateTimelineModal" variant="default">
+                            <Plus class="h-4 w-4 mr-2" />
+                            Adicionar Evento
+                        </Button>
+                    </div>
+
+                    <!-- Lista de eventos da timeline -->
+                    <Timeline 
+                        :events="timelineEvents" 
+                        :show-actions="true"
+                        @edit="openEditTimelineModal"
+                        @delete="deleteTimelineEvent"
+                    />
+                </div>
             </div>
 
             <DeleteUser />
+
+            <!-- Modal para criar/editar evento de timeline -->
+            <Dialog :open="isTimelineModalOpen" @update:open="(value) => { if (!value) closeTimelineModal() }">
+                <DialogContent class="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>
+                            {{ editingEventId ? 'Editar Evento' : 'Adicionar Evento' }}
+                        </DialogTitle>
+                        <DialogDescription>
+                            Preencha as informações do evento de timeline (educação, curso, certificado ou projeto).
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <form @submit.prevent="saveTimelineEvent" class="space-y-6">
+                        <!-- Tipo de Evento -->
+                        <div class="grid gap-2">
+                            <Label for="timeline_type">Tipo de Evento *</Label>
+                            <Select
+                                id="timeline_type"
+                                name="type"
+                                v-model="timelineForm.type"
+                                required
+                            >
+                                <option v-for="option in eventTypeOptions" :key="option.value" :value="option.value">
+                                    {{ option.label }}
+                                </option>
+                            </Select>
+                            <InputError :message="timelineFormErrors.type?.[0]" />
+                        </div>
+
+                        <!-- Título -->
+                        <div class="grid gap-2">
+                            <Label for="timeline_title">Título *</Label>
+                            <Input
+                                id="timeline_title"
+                                name="title"
+                                v-model="timelineForm.title"
+                                :placeholder="timelineForm.type === 'education' ? 'Ex: Medicina' : timelineForm.type === 'course' ? 'Ex: Curso de Laravel Avançado' : timelineForm.type === 'certificate' ? 'Ex: AWS Practitioner' : 'Ex: Telemedicina Para Todos'"
+                                required
+                            />
+                            <InputError :message="timelineFormErrors.title?.[0]" />
+                        </div>
+
+                        <!-- Subtítulo (Instituição/Empresa) - Obrigatório para Education -->
+                        <div class="grid gap-2">
+                            <Label for="timeline_subtitle">
+                                {{ timelineForm.type === 'education' ? 'Instituição *' : timelineForm.type === 'certificate' ? 'Organização' : 'Instituição/Empresa' }}
+                            </Label>
+                            <Input
+                                id="timeline_subtitle"
+                                name="subtitle"
+                                v-model="timelineForm.subtitle"
+                                :placeholder="timelineForm.type === 'education' ? 'Ex: Universidade Federal' : 'Ex: Udemy, Amazon, etc.'"
+                                :required="timelineForm.type === 'education'"
+                            />
+                            <InputError :message="timelineFormErrors.subtitle?.[0]" />
+                        </div>
+
+                        <!-- Data de Início -->
+                        <div class="grid gap-2">
+                            <Label for="timeline_start_date">Data de Início *</Label>
+                            <Input
+                                id="timeline_start_date"
+                                name="start_date"
+                                type="date"
+                                v-model="timelineForm.start_date"
+                                required
+                            />
+                            <InputError :message="timelineFormErrors.start_date?.[0]" />
+                        </div>
+
+                        <!-- Data de Fim -->
+                        <div class="grid gap-2">
+                            <Label for="timeline_end_date">Data de Fim (deixe em branco se ainda estiver em andamento)</Label>
+                            <Input
+                                id="timeline_end_date"
+                                name="end_date"
+                                type="date"
+                                v-model="timelineForm.end_date"
+                                :min="timelineForm.start_date"
+                            />
+                            <InputError :message="timelineFormErrors.end_date?.[0]" />
+                        </div>
+
+                        <!-- Descrição - Obrigatória para Projeto -->
+                        <div class="grid gap-2">
+                            <Label for="timeline_description">
+                                Descrição {{ timelineForm.type === 'project' ? '*' : '' }}
+                            </Label>
+                            <Textarea
+                                id="timeline_description"
+                                name="description"
+                                v-model="timelineForm.description"
+                                :placeholder="timelineForm.type === 'education' ? 'Descreva sua formação, participações, projetos, etc.' : timelineForm.type === 'project' ? 'Descreva o projeto, tecnologias utilizadas, objetivos alcançados, etc.' : 'Descreva o curso ou certificado'"
+                                :rows="4"
+                                :required="timelineForm.type === 'project'"
+                            />
+                            <InputError :message="timelineFormErrors.description?.[0]" />
+                        </div>
+
+                        <!-- Media URL - Obrigatória para Certificado -->
+                        <div class="grid gap-2">
+                            <Label for="timeline_media_url">
+                                URL do Certificado/Documento {{ timelineForm.type === 'certificate' ? '*' : '' }}
+                            </Label>
+                            <Input
+                                id="timeline_media_url"
+                                name="media_url"
+                                type="url"
+                                v-model="timelineForm.media_url"
+                                placeholder="https://exemplo.com/certificado.pdf"
+                                :required="timelineForm.type === 'certificate'"
+                            />
+                            <InputError :message="timelineFormErrors.media_url?.[0]" />
+                            <p class="text-xs text-gray-500">
+                                URL do certificado, diploma ou documento relacionado ao evento.
+                            </p>
+                        </div>
+
+                        <!-- Degree Type -->
+                        <div class="grid gap-2">
+                            <Label for="timeline_degree_type">Nível/Grau</Label>
+                            <Select
+                                id="timeline_degree_type"
+                                name="degree_type"
+                                v-model="timelineForm.degree_type"
+                            >
+                                <option value="">Selecione...</option>
+                                <option v-for="option in degreeTypeOptions" :key="option.value" :value="option.value">
+                                    {{ option.label }}
+                                </option>
+                            </Select>
+                            <InputError :message="timelineFormErrors.degree_type?.[0]" />
+                        </div>
+
+                        <!-- Is Public -->
+                        <div class="flex items-start gap-3 rounded-lg border border-gray-200 bg-gray-50 p-4">
+                            <Checkbox
+                                id="timeline_is_public"
+                                :checked="timelineForm.is_public"
+                                @update:checked="(checked: boolean) => timelineForm.is_public = checked"
+                            />
+                            <div class="grid gap-1">
+                                <Label for="timeline_is_public" class="cursor-pointer font-medium">
+                                    Evento Público
+                                </Label>
+                                <p class="text-xs text-gray-600">
+                                    Quando marcado, este evento será visível para pacientes. Projetos internos podem ser mantidos privados.
+                                </p>
+                                <InputError :message="timelineFormErrors.is_public?.[0]" />
+                            </div>
+                        </div>
+
+                        <!-- Order Priority -->
+                        <div class="grid gap-2">
+                            <Label for="timeline_order_priority">Prioridade de Ordenação</Label>
+                            <Input
+                                id="timeline_order_priority"
+                                name="order_priority"
+                                type="number"
+                                v-model.number="timelineForm.order_priority"
+                                min="0"
+                                placeholder="0"
+                            />
+                            <InputError :message="timelineFormErrors.order_priority?.[0]" />
+                            <p class="text-xs text-gray-500">
+                                Eventos com maior prioridade aparecem primeiro na timeline. Padrão: 0.
+                            </p>
+                        </div>
+
+                        <DialogFooter>
+                            <Button type="button" variant="outline" @click="closeTimelineModal" :disabled="isSubmittingTimeline">
+                                Cancelar
+                            </Button>
+                            <Button type="submit" :disabled="isSubmittingTimeline">
+                                <Loader2 v-if="isSubmittingTimeline" class="h-4 w-4 animate-spin mr-2" />
+                                {{ editingEventId ? 'Salvar Alterações' : 'Adicionar Evento' }}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
         </SettingsLayout>
     </AppLayout>
 </template>

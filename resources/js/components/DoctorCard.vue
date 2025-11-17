@@ -71,7 +71,7 @@ const formattedSelectedDate = computed(() => {
     <div :class="['bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-lg transition-shadow', props.class]">
         <div class="flex items-start gap-4 mb-4">
             <Avatar class="h-16 w-16">
-                <AvatarImage :src="doctor.user.avatar || undefined" />
+                <AvatarImage v-if="doctor.user.avatar" :src="doctor.user.avatar" />
                 <AvatarFallback class="bg-primary/10 text-primary text-lg font-semibold">
                     {{ getInitials(doctor.user.name) }}
                 </AvatarFallback>

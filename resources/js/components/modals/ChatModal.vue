@@ -239,7 +239,7 @@ onUnmounted(() => {
                                 class="flex items-center gap-3 p-3 cursor-pointer hover:bg-gray-50 transition-colors border-b border-gray-100"
                             >
                                 <Avatar class="h-10 w-10 flex-shrink-0">
-                                    <AvatarImage :src="conversation.avatar" :alt="conversation.name" />
+                                    <AvatarImage v-if="conversation.avatar" :src="conversation.avatar" :alt="conversation.name" />
                                     <AvatarFallback class="bg-gray-200 text-gray-600">
                                         {{ getInitials(conversation.name) }}
                                     </AvatarFallback>
@@ -281,6 +281,7 @@ onUnmounted(() => {
                             </button>
                             <Avatar class="h-8 w-8">
                                 <AvatarImage 
+                                    v-if="selectedConversation.avatar"
                                     :src="selectedConversation.avatar" 
                                     :alt="selectedConversation.name" 
                                 />
