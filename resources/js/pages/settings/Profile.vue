@@ -244,7 +244,13 @@ const saveTimelineEvent = async () => {
         
         const method = editingEventId.value ? 'put' : 'post';
         
-        const response = await axios[method](url, timelineForm.value);
+        // Preparar dados para envio, garantindo que is_public seja sempre boolean
+        const dataToSend = {
+            ...timelineForm.value,
+            is_public: Boolean(timelineForm.value.is_public),
+        };
+        
+        const response = await axios[method](url, dataToSend);
 
         if (response.data.success) {
             // Recarregar a página para atualizar os eventos e timeline_completed

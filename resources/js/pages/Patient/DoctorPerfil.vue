@@ -1,88 +1,211 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
+import Timeline from '@/components/Timeline.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/vue3';
 import { 
     Star, Bookmark, Heart, ChevronLeft, ChevronRight, 
-    GraduationCap, Briefcase, CheckCircle2, MessageCircle 
+    CheckCircle2, MessageCircle, Video
 } from 'lucide-vue-next';
 import * as patientRoutes from '@/routes/patient';
-import { onMounted, ref } from 'vue';
+import { onMounted, ref, computed } from 'vue';
 import { useRouteGuard } from '@/composables/auth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useInitials } from '@/composables/useInitials';
 
+interface TimelineEvent {
+    id: string;
+    type: 'education' | 'course' | 'certificate' | 'project';
+    type_label: string;
+    title: string;
+    subtitle?: string;
+    start_date: string;
+    end_date?: string;
+    description?: string;
+    media_url?: string;
+    degree_type?: string;
+    is_public: boolean;
+    extra_data?: Record<string, any>;
+    order_priority: number;
+    formatted_start_date: string;
+    formatted_end_date?: string;
+    date_range: string;
+    duration?: string;
+    is_in_progress: boolean;
+}
+
+interface AvailableDate {
+    date: string;
+    formatted_date: string;
+    day_of_week: string;
+    day_of_week_label: string;
+    available_slots: string[];
+}
+
+interface Doctor {
+    id: string;
+    name: string;
+    email: string;
+    avatar?: string | null;
+    avatar_thumbnail?: string | null;
+    crm?: string | null;
+    biography?: string | null;
+    languages: string;
+    consultation_fee?: number | null;
+    consultation_fee_formatted: string;
+    specialties: string[];
+    primary_specialty: string;
+    has_online_service: boolean;
+    has_presencial_service: boolean;
+    modalities: string[];
+    status: string;
+    timeline_events: TimelineEvent[];
+    timeline_completed: boolean;
+    available_dates: AvailableDate[];
+}
+
+interface Props {
+    doctor: Doctor;
+}
+
+const props = defineProps<Props>();
+
 const { canAccessPatientRoute } = useRouteGuard();
 const { getInitials } = useInitials();
 
 // Estado do calendário
-const selectedDate = ref(8);
-const selectedTime = ref('14:00');
-const currentMonth = ref('Maio 2024');
+const selectedDate = ref<string | null>(null);
+const selectedTime = ref<string | null>(null);
+const currentMonthStart = ref(new Date());
 
-// Horários disponíveis
-const availableTimes = [
-    '14:00', '14:30', '15:00', '15:30', '16:00'
-];
+// Computed properties
+const consultationPrice = computed(() => props.doctor.consultation_fee || 0);
+const consultationTime = computed(() => '45 minutos'); // Padrão do sistema
+const about = computed(() => props.doctor.biography || 'Informações não disponíveis.');
+const modalities = computed(() => props.doctor.modalities || []);
 
-// Dados do médico (estático)
-const doctor = {
-    name: 'Dra. Ana Silva',
-    specialty: 'Cardiologista',
-    avatar: null,
-    rating: 4.9,
-    reviewsCount: 128,
-    experience: '10 anos',
-    crm: '123456-SP',
-    languages: 'Português, Inglês',
-    about: 'Com mais de uma década de experiência em cardiologia clínica, Dra. Ana é dedicada a fornecer cuidados compassivos e baseados em evidências para ajudar seus pacientes a alcançarem uma saúde cardíaca ótima. Especialista em prevenção de doenças cardiovasculares e tratamento de condições crônicas.',
-    modalities: ['Online'],
-    availableToday: true,
-    consultationTime: '45 minutos',
-    consultationPrice: 350.00,
-    specialties: [
-        'Hipertensão',
-        'Aritmia',
-        'Prevenção Cardiovascular',
-        'Doença Coronariana',
-        'Check-up Cardiológico'
-    ],
-    timeline: [
-        {
-            type: 'education',
-            title: 'Residência em Cardiologia',
-            location: 'Hospital das Clínicas da FMUSP',
-            year: '2012'
-        },
-        {
-            type: 'work',
-            title: 'Cardiologista',
-            location: 'Hospital Sírio-Libanês',
-            period: '2012 - Presente'
-        }
-    ],
-    reviews: [
-        {
-            rating: 5,
-            comment: 'A Dra. Ana foi extremamente atenciosa e clara em suas explicações. Senti muita segurança no atendimento.',
-            patient: 'Carlos P.',
-            date: '12/04/2024'
-        },
-        {
-            rating: 5,
-            comment: 'Excelente profissional! Muito competente e humana. O tratamento proposto está fazendo toda a diferença.',
-            patient: 'Mariana S.',
-            date: '05/03/2024'
-        }
-    ],
-    verified: true
+// Calendário dinâmico
+const currentMonth = computed(() => {
+    const date = currentMonthStart.value;
+    const months = [
+        'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+        'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+    ];
+    return `${months[date.getMonth()]} ${date.getFullYear()}`;
+});
+
+// Datas disponíveis do mês atual
+const availableDatesInMonth = computed(() => {
+    const monthStart = new Date(currentMonthStart.value.getFullYear(), currentMonthStart.value.getMonth(), 1);
+    const monthEnd = new Date(currentMonthStart.value.getFullYear(), currentMonthStart.value.getMonth() + 1, 0);
+    
+    return props.doctor.available_dates?.filter(date => {
+        const dateObj = new Date(date.date);
+        return dateObj >= monthStart && dateObj <= monthEnd;
+    }) || [];
+});
+
+// Dias do calendário
+const calendarDays = computed(() => {
+    const year = currentMonthStart.value.getFullYear();
+    const month = currentMonthStart.value.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const startingDayOfWeek = firstDay.getDay(); // 0 = Domingo, 1 = Segunda, etc.
+    
+    const days: Array<{ day: number; date: string | null; isAvailable: boolean }> = [];
+    
+    // Dias do mês anterior (para completar a semana)
+    const prevMonth = new Date(year, month - 1, 0);
+    const daysInPrevMonth = prevMonth.getDate();
+    for (let i = startingDayOfWeek - 1; i >= 0; i--) {
+        days.push({ 
+            day: daysInPrevMonth - i, 
+            date: null, 
+            isAvailable: false 
+        });
+    }
+    
+    // Dias do mês atual
+    for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const availableDate = availableDatesInMonth.value.find(d => d.date === dateStr);
+        days.push({
+            day,
+            date: dateStr,
+            isAvailable: !!availableDate,
+        });
+    }
+    
+    // Completar a última semana se necessário
+    const remainingDays = 42 - days.length; // 6 semanas x 7 dias
+    for (let day = 1; day <= remainingDays; day++) {
+        days.push({ 
+            day, 
+            date: null, 
+            isAvailable: false 
+        });
+    }
+    
+    return days;
+});
+
+// Horários disponíveis para a data selecionada
+const availableTimes = computed(() => {
+    if (!selectedDate.value) return [];
+    
+    const availableDate = props.doctor.available_dates?.find(d => d.date === selectedDate.value);
+    return availableDate?.available_slots || [];
+});
+
+// Data formatada para exibição
+const selectedDateLabel = computed(() => {
+    if (!selectedDate.value) return '';
+    
+    const date = new Date(selectedDate.value);
+    const dayLabels = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+    const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+        'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+    
+    const availableDate = props.doctor.available_dates?.find(d => d.date === selectedDate.value);
+    const dayOfWeek = availableDate?.day_of_week_label || dayLabels[date.getDay()];
+    
+    return `${dayOfWeek}, ${date.getDate()} de ${months[date.getMonth()]}`;
+});
+
+// Funções do calendário
+const goToPreviousMonth = () => {
+    const newDate = new Date(currentMonthStart.value);
+    newDate.setMonth(newDate.getMonth() - 1);
+    currentMonthStart.value = newDate;
+    selectedDate.value = null;
+    selectedTime.value = null;
 };
 
-// Verificar acesso ao montar componente
+const goToNextMonth = () => {
+    const newDate = new Date(currentMonthStart.value);
+    newDate.setMonth(newDate.getMonth() + 1);
+    currentMonthStart.value = newDate;
+    selectedDate.value = null;
+    selectedTime.value = null;
+};
+
+const selectCalendarDate = (date: string | null) => {
+    if (date) {
+        selectedDate.value = date;
+        selectedTime.value = null;
+    }
+};
+
+// Selecionar primeira data disponível ao montar
 onMounted(() => {
     canAccessPatientRoute();
+    if (props.doctor.available_dates && props.doctor.available_dates.length > 0) {
+        selectedDate.value = props.doctor.available_dates[0].date;
+    }
 });
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -113,7 +236,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                     <div class="flex flex-col sm:flex-row gap-4">
                         <!-- Avatar -->
                         <Avatar class="h-24 w-24 flex-shrink-0">
-                            <AvatarImage :src="doctor.avatar" />
+                            <AvatarImage v-if="doctor.avatar || doctor.avatar_thumbnail" :src="doctor.avatar_thumbnail || doctor.avatar" />
                             <AvatarFallback class="bg-primary/10 text-primary text-2xl font-semibold">
                                 {{ getInitials(doctor.name) }}
                             </AvatarFallback>
@@ -124,21 +247,12 @@ const breadcrumbs: BreadcrumbItem[] = [
                             <div class="flex items-start justify-between mb-2">
                                 <div>
                                     <h1 class="text-2xl font-bold text-gray-900 mb-0.5">{{ doctor.name }}</h1>
-                                    <p class="text-base text-gray-600 mb-1.5">{{ doctor.specialty }}</p>
+                                    <p class="text-base text-gray-600 mb-1.5">{{ doctor.primary_specialty }}</p>
                                     <div class="flex items-center gap-2 mb-2">
-                                        <div class="flex items-center gap-0.5">
-                                            <Star 
-                                                v-for="i in 5" 
-                                                :key="i" 
-                                                class="h-4 w-4 text-primary fill-primary" 
-                                            />
+                                        <div v-if="doctor.timeline_completed" class="flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-medium">
+                                            <CheckCircle2 class="h-3 w-3" />
+                                            Perfil Completo
                                         </div>
-                                        <span class="text-sm font-semibold text-gray-900">
-                                            {{ doctor.rating }}
-                                        </span>
-                                        <span class="text-xs text-gray-500">
-                                            ({{ doctor.reviewsCount }} avaliações)
-                                        </span>
                                     </div>
                                 </div>
                                 <!-- Icons -->
@@ -165,19 +279,23 @@ const breadcrumbs: BreadcrumbItem[] = [
                             <!-- Tags -->
                             <div class="flex flex-wrap gap-2">
                                 <span 
-                                    v-if="doctor.modalities.includes('Online')"
-                                    class="px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium"
+                                    v-if="doctor.has_online_service"
+                                    class="px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium flex items-center gap-1"
                                 >
+                                    <Video class="h-3 w-3" />
                                     Atende online
                                 </span>
                                 <span 
-                                    v-if="doctor.availableToday"
+                                    v-if="doctor.has_presencial_service"
                                     class="px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium"
                                 >
-                                    Disponível hoje
+                                    Atende presencial
                                 </span>
-                                <span class="px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium">
-                                    +{{ doctor.experience }} de experiência
+                                <span 
+                                    v-if="doctor.crm"
+                                    class="px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium"
+                                >
+                                    CRM {{ doctor.crm }}
                                 </span>
                             </div>
                         </div>
@@ -192,20 +310,20 @@ const breadcrumbs: BreadcrumbItem[] = [
                     <CardContent class="space-y-3 pt-0">
                         <div>
                             <p class="text-xs text-gray-600 mb-0.5">Modalidade:</p>
-                            <p class="text-sm font-semibold text-gray-900">{{ doctor.modalities.join(', ') }}</p>
+                            <p class="text-sm font-semibold text-gray-900">{{ modalities.length > 0 ? modalities.join(', ') : 'Não configurado' }}</p>
                         </div>
                         <div>
                             <p class="text-xs text-gray-600 mb-0.5">Tempo Consulta:</p>
-                            <p class="text-sm font-semibold text-gray-900">{{ doctor.consultationTime }}</p>
+                            <p class="text-sm font-semibold text-gray-900">{{ consultationTime }}</p>
                         </div>
                         <div class="border-t border-gray-200 pt-3">
                             <p class="text-xs text-gray-600 mb-1">Valor da Consulta</p>
                             <p class="text-xl font-bold text-gray-900">
-                                R$ {{ doctor.consultationPrice.toFixed(2).replace('.', ',') }}
+                                {{ doctor.consultation_fee_formatted || 'A consultar' }}
                             </p>
                         </div>
                         <Button as-child class="w-full bg-primary hover:bg-primary/90 text-gray-900 font-semibold py-4 text-sm mt-2">
-                            <Link :href="patientRoutes.scheduleConsultation()">
+                            <Link :href="patientRoutes.scheduleConsultation({ query: { doctor_id: doctor.id } })">
                                 Agendar Consulta
                             </Link>
                         </Button>
@@ -220,15 +338,15 @@ const breadcrumbs: BreadcrumbItem[] = [
                     <!-- About Section -->
                     <Card>
                         <CardHeader>
-                            <CardTitle class="text-xl font-bold text-gray-900">Sobre a {{ doctor.name.split(' ')[0] }}</CardTitle>
+                            <CardTitle class="text-xl font-bold text-gray-900">Sobre {{ doctor.name.split(' ')[0] }}</CardTitle>
                         </CardHeader>
                         <CardContent class="space-y-4">
-                            <p class="text-gray-700 leading-relaxed">{{ doctor.about }}</p>
+                            <p class="text-gray-700 leading-relaxed">{{ about }}</p>
                             <div class="space-y-2 pt-4 border-t border-gray-200">
-                                <p class="text-sm text-gray-600">
+                                <p v-if="doctor.languages" class="text-sm text-gray-600">
                                     <span class="font-semibold">Idiomas:</span> {{ doctor.languages }}
                                 </p>
-                                <p class="text-sm text-gray-600">
+                                <p v-if="doctor.crm" class="text-sm text-gray-600">
                                     <span class="font-semibold">CRM:</span> {{ doctor.crm }}
                                 </p>
                             </div>
@@ -236,10 +354,10 @@ const breadcrumbs: BreadcrumbItem[] = [
                     </Card>
 
                     <!-- Specialties Section -->
-                    <Card>
+                    <Card v-if="doctor.specialties && doctor.specialties.length > 0">
                         <CardHeader>
                             <CardTitle class="text-xl font-bold text-gray-900">
-                                Especialidades & Condições Atendidas
+                                Especialidades
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
@@ -255,60 +373,32 @@ const breadcrumbs: BreadcrumbItem[] = [
                         </CardContent>
                     </Card>
 
-                    <!-- Experience & Education Section -->
-                    <Card>
+                    <!-- Experience & Education Section (Timeline) -->
+                    <Card v-if="doctor.timeline_events && doctor.timeline_events.length > 0">
                         <CardHeader>
                             <div class="flex items-center justify-between">
                                 <CardTitle class="text-xl font-bold text-gray-900">
-                                    Experiência & Formação
+                                    Formação & Certificações
                                 </CardTitle>
                                 <span 
-                                    v-if="doctor.verified"
+                                    v-if="doctor.timeline_completed"
                                     class="flex items-center gap-1 px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-medium"
                                 >
                                     <CheckCircle2 class="h-4 w-4" />
-                                    Perfil Verificado
+                                    Perfil Completo
                                 </span>
                             </div>
                         </CardHeader>
                         <CardContent>
-                            <div class="relative space-y-6">
-                                <div
-                                    v-for="(item, index) in doctor.timeline"
-                                    :key="index"
-                                    class="relative pl-10"
-                                >
-                                    <!-- Timeline dot -->
-                                    <div class="absolute left-0 top-1">
-                                        <div class="h-3 w-3 rounded-full bg-primary border-2 border-white"></div>
-                                    </div>
-                                    <!-- Timeline line -->
-                                    <div 
-                                        v-if="index < doctor.timeline.length - 1"
-                                        class="absolute left-1.5 top-4 h-full w-0.5 bg-gray-200"
-                                        style="height: calc(100% + 1.5rem);"
-                                    ></div>
-                                    <!-- Content -->
-                                    <div class="flex items-start gap-3">
-                                        <component 
-                                            :is="item.type === 'education' ? GraduationCap : Briefcase"
-                                            class="h-5 w-5 text-primary mt-0.5 flex-shrink-0"
-                                        />
-                                        <div>
-                                            <h4 class="font-semibold text-gray-900">{{ item.title }}</h4>
-                                            <p class="text-sm text-gray-600">{{ item.location }}</p>
-                                            <p class="text-xs text-gray-500 mt-1">
-                                                {{ item.year || item.period }}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                            <Timeline 
+                                :events="doctor.timeline_events" 
+                                :show-actions="false"
+                            />
                         </CardContent>
                     </Card>
 
-                    <!-- Reviews Section -->
-                    <Card>
+                    <!-- Reviews Section - Placeholder for future implementation -->
+                    <!-- <Card>
                         <CardHeader>
                             <div class="flex items-center justify-between">
                                 <CardTitle class="text-xl font-bold text-gray-900">
@@ -320,29 +410,9 @@ const breadcrumbs: BreadcrumbItem[] = [
                             </div>
                         </CardHeader>
                         <CardContent>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div
-                                    v-for="(review, index) in doctor.reviews"
-                                    :key="index"
-                                    class="p-4 rounded-lg bg-secondary/30 space-y-3"
-                                >
-                                    <div class="flex items-center gap-1">
-                                        <Star
-                                            v-for="i in review.rating"
-                                            :key="i"
-                                            class="h-4 w-4 text-primary fill-primary"
-                                        />
-                                    </div>
-                                    <p class="text-sm text-gray-700 leading-relaxed">
-                                        "{{ review.comment }}"
-                                    </p>
-                                    <div class="text-xs text-gray-500">
-                                        <span class="font-semibold">{{ review.patient }}</span> - {{ review.date }}
-                                    </div>
-                                </div>
-                            </div>
+                            <p class="text-sm text-gray-500">Avaliações estarão disponíveis em breve.</p>
                         </CardContent>
-                    </Card>
+                    </Card> -->
                 </div>
 
                 <!-- Right Column: Availability -->
@@ -361,11 +431,11 @@ const breadcrumbs: BreadcrumbItem[] = [
                         <CardContent class="space-y-3 pt-0">
                             <!-- Calendar Navigation -->
                             <div class="flex items-center justify-between">
-                                <Button variant="ghost" size="icon" class="h-7 w-7">
+                                <Button variant="ghost" size="icon" class="h-7 w-7" @click="goToPreviousMonth">
                                     <ChevronLeft class="h-3 w-3" />
                                 </Button>
                                 <span class="font-semibold text-xs text-gray-900">{{ currentMonth }}</span>
-                                <Button variant="ghost" size="icon" class="h-7 w-7">
+                                <Button variant="ghost" size="icon" class="h-7 w-7" @click="goToNextMonth">
                                     <ChevronRight class="h-3 w-3" />
                                 </Button>
                             </div>
@@ -383,33 +453,30 @@ const breadcrumbs: BreadcrumbItem[] = [
 
                             <!-- Calendar Days -->
                             <div class="grid grid-cols-7 gap-0.5 mb-3">
-                                <!-- Previous month days -->
-                                <div class="text-center text-xs text-gray-300 py-0.5">28</div>
-                                <div class="text-center text-xs text-gray-300 py-0.5">29</div>
-                                <div class="text-center text-xs text-gray-300 py-0.5">30</div>
-                                
-                                <!-- Current month days -->
                                 <div
-                                    v-for="day in 31"
-                                    :key="day"
-                                    @click="selectedDate = day"
+                                    v-for="(calendarDay, index) in calendarDays"
+                                    :key="index"
+                                    @click="calendarDay.isAvailable ? selectCalendarDate(calendarDay.date) : null"
                                     :class="[
-                                        'text-center text-xs py-0.5 rounded cursor-pointer transition-colors',
-                                        day === selectedDate
+                                        'text-center text-xs py-0.5 rounded transition-colors',
+                                        calendarDay.isAvailable
+                                            ? 'cursor-pointer text-gray-900 hover:bg-gray-100'
+                                            : 'text-gray-300 cursor-not-allowed',
+                                        calendarDay.date && selectedDate === calendarDay.date
                                             ? 'bg-primary text-white font-semibold'
-                                            : 'text-gray-900 hover:bg-gray-100'
+                                            : ''
                                     ]"
                                 >
-                                    {{ day }}
+                                    {{ calendarDay.day }}
                                 </div>
                             </div>
 
                             <!-- Available Times -->
-                            <div class="space-y-1.5">
+                            <div v-if="selectedDate" class="space-y-1.5">
                                 <h3 class="text-xs font-medium text-gray-900">
-                                    Horários para Quarta, {{ selectedDate }} de Maio
+                                    Horários para {{ selectedDateLabel }}
                                 </h3>
-                                <div class="grid grid-cols-1 gap-1.5">
+                                <div v-if="availableTimes.length > 0" class="grid grid-cols-1 gap-1.5">
                                     <button
                                         v-for="time in availableTimes"
                                         :key="time"
@@ -424,6 +491,14 @@ const breadcrumbs: BreadcrumbItem[] = [
                                         {{ time }}
                                     </button>
                                 </div>
+                                <p v-else class="text-xs text-gray-500 text-center py-2">
+                                    Nenhum horário disponível nesta data
+                                </p>
+                            </div>
+                            <div v-else class="space-y-1.5">
+                                <p class="text-xs text-gray-500 text-center py-2">
+                                    Selecione uma data para ver os horários disponíveis
+                                </p>
                             </div>
                         </CardContent>
                     </Card>

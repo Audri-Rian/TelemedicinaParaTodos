@@ -116,6 +116,24 @@ class UpdateTimelineEventRequest extends FormRequest
      */
     protected function prepareForValidation(): void
     {
+        // Converter is_public para boolean
+        if ($this->has('is_public')) {
+            $isPublic = $this->input('is_public');
+            
+            // Converter strings e números para boolean
+            if (is_string($isPublic)) {
+                $isPublic = in_array(strtolower($isPublic), ['true', '1', 'yes', 'on']);
+            } elseif (is_numeric($isPublic)) {
+                $isPublic = (bool) $isPublic;
+            } else {
+                $isPublic = (bool) $isPublic;
+            }
+            
+            $this->merge([
+                'is_public' => $isPublic,
+            ]);
+        }
+        
         // Se start_date foi atualizado, validar end_date em relação ao novo start_date
         if ($this->has('start_date') && $this->has('end_date')) {
             $this->merge([

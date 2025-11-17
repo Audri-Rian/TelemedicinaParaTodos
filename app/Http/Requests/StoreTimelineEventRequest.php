@@ -70,6 +70,35 @@ class StoreTimelineEventRequest extends FormRequest
     }
 
     /**
+     * Prepare the data for validation.
+     */
+    protected function prepareForValidation(): void
+    {
+        // Converter is_public para boolean
+        if ($this->has('is_public')) {
+            $isPublic = $this->input('is_public');
+            
+            // Converter strings e números para boolean
+            if (is_string($isPublic)) {
+                $isPublic = in_array(strtolower($isPublic), ['true', '1', 'yes', 'on']);
+            } elseif (is_numeric($isPublic)) {
+                $isPublic = (bool) $isPublic;
+            } else {
+                $isPublic = (bool) $isPublic;
+            }
+            
+            $this->merge([
+                'is_public' => $isPublic,
+            ]);
+        } else {
+            // Se não foi enviado, usar true como padrão
+            $this->merge([
+                'is_public' => true,
+            ]);
+        }
+    }
+
+    /**
      * Get custom messages for validator errors.
      *
      * @return array<string, string>
