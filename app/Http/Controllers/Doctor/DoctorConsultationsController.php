@@ -24,7 +24,9 @@ class DoctorConsultationsController extends Controller
 
         $doctor = $currentUser->doctor;
 
-        $patients = Patient::with('user')->get();
+        $patients = Patient::with('user')
+            ->active()
+            ->get();
         $patientIds = $patients->pluck('id');
 
         $appointments = Appointments::where('doctor_id', $doctor->id)
@@ -112,9 +114,27 @@ class DoctorConsultationsController extends Controller
                     } elseif ($appointment->scheduled_at->lessThan($startWindow)) {
                         $timeWindowMessage = __('Janela de tempo expirada');
                     } else {
-                        $timeWindowMessage = __('Início em :minutes min', [
-                            'minutes' => $now->diffInMinutes($appointment->scheduled_at, false),
-                        ]);
+                        $daysUntil = (int) $now->diffInDays($appointment->scheduled_at, false);
+                        if ($daysUntil > 0) {
+                            $dayText = $daysUntil === 1 ? 'dia' : 'dias';
+                            $timeWindowMessage = __('Agendado para :days :day_text', [
+                                'days' => $daysUntil,
+                                'day_text' => $dayText,
+                            ]);
+                        } else {
+                            $hoursUntil = (int) $now->diffInHours($appointment->scheduled_at, false);
+                            if ($hoursUntil > 0) {
+                                $hourText = $hoursUntil === 1 ? 'hora' : 'horas';
+                                $timeWindowMessage = __('Início em :hours :hour_text', [
+                                    'hours' => $hoursUntil,
+                                    'hour_text' => $hourText,
+                                ]);
+                            } else {
+                                $timeWindowMessage = __('Início em :minutes min', [
+                                    'minutes' => $now->diffInMinutes($appointment->scheduled_at, false),
+                                ]);
+                            }
+                        }
                     }
                 } elseif ($appointment->status === Appointments::STATUS_COMPLETED) {
                     $timeWindowMessage = __('Consulta finalizada');

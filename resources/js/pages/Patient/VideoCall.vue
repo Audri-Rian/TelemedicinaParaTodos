@@ -121,6 +121,8 @@ const finalizeBackendAppointment = async () => {
                     status: 'completed',
                 }
                 : null,
+            canStartCall: false,
+            timeWindowMessage: 'Consulta finalizada',
         };
     } catch (error) {
         // silencioso
@@ -147,6 +149,7 @@ const callUser = async () => {
     const started = await startBackendAppointment();
 
     if (!started && selectedUser.value.appointment?.status !== 'in_progress') {
+        alert('Não foi possível iniciar a consulta. Verifique o agendamento.');
         return;
     }
     

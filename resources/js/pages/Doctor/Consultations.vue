@@ -5,10 +5,22 @@ import axios from 'axios';
 import { ref, onMounted, onUnmounted } from 'vue';
 import { useVideoCall } from '@/composables/useVideoCall';
 import * as appointmentsRoutes from '@/routes/appointments';
+import * as doctorRoutes from '@/routes/doctor';
+import { type BreadcrumbItem } from '@/types';
+import { useRouteGuard } from '@/composables/auth';
 
-defineOptions({
-    layout: AppLayout,
-});
+const { canAccessDoctorRoute } = useRouteGuard();
+
+const breadcrumbs: BreadcrumbItem[] = [
+    {
+        title: 'Dashboard',
+        href: doctorRoutes.dashboard().url,
+    },
+    {
+        title: 'Consultas',
+        href: doctorRoutes.consultations().url,
+    },
+];
 
 interface Appointment {
     id: string;
@@ -37,12 +49,15 @@ const auth = page.props.auth as AuthUser;
 const users = (page.props.users as User[]) || [];
 
 const selectedUser = ref<User | null>(null);
+const isMuted = ref(false);
+const isVideoEnabled = ref(true);
 
 const {
     isCalling,
     hasRemoteStream,
     remoteVideoRef,
     localVideoRef,
+    localStreamRef,
     callUser: initiateCall,
     endCall: endVideoCall,
     initialize,
@@ -55,6 +70,8 @@ const {
     },
     onCallEnd: async () => {
         await finalizeBackendAppointment();
+        isMuted.value = false;
+        isVideoEnabled.value = true;
     },
 });
 
@@ -82,6 +99,10 @@ const startBackendAppointment = async (): Promise<boolean> => {
 
         return true;
     } catch (error: any) {
+        const message = error?.response?.data?.message;
+        if (message) {
+            alert(message);
+        }
         return false;
     }
 };
@@ -141,11 +162,31 @@ const callUser = async () => {
 };
 
 const endCall = async () => {
-    endVideoCall();
-    await finalizeBackendAppointment();
+    await endVideoCall();
+};
+
+const toggleMute = () => {
+    if (localStreamRef.value) {
+        const audioTracks = localStreamRef.value.getAudioTracks();
+        audioTracks.forEach(track => {
+            track.enabled = !track.enabled;
+        });
+        isMuted.value = !isMuted.value;
+    }
+};
+
+const toggleVideo = () => {
+    if (localStreamRef.value) {
+        const videoTracks = localStreamRef.value.getVideoTracks();
+        videoTracks.forEach(track => {
+            track.enabled = !track.enabled;
+        });
+        isVideoEnabled.value = !isVideoEnabled.value;
+    }
 };
 
 onMounted(() => {
+    canAccessDoctorRoute();
     initialize();
 });
 
@@ -157,123 +198,282 @@ onUnmounted(() => {
 <template>
     <Head title="Consultas - Videoconferência Médica" />
     
-    <div class="h-screen flex bg-gray-100" style="height: 90vh;">
-        <!-- Sidebar -->
-        <div class="w-1/4 bg-white border-r border-gray-200">
-            <div class="p-4 bg-gray-100 font-bold text-lg border-b border-gray-200">
-                Pacientes Disponíveis
-            </div>
-            <div class="p-4 space-y-4">
-                <!-- Lista de Contatos -->
-                <div
-                    v-for="user in users"
-                    :key="user.id"
-                    @click="selectedUser = user"
-                    :class="[
-                        'flex items-center p-2 hover:bg-blue-500 hover:text-white rounded cursor-pointer transition-colors',
-                        user.id === selectedUser?.id ? 'bg-primary text-white' : ''
-                    ]"
-                >
-                    <div class="w-12 h-12 bg-blue-200 rounded-full flex items-center justify-center">
-                        <span class="text-blue-600 font-semibold">
-                            {{ user.name?.charAt(0)?.toUpperCase() || 'U' }}
-                        </span>
+    <AppLayout :breadcrumbs="breadcrumbs">
+        <div class="flex h-full flex-1 flex-col overflow-hidden" style="height: 90vh;">
+            <!-- Área Principal de Vídeo -->
+            <div v-if="isCalling && selectedUser" class="flex-1 flex flex-col bg-gray-900">
+                <!-- Barra Superior com Informações -->
+                <div class="bg-gray-800/90 backdrop-blur-sm px-6 py-3 flex items-center justify-between border-b border-gray-700">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
+                            <span class="text-gray-900 font-bold text-sm">
+                                {{ selectedUser.name?.charAt(0)?.toUpperCase() || 'P' }}
+                            </span>
+                        </div>
+                        <div>
+                            <div class="text-white font-semibold">{{ selectedUser.name }}</div>
+                            <div class="text-gray-400 text-sm">Consultando</div>
+                        </div>
                     </div>
-                    <div class="ml-4">
-                        <div class="font-semibold">{{ user.name }}</div>
-                        <div class="text-sm text-gray-500">{{ user.email }}</div>
-                        <div
-                            class="text-xs mt-1"
-                            :class="user.canStartCall ? 'text-green-600' : 'text-gray-500'"
-                        >
-                            {{ user.timeWindowMessage || 'Sem agendamento' }}
+                    <div class="text-primary text-sm font-medium">00:00</div>
+                </div>
+
+                <!-- Container Principal de Vídeo -->
+                <div class="flex-1 flex gap-4 p-4 relative">
+                    <!-- Vídeo Remoto (Paciente) -->
+                    <div class="flex-1 relative bg-gray-950 rounded-lg overflow-hidden">
+                        <video 
+                            ref="remoteVideoRef" 
+                            autoplay 
+                            playsinline 
+                            class="w-full h-full object-cover"
+                        ></video>
+                        <div v-if="!hasRemoteStream" class="absolute inset-0 w-full h-full flex items-center justify-center bg-gray-950 z-10">
+                            <div class="text-center">
+                                <div class="w-20 h-20 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <svg class="w-10 h-10 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                    </svg>
+                                </div>
+                                <p class="text-gray-400">Aguardando conexão...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Vídeo Local (Médico) -->
+                    <div class="w-80 h-96 relative bg-gray-950 rounded-lg overflow-hidden border-2 border-primary/30">
+                        <video 
+                            ref="localVideoRef" 
+                            autoplay 
+                            playsinline 
+                            muted
+                            class="w-full h-full object-cover"
+                            v-if="isVideoEnabled"
+                        ></video>
+                        <div v-else class="w-full h-full flex items-center justify-center bg-gray-950">
+                            <div class="text-center">
+                                <div class="w-16 h-16 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                                    <svg class="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                    </svg>
+                                </div>
+                                <p class="text-gray-400 text-sm">{{ auth.user.name }}</p>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
 
-        <!-- Área de Chamadas -->
-        <div class="flex flex-col w-3/4">
-            <div v-if="!selectedUser" class="h-full flex justify-center items-center text-gray-800 font-bold">
-                Selecione um Paciente para Consulta
-            </div>
-            
-            <div v-if="selectedUser">
-                <!-- Cabeçalho do Contato -->
-                <div class="p-4 border-b border-gray-200 flex items-center">
-                    <div class="w-12 h-12 bg-blue-200 rounded-full flex items-center justify-center">
-                        <span class="text-blue-600 font-semibold">
-                            {{ selectedUser.name?.charAt(0)?.toUpperCase() || 'U' }}
-                        </span>
+                <!-- Controles Inferiores -->
+                <div class="bg-gray-800/90 backdrop-blur-sm px-6 py-4 border-t border-gray-700">
+                    <div class="flex items-center justify-center gap-4">
+                        <!-- Mute/Desmute -->
+                        <button
+                            @click="toggleMute"
+                            :class="[
+                                'w-12 h-12 rounded-full flex items-center justify-center transition-all',
+                                isMuted 
+                                    ? 'bg-red-500 hover:bg-red-600' 
+                                    : 'bg-gray-700 hover:bg-gray-600'
+                            ]"
+                            title="Microfone"
+                        >
+                            <svg v-if="isMuted" class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+                            </svg>
+                            <svg v-else class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                            </svg>
+                        </button>
+
+                        <!-- Liga/Desliga Vídeo -->
+                        <button
+                            @click="toggleVideo"
+                            :class="[
+                                'w-12 h-12 rounded-full flex items-center justify-center transition-all',
+                                isVideoEnabled 
+                                    ? 'bg-gray-700 hover:bg-gray-600' 
+                                    : 'bg-red-500 hover:bg-red-600'
+                            ]"
+                            title="Câmera"
+                        >
+                            <svg v-if="isVideoEnabled" class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                            <svg v-else class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                            </svg>
+                        </button>
+
+                        <!-- Desligar -->
+                        <button
+                            v-if="isCalling"
+                            @click="endCall"
+                            class="w-14 h-14 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center transition-all shadow-lg"
+                            title="Encerrar Chamada"
+                        >
+                            <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
                     </div>
-                    <div class="ml-4 flex items-center justify-between w-full">
-                        <div class="font-bold">{{ selectedUser.name }}</div>
-                        <div>
-                            <button
-                                v-if="!isCalling"
-                                @click="callUser"
-                                :disabled="!selectedUser.canStartCall"
-                                :class="[
-                                    'px-4 py-2 rounded-lg transition-colors',
-                                    selectedUser.canStartCall
-                                        ? 'bg-primary text-white hover:bg-blue-600'
-                                        : 'bg-gray-300 text-gray-500 cursor-not-allowed',
-                                ]"
-                            >
-                                Iniciar Consulta
-                            </button>
-                            <button
-                                v-if="isCalling"
-                                @click="endCall"
-                                class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
-                            >
-                                Encerrar Chamada
-                            </button>
-                            <p
-                                v-if="!isCalling && selectedUser && !selectedUser.canStartCall"
-                                class="text-xs text-gray-500 mt-2"
-                            >
-                                {{ selectedUser.timeWindowMessage || 'Sem agendamento disponível.' }}
+                </div>
+            </div>
+
+            <!-- Tela Inicial - Seleção de Paciente -->
+            <div v-else class="flex-1 flex bg-gray-50">
+                <!-- Sidebar com Pacientes -->
+                <div class="w-80 bg-white border-r border-gray-200 flex flex-col">
+                    <div class="p-6 border-b border-gray-200">
+                        <h2 class="text-xl font-bold text-gray-900">Pacientes Disponíveis</h2>
+                        <p class="text-sm text-gray-600 mt-1">Selecione um paciente para iniciar a consulta</p>
+                    </div>
+                    <div class="flex-1 overflow-y-auto p-4 space-y-2">
+                        <div
+                            v-for="user in users"
+                            :key="user.id"
+                            @click="selectedUser = user"
+                            :class="[
+                                'flex items-center p-3 rounded-lg cursor-pointer transition-all',
+                                user.id === selectedUser?.id 
+                                    ? 'bg-primary text-gray-900 shadow-md' 
+                                    : 'hover:bg-gray-100'
+                            ]"
+                        >
+                            <div :class="[
+                                'w-12 h-12 rounded-full flex items-center justify-center font-semibold',
+                                user.id === selectedUser?.id 
+                                    ? 'bg-gray-900 text-primary' 
+                                    : 'bg-primary/20 text-primary'
+                            ]">
+                                {{ user.name?.charAt(0)?.toUpperCase() || 'P' }}
+                            </div>
+                            <div class="ml-3 flex-1">
+                                <div :class="[
+                                    'font-semibold',
+                                    user.id === selectedUser?.id ? 'text-gray-900' : 'text-gray-900'
+                                ]">{{ user.name }}</div>
+                                <div class="text-sm text-gray-500">{{ user.email }}</div>
+                                <!-- Badge de Agendamento -->
+                                <div v-if="user.hasAppointment" class="flex items-center gap-1 mt-1">
+                                    <span :class="[
+                                        'text-xs px-2 py-0.5 rounded-full',
+                                        user.canStartCall 
+                                            ? 'bg-green-100 text-green-700' 
+                                            : 'bg-yellow-100 text-yellow-700'
+                                    ]">
+                                        {{ user.timeWindowMessage || 'Agendado' }}
+                                    </span>
+                                </div>
+                                <div v-else class="text-xs text-gray-400 mt-1">
+                                    Sem agendamento
+                                </div>
+                            </div>
+                            <svg v-if="user.id === selectedUser?.id" class="w-5 h-5 text-gray-900" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Área Central de Seleção -->
+                <div class="flex-1 flex flex-col items-center justify-center bg-gray-50">
+                    <div v-if="!selectedUser" class="text-center">
+                        <div class="w-24 h-24 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <svg class="w-12 h-12 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                        </div>
+                        <h3 class="text-2xl font-bold text-gray-900 mb-2">Videoconferência Médica</h3>
+                        <p class="text-gray-600 mb-4">Selecione um paciente da lista ao lado para iniciar a consulta</p>
+                        <div class="mt-4 p-3 bg-gray-100 rounded-lg max-w-md">
+                            <p class="text-xs text-gray-600 text-center">
+                                <strong>Importante:</strong> É necessário ter um agendamento para iniciar a chamada.<br/>
+                                A chamada só pode ser iniciada 10 minutos antes ou depois do horário agendado.
+                            </p>
+                        </div>
+                    </div>
+                    <div v-else class="text-center max-w-md">
+                        <div class="w-24 h-24 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <div class="w-20 h-20 bg-primary rounded-full flex items-center justify-center">
+                                <span class="text-gray-900 font-bold text-2xl">
+                                    {{ selectedUser.name?.charAt(0)?.toUpperCase() || 'P' }}
+                                </span>
+                            </div>
+                        </div>
+                        <h3 class="text-2xl font-bold text-gray-900 mb-2">{{ selectedUser.name }}</h3>
+                        <p class="text-gray-600 mb-4">{{ selectedUser.email }}</p>
+                        
+                        <!-- Informações de Agendamento -->
+                        <div v-if="selectedUser.hasAppointment && selectedUser.appointment" class="mb-6 p-4 bg-white rounded-lg border border-gray-200 shadow-sm">
+                            <div class="flex items-center justify-center gap-2 mb-2">
+                                <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                <span class="font-semibold text-gray-900">Agendamento</span>
+                            </div>
+                            <p class="text-sm text-gray-700 mb-1">
+                                <strong>Data:</strong> {{ selectedUser.appointment.formatted_date }}
+                            </p>
+                            <p class="text-sm text-gray-700 mb-2">
+                                <strong>Horário:</strong> {{ selectedUser.appointment.formatted_time }}
+                            </p>
+                            <div :class="[
+                                'inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium',
+                                selectedUser.canStartCall 
+                                    ? 'bg-green-100 text-green-700' 
+                                    : 'bg-yellow-100 text-yellow-700'
+                            ]">
+                                <svg v-if="selectedUser.canStartCall" class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                                </svg>
+                                <svg v-else class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                                </svg>
+                                {{ selectedUser.timeWindowMessage || 'Status do agendamento' }}
+                            </div>
+                        </div>
+                        
+                        <!-- Mensagem quando não tem agendamento -->
+                        <div v-else class="mb-6 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                            <div class="flex items-center justify-center gap-2 mb-2">
+                                <svg class="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                                <span class="font-semibold text-yellow-800">Atenção</span>
+                            </div>
+                            <p class="text-sm text-yellow-700">
+                                Este paciente não possui um agendamento para iniciar a chamada.
+                            </p>
+                        </div>
+                        
+                        <button
+                            @click="callUser"
+                            :disabled="!selectedUser.canStartCall"
+                            :class="[
+                                'px-8 py-3 rounded-lg transition-all font-semibold shadow-lg flex items-center gap-2 mx-auto',
+                                selectedUser.canStartCall
+                                    ? 'bg-primary text-gray-900 hover:bg-primary/90'
+                                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                            ]"
+                        >
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
+                            </svg>
+                            Iniciar Consulta
+                        </button>
+                        
+                        <!-- Informações sobre a janela de tempo -->
+                        <div class="mt-6 p-3 bg-gray-100 rounded-lg">
+                            <p class="text-xs text-gray-600 text-center">
+                                <strong>Lembrete:</strong> A chamada só pode ser iniciada na janela de tempo permitida<br/>
+                                (10 minutos antes ou depois do horário agendado)
                             </p>
                         </div>
                     </div>
                 </div>
-
-                <!-- Área de Chamada -->
-                <div class="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 relative">
-                    <div v-if="isCalling" class="relative">
-                        <video 
-                            id="remoteVideo" 
-                            ref="remoteVideoRef" 
-                            autoplay 
-                            playsinline 
-                            muted 
-                            class="border-2 border-gray-800 w-full rounded-lg"
-                        ></video>
-                        <div
-                            v-if="!hasRemoteStream"
-                            class="absolute inset-0 flex items-center justify-center bg-gray-900/70 text-white font-semibold rounded-lg"
-                        >
-                            Aguardando conexão...
-                        </div>
-                        <video 
-                            id="localVideo" 
-                            ref="localVideoRef" 
-                            autoplay 
-                            playsinline 
-                            muted 
-                            class="border-2 border-gray-800 absolute top-6 right-6 w-4/12 rounded-lg"
-                            style="margin: 0;"
-                        ></video>
-                    </div>
-                    
-                    <div v-if="!isCalling" class="h-full flex justify-center items-center text-gray-800 font-bold">
-                        {{ selectedUser?.timeWindowMessage || 'Nenhuma Consulta em Andamento.' }}
-                    </div>
-                </div>
             </div>
         </div>
-    </div>
+    </AppLayout>
 </template>
 
