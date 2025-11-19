@@ -207,25 +207,15 @@ class AvailabilityService
         $startMinutes = (int)$startHour * 60 + (int)$startMin;
         $endMinutes = (int)$endHour * 60 + (int)$endMin;
         
-        // Intervalo de almoço: 12:00-14:00 (720-840 minutos)
-        $lunchStart = 12 * 60;
-        $lunchEnd = 14 * 60;
-        
         $currentMinutes = $startMinutes;
         $slotDuration = 45; // 45 minutos
         
         while ($currentMinutes + $slotDuration <= $endMinutes) {
             $slotEnd = $currentMinutes + $slotDuration;
-            
-            // Pular intervalo de almoço
-            if (!($currentMinutes >= $lunchStart && $currentMinutes < $lunchEnd) &&
-                !($slotEnd > $lunchStart && $slotEnd <= $lunchEnd) &&
-                !($currentMinutes < $lunchStart && $slotEnd > $lunchEnd)) {
                 
                 $hours = floor($currentMinutes / 60);
                 $minutes = $currentMinutes % 60;
                 $slots[] = sprintf('%02d:%02d', $hours, $minutes);
-            }
             
             $currentMinutes += $slotDuration;
         }

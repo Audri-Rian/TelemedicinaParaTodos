@@ -3,7 +3,6 @@ import { usePage } from '@inertiajs/vue3';
 import axios from 'axios';
 import Peer from 'peerjs';
 import Echo from 'laravel-echo';
-import Pusher from 'pusher-js';
 
 interface User {
     id: number;
@@ -301,14 +300,20 @@ export function useVideoCall(options: UseVideoCallOptions = {}) {
      */
     const connectWebSocket = () => {
         try {
-            // Configurar Echo com Reverb
+            const reverbConfig = (page.props as any)?.reverb;
+
+            if (!reverbConfig) {
+                console.warn('Reverb não configurado. Adicione os dados no middleware HandleInertiaRequests.');
+                return;
+            }
+
             echoInstance = new Echo({
                 broadcaster: 'reverb',
-                key: import.meta.env.VITE_REVERB_APP_KEY,
-                wsHost: import.meta.env.VITE_REVERB_HOST,
-                wsPort: import.meta.env.VITE_REVERB_PORT,
-                wssPort: import.meta.env.VITE_REVERB_PORT,
-                forceTLS: (import.meta.env.VITE_REVERB_SCHEME ?? 'https') === 'https',
+                key: reverbConfig.key,
+                wsHost: reverbConfig.host,
+                wsPort: reverbConfig.port,
+                wssPort: reverbConfig.port,
+                forceTLS: reverbConfig.scheme === 'https',
                 enabledTransports: ['ws', 'wss'],
             });
 

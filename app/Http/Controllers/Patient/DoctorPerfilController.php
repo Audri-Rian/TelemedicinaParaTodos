@@ -33,13 +33,15 @@ class DoctorPerfilController extends Controller
             abort(404, 'Médico não encontrado');
         }
 
+        // Garantir disponibilidade inicial para médicos novos
+        $this->scheduleService->ensureDefaultAvailability($doctor);
+
         $user = $doctor->user;
 
-        // Carregar timeline events (apenas públicos e filtrados para pacientes)
-        // Mostrar apenas: education e certificate (públicos), excluir projetos privados
+        // Carregar timeline events (apenas públicos)
+        // Mostrar todos os tipos de eventos públicos: education, course, certificate e project
         $timelineEvents = $user->timelineEvents()
             ->where('is_public', true)
-            ->whereIn('type', ['education', 'certificate']) // Apenas educação e certificados
             ->ordered()
             ->get()
             ->map(function ($event) {

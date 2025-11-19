@@ -7,6 +7,7 @@ use App\Http\Requests\Auth\DoctorRegistrationRequest;
 use App\Models\Doctor;
 use App\Models\User;
 use App\Models\Specialization;
+use App\Services\Doctor\ScheduleService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
@@ -15,6 +16,10 @@ use Inertia\Response;
 
 class DoctorRegistrationController extends Controller
 {
+    public function __construct(
+        protected ScheduleService $scheduleService,
+    ) {}
+
     /**
      * Show the doctor registration form.
      */
@@ -51,6 +56,9 @@ class DoctorRegistrationController extends Controller
                 if (!empty($request->specializations)) {
                     $doctor->specializations()->attach($request->specializations);
                 }
+
+                // Criar agenda padrão para novos médicos
+                $this->scheduleService->ensureDefaultAvailability($doctor);
 
                 return $user;
             });

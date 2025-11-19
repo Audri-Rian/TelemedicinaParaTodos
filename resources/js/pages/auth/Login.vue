@@ -2,6 +2,7 @@
 import { store as storeRoute } from '@/actions/App/Http/Controllers/Auth/AuthenticatedSessionController';
 import BackgroundDecorativo from '@/components/BackgroundDecorativo.vue';
 import InputError from '@/components/InputError.vue';
+import LottieAnimation from '@/components/LottieAnimation.vue';
 import TextLink from '@/components/TextLink.vue';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -158,12 +159,14 @@ const submit = () => {
                         </div>
                     </form>
 
-                    <!-- Image Section -->
-                    <div class="relative hidden bg-muted md:block">
-                        <img
-                            src="/placeholder.svg"
-                            alt="Consulta médica"
-                            class="absolute inset-0 h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
+                    <!-- Animation Section -->
+                    <div class="relative hidden bg-muted md:flex items-center justify-center p-8">
+                        <LottieAnimation
+                            src="/animations/Doctor.lottie"
+                            :width="350"
+                            :height="350"
+                            :autoplay="true"
+                            :loop="true"
                         />
                     </div>
                 </CardContent>

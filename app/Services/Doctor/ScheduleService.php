@@ -64,10 +64,19 @@ class ScheduleService
             });
 
         // Carregar slots de disponibilidade específicos
+        $today = Carbon::today();
+        $nowTime = Carbon::now()->format('H:i:s');
+
         $specificSlots = $doctor->availabilitySlots()
             ->where('type', AvailabilitySlot::TYPE_SPECIFIC)
             ->where('is_active', true)
-            ->where('specific_date', '>=', Carbon::today())
+            ->where(function ($query) use ($today, $nowTime) {
+                $query->where('specific_date', '>', $today->toDateString())
+                    ->orWhere(function ($subQuery) use ($today, $nowTime) {
+                        $subQuery->where('specific_date', $today->toDateString())
+                            ->where('start_time', '>=', $nowTime);
+                    });
+            })
             ->with('location')
             ->orderBy('specific_date')
             ->orderBy('start_time')
@@ -265,6 +274,124 @@ class ScheduleService
             'is_blocked' => false,
             'available_slots' => $availableSlots,
         ];
+    }
+
+    /**
+     * Garante que um médico possua uma disponibilidade inicial caso ainda não tenha configurado.
+     */
+    public function ensureDefaultAvailability(Doctor $doctor): void
+    {
+        if ($doctor->availabilitySlots()->exists()) {
+            return;
+        }
+
+        $defaults = config('telemedicine.doctor_defaults', []);
+        $workDays = $defaults['work_days'] ?? ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+
+        if (!empty($defaults['include_saturday']) && !in_array('saturday', $workDays, true)) {
+            $workDays[] = 'saturday';
+        }
+
+        $workHours = $defaults['work_hours'] ?? ['start' => '08:00', 'end' => '18:00'];
+        $slotDuration = (int) ($defaults['slot_duration_minutes'] ?? 45);
+        $lunchBreak = $defaults['lunch_break'] ?? ['start' => '12:00', 'end' => '14:00'];
+
+        $teleLocation = $doctor->serviceLocations()
+            ->where('type', ServiceLocation::TYPE_TELECONSULTATION)
+            ->first();
+
+        if (!$teleLocation) {
+            $teleLocation = $this->availabilityService->createServiceLocation(
+                $doctor,
+                $defaults['telehealth_location']['name'] ?? 'Teleconsulta (Padrão)',
+                ServiceLocation::TYPE_TELECONSULTATION,
+                $defaults['telehealth_location']['address'] ?? null,
+                $defaults['telehealth_location']['phone'] ?? null,
+                $defaults['telehealth_location']['description'] ?? 'Atendimento remoto via videoconferência.'
+            );
+        }
+
+        $availabilitySchedule = $doctor->availability_schedule ?? [];
+        $allDays = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
+
+        foreach ($allDays as $day) {
+            if (!in_array($day, $workDays, true)) {
+                $availabilitySchedule[$day] = $availabilitySchedule[$day] ?? null;
+                continue;
+            }
+
+            $start = $workHours['start'] ?? '08:00';
+            $end = $workHours['end'] ?? '18:00';
+            $slots = $this->generateDefaultSlots($start, $end, $slotDuration, $lunchBreak);
+
+            $availabilitySchedule[$day] = [
+                'start' => $start,
+                'end' => $end,
+                'slots' => $slots,
+            ];
+
+            $this->availabilityService->createRecurringSlot(
+                $doctor,
+                $day,
+                $start,
+                $end,
+                $teleLocation->id
+            );
+        }
+
+        $doctor->availability_schedule = $availabilitySchedule;
+        $doctor->save();
+    }
+
+    /**
+     * Gera slots de horário respeitando duração e intervalo configurados.
+     */
+    private function generateDefaultSlots(
+        string $startTime,
+        string $endTime,
+        int $slotDuration,
+        ?array $lunchBreak = null
+    ): array {
+        $slots = [];
+
+        [$startHour, $startMin] = explode(':', $startTime);
+        [$endHour, $endMin] = explode(':', $endTime);
+        $startMinutes = (int)$startHour * 60 + (int)$startMin;
+        $endMinutes = (int)$endHour * 60 + (int)$endMin;
+
+        $lunchStart = null;
+        $lunchEnd = null;
+
+        if ($lunchBreak && isset($lunchBreak['start'], $lunchBreak['end'])) {
+            [$lunchStartHour, $lunchStartMin] = explode(':', $lunchBreak['start']);
+            [$lunchEndHour, $lunchEndMin] = explode(':', $lunchBreak['end']);
+            $lunchStart = (int)$lunchStartHour * 60 + (int)$lunchStartMin;
+            $lunchEnd = (int)$lunchEndHour * 60 + (int)$lunchEndMin;
+        }
+
+        $currentMinutes = $startMinutes;
+        while ($currentMinutes + $slotDuration <= $endMinutes) {
+            $slotEnd = $currentMinutes + $slotDuration;
+
+            if ($lunchStart !== null && $lunchEnd !== null) {
+                $overlapsLunch = ($currentMinutes >= $lunchStart && $currentMinutes < $lunchEnd)
+                    || ($slotEnd > $lunchStart && $slotEnd <= $lunchEnd)
+                    || ($currentMinutes < $lunchStart && $slotEnd > $lunchEnd);
+
+                if ($overlapsLunch) {
+                    $currentMinutes += $slotDuration;
+                    continue;
+                }
+            }
+
+            $hours = floor($currentMinutes / 60);
+            $minutes = $currentMinutes % 60;
+            $slots[] = sprintf('%02d:%02d', $hours, $minutes);
+
+            $currentMinutes += $slotDuration;
+        }
+
+        return $slots;
     }
 
     /**

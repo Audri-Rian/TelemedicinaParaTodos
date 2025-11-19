@@ -15,7 +15,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Auth;
 
 Route::get('/', function () {
-    return Inertia::render('Welcome');
+    return Inertia::render('index');
 })->name('home');
 
 // Rota para capturar /dashboard e redirecionar baseado no papel do usuário
@@ -37,6 +37,7 @@ Route::middleware(['auth', 'verified'])->get('/dashboard', function () {
 Route::middleware(['auth', 'verified', 'doctor'])->prefix('doctor')->name('doctor.')->group(function () {
     Route::get('dashboard', [App\Http\Controllers\Doctor\DoctorDashboardController::class, 'index'])->name('dashboard');
     Route::get('appointments', [App\Http\Controllers\Doctor\DoctorAppointmentsController::class, 'index'])->name('appointments');
+    Route::get('availability', [App\Http\Controllers\Doctor\DoctorAvailabilityController::class, 'index'])->name('availability');
     Route::get('consultations', [App\Http\Controllers\Doctor\DoctorConsultationsController::class, 'index'])->name('consultations');
     Route::get('messages', [App\Http\Controllers\Doctor\DoctorMessagesController::class, 'index'])->name('messages');
     Route::get('history', [App\Http\Controllers\Doctor\DoctorHistoryController::class, 'index'])->name('history');
@@ -148,6 +149,11 @@ Route::get('storage/avatars/{userId}/{filename}', function ($userId, $filename) 
         ->header('Content-Type', $mimeType)
         ->header('Cache-Control', 'public, max-age=31536000');
 })->where(['userId' => '[^/]+', 'filename' => '[^/]+'])->name('storage.avatar');
+
+// Rotas de desenvolvimento (apenas local/dev)
+Route::middleware([\App\Http\Middleware\EnsureDevelopmentEnvironment::class])->prefix('dev')->group(function () {
+    Route::get('video-test', [App\Http\Controllers\Dev\VideoTestController::class, 'index'])->name('dev.video-test');
+});
 
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';

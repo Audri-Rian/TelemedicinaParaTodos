@@ -10,7 +10,6 @@ import { Button } from '@/components/ui/button';
 import axios from 'axios';
 import * as appointmentsRoutes from '@/routes/appointments';
 import Echo from 'laravel-echo';
-import Pusher from 'pusher-js';
 import AppointmentStatusBadge from '@/components/AppointmentStatusBadge.vue';
 import AppointmentActions from '@/components/AppointmentActions.vue';
 import CancelAppointmentModal from '@/components/modals/CancelAppointmentModal.vue';
@@ -255,31 +254,21 @@ const connectEcho = () => {
         return;
     }
 
-    // Verificar se as variáveis de ambiente estão definidas
-    const appKey = import.meta.env.VITE_REVERB_APP_KEY;
-    const wsHost = import.meta.env.VITE_REVERB_HOST;
-    const wsPort = import.meta.env.VITE_REVERB_PORT;
-    const scheme = import.meta.env.VITE_REVERB_SCHEME ?? 'https';
+    const reverbConfig = (page.props as any)?.reverb;
 
-    if (!appKey || !wsHost) {
-        console.warn('Reverb não configurado. Variáveis de ambiente VITE_REVERB_APP_KEY ou VITE_REVERB_HOST não encontradas.');
+    if (!reverbConfig) {
+        console.warn('Reverb não configurado. Adicione os dados no middleware HandleInertiaRequests.');
         return;
-    }
-
-    // Configurar Pusher globalmente se necessário
-    if (typeof window !== 'undefined' && !(window as any).Pusher) {
-        (window as any).Pusher = Pusher;
     }
 
     const echo = new Echo({
         broadcaster: 'reverb',
-        key: appKey,
-        wsHost: wsHost,
-        wsPort: wsPort ? parseInt(wsPort) : 8080,
-        wssPort: wsPort ? parseInt(wsPort) : 8080,
-        forceTLS: scheme === 'https',
+        key: reverbConfig.key,
+        wsHost: reverbConfig.host,
+        wsPort: reverbConfig.port,
+        wssPort: reverbConfig.port,
+        forceTLS: reverbConfig.scheme === 'https',
         enabledTransports: ['ws', 'wss'],
-        client: Pusher,
     });
 
     echo.private(`appointment.${appointment.value.patient.id}`)

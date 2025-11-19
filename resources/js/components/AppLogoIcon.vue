@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { HTMLAttributes } from 'vue';
-import logoImage from '@images/brand/Logo.png';
+import logoImage from '@images/brand/DefinitiveBrand.png';
 
 defineOptions({
     inheritAttrs: false,

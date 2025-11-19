@@ -60,6 +60,12 @@ class HandleInertiaRequests extends Middleware
                 'profile' => $user?->doctor ?? $user?->patient,
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+            'reverb' => [
+                'key' => config('broadcasting.connections.reverb.key'),
+                'host' => config('broadcasting.connections.reverb.options.host'),
+                'port' => config('broadcasting.connections.reverb.options.port'),
+                'scheme' => config('broadcasting.connections.reverb.options.scheme'),
+            ],
         ];
     }
 }

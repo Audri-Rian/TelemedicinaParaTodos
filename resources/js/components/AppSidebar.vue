@@ -5,7 +5,7 @@ import NavUser from '@/components/NavUser.vue';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarInput, SidebarGroup, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/vue3';
-import { BookOpen, Calendar, Folder, Home, Activity, Monitor, Users, History, FileText, MessageCircle, Search, Video, Stethoscope } from 'lucide-vue-next';
+import { BookOpen, Calendar, CalendarClock, Folder, Home, Activity, Monitor, Users, History, FileText, MessageCircle, Search, Video, Stethoscope } from 'lucide-vue-next';
 import AppLogo from './AppLogo.vue';
 import { useAuth } from '@/composables/auth';
 import { computed, ref } from 'vue';
@@ -28,6 +28,11 @@ const doctorNavItems = computed<NavItem[]>(() => [
         title: 'Agenda',
         href: doctorRoutes.appointments(),
         icon: Calendar,
+    },
+    {
+        title: 'Disponibilidade',
+        href: doctorRoutes.availability(),
+        icon: CalendarClock,
     },
     {
         title: 'Pacientes',
