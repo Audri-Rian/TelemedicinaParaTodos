@@ -161,7 +161,7 @@ onUnmounted(() => {
         <!-- Sidebar -->
         <div class="w-1/4 bg-white border-r border-gray-200">
             <div class="p-4 bg-gray-100 font-bold text-lg border-b border-gray-200">
-                Médicos Disponíveis
+                Pacientes Disponíveis
             </div>
             <div class="p-4 space-y-4">
                 <!-- Lista de Contatos -->
@@ -196,7 +196,7 @@ onUnmounted(() => {
         <!-- Área de Chamadas -->
         <div class="flex flex-col w-3/4">
             <div v-if="!selectedUser" class="h-full flex justify-center items-center text-gray-800 font-bold">
-                Selecione um Médico para Consulta
+                Selecione um Paciente para Consulta
             </div>
             
             <div v-if="selectedUser">
@@ -276,3 +276,4 @@ onUnmounted(() => {
         </div>
     </div>
 </template>
+

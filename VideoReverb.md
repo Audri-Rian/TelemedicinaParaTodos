@@ -886,7 +886,7 @@ onUnmounted(() => {
 
 ### 10.2 Alternativa: Usar a Página Existente
 
-O projeto já possui uma implementação de videochamadas em `resources/js/pages/Consultations.vue`. Você pode usar essa página como referência ou adaptá-la conforme necessário.
+O projeto já possui uma implementação de videochamadas em `resources/js/pages/Doctor/Consultations.vue`. Você pode usar essa página como referência ou adaptá-la conforme necessário.
 
 ---
 

@@ -46,7 +46,8 @@ routes/
 ### **Frontend (Vue.js):**
 ```
 resources/js/pages/
-└── Consultations.vue                   # Página de consultas médicas com videoconferência
+└── Doctor/
+    └── Consultations.vue               # Página de consultas médicas com videoconferência
 ```
 
 ## 🛣️ Rotas Disponíveis

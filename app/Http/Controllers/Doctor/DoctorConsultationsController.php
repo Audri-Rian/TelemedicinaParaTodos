@@ -17,7 +17,7 @@ class DoctorConsultationsController extends Controller
         $currentUser = Auth::user()->loadMissing('doctor');
 
         if (!$currentUser->doctor) {
-            return Inertia::render('Consultations', [
+            return Inertia::render('Doctor/Consultations', [
                 'users' => [],
             ]);
         }
@@ -140,7 +140,7 @@ class DoctorConsultationsController extends Controller
             ];
         })->values();
 
-        return Inertia::render('Consultations', [
+        return Inertia::render('Doctor/Consultations', [
             'users' => $users,
         ]);
     }

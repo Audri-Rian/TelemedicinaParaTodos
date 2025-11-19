@@ -153,11 +153,13 @@ resources/js/
 │   │   ├── RegisterDoctor.vue
 │   │   ├── RegisterPatient.vue
 │   │   └── ...
-│   ├── Doctor/Dashboard.vue   # Dashboard do médico
+│   ├── Doctor/                # Páginas do médico
+│   │   ├── Dashboard.vue
+│   │   ├── Consultations.vue
+│   │   └── ...
 │   ├── Patient/               # Páginas do paciente
 │   │   ├── Dashboard.vue
 │   │   ├── SearchConsultations.vue
-│   │   ├── Consultations.vue
 │   │   └── HealthRecords.vue
 │   └── settings/              # Configurações
 │       ├── Profile.vue
