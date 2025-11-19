@@ -1,6 +1,7 @@
-Não estou conseguindo fazer agendamentos com o meu usario doctor com o meu paciente
-
 Testar o sistema de video-chamadas independente do problema.
+
+Colocar algumas JSON-LD para melhorar o funcionamento do projeto
+
 
 
 Coisas que eu quero que você implemente nas minhas paginas reais.
