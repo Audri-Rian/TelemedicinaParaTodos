@@ -42,12 +42,14 @@ class DoctorConsultationsController extends Controller
         $users = $patients->map(function (Patient $patient) use ($appointments, $now, $leadMinutes) {
             $relatedAppointments = $appointments->get($patient->id, collect());
 
-            $appointment = $relatedAppointments->first(function (Appointments $appointment) {
+            // Priorizar consulta em andamento
+            $primaryAppointment = $relatedAppointments->first(function (Appointments $appointment) {
                 return $appointment->status === Appointments::STATUS_IN_PROGRESS;
             });
 
-            if (!$appointment) {
-                $appointment = $relatedAppointments->first(function (Appointments $appointment) use ($now, $leadMinutes) {
+            // Se não há consulta em andamento, buscar próxima na janela de tempo
+            if (!$primaryAppointment) {
+                $primaryAppointment = $relatedAppointments->first(function (Appointments $appointment) use ($now, $leadMinutes) {
                     if (!in_array($appointment->status, [
                         Appointments::STATUS_SCHEDULED,
                         Appointments::STATUS_RESCHEDULED,
@@ -62,8 +64,9 @@ class DoctorConsultationsController extends Controller
                 });
             }
 
-            if (!$appointment) {
-                $appointment = $relatedAppointments->first(function (Appointments $appointment) use ($now) {
+            // Se não há consulta na janela, buscar próxima futura
+            if (!$primaryAppointment) {
+                $primaryAppointment = $relatedAppointments->first(function (Appointments $appointment) use ($now) {
                     return in_array($appointment->status, [
                         Appointments::STATUS_SCHEDULED,
                         Appointments::STATUS_RESCHEDULED,
@@ -71,8 +74,9 @@ class DoctorConsultationsController extends Controller
                 });
             }
 
-            if (!$appointment) {
-                $appointment = $relatedAppointments->first(function (Appointments $appointment) use ($now) {
+            // Se não há consulta futura, buscar última passada
+            if (!$primaryAppointment) {
+                $primaryAppointment = $relatedAppointments->sortByDesc('scheduled_at')->first(function (Appointments $appointment) use ($now) {
                     return in_array($appointment->status, [
                         Appointments::STATUS_COMPLETED,
                         Appointments::STATUS_NO_SHOW,
@@ -83,22 +87,22 @@ class DoctorConsultationsController extends Controller
             $canStartCall = false;
             $timeWindowMessage = __('Sem agendamento');
 
-            if ($appointment) {
+            if ($primaryAppointment) {
                 $timeWindowMessage = null;
 
-                if ($appointment->status === Appointments::STATUS_IN_PROGRESS) {
+                if ($primaryAppointment->status === Appointments::STATUS_IN_PROGRESS) {
                     $canStartCall = true;
                     $timeWindowMessage = __('Consulta em andamento');
-                } elseif (in_array($appointment->status, [
+                } elseif (in_array($primaryAppointment->status, [
                     Appointments::STATUS_SCHEDULED,
                     Appointments::STATUS_RESCHEDULED,
                 ])) {
-                    $startWindow = $appointment->scheduled_at->copy()->subMinutes($leadMinutes);
-                    $endWindow = $appointment->scheduled_at->copy()->addMinutes($leadMinutes);
+                    $startWindow = $primaryAppointment->scheduled_at->copy()->subMinutes($leadMinutes);
+                    $endWindow = $primaryAppointment->scheduled_at->copy()->addMinutes($leadMinutes);
 
                     if ($now->between($startWindow, $endWindow)) {
                         $canStartCall = true;
-                        $diffMinutes = $appointment->scheduled_at->diffInMinutes($now, false);
+                        $diffMinutes = $primaryAppointment->scheduled_at->diffInMinutes($now, false);
 
                         if ($diffMinutes < 0) {
                             $timeWindowMessage = __('Tempo restante: :minutes min', [
@@ -111,10 +115,10 @@ class DoctorConsultationsController extends Controller
                                 'minutes' => $diffMinutes,
                             ]);
                         }
-                    } elseif ($appointment->scheduled_at->lessThan($startWindow)) {
+                    } elseif ($primaryAppointment->scheduled_at->lessThan($startWindow)) {
                         $timeWindowMessage = __('Janela de tempo expirada');
                     } else {
-                        $daysUntil = (int) $now->diffInDays($appointment->scheduled_at, false);
+                        $daysUntil = (int) $now->diffInDays($primaryAppointment->scheduled_at, false);
                         if ($daysUntil > 0) {
                             $dayText = $daysUntil === 1 ? 'dia' : 'dias';
                             $timeWindowMessage = __('Agendado para :days :day_text', [
@@ -122,7 +126,7 @@ class DoctorConsultationsController extends Controller
                                 'day_text' => $dayText,
                             ]);
                         } else {
-                            $hoursUntil = (int) $now->diffInHours($appointment->scheduled_at, false);
+                            $hoursUntil = (int) $now->diffInHours($primaryAppointment->scheduled_at, false);
                             if ($hoursUntil > 0) {
                                 $hourText = $hoursUntil === 1 ? 'hora' : 'horas';
                                 $timeWindowMessage = __('Início em :hours :hour_text', [
@@ -131,17 +135,28 @@ class DoctorConsultationsController extends Controller
                                 ]);
                             } else {
                                 $timeWindowMessage = __('Início em :minutes min', [
-                                    'minutes' => $now->diffInMinutes($appointment->scheduled_at, false),
+                                    'minutes' => $now->diffInMinutes($primaryAppointment->scheduled_at, false),
                                 ]);
                             }
                         }
                     }
-                } elseif ($appointment->status === Appointments::STATUS_COMPLETED) {
+                } elseif ($primaryAppointment->status === Appointments::STATUS_COMPLETED) {
                     $timeWindowMessage = __('Consulta finalizada');
-                } elseif ($appointment->status === Appointments::STATUS_NO_SHOW) {
+                } elseif ($primaryAppointment->status === Appointments::STATUS_NO_SHOW) {
                     $timeWindowMessage = __('Consulta não comparecida');
                 }
             }
+
+            // Incluir todas as consultas para permitir seleção específica
+            $allAppointments = $relatedAppointments->map(function (Appointments $appointment) {
+                return [
+                    'id' => $appointment->id,
+                    'scheduled_at' => $appointment->scheduled_at->format('Y-m-d H:i:s'),
+                    'formatted_date' => $appointment->scheduled_at->format('d/m/Y'),
+                    'formatted_time' => $appointment->scheduled_at->format('H:i'),
+                    'status' => $appointment->status,
+                ];
+            })->sortByDesc('scheduled_at')->values()->toArray();
 
             return [
                 'id' => $patient->user->id,
@@ -149,13 +164,14 @@ class DoctorConsultationsController extends Controller
                 'email' => $patient->user->email,
                 'hasAppointment' => $relatedAppointments->isNotEmpty(),
                 'canStartCall' => $canStartCall,
-                'appointment' => $appointment ? [
-                    'id' => $appointment->id,
-                    'scheduled_at' => $appointment->scheduled_at->format('Y-m-d H:i:s'),
-                    'formatted_date' => $appointment->scheduled_at->format('d/m/Y'),
-                    'formatted_time' => $appointment->scheduled_at->format('H:i'),
-                    'status' => $appointment->status,
+                'appointment' => $primaryAppointment ? [
+                    'id' => $primaryAppointment->id,
+                    'scheduled_at' => $primaryAppointment->scheduled_at->format('Y-m-d H:i:s'),
+                    'formatted_date' => $primaryAppointment->scheduled_at->format('d/m/Y'),
+                    'formatted_time' => $primaryAppointment->scheduled_at->format('H:i'),
+                    'status' => $primaryAppointment->status,
                 ] : null,
+                'allAppointments' => $allAppointments,
                 'timeWindowMessage' => $timeWindowMessage,
             ];
         })->values();

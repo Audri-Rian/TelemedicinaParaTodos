@@ -33,8 +33,7 @@ class DoctorPerfilController extends Controller
             abort(404, 'Médico não encontrado');
         }
 
-        // Garantir disponibilidade inicial para médicos novos
-        $this->scheduleService->ensureDefaultAvailability($doctor);
+        // Médicos devem configurar sua própria disponibilidade
 
         $user = $doctor->user;
 

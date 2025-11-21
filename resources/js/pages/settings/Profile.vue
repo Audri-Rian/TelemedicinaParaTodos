@@ -20,7 +20,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { ref, computed, watch } from 'vue';
-import { AlertCircle, Upload, X, User as UserIcon, Plus, CheckCircle } from 'lucide-vue-next';
+import { AlertCircle, Upload, X, User as UserIcon, Plus, CheckCircle, Loader2 } from 'lucide-vue-next';
 import axios from 'axios';
 
 interface Patient {
@@ -687,6 +687,39 @@ const cancelPreview = () => {
                             <p v-show="recentlySuccessful" class="text-sm text-neutral-600">Salvo.</p>
                         </Transition>
                     </div>
+
+                    <!-- Aviso de sucesso mais destacado para pacientes -->
+                    <Transition
+                        enter-active-class="transition-all duration-300 ease-out"
+                        enter-from-class="opacity-0 transform scale-95"
+                        enter-to-class="opacity-100 transform scale-100"
+                        leave-active-class="transition-all duration-200 ease-in"
+                        leave-from-class="opacity-100 transform scale-100"
+                        leave-to-class="opacity-0 transform scale-95"
+                    >
+                        <div 
+                            v-if="recentlySuccessful && (auth?.isPatient || auth?.role === 'patient')" 
+                            class="mt-4 rounded-lg border border-green-200 bg-green-50 p-4"
+                        >
+                            <div class="flex items-start gap-3">
+                                <CheckCircle class="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                                <div class="flex-1">
+                                    <h3 class="text-sm font-semibold text-green-800">
+                                        Perfil atualizado com sucesso!
+                                    </h3>
+                                    <p class="mt-1 text-sm text-green-700">
+                                        Suas informações foram salvas. 
+                                        <span v-if="!isSecondStageComplete" class="font-medium">
+                                            Complete o contato de emergência para poder agendar consultas.
+                                        </span>
+                                        <span v-else class="font-medium">
+                                            Agora você pode agendar consultas normalmente.
+                                        </span>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </Transition>
                 </form>
 
                 <!-- Segunda Etapa: Timeline (Apenas para Doutores) -->

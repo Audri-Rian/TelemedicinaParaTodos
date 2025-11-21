@@ -1,4 +1,4 @@
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted, onUnmounted, watch } from 'vue';
 import { usePage } from '@inertiajs/vue3';
 import axios from 'axios';
 import Peer from 'peerjs';
@@ -28,6 +28,13 @@ interface VideoCallEvent {
     };
 }
 
+interface MediaConfig {
+    videoResolution: string;
+    codec: string;
+    stunServer: string;
+    turnServer?: string;
+}
+
 interface UseVideoCallOptions {
     /**
      * Prefixo da rota base (ex: '/patient' ou '/doctor')
@@ -46,6 +53,14 @@ interface UseVideoCallOptions {
      * Callback chamado quando uma chamada é recebida
      */
     onCallReceived?: (user: User) => void | Promise<void>;
+    /**
+     * Callback chamado quando a conexão é perdida
+     */
+    onConnectionLost?: () => void | Promise<void>;
+    /**
+     * Callback chamado quando a conexão é restaurada
+     */
+    onConnectionRestored?: () => void | Promise<void>;
 }
 
 /**
@@ -76,17 +91,42 @@ export function useVideoCall(options: UseVideoCallOptions = {}) {
     const page = usePage();
     const auth = page.props.auth as unknown as AuthUser;
 
-    // Estados reativos
+    // Estados reativos principais
     const peer = ref<Peer | null>(null);
     const peerCall = ref<any>(null);
     const isCalling = ref(false);
     const selectedUser = ref<User | null>(null);
     const hasRemoteStream = ref(false);
 
+    // Estados de conexão avançados
+    const isConnected = ref(false);
+    const isReceivingCall = ref(false);
+    const connectionLost = ref(false);
+    const isReconnecting = ref(false);
+    const savedRemotePeerId = ref<string>('');
+    const showIncomingCallModal = ref(false);
+    const incomingCallPeerId = ref<string>('');
+    const connectionState = ref<string>('disconnected');
+    
+    // Estados para melhorar rejeições acidentais
+    const lastRejectedPeerId = ref<string>('');
+    const rejectionTimestamp = ref<number>(0);
+    const canCallBack = ref(false);
+    const showRejectionConfirmModal = ref(false);
+    const pendingRejectCall = ref<any>(null);
+
     // Refs para elementos de vídeo
     const remoteVideoRef = ref<HTMLVideoElement | null>(null);
     const localVideoRef = ref<HTMLVideoElement | null>(null);
     const localStreamRef = ref<MediaStream | null>(null);
+
+    // Configurações de mídia adaptáveis
+    const mediaConfig = ref<MediaConfig>({
+        videoResolution: '1280x720',
+        codec: 'VP8',
+        stunServer: 'stun:stun.l.google.com:19302',
+        turnServer: '',
+    });
 
     // Instância do Echo para cleanup
     let echoInstance: Echo | null = null;
@@ -105,14 +145,87 @@ export function useVideoCall(options: UseVideoCallOptions = {}) {
     };
 
     /**
-     * Exibe o vídeo local
+     * Detecta a qualidade da conexão e ajusta configurações de mídia
+     */
+    const detectConnectionQuality = async (): Promise<MediaStreamConstraints> => {
+        // Configuração base adaptável
+        const baseConstraints: MediaStreamConstraints = {
+            video: {
+                width: { ideal: parseInt(mediaConfig.value.videoResolution.split('x')[0]) },
+                height: { ideal: parseInt(mediaConfig.value.videoResolution.split('x')[1]) },
+                frameRate: { ideal: 30, max: 30 },
+            },
+            audio: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true,
+            },
+        };
+
+        // Tentar detectar qualidade da conexão via navigator.connection (se disponível)
+        const connection = (navigator as any).connection;
+        if (connection) {
+            const effectiveType = connection.effectiveType;
+            
+            // Ajustar qualidade baseada na conexão
+            if (effectiveType === '2g' || effectiveType === 'slow-2g') {
+                mediaConfig.value.videoResolution = '640x480';
+                (baseConstraints.video as any).width = { ideal: 640 };
+                (baseConstraints.video as any).height = { ideal: 480 };
+                (baseConstraints.video as any).frameRate = { ideal: 15, max: 15 };
+            } else if (effectiveType === '3g') {
+                mediaConfig.value.videoResolution = '960x540';
+                (baseConstraints.video as any).width = { ideal: 960 };
+                (baseConstraints.video as any).height = { ideal: 540 };
+                (baseConstraints.video as any).frameRate = { ideal: 24, max: 24 };
+            }
+        }
+
+        return baseConstraints;
+    };
+
+    /**
+     * Monitora o estado da conexão ICE
+     */
+    const monitorIceConnectionState = (peerConnection: RTCPeerConnection) => {
+        if (!peerConnection) return;
+
+        const checkState = () => {
+            const state = peerConnection.iceConnectionState;
+
+            if (state === 'failed' || state === 'disconnected') {
+                if (!connectionLost.value && isCalling.value) {
+                    connectionLost.value = true;
+                    hasRemoteStream.value = false;
+                    
+                    if (options.onConnectionLost) {
+                        options.onConnectionLost();
+                    }
+                }
+            }
+
+            if (state === 'connected' || state === 'completed') {
+                if (connectionLost.value) {
+                    connectionLost.value = false;
+                    
+                    if (options.onConnectionRestored) {
+                        options.onConnectionRestored();
+                    }
+                }
+            }
+        };
+
+        checkState();
+        peerConnection.addEventListener('iceconnectionstatechange', checkState);
+    };
+
+    /**
+     * Exibe o vídeo local com configurações adaptáveis
      */
     const displayLocalVideo = async (): Promise<void> => {
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({
-                video: true,
-                audio: true,
-            });
+            const constraints = await detectConnectionQuality();
+            const stream = await navigator.mediaDevices.getUserMedia(constraints);
 
             if (localVideoRef.value) {
                 localVideoRef.value.srcObject = stream;
@@ -120,15 +233,29 @@ export function useVideoCall(options: UseVideoCallOptions = {}) {
 
             localStreamRef.value = stream;
         } catch (error: any) {
-            console.error('Erro ao acessar dispositivos de mídia:', error);
-            throw error;
+            // Fallback para configurações mais básicas
+            try {
+                const fallbackStream = await navigator.mediaDevices.getUserMedia({
+                    video: { width: 640, height: 480 },
+                    audio: true,
+                });
+
+                if (localVideoRef.value) {
+                    localVideoRef.value.srcObject = fallbackStream;
+                }
+
+                localStreamRef.value = fallbackStream;
+            } catch (fallbackError: any) {
+                console.error('Erro ao acessar dispositivos de mídia:', fallbackError);
+                throw fallbackError;
+            }
         }
     };
 
     /**
      * Encerra a chamada e limpa os recursos
      */
-    const endCall = async () => {
+    const endCall = async (preservePeerId = false) => {
         if (peerCall.value) {
             peerCall.value.close();
             peerCall.value = null;
@@ -150,11 +277,96 @@ export function useVideoCall(options: UseVideoCallOptions = {}) {
         }
 
         isCalling.value = false;
+        isReceivingCall.value = false;
         hasRemoteStream.value = false;
+        showIncomingCallModal.value = false;
+
+        // Se não for perda de conexão, limpar tudo
+        if (!preservePeerId) {
+            connectionLost.value = false;
+            savedRemotePeerId.value = '';
+            incomingCallPeerId.value = '';
+        }
 
         // Chamar callback se fornecido
         if (options.onCallEnd) {
             await options.onCallEnd();
+        }
+    };
+
+    /**
+     * Reconecta automaticamente a chamada
+     */
+    const reconnectCall = async () => {
+        if (!savedRemotePeerId.value || !peer.value || !isConnected.value) {
+            return;
+        }
+
+        isReconnecting.value = true;
+        connectionLost.value = false;
+
+        try {
+            // Limpar chamada anterior
+            if (peerCall.value) {
+                peerCall.value.close();
+                peerCall.value = null;
+            }
+
+            // Garantir que temos stream local
+            if (!localStreamRef.value) {
+                await displayLocalVideo();
+            }
+
+            if (!localStreamRef.value) {
+                isReconnecting.value = false;
+                return;
+            }
+
+            // Iniciar nova chamada
+            const call = peer.value.call(savedRemotePeerId.value, localStreamRef.value);
+            peerCall.value = call;
+            isCalling.value = true;
+
+            call.on('stream', (stream) => {
+                if (remoteVideoRef.value) {
+                    remoteVideoRef.value.srcObject = stream;
+                }
+                hasRemoteStream.value = true;
+                isReconnecting.value = false;
+                connectionLost.value = false;
+
+                // Monitorar ICE connection state
+                monitorIceConnectionState(call.peerConnection);
+            });
+
+            call.on('close', () => {
+                const iceState = call.peerConnection?.iceConnectionState;
+                const isConnectionLost = connectionLost.value || iceState === 'disconnected' || iceState === 'failed';
+                
+                isReconnecting.value = false;
+                
+                if (isConnectionLost) {
+                    if (!connectionLost.value) {
+                        connectionLost.value = true;
+                    }
+                    // Limpar apenas o stream remoto, manter estado para reconexão
+                    if (remoteVideoRef.value) {
+                        remoteVideoRef.value.srcObject = null;
+                    }
+                    hasRemoteStream.value = false;
+                    peerCall.value = null;
+                } else {
+                    endCall();
+                }
+            });
+
+            call.on('error', (error: any) => {
+                isReconnecting.value = false;
+                connectionLost.value = true;
+            });
+        } catch (error: any) {
+            isReconnecting.value = false;
+            connectionLost.value = true;
         }
     };
 
@@ -176,6 +388,10 @@ export function useVideoCall(options: UseVideoCallOptions = {}) {
 
             isCalling.value = true;
             selectedUser.value = user;
+            connectionLost.value = false;
+
+            // Salvar PeerID remoto para reconexão
+            savedRemotePeerId.value = user.peerId || '';
 
             // Chamar callback se fornecido
             if (options.onCallStart) {
@@ -184,31 +400,158 @@ export function useVideoCall(options: UseVideoCallOptions = {}) {
 
             // Aguardar o stream local estar pronto
             await displayLocalVideo();
-
-            // Configurar listener para quando o destinatário aceitar
-            peer.value.on('call', (call) => {
-                peerCall.value = call;
-
-                // Responder à chamada com o stream local
-                if (localStreamRef.value) {
-                    call.answer(localStreamRef.value);
-                }
-
-                // Escutar o stream do destinatário
-                call.on('stream', (remoteStream) => {
-                    if (remoteVideoRef.value) {
-                        remoteVideoRef.value.srcObject = remoteStream;
-                        hasRemoteStream.value = true;
-                    }
-                });
-
-                // Destinatário encerrou a chamada
-                call.on('close', () => {
-                    endCall();
-                });
-            });
         } catch (error: any) {
             console.error('Erro ao iniciar chamada:', error);
+        }
+    };
+
+    /**
+     * Aceita uma chamada recebida
+     */
+    const acceptCall = async () => {
+        if (!peerCall.value) {
+            return;
+        }
+
+        try {
+            // Obter stream local se ainda não tiver
+            if (!localStreamRef.value) {
+                await displayLocalVideo();
+            }
+
+            if (peerCall.value && localStreamRef.value) {
+                // Salvar PeerID remoto para reconexão
+                savedRemotePeerId.value = peerCall.value.peer;
+                
+                peerCall.value.answer(localStreamRef.value);
+                isReceivingCall.value = false;
+                isCalling.value = true;
+                connectionLost.value = false;
+                showIncomingCallModal.value = false;
+            }
+        } catch (error: any) {
+            console.error('Erro ao aceitar chamada:', error);
+        }
+    };
+
+    /**
+     * Mostra modal de confirmação de rejeição
+     */
+    const showRejectConfirmation = () => {
+        pendingRejectCall.value = peerCall.value;
+        showRejectionConfirmModal.value = true;
+    };
+
+    /**
+     * Confirma a rejeição da chamada
+     */
+    const confirmRejectCall = () => {
+        const rejectedPeerId = incomingCallPeerId.value;
+        
+        if (pendingRejectCall.value) {
+            pendingRejectCall.value.close();
+            pendingRejectCall.value = null;
+        }
+        
+        if (peerCall.value) {
+            peerCall.value.close();
+            peerCall.value = null;
+        }
+        
+        // Salvar informações da rejeição para permitir "chamar de volta"
+        lastRejectedPeerId.value = rejectedPeerId;
+        rejectionTimestamp.value = Date.now();
+        canCallBack.value = true;
+        
+        isReceivingCall.value = false;
+        showIncomingCallModal.value = false;
+        showRejectionConfirmModal.value = false;
+        incomingCallPeerId.value = '';
+        
+        // NÃO limpar savedRemotePeerId imediatamente - preservar por 30 segundos
+        setTimeout(() => {
+            if (savedRemotePeerId.value === rejectedPeerId && !isCalling.value) {
+                savedRemotePeerId.value = '';
+            }
+        }, 30000); // 30 segundos para reconexão
+        
+        // Limpar possibilidade de "chamar de volta" após 2 minutos
+        setTimeout(() => {
+            if (lastRejectedPeerId.value === rejectedPeerId) {
+                canCallBack.value = false;
+                lastRejectedPeerId.value = '';
+            }
+        }, 120000); // 2 minutos
+    };
+
+    /**
+     * Cancela a rejeição (volta para o modal de chamada)
+     */
+    const cancelRejectCall = () => {
+        showRejectionConfirmModal.value = false;
+        pendingRejectCall.value = null;
+        // Modal de chamada continua aberto
+    };
+
+    /**
+     * Rejeita uma chamada recebida (mantido para compatibilidade)
+     */
+    const rejectCall = () => {
+        confirmRejectCall();
+    };
+
+    /**
+     * Permite chamar de volta após rejeição acidental
+     */
+    const callBack = async () => {
+        if (!canCallBack.value || !lastRejectedPeerId.value) {
+            return;
+        }
+
+        try {
+            // Usar o mesmo fluxo de callUser mas com o peer rejeitado
+            if (!localStreamRef.value) {
+                await displayLocalVideo();
+            }
+
+            if (!peer.value || !isConnected.value) {
+                console.error('Peer não está conectado');
+                return;
+            }
+
+            if (!localStreamRef.value) {
+                console.error('Stream local não disponível');
+                return;
+            }
+
+            // Iniciar chamada para o peer que foi rejeitado
+            const call = peer.value.call(lastRejectedPeerId.value, localStreamRef.value);
+            peerCall.value = call;
+
+            // Salvar PeerID para reconexão
+            savedRemotePeerId.value = lastRejectedPeerId.value;
+
+            // Escutar o stream do receptor
+            call.on('stream', (remoteStream) => {
+                if (remoteVideoRef.value) {
+                    remoteVideoRef.value.srcObject = remoteStream;
+                    hasRemoteStream.value = true;
+                }
+            });
+
+            call.on('close', () => {
+                hasRemoteStream.value = false;
+                if (remoteVideoRef.value) {
+                    remoteVideoRef.value.srcObject = null;
+                }
+            });
+
+            isCalling.value = true;
+            canCallBack.value = false; // Limpar após usar
+            lastRejectedPeerId.value = '';
+
+        } catch (error: any) {
+            console.error('Erro ao chamar de volta:', error);
         }
     };
 
@@ -232,32 +575,6 @@ export function useVideoCall(options: UseVideoCallOptions = {}) {
 
             const baseRoute = getRoutePrefix();
             await axios.post(`${baseRoute}/video-call/request/status/${e.user.fromUser.id}`, statusPayload);
-
-            // Configurar listener para chamadas recebidas
-            peer.value.on('call', (call) => {
-                peerCall.value = call;
-
-                // Aceitar chamada se for do usuário correto
-                if (e.user.peerId === call.peer) {
-                    // Responder à chamada com o stream local já obtido
-                    if (localStreamRef.value) {
-                        call.answer(localStreamRef.value);
-                    }
-
-                    // Escutar o stream do chamador
-                    call.on('stream', (remoteStream) => {
-                        if (remoteVideoRef.value) {
-                            remoteVideoRef.value.srcObject = remoteStream;
-                            hasRemoteStream.value = true;
-                        }
-                    });
-
-                    // Chamador encerrou a chamada
-                    call.on('close', () => {
-                        endCall();
-                    });
-                }
-            });
         } catch (error: any) {
             console.error('Erro ao aceitar chamada:', error);
         }
@@ -278,17 +595,43 @@ export function useVideoCall(options: UseVideoCallOptions = {}) {
             const call = peer.value.call(receiverId, localStreamRef.value);
             peerCall.value = call;
 
+            // Salvar PeerID para reconexão
+            savedRemotePeerId.value = receiverId;
+
             // Escutar o stream do receptor
             call.on('stream', (remoteStream) => {
                 if (remoteVideoRef.value) {
                     remoteVideoRef.value.srcObject = remoteStream;
-                    hasRemoteStream.value = true;
                 }
+                hasRemoteStream.value = true;
+                connectionLost.value = false;
+
+                // Monitorar ICE connection state
+                monitorIceConnectionState(call.peerConnection);
             });
 
             // Receptor encerrou a chamada
             call.on('close', () => {
-                endCall();
+                const iceState = call.peerConnection?.iceConnectionState;
+                const isConnectionLost = connectionLost.value || iceState === 'disconnected' || iceState === 'failed';
+                
+                if (isConnectionLost) {
+                    if (!connectionLost.value) {
+                        connectionLost.value = true;
+                    }
+                    // Limpar apenas o stream remoto, manter estado para reconexão
+                    if (remoteVideoRef.value) {
+                        remoteVideoRef.value.srcObject = null;
+                    }
+                    hasRemoteStream.value = false;
+                    peerCall.value = null;
+                } else {
+                    endCall();
+                }
+            });
+
+            call.on('error', (error: any) => {
+                console.error('Erro na conexão:', error);
             });
         } catch (error) {
             console.error('Erro ao criar conexão:', error);
@@ -344,20 +687,111 @@ export function useVideoCall(options: UseVideoCallOptions = {}) {
     };
 
     /**
-     * Inicializa o PeerJS e conecta ao WebSocket
+     * Inicializa o PeerJS com configurações otimizadas
      */
-    const initialize = () => {
-        // Inicializar PeerJS
-        peer.value = new Peer();
+    const initializePeer = () => {
+        if (peer.value) {
+            peer.value.destroy();
+        }
 
-        peer.value.on('open', () => {
-            // Conectar WebSocket após PeerJS estar pronto
+        const peerOptions: any = {
+            config: {
+                iceServers: [
+                    { urls: mediaConfig.value.stunServer },
+                    ...(mediaConfig.value.turnServer ? [{ urls: mediaConfig.value.turnServer }] : []),
+                ],
+            },
+        };
+
+        peer.value = new Peer(peerOptions);
+
+        peer.value.on('open', (id) => {
+            connectionState.value = 'connected';
+            isConnected.value = true;
             connectWebSocket();
         });
 
         peer.value.on('error', (error) => {
+            connectionState.value = 'error';
             console.error('Erro no PeerJS:', error);
         });
+
+        peer.value.on('call', async (call) => {
+            peerCall.value = call;
+            incomingCallPeerId.value = call.peer;
+            
+            // Verificar se é uma reconexão
+            const isReconnection = savedRemotePeerId.value && savedRemotePeerId.value === call.peer;
+            
+            if (isReconnection) {
+                // Reconexão - aceitar automaticamente
+                isReceivingCall.value = false;
+                connectionLost.value = false;
+                showIncomingCallModal.value = false;
+                
+                try {
+                    if (!localStreamRef.value) {
+                        await displayLocalVideo();
+                    }
+                    
+                    if (localStreamRef.value) {
+                        call.answer(localStreamRef.value);
+                        isCalling.value = true;
+                    }
+                } catch (error: any) {
+                    console.error('Erro ao aceitar reconexão:', error);
+                }
+            } else {
+                // Nova chamada - mostrar modal e salvar PeerID
+                savedRemotePeerId.value = call.peer;
+                isReceivingCall.value = true;
+                showIncomingCallModal.value = true;
+            }
+
+            // Configurar listeners da chamada
+            call.on('stream', (stream) => {
+                if (remoteVideoRef.value) {
+                    remoteVideoRef.value.srcObject = stream;
+                }
+                hasRemoteStream.value = true;
+                connectionLost.value = false;
+
+                // Monitorar ICE connection state
+                monitorIceConnectionState(call.peerConnection);
+            });
+
+            call.on('close', () => {
+                const iceState = call.peerConnection?.iceConnectionState;
+                const isConnectionLost = connectionLost.value || iceState === 'disconnected' || iceState === 'failed';
+                
+                if (isConnectionLost) {
+                    if (!connectionLost.value) {
+                        connectionLost.value = true;
+                    }
+                    // Limpar apenas o stream remoto, manter estado para reconexão
+                    if (remoteVideoRef.value) {
+                        remoteVideoRef.value.srcObject = null;
+                    }
+                    hasRemoteStream.value = false;
+                    peerCall.value = null;
+                } else {
+                    showIncomingCallModal.value = false;
+                    endCall();
+                }
+            });
+
+            call.on('error', (error: any) => {
+                showIncomingCallModal.value = false;
+                console.error('Erro na chamada recebida:', error);
+            });
+        });
+    };
+
+    /**
+     * Inicializa o sistema de videochamadas
+     */
+    const initialize = () => {
+        initializePeer();
     };
 
     /**
@@ -384,8 +818,20 @@ export function useVideoCall(options: UseVideoCallOptions = {}) {
         }
     };
 
+    // Configurar reconexão automática quando a conexão é perdida
+    watch(connectionLost, (isLost) => {
+        if (isLost && savedRemotePeerId.value && !isReconnecting.value) {
+            // Tentar reconectar automaticamente após um pequeno delay
+            setTimeout(() => {
+                if (connectionLost.value && !isReconnecting.value) {
+                    reconnectCall();
+                }
+            }, 2000);
+        }
+    });
+
     return {
-        // Estados
+        // Estados principais
         peer,
         peerCall,
         isCalling,
@@ -393,17 +839,43 @@ export function useVideoCall(options: UseVideoCallOptions = {}) {
         localStreamRef,
         hasRemoteStream,
 
+        // Estados de conexão avançados
+        isConnected,
+        isReceivingCall,
+        connectionLost,
+        isReconnecting,
+        showIncomingCallModal,
+        incomingCallPeerId,
+        connectionState,
+        
+        // Estados para rejeições acidentais
+        canCallBack,
+        showRejectionConfirmModal,
+        lastRejectedPeerId,
+
         // Refs
         remoteVideoRef,
         localVideoRef,
 
-        // Métodos
+        // Configurações
+        mediaConfig,
+
+        // Métodos principais
         callUser,
         endCall,
+        acceptCall,
+        rejectCall,
+        reconnectCall,
         displayLocalVideo,
         connectWebSocket,
         initialize,
         cleanup,
+        
+        // Novos métodos para rejeições acidentais
+        showRejectConfirmation,
+        confirmRejectCall,
+        cancelRejectCall,
+        callBack,
     };
 }
 

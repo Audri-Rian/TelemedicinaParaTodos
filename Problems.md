@@ -1,8 +1,9 @@
-Testar o sistema de video-chamadas independente do problema.
-
 Colocar algumas JSON-LD para melhorar o funcionamento do projeto
 
+Ajustar UX para caso alguem recuse acidentalmente a chamada
 
+Pensar em sistema de notificação.
 
-Coisas que eu quero que você implemente nas minhas paginas reais.
-O sistema de monitoramento de stream remoto, que serve para caso o stream para ou a conexão cair. Quero tambem o mesmo sistema de configuração de midia nas duas paginas, com o mesmo desing de patient. Quero tambem o mesmo sistema de aceitação, ou seja o usuario vai ser notificado quando alguem iniciar a consulta.
+Pensar em sistema de chat.
+
+Pensar em mudar as regras de funcionamento de chamadas

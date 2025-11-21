@@ -42,8 +42,7 @@ class ScheduleConsultationController extends Controller
                 ->with('error', 'Perfil de paciente não encontrado.');
         }
         
-        // Criar disponibilidade padrão caso o médico ainda não tenha configurado
-        $this->scheduleService->ensureDefaultAvailability($doctor);
+        // Médicos devem configurar sua própria disponibilidade
 
         // Calcular horários disponíveis para os próximos 30 dias
         $availableDates = $this->getAvailableDates($doctor);

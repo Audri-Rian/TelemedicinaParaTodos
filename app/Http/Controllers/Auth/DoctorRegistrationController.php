@@ -57,8 +57,7 @@ class DoctorRegistrationController extends Controller
                     $doctor->specializations()->attach($request->specializations);
                 }
 
-                // Criar agenda padrão para novos médicos
-                $this->scheduleService->ensureDefaultAvailability($doctor);
+                // Médicos começam com agenda vazia - devem configurar manualmente
 
                 return $user;
             });

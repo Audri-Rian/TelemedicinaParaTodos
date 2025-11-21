@@ -41,64 +41,73 @@ class PatientVideoCallController extends Controller
             ->active()
             ->get()
             ->map(function ($doctor) use ($patient) {
-                $appointment = null;
+                $now = Carbon::now();
+                
+                // Buscar todos os agendamentos com este médico
+                $allAppointments = Appointments::where('doctor_id', $doctor->id)
+                    ->where('patient_id', $patient->id)
+                    ->where('status', '!=', Appointments::STATUS_CANCELLED)
+                    ->orderBy('scheduled_at', 'desc')
+                    ->get();
+
+                $primaryAppointment = null;
                 $canStartCall = false;
                 $timeWindowMessage = null;
 
-                // Buscar próximo agendamento com este médico (dentro de 10 minutos ou ainda não aconteceu)
-                $appointment = Appointments::where('doctor_id', $doctor->id)
-                    ->where('patient_id', $patient->id)
-                    ->whereIn('status', [
-                        Appointments::STATUS_SCHEDULED,
-                        Appointments::STATUS_RESCHEDULED,
-                        Appointments::STATUS_IN_PROGRESS
-                    ])
-                    ->where('scheduled_at', '>=', Carbon::now()->subMinutes(10))
-                    ->where('scheduled_at', '<=', Carbon::now()->addMinutes(10))
-                    ->orderBy('scheduled_at', 'asc')
-                    ->first();
-                
-                // Se não encontrou na janela de 10 minutos, busca o próximo agendamento futuro
-                if (!$appointment) {
-                    $appointment = Appointments::where('doctor_id', $doctor->id)
-                        ->where('patient_id', $patient->id)
-                        ->whereIn('status', [
+                // Priorizar consulta em andamento
+                $primaryAppointment = $allAppointments->first(function ($appointment) {
+                    return $appointment->status === Appointments::STATUS_IN_PROGRESS;
+                });
+
+                // Se não há consulta em andamento, buscar próxima na janela de 10 minutos
+                if (!$primaryAppointment) {
+                    $primaryAppointment = $allAppointments->first(function ($appointment) use ($now) {
+                        if (!in_array($appointment->status, [
                             Appointments::STATUS_SCHEDULED,
                             Appointments::STATUS_RESCHEDULED
-                        ])
-                        ->where('scheduled_at', '>', Carbon::now())
-                        ->orderBy('scheduled_at', 'asc')
-                        ->first();
+                        ])) {
+                            return false;
+                        }
+                        
+                        $minutesDifference = (int) round(($appointment->scheduled_at->timestamp - $now->timestamp) / 60);
+                        return $minutesDifference >= -10 && $minutesDifference <= 10;
+                    });
                 }
 
-                // Se ainda não encontrou, busca o último agendamento passado (para histórico)
-                if (!$appointment) {
-                    $appointment = Appointments::where('doctor_id', $doctor->id)
-                        ->where('patient_id', $patient->id)
-                        ->whereIn('status', [
+                // Se não há consulta na janela, buscar próxima futura
+                if (!$primaryAppointment) {
+                    $primaryAppointment = $allAppointments->first(function ($appointment) use ($now) {
+                        return in_array($appointment->status, [
+                            Appointments::STATUS_SCHEDULED,
+                            Appointments::STATUS_RESCHEDULED
+                        ]) && $appointment->scheduled_at->greaterThan($now);
+                    });
+                }
+
+                // Se não há consulta futura, buscar última passada
+                if (!$primaryAppointment) {
+                    $primaryAppointment = $allAppointments->first(function ($appointment) use ($now) {
+                        return in_array($appointment->status, [
                             Appointments::STATUS_COMPLETED,
                             Appointments::STATUS_NO_SHOW
-                        ])
-                        ->where('scheduled_at', '<', Carbon::now())
-                        ->orderBy('scheduled_at', 'desc')
-                        ->first();
+                        ]) && $appointment->scheduled_at->lessThan($now);
+                    });
                 }
 
-                if ($appointment) {
-                    $now = Carbon::now();
-                    $scheduledAt = Carbon::parse($appointment->scheduled_at);
+                if ($primaryAppointment) {
+                    $scheduledAt = Carbon::parse($primaryAppointment->scheduled_at);
                     
                     // Calcular diferença em minutos (negativo = passou, positivo = futuro)
                     $minutesDifference = (int) round(($scheduledAt->timestamp - $now->timestamp) / 60);
                     
                     // Se a consulta está em progresso, sempre pode iniciar
-                    if ($appointment->status === Appointments::STATUS_IN_PROGRESS) {
+                    if ($primaryAppointment->status === Appointments::STATUS_IN_PROGRESS) {
                         $canStartCall = true;
                         $timeWindowMessage = 'Consulta em andamento';
                     } 
                     // Verificar se está na janela de tempo permitida (10 minutos antes ou depois)
                     elseif ($minutesDifference >= -10 && $minutesDifference <= 10 && 
-                            in_array($appointment->status, [
+                            in_array($primaryAppointment->status, [
                                 Appointments::STATUS_SCHEDULED,
                                 Appointments::STATUS_RESCHEDULED
                             ])) {
@@ -112,9 +121,9 @@ class PatientVideoCallController extends Controller
                         }
                     } else {
                         // Fora da janela de tempo ou consulta passada
-                        if ($appointment->status === Appointments::STATUS_COMPLETED) {
+                        if ($primaryAppointment->status === Appointments::STATUS_COMPLETED) {
                             $timeWindowMessage = 'Consulta finalizada';
-                        } elseif ($appointment->status === Appointments::STATUS_NO_SHOW) {
+                        } elseif ($primaryAppointment->status === Appointments::STATUS_NO_SHOW) {
                             $timeWindowMessage = 'Consulta não comparecida';
                         } elseif ($minutesDifference < -10) {
                             $timeWindowMessage = 'Janela de tempo expirada';
@@ -130,19 +139,31 @@ class PatientVideoCallController extends Controller
                     }
                 }
 
-                return [
-                    'id' => $doctor->user->id,
-                    'name' => $doctor->user->name,
-                    'email' => $doctor->user->email,
-                    'hasAppointment' => $appointment !== null,
-                    'canStartCall' => $canStartCall,
-                    'appointment' => $appointment ? [
+                // Preparar lista de todas as consultas para seleção
+                $appointmentsList = $allAppointments->map(function ($appointment) {
+                    return [
                         'id' => $appointment->id,
                         'scheduled_at' => $appointment->scheduled_at->format('Y-m-d H:i:s'),
                         'formatted_date' => $appointment->scheduled_at->format('d/m/Y'),
                         'formatted_time' => $appointment->scheduled_at->format('H:i'),
                         'status' => $appointment->status,
+                    ];
+                })->toArray();
+
+                return [
+                    'id' => $doctor->user->id,
+                    'name' => $doctor->user->name,
+                    'email' => $doctor->user->email,
+                    'hasAppointment' => $primaryAppointment !== null,
+                    'canStartCall' => $canStartCall,
+                    'appointment' => $primaryAppointment ? [
+                        'id' => $primaryAppointment->id,
+                        'scheduled_at' => $primaryAppointment->scheduled_at->format('Y-m-d H:i:s'),
+                        'formatted_date' => $primaryAppointment->scheduled_at->format('d/m/Y'),
+                        'formatted_time' => $primaryAppointment->scheduled_at->format('H:i'),
+                        'status' => $primaryAppointment->status,
                     ] : null,
+                    'allAppointments' => $appointmentsList,
                     'timeWindowMessage' => $timeWindowMessage,
                 ];
             });

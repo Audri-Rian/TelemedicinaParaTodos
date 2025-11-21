@@ -73,8 +73,14 @@ class AvailabilityTimelineService
                             'patient_avatar' => $appointment->patient?->user?->avatar_url,
                         ] : null,
                         'is_past' => $slotDateTime->copy()->addMinutes($this->calculateDuration($startTime, $endTime))->isPast(),
-                        'can_edit' => $slotDateTime->isFuture(),
-                        'can_delete' => $slotDateTime->isFuture(),
+                        'can_edit' => $slotDateTime->isFuture() && (!$appointment || !in_array($appointment->status, [
+                            Appointments::STATUS_COMPLETED,
+                            Appointments::STATUS_IN_PROGRESS,
+                        ])),
+                        'can_delete' => $slotDateTime->isFuture() && (!$appointment || !in_array($appointment->status, [
+                            Appointments::STATUS_COMPLETED,
+                            Appointments::STATUS_IN_PROGRESS,
+                        ])),
                     ];
                 });
 

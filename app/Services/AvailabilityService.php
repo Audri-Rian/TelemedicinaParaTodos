@@ -49,6 +49,9 @@ class AvailabilityService
             ->map(fn ($dt) => Carbon::parse($dt)->format('H:i'))
             ->toArray();
 
+        // Array para controlar horários únicos
+        $uniqueTimes = [];
+
         // Gerar slots disponíveis baseado nos intervalos
         foreach ($allSlots as $slot) {
             $timeSlots = $this->generateTimeSlotsFromInterval(
@@ -77,8 +80,13 @@ class AvailabilityService
                 return true;
             });
 
-            // Adicionar informações do local se existir
+            // Adicionar informações do local se existir, evitando duplicatas
             foreach ($filteredSlots as $slotTime) {
+                // Verificar se o horário já foi adicionado
+                if (isset($uniqueTimes[$slotTime])) {
+                    continue;
+                }
+
                 $slotData = [
                     'time' => $slotTime,
                     'location_id' => $slot->location_id,
@@ -94,8 +102,14 @@ class AvailabilityService
                 }
 
                 $slots[] = $slotData;
+                $uniqueTimes[$slotTime] = true; // Marcar como adicionado
             }
         }
+
+        // Ordenar slots por horário
+        usort($slots, function ($a, $b) {
+            return strcmp($a['time'], $b['time']);
+        });
 
         return $slots;
     }
