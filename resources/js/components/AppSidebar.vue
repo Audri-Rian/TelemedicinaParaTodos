@@ -5,7 +5,7 @@ import NavUser from '@/components/NavUser.vue';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarInput, SidebarGroup, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/vue3';
-import { BookOpen, Calendar, CalendarClock, Folder, Home, Activity, Monitor, Users, History, FileText, MessageCircle, Search, Video, Stethoscope } from 'lucide-vue-next';
+import { Calendar, CalendarClock, Home, Activity, Monitor, Users, History, FileText, MessageCircle, Search, Video, Stethoscope, Bug } from 'lucide-vue-next';
 import AppLogo from './AppLogo.vue';
 import { useAuth } from '@/composables/auth';
 import { computed, ref } from 'vue';
@@ -108,14 +108,9 @@ const mainNavItems = computed(() => {
 
 const footerNavItems: NavItem[] = [
     {
-        title: 'Github Repo',
-        href: 'https://github.com/laravel/vue-starter-kit',
-        icon: Folder,
-    },
-    {
-        title: 'Documentation',
-        href: 'https://laravel.com/docs/starter-kits#vue',
-        icon: BookOpen,
+        title: 'Notificar Bug',
+        href: '/settings/bug-report',
+        icon: Bug,
     },
 ];
 

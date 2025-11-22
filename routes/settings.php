@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Settings\BugReportController;
 use App\Http\Controllers\Settings\PasswordController;
 use App\Http\Controllers\Settings\ProfileController;
 use Illuminate\Support\Facades\Route;
@@ -17,6 +18,8 @@ Route::middleware('auth')->group(function () {
     Route::put('settings/password', [PasswordController::class, 'update'])
         ->middleware('throttle:6,1')
         ->name('password.update');
+
+    Route::get('settings/bug-report', [BugReportController::class, 'index'])->name('bug-report.index');
 });
 
 // Rotas de avatar
