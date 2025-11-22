@@ -86,11 +86,11 @@ export function useRoleRoutes() {
     };
     
     /**
-     * Retorna a rota de health records (apenas para pacientes)
+     * Retorna a rota de medical records (apenas para pacientes)
      */
-    const healthRecordsRoute = (): RouteDefinition<'get'> | null => {
-        if ('healthRecords' in routes && typeof routes.healthRecords === 'function') {
-            return routes.healthRecords();
+    const medicalRecordsRoute = (): RouteDefinition<'get'> | null => {
+        if ('medicalRecords' in routes && typeof routes.medicalRecords === 'function') {
+            return routes.medicalRecords();
         }
         return null;
     };
@@ -113,7 +113,7 @@ export function useRoleRoutes() {
         appointmentsRoute,
         searchConsultationsRoute,
         consultationsRoute,
-        healthRecordsRoute,
+        medicalRecordsRoute,
         
         // Acesso direto ao namespace de rotas
         routes,

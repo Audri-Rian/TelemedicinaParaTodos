@@ -90,7 +90,7 @@ const patientNavItems = computed<NavItem[]>(() => [
     },
     {
         title: 'Prontuário',
-        href: patientRoutes.healthRecords(),
+        href: patientRoutes.medicalRecords(),
         icon: Activity,
     },
 ]);

@@ -95,7 +95,7 @@ const quickActions = computed(() => {
                 },
                 {
                     label: 'Meus Registros',
-                    href: '/patient/health-records',
+                    href: '/patient/medical-records',
                     icon: Heart,
                 }
             );

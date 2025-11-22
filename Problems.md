@@ -6,4 +6,4 @@ Pensar em sistema de notificação.
 
 Pensar em sistema de chat.
 
-Pensar em mudar as regras de funcionamento de chamadas
+Na pagina de consultations preciso colocar um botão para envio de 

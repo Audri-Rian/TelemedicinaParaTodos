@@ -366,14 +366,14 @@ onUnmounted(() => {
                 </div>
 
                 <!-- Container Principal de Vídeo -->
-                <div class="flex-1 flex gap-4 p-4 relative">
+                <div class="flex-1 flex gap-4 p-4 relative max-h-[calc(100vh-200px)]">
                     <!-- Vídeo Remoto (Paciente) -->
-                    <div class="flex-1 relative bg-white rounded-lg overflow-hidden border border-gray-200">
+                    <div class="flex-1 relative bg-white rounded-lg overflow-hidden border border-gray-200 max-h-full">
                         <video 
                             ref="remoteVideoRef" 
                             autoplay 
                             playsinline 
-                            class="w-full h-full object-cover"
+                            class="w-full h-full object-cover max-h-full"
                         ></video>
                         <div v-if="!hasRemoteStream" class="absolute inset-0 w-full h-full flex items-center justify-center bg-white z-10">
                             <div class="text-center">
@@ -402,7 +402,7 @@ onUnmounted(() => {
                     </div>
 
                     <!-- Vídeo Local (Médico) -->
-                    <div class="w-64 h-80 relative bg-white rounded-lg overflow-hidden border-2 border-primary/30">
+                    <div class="w-56 h-64 relative bg-white rounded-lg overflow-hidden border-2 border-primary/30">
                         <video 
                             ref="localVideoRef" 
                             autoplay 

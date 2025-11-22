@@ -308,7 +308,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                 </Link>
 
                 <Link 
-                    :href="patientRoutes.healthRecords()"
+                    :href="patientRoutes.medicalRecords()"
                     class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition cursor-pointer">
                     <div class="flex flex-col items-center text-center">
                         <div class="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-4">
@@ -320,7 +320,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                 </Link>
 
                 <Link 
-                    :href="patientRoutes.healthRecords()"
+                    :href="patientRoutes.medicalRecords()"
                     class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition cursor-pointer">
                     <div class="flex flex-col items-center text-center">
                         <div class="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-4">
