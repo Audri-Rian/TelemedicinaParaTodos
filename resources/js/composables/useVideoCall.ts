@@ -186,6 +186,7 @@ export function useVideoCall(options: UseVideoCallOptions = {}) {
 
     /**
      * Monitora o estado da conexão ICE
+     * Baseado na lógica do VideoTest.vue para garantir reconexão correta em ambos os lados
      */
     const monitorIceConnectionState = (peerConnection: RTCPeerConnection) => {
         if (!peerConnection) return;
@@ -193,6 +194,7 @@ export function useVideoCall(options: UseVideoCallOptions = {}) {
         const checkState = () => {
             const state = peerConnection.iceConnectionState;
 
+            // ESTE peer caiu - apenas ele deve reconectar
             if (state === 'failed' || state === 'disconnected') {
                 if (!connectionLost.value && isCalling.value) {
                     connectionLost.value = true;
@@ -204,6 +206,7 @@ export function useVideoCall(options: UseVideoCallOptions = {}) {
                 }
             }
 
+            // ESTE peer está ok - não precisa reconectar
             if (state === 'connected' || state === 'completed') {
                 if (connectionLost.value) {
                     connectionLost.value = false;
@@ -215,7 +218,10 @@ export function useVideoCall(options: UseVideoCallOptions = {}) {
             }
         };
 
+        // Verificar estado inicial
         checkState();
+
+        // Monitorar mudanças
         peerConnection.addEventListener('iceconnectionstatechange', checkState);
     };
 
@@ -296,9 +302,16 @@ export function useVideoCall(options: UseVideoCallOptions = {}) {
 
     /**
      * Reconecta automaticamente a chamada
+     * Funciona independentemente do lado que iniciou a chamada (baseado em VideoTest.vue)
      */
     const reconnectCall = async () => {
-        if (!savedRemotePeerId.value || !peer.value || !isConnected.value) {
+        if (!savedRemotePeerId.value) {
+            console.error('Nenhum PeerID salvo para reconexão');
+            return;
+        }
+
+        if (!peer.value || !isConnected.value) {
+            console.error('Peer não está conectado. Reinicie o Peer primeiro.');
             return;
         }
 
@@ -312,13 +325,25 @@ export function useVideoCall(options: UseVideoCallOptions = {}) {
                 peerCall.value = null;
             }
 
+            // Limpar stream remoto anterior se existir
+            if (remoteVideoRef.value?.srcObject) {
+                const remoteStream = remoteVideoRef.value.srcObject as MediaStream;
+                remoteStream.getTracks().forEach((track) => track.stop());
+            }
+
+            if (remoteVideoRef.value) {
+                remoteVideoRef.value.srcObject = null;
+            }
+
             // Garantir que temos stream local
             if (!localStreamRef.value) {
                 await displayLocalVideo();
             }
 
             if (!localStreamRef.value) {
+                console.error('Não foi possível obter stream local para reconexão');
                 isReconnecting.value = false;
+                connectionLost.value = true;
                 return;
             }
 
@@ -335,16 +360,24 @@ export function useVideoCall(options: UseVideoCallOptions = {}) {
                 isReconnecting.value = false;
                 connectionLost.value = false;
 
+                // Garantir que savedRemotePeerId está preservado para futuras reconexões
+                if (!savedRemotePeerId.value) {
+                    savedRemotePeerId.value = call.peer;
+                }
+
                 // Monitorar ICE connection state
                 monitorIceConnectionState(call.peerConnection);
             });
 
             call.on('close', () => {
+                // Verificar se connectionLost já foi setado (via ICE ou erro)
+                // Se não foi setado, verificar o estado ICE diretamente
                 const iceState = call.peerConnection?.iceConnectionState;
                 const isConnectionLost = connectionLost.value || iceState === 'disconnected' || iceState === 'failed';
                 
                 isReconnecting.value = false;
                 
+                // Preservar estado APENAS se este lado realmente perdeu a conexão
                 if (isConnectionLost) {
                     if (!connectionLost.value) {
                         connectionLost.value = true;
@@ -355,6 +388,7 @@ export function useVideoCall(options: UseVideoCallOptions = {}) {
                     }
                     hasRemoteStream.value = false;
                     peerCall.value = null;
+                    // NÃO chamar endCall() - preservar estado para permitir nova reconexão
                 } else {
                     endCall();
                 }
@@ -363,15 +397,18 @@ export function useVideoCall(options: UseVideoCallOptions = {}) {
             call.on('error', (error: any) => {
                 isReconnecting.value = false;
                 connectionLost.value = true;
+                console.error('Erro na reconexão:', error);
             });
         } catch (error: any) {
             isReconnecting.value = false;
             connectionLost.value = true;
+            console.error('Erro ao reconectar:', error);
         }
     };
 
     /**
      * Inicia uma chamada com um usuário
+     * O savedRemotePeerId será salvo quando a conexão for estabelecida (em createConnection)
      */
     const callUser = async (user: User) => {
         if (!user || !peer.value || !peer.value.id) {
@@ -390,8 +427,8 @@ export function useVideoCall(options: UseVideoCallOptions = {}) {
             selectedUser.value = user;
             connectionLost.value = false;
 
-            // Salvar PeerID remoto para reconexão
-            savedRemotePeerId.value = user.peerId || '';
+            // NOTA: Não salvar user.peerId aqui pois pode não estar disponível ainda
+            // O savedRemotePeerId será salvo quando a conexão for estabelecida via createConnection()
 
             // Chamar callback se fornecido
             if (options.onCallStart) {
@@ -612,9 +649,12 @@ export function useVideoCall(options: UseVideoCallOptions = {}) {
 
             // Receptor encerrou a chamada
             call.on('close', () => {
+                // Verificar se connectionLost já foi setado (via ICE ou erro)
+                // Se não foi setado, verificar o estado ICE diretamente
                 const iceState = call.peerConnection?.iceConnectionState;
                 const isConnectionLost = connectionLost.value || iceState === 'disconnected' || iceState === 'failed';
                 
+                // Preservar estado APENAS se este lado realmente perdeu a conexão
                 if (isConnectionLost) {
                     if (!connectionLost.value) {
                         connectionLost.value = true;
@@ -625,6 +665,7 @@ export function useVideoCall(options: UseVideoCallOptions = {}) {
                     }
                     hasRemoteStream.value = false;
                     peerCall.value = null;
+                    // NÃO chamar endCall() - preservar estado para permitir reconexão
                 } else {
                     endCall();
                 }
@@ -720,11 +761,12 @@ export function useVideoCall(options: UseVideoCallOptions = {}) {
             peerCall.value = call;
             incomingCallPeerId.value = call.peer;
             
-            // Verificar se é uma reconexão
+            // Verificar se é uma reconexão ANTES de setar savedRemotePeerId:
+            // Se já temos savedRemotePeerId e o chamador é o mesmo, é uma reconexão
             const isReconnection = savedRemotePeerId.value && savedRemotePeerId.value === call.peer;
             
             if (isReconnection) {
-                // Reconexão - aceitar automaticamente
+                // Reconexão - aceitar automaticamente SEM mostrar modal
                 isReceivingCall.value = false;
                 connectionLost.value = false;
                 showIncomingCallModal.value = false;
@@ -742,8 +784,8 @@ export function useVideoCall(options: UseVideoCallOptions = {}) {
                     console.error('Erro ao aceitar reconexão:', error);
                 }
             } else {
-                // Nova chamada - mostrar modal e salvar PeerID
-                savedRemotePeerId.value = call.peer;
+                // Nova chamada - mostrar modal e salvar PeerID para futuras reconexões
+                savedRemotePeerId.value = call.peer; // Salvar apenas quando for nova chamada
                 isReceivingCall.value = true;
                 showIncomingCallModal.value = true;
             }
@@ -761,9 +803,12 @@ export function useVideoCall(options: UseVideoCallOptions = {}) {
             });
 
             call.on('close', () => {
+                // Verificar se connectionLost já foi setado (via ICE ou simulação)
+                // Se não foi setado, verificar o estado ICE diretamente
                 const iceState = call.peerConnection?.iceConnectionState;
                 const isConnectionLost = connectionLost.value || iceState === 'disconnected' || iceState === 'failed';
                 
+                // Preservar estado APENAS se este lado realmente perdeu a conexão
                 if (isConnectionLost) {
                     if (!connectionLost.value) {
                         connectionLost.value = true;
@@ -774,6 +819,7 @@ export function useVideoCall(options: UseVideoCallOptions = {}) {
                     }
                     hasRemoteStream.value = false;
                     peerCall.value = null;
+                    // NÃO chamar endCall() - preservar estado para permitir reconexão
                 } else {
                     showIncomingCallModal.value = false;
                     endCall();
@@ -818,17 +864,9 @@ export function useVideoCall(options: UseVideoCallOptions = {}) {
         }
     };
 
-    // Configurar reconexão automática quando a conexão é perdida
-    watch(connectionLost, (isLost) => {
-        if (isLost && savedRemotePeerId.value && !isReconnecting.value) {
-            // Tentar reconectar automaticamente após um pequeno delay
-            setTimeout(() => {
-                if (connectionLost.value && !isReconnecting.value) {
-                    reconnectCall();
-                }
-            }, 2000);
-        }
-    });
+    // NOTA: Reconexão manual via botão, seguindo a lógica do VideoTest.vue
+    // Não há watch automático para evitar loops de reconexão
+    // O usuário deve clicar no botão "Reconectar" quando connectionLost === true
 
     return {
         // Estados principais
