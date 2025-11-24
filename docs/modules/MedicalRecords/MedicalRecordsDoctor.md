@@ -57,7 +57,7 @@ Enquanto o paciente tem acesso apenas para **visualizar** seu prontuário, o mé
 #### RF001 - Lista de Pacientes Atendidos
 - **Descrição**: Médico deve poder visualizar lista de todos os pacientes que já teve consultas
 - **Prioridade**: Alta
-- **Status**: 🔄 Parcialmente Implementado
+- **Status**: ✅ Implementado
 - **Detalhes**:
   - Acesso através da rota `/doctor/patients` ou `/doctor/medical-records`
   - Lista paginada de pacientes com histórico de consultas
@@ -69,7 +69,7 @@ Enquanto o paciente tem acesso apenas para **visualizar** seu prontuário, o mé
 #### RF002 - Visualização do Prontuário Completo
 - **Descrição**: Médico deve poder visualizar prontuário completo de pacientes atendidos
 - **Prioridade**: Alta
-- **Status**: ❌ Não Implementado
+- **Status**: ✅ Implementado
 - **Detalhes**:
   - Acesso através de `/doctor/patient/{id}/medical-record` ou `/doctor/patients/{id}`
   - Visualização durante consulta em andamento (`/doctor/consultations/{appointment_id}`)
@@ -81,7 +81,7 @@ Enquanto o paciente tem acesso apenas para **visualizar** seu prontuário, o mé
 #### RF003 - Organização por Abas/Seções
 - **Descrição**: Prontuário deve ser organizado em seções temáticas otimizadas para uso médico
 - **Prioridade**: Alta
-- **Status**: ❌ Não Implementado
+- **Status**: ✅ Implementado
 - **Seções Planejadas**:
   1. **Visão Geral** - Resumo executivo do paciente (dados pessoais, alertas, última consulta)
   2. **Histórico Clínico** - Timeline completa de consultas e eventos médicos
@@ -96,7 +96,7 @@ Enquanto o paciente tem acesso apenas para **visualizar** seu prontuário, o mé
 #### RF004 - Registro de Diagnóstico
 - **Descrição**: Médico deve poder registrar diagnóstico com CID-10 durante consulta
 - **Prioridade**: Alta
-- **Status**: ❌ Não Implementado
+- **Status**: ✅ Implementado
 - **Funcionalidades**:
   - Busca inteligente por CID-10 (código ou descrição)
   - Sugestões baseadas em sintomas
@@ -109,7 +109,7 @@ Enquanto o paciente tem acesso apenas para **visualizar** seu prontuário, o mé
 #### RF005 - Emissão de Prescrições Digitais
 - **Descrição**: Médico deve poder emitir prescrições médicas digitais
 - **Prioridade**: Alta
-- **Status**: ❌ Não Implementado
+- **Status**: ✅ Implementado
 - **Funcionalidades**:
   - Formulário de prescrição estruturado
   - Busca de medicamentos (API externa ou base local)
@@ -126,7 +126,7 @@ Enquanto o paciente tem acesso apenas para **visualizar** seu prontuário, o mé
 #### RF006 - Solicitação de Exames
 - **Descrição**: Médico deve poder solicitar exames laboratoriais e de imagem
 - **Prioridade**: Alta
-- **Status**: ❌ Não Implementado
+- **Status**: ✅ Implementado
 - **Funcionalidades**:
   - Catálogo de exames disponíveis
   - Busca por tipo (laboratorial, imagem, outros)
@@ -141,7 +141,7 @@ Enquanto o paciente tem acesso apenas para **visualizar** seu prontuário, o mé
 #### RF007 - Upload e Anexo de Documentos
 - **Descrição**: Médico deve poder anexar documentos ao prontuário
 - **Prioridade**: Alta
-- **Status**: ❌ Não Implementados
+- **Status**: ✅ Implementado
 - **Funcionalidades**:
   - Upload de múltiplos arquivos (PDF, imagens, documentos)
   - Drag & drop interface
@@ -155,7 +155,7 @@ Enquanto o paciente tem acesso apenas para **visualizar** seu prontuário, o mé
 #### RF008 - Registro de Anotações Clínicas
 - **Descrição**: Médico deve poder registrar anotações clínicas (públicas e privadas)
 - **Prioridade**: Alta
-- **Status**: ❌ Não Implementado
+- **Status**: ✅ Implementado
 - **Funcionalidades**:
   - Anotações privadas (visíveis apenas ao médico)
   - Anotações compartilhadas (visíveis ao paciente)
@@ -169,7 +169,7 @@ Enquanto o paciente tem acesso apenas para **visualizar** seu prontuário, o mé
 #### RF009 - Registro de Sinais Vitais
 - **Descrição**: Médico deve poder registrar sinais vitais durante consulta
 - **Prioridade**: Média
-- **Status**: ❌ Não Implementado
+- **Status**: ✅ Implementado
 - **Sinais a Registrar**:
   - Pressão arterial (sistólica/diastólica)
   - Temperatura corporal
@@ -188,7 +188,7 @@ Enquanto o paciente tem acesso apenas para **visualizar** seu prontuário, o mé
 #### RF010 - Emissão de Atestados
 - **Descrição**: Médico deve poder emitir atestados médicos digitais
 - **Prioridade**: Média
-- **Status**: ❌ Não Implementado
+- **Status**: ✅ Implementado
 - **Funcionalidades**:
   - Templates de atestados (afastamento, comparecimento, etc.)
   - Campos editáveis (período, motivo, restrições)
@@ -471,32 +471,40 @@ Enquanto o paciente tem acesso apenas para **visualizar** seu prontuário, o mé
   - Cards com informações pessoais
   - Lista de consultas recentes
 
-### Funcionalidades Parcialmente Implementadas 🔄
+### Funcionalidades Implementadas ✅
 
-#### 1. Estrutura de Rotas
-- **Status**: 🔄 Rotas básicas existem, mas sem funcionalidade completa
-- **Rotas Existentes**:
+#### 1. Estrutura de Rotas Completa
+- **Status**: ✅ Rotas implementadas e funcionais
+- **Rotas Implementadas**:
   - `/doctor/patients` - Lista de pacientes
   - `/doctor/patient/{id}` - Detalhes do paciente
-- **Rotas Faltantes**:
-  - `/doctor/patient/{id}/medical-record` - Prontuário completo
-  - `/doctor/consultations/{appointment_id}` - Consulta em andamento
-  - `/doctor/prescriptions` - Gerenciar prescrições
-  - `/doctor/examinations` - Gerenciar exames
+  - `/doctor/patients/{patient}/medical-record` - Prontuário completo
+  - `/doctor/consultations/{appointment}` - Consulta em andamento
+  - `/doctor/consultations/{appointment}/start` - Iniciar consulta
+  - `/doctor/consultations/{appointment}/save-draft` - Salvar rascunho
+  - `/doctor/consultations/{appointment}/finalize` - Finalizar consulta
+  - `/doctor/consultations/{appointment}/complement` - Adicionar complemento
+  - `/doctor/consultations/{appointment}/pdf` - Gerar PDF
+  - `/doctor/patients/{patient}/medical-record/export` - Exportar prontuário
+  - `/doctor/patients/{patient}/medical-record/diagnoses` - Criar diagnóstico
+  - `/doctor/patients/{patient}/medical-record/prescriptions` - Criar prescrição
+  - `/doctor/patients/{patient}/medical-record/examinations` - Criar exame
+  - `/doctor/patients/{patient}/medical-record/notes` - Criar anotação
+  - `/doctor/patients/{patient}/medical-record/certificates` - Criar atestado
+  - `/doctor/patients/{patient}/medical-record/vital-signs` - Registrar sinais vitais
+  - `/doctor/patients/{patient}/medical-record/documents` - Anexar documento
 
-### Funcionalidades Não Implementadas ❌
-
-#### 1. Service Layer para Medical Records (Médico)
-- **Arquivo Necessário**: `app/Services/MedicalRecordService.php`
-- **Métodos Específicos para Médico**:
-  - `getDoctorPatientList(Doctor $doctor, array $filters = []): Collection` - Lista pacientes do médico
-  - `getDoctorPatientMedicalRecord(Doctor $doctor, Patient $patient): array` - Prontuário completo
-  - `canDoctorViewPatientRecord(Doctor $doctor, Patient $patient): bool` - Validação de acesso
-  - `registerDiagnosis(Appointment $appointment, array $diagnosisData): void` - Registrar diagnóstico
-  - `issuePrescription(Doctor $doctor, Patient $patient, Appointment $appointment, array $medicationData): Prescription` - Emitir prescrição
-  - `requestExamination(Doctor $doctor, Patient $patient, Appointment $appointment, array $examData): Examination` - Solicitar exame
-  - `uploadDocument(Doctor $doctor, Patient $patient, array $fileData): MedicalDocument` - Upload documento
-  - `createClinicalNote(Doctor $doctor, Patient $patient, array $noteData): ClinicalNote` - Criar anotação
+#### 2. Service Layer para Medical Records (Médico)
+- **Arquivo**: `app/Services/MedicalRecordService.php` ✅ Implementado
+- **Métodos Implementados**:
+  - `getDoctorPatientList(Doctor $doctor, array $filters = []): Collection` ✅
+  - `getDoctorPatientMedicalRecord(Doctor $doctor, Patient $patient): array` ✅
+  - `canDoctorViewPatientRecord(Doctor $doctor, Patient $patient): bool` ✅
+  - `registerDiagnosis(Appointment $appointment, array $diagnosisData): void` ✅
+  - `issuePrescription(Doctor $doctor, Patient $patient, Appointment $appointment, array $medicationData): Prescription` ✅
+  - `requestExamination(Doctor $doctor, Patient $patient, Appointment $appointment, array $examData): Examination` ✅
+  - `uploadDocument(Doctor $doctor, Patient $patient, array $fileData): MedicalDocument` ✅
+  - `createClinicalNote(Doctor $doctor, Patient $patient, array $noteData): ClinicalNote` ✅
   - `issueCertificate(Doctor $doctor, Patient $patient, Appointment $appointment, array $certificateData): Certificate` - Emitir atestado
   - `registerVitalSigns(Appointment $appointment, array $vitalSigns): VitalSign` - Registrar sinais vitais
   - `generateConsultationPDF(Appointment $appointment): string` - Gerar PDF de consulta
@@ -1920,7 +1928,7 @@ Route::middleware(['auth', 'verified', 'doctor'])->prefix('doctor')->group(funct
 - **Campo Relevante**: `metadata` (JSON) - armazena diagnóstico, sintomas, etc.
 - **Relacionamentos**: `belongsTo(Doctor)`, `belongsTo(Patient)`
 
-#### 3. Prescription (A Criar)
+#### 3. Prescription (✅ Implementado)
 - **Tabela**: `prescriptions`
 - **Campos Principais**:
   ```sql
@@ -1941,7 +1949,7 @@ Route::middleware(['auth', 'verified', 'doctor'])->prefix('doctor')->group(funct
   deleted_at TIMESTAMP (soft delete)
   ```
 
-#### 4. Examination (A Criar)
+#### 4. Examination (✅ Implementado)
 - **Tabela**: `examinations`
 - **Campos Principais**:
   ```sql
@@ -1966,7 +1974,7 @@ Route::middleware(['auth', 'verified', 'doctor'])->prefix('doctor')->group(funct
   deleted_at TIMESTAMP (soft delete)
   ```
 
-#### 5. ClinicalNote (A Criar)
+#### 5. ClinicalNote (✅ Implementado)
 - **Tabela**: `clinical_notes`
 - **Campos Principais**:
   ```sql
@@ -1986,7 +1994,7 @@ Route::middleware(['auth', 'verified', 'doctor'])->prefix('doctor')->group(funct
   deleted_at TIMESTAMP (soft delete)
   ```
 
-#### 6. MedicalCertificate (A Criar)
+#### 6. MedicalCertificate (✅ Implementado)
 - **Tabela**: `medical_certificates`
 - **Campos Principais**:
   ```sql
@@ -2010,7 +2018,7 @@ Route::middleware(['auth', 'verified', 'doctor'])->prefix('doctor')->group(funct
   deleted_at TIMESTAMP (soft delete)
   ```
 
-#### 7. VitalSign (A Criar)
+#### 7. VitalSign (✅ Implementado)
 - **Tabela**: `vital_signs`
 - **Campos Principais**:
   ```sql
@@ -2033,7 +2041,7 @@ Route::middleware(['auth', 'verified', 'doctor'])->prefix('doctor')->group(funct
   updated_at TIMESTAMP
   ```
 
-#### 8. MedicalDocument (A Criar)
+#### 8. MedicalDocument (✅ Implementado)
 - **Tabela**: `medical_documents`
 - **Campos Principais**:
   ```sql
@@ -2054,9 +2062,8 @@ Route::middleware(['auth', 'verified', 'doctor'])->prefix('doctor')->group(funct
   deleted_at TIMESTAMP (soft delete)
   ```
 
-#### 9. Diagnosis (Opcional - Pode usar appointments.metadata)
-- **Opção 1**: Tabela separada `diagnoses`
-- **Opção 2**: Usar `appointments.metadata` JSON estruturado
+#### 9. Diagnosis (✅ Implementado)
+- **Tabela**: `diagnoses` (tabela separada implementada)
 - **Campos (se tabela separada)**:
   ```sql
   id UUID PRIMARY KEY

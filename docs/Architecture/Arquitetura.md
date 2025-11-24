@@ -44,7 +44,14 @@ O sistema segue uma arquitetura em camadas bem definida:
 - Agregam regras de negócio
 - Coordenam fluxos complexos
 - Utilizam modelos diretamente
-- Implementados: AppointmentService, UserRedirectService
+- Implementados:
+  - `AppointmentService` - Lógica de agendamentos
+  - `AvailabilityService` - Gestão de disponibilidade
+  - `MedicalRecordService` - Gestão de prontuários médicos
+  - `TimelineEventService` - Gestão de timeline profissional
+  - `AvatarService` - Gestão de avatares
+  - `ScheduleService` (Doctor) - Configuração de agenda do médico
+  - `AvailabilityTimelineService` (Doctor) - Timeline de disponibilidade
 
 #### Models (Eloquent)
 - Schema e relacionamentos bem definidos
@@ -54,8 +61,20 @@ O sistema segue uma arquitetura em camadas bem definida:
 - Soft Deletes e UUIDs implementados
 
 #### Events/Observers
-- Events: RequestVideoCall, RequestVideoCallStatus
-- Observers: AppointmentsObserver
+- **Events**:
+  - `RequestVideoCall` - Solicitação de videoconferência
+  - `RequestVideoCallStatus` - Status da chamada
+  - `AppointmentStatusChanged` - Mudança de status de consulta
+  - `VideoCallRoomCreated` - Criação de sala de videoconferência
+  - `VideoCallRoomExpired` - Expiração de sala
+  - `VideoCallUserJoined` - Usuário entrou na chamada
+  - `VideoCallUserLeft` - Usuário saiu da chamada
+- **Observers**: `AppointmentsObserver` - Monitora mudanças em agendamentos
+- **Jobs**:
+  - `CleanupOldVideoCallEvents` - Limpeza de eventos antigos
+  - `ExpireVideoCallRooms` - Expiração automática de salas
+  - `UpdateAppointmentFromRoom` - Atualização de consulta a partir da sala
+  - `GenerateMedicalRecordPDF` - Geração de PDF de prontuário
 - Broadcasting em tempo real via Laravel Reverb
 
 ## Estrutura do Backend
@@ -73,13 +92,47 @@ app/
 │   │   │   ├── DoctorRegistrationController.php
 │   │   │   ├── PatientRegistrationController.php
 │   │   │   └── ...
-│   │   ├── Doctor/DashboardController.php   # Dashboard do médico
-│   │   ├── Patient/DashboardController.php  # Dashboard do paciente
+│   │   ├── Doctor/                         # Controllers do médico
+│   │   │   ├── DoctorDashboardController.php
+│   │   │   ├── DoctorAppointmentsController.php
+│   │   │   ├── DoctorAvailabilityController.php
+│   │   │   ├── DoctorConsultationsController.php
+│   │   │   ├── DoctorConsultationDetailController.php
+│   │   │   ├── DoctorMessagesController.php
+│   │   │   ├── DoctorHistoryController.php
+│   │   │   ├── DoctorPatientsController.php
+│   │   │   ├── DoctorDocumentsController.php
+│   │   │   ├── PatientDetailsController.php
+│   │   │   ├── DoctorPatientMedicalRecordController.php
+│   │   │   ├── DoctorScheduleController.php
+│   │   │   ├── DoctorServiceLocationController.php
+│   │   │   ├── DoctorAvailabilitySlotController.php
+│   │   │   └── DoctorBlockedDateController.php
+│   │   ├── Patient/                        # Controllers do paciente
+│   │   │   ├── PatientDashboardController.php
+│   │   │   ├── PatientSearchConsultationsController.php
+│   │   │   ├── ScheduleConsultationController.php
+│   │   │   ├── DoctorPerfilController.php
+│   │   │   ├── PatientMessagesController.php
+│   │   │   ├── PatientVideoCallController.php
+│   │   │   ├── PatientHistoryConsultationsController.php
+│   │   │   ├── PatientConsultationDetailsController.php
+│   │   │   ├── PatientNextConsultationController.php
+│   │   │   └── PatientMedicalRecordController.php
 │   │   ├── Settings/                       # Configurações do usuário
 │   │   │   ├── PasswordController.php
-│   │   │   └── ProfileController.php
+│   │   │   ├── ProfileController.php
+│   │   │   └── BugReportController.php
 │   │   ├── VideoCall/VideoCallController.php # Videoconferência
-│   │   └── SpecializationController.php    # Especializações médicas
+│   │   ├── MedicalRecordDocumentController.php # Documentos médicos
+│   │   ├── TimelineEventController.php     # Timeline events
+│   │   ├── SpecializationController.php    # Especializações médicas
+│   │   ├── AppointmentsController.php      # Consultas (compartilhado)
+│   │   ├── ConsultationsController.php     # Consultas
+│   │   ├── HealthController.php            # Saúde
+│   │   ├── AvatarController.php            # Avatares
+│   │   ├── TermsOfServiceController.php    # Termos de serviço
+│   │   └── PrivacyPolicyController.php     # Política de privacidade
 │   ├── Middleware/                         # Middleware personalizado
 │   └── Requests/                          # Form Requests de validação
 ├── Models/
@@ -88,15 +141,54 @@ app/
 │   ├── Patient.php                        # Modelo do paciente
 │   ├── Appointments.php                   # Agendamentos
 │   ├── AppointmentLog.php                 # Log de agendamentos
-│   └── Specialization.php                 # Especializações
+│   ├── Specialization.php                 # Especializações
+│   ├── ServiceLocation.php                # Locais de atendimento
+│   ├── AvailabilitySlot.php               # Slots de disponibilidade
+│   ├── Doctor/BlockedDate.php             # Datas bloqueadas
+│   ├── Prescription.php                   # Prescrições médicas
+│   ├── Diagnosis.php                      # Diagnósticos (CID-10)
+│   ├── Examination.php                    # Exames solicitados
+│   ├── ClinicalNote.php                   # Anotações clínicas
+│   ├── MedicalCertificate.php             # Atestados médicos
+│   ├── VitalSign.php                      # Sinais vitais
+│   ├── MedicalDocument.php                # Documentos médicos
+│   ├── MedicalRecordAuditLog.php          # Logs de auditoria
+│   ├── VideoCallRoom.php                  # Salas de videoconferência
+│   ├── VideoCallEvent.php                 # Eventos de videoconferência
+│   └── TimelineEvent.php                  # Eventos de timeline
 ├── Services/
 │   ├── AppointmentService.php             # Lógica de agendamentos
-│   └── UserRedirectService.php            # Redirecionamento por tipo de usuário
+│   ├── AvailabilityService.php            # Gestão de disponibilidade
+│   ├── MedicalRecordService.php           # Gestão de prontuários
+│   ├── TimelineEventService.php           # Gestão de timeline
+│   ├── AvatarService.php                  # Gestão de avatares
+│   └── Doctor/
+│       ├── ScheduleService.php            # Configuração de agenda
+│       └── AvailabilityTimelineService.php # Timeline de disponibilidade
 ├── Events/
 │   ├── RequestVideoCall.php              # Evento de solicitação de chamada
-│   └── RequestVideoCallStatus.php        # Evento de status da chamada
+│   ├── RequestVideoCallStatus.php        # Evento de status da chamada
+│   ├── AppointmentStatusChanged.php      # Mudança de status de consulta
+│   ├── VideoCallRoomCreated.php          # Criação de sala de videoconferência
+│   ├── VideoCallRoomExpired.php          # Expiração de sala
+│   ├── VideoCallUserJoined.php          # Usuário entrou na chamada
+│   └── VideoCallUserLeft.php            # Usuário saiu da chamada
 ├── Observers/
 │   └── AppointmentsObserver.php          # Observer para agendamentos
+├── Jobs/
+│   ├── CleanupOldVideoCallEvents.php     # Limpeza de eventos antigos
+│   ├── ExpireVideoCallRooms.php          # Expiração automática de salas
+│   ├── UpdateAppointmentFromRoom.php     # Atualização de consulta
+│   └── GenerateMedicalRecordPDF.php      # Geração de PDF de prontuário
+├── Policies/
+│   ├── AppointmentPolicy.php            # Políticas de consultas
+│   ├── MedicalRecordPolicy.php           # Políticas de prontuários
+│   ├── TimelineEventPolicy.php           # Políticas de timeline
+│   ├── VideoCallPolicy.php               # Políticas de videoconferência
+│   └── Doctor/                           # Políticas específicas do médico
+│       ├── DoctorPolicy.php
+│       ├── DoctorSchedulePolicy.php
+│       └── DoctorPatientPolicy.php
 └── Providers/
     └── AppServiceProvider.php            # Service Provider principal
 ```
@@ -251,20 +343,28 @@ Criar modelos Eloquent com relacionamentos, casts, scopes e accessors
 
 ### 3. Services
 Implementar lógica de negócio nos services
-- AppointmentService para lógica de agendamentos
-- UserRedirectService para redirecionamento por tipo
+- `AppointmentService` - Lógica de agendamentos
+- `AvailabilityService` - Gestão de disponibilidade e slots
+- `MedicalRecordService` - Gestão completa de prontuários médicos
+- `TimelineEventService` - Gestão de timeline profissional
+- `AvatarService` - Upload e gestão de avatares
+- `ScheduleService` (Doctor) - Configuração completa de agenda
+- `AvailabilityTimelineService` (Doctor) - Timeline de disponibilidade
 
 ### 4. Controllers
 Criar controllers organizados por domínio
-- Auth/ para autenticação e registro
-- Doctor/ e Patient/ para funcionalidades específicas
-- Settings/ para configurações do usuário
-- VideoCall/ para videoconferência
+- `Auth/` - Autenticação e registro (Doctor e Patient separados)
+- `Doctor/` - Funcionalidades específicas do médico (dashboard, consultas, pacientes, agenda, prontuários)
+- `Patient/` - Funcionalidades específicas do paciente (dashboard, busca, agendamento, histórico, prontuários)
+- `Settings/` - Configurações do usuário (perfil, senha, relatórios de bug)
+- `VideoCall/` - Videoconferência
+- Controllers compartilhados: `AppointmentsController`, `TimelineEventController`, `MedicalRecordDocumentController`
 
-### 5. Events e Observers
+### 5. Events, Observers e Jobs
 Implementar eventos para comunicação em tempo real
-- Events para videoconferência
-- Observers para hooks de modelo
+- **Events**: Videoconferência, mudanças de status de consulta, criação/expiração de salas
+- **Observers**: Hooks de modelo (AppointmentsObserver)
+- **Jobs**: Limpeza automática, expiração de salas, geração de PDFs, atualização de consultas
 
 ### 6. Frontend (Vue.js + Inertia.js)
 Desenvolver componentes e páginas
@@ -288,11 +388,27 @@ Implementar testes unitários e de integração
 ## Convenções de Nomenclatura
 
 ### Backend
-- **Controllers**: `Doctor/DashboardController`, `Patient/DashboardController`, `VideoCall/VideoCallController`
-- **Services**: `AppointmentService`, `UserRedirectService`
-- **Models**: `Doctor`, `Patient`, `User`, `Appointments`, `Specialization`
-- **Events**: `RequestVideoCall`, `RequestVideoCallStatus`
+- **Controllers**: 
+  - `Doctor/DoctorDashboardController`, `Doctor/DoctorConsultationsController`, `Doctor/DoctorScheduleController`
+  - `Patient/PatientDashboardController`, `Patient/ScheduleConsultationController`
+  - `VideoCall/VideoCallController`, `TimelineEventController`, `MedicalRecordDocumentController`
+- **Services**: 
+  - `AppointmentService`, `AvailabilityService`, `MedicalRecordService`
+  - `TimelineEventService`, `AvatarService`, `Doctor/ScheduleService`
+- **Models**: 
+  - `User`, `Doctor`, `Patient`, `Appointments`, `Specialization`
+  - `ServiceLocation`, `AvailabilitySlot`, `Doctor/BlockedDate`
+  - `Prescription`, `Diagnosis`, `Examination`, `ClinicalNote`, `MedicalCertificate`, `VitalSign`, `MedicalDocument`
+  - `MedicalRecordAuditLog`, `VideoCallRoom`, `VideoCallEvent`, `TimelineEvent`
+- **Events**: 
+  - `RequestVideoCall`, `RequestVideoCallStatus`, `AppointmentStatusChanged`
+  - `VideoCallRoomCreated`, `VideoCallRoomExpired`, `VideoCallUserJoined`, `VideoCallUserLeft`
 - **Observers**: `AppointmentsObserver`
+- **Jobs**: 
+  - `CleanupOldVideoCallEvents`, `ExpireVideoCallRooms`, `UpdateAppointmentFromRoom`, `GenerateMedicalRecordPDF`
+- **Policies**: 
+  - `AppointmentPolicy`, `MedicalRecordPolicy`, `TimelineEventPolicy`, `VideoCallPolicy`
+  - `Doctor/DoctorPolicy`, `Doctor/DoctorSchedulePolicy`, `Doctor/DoctorPatientPolicy`
 
 ### Frontend
 - **Components**: `AppHeader.vue`, `AppSidebar.vue`, `NavMain.vue`
@@ -328,6 +444,11 @@ Implementar testes unitários e de integração
 - **[Inertia.js](../index/Glossario.md#i)** - Integração Laravel + Vue.js
 
 ---
+
+---
+
+*Última atualização: Janeiro 2025*
+*Versão: 2.0*
 
 *Este documento deve ser atualizado conforme a evolução do projeto.*
 

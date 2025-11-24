@@ -72,6 +72,13 @@ Alguns requisitos essenciais:
   - [V] `doctor()` - belongsTo Doctor
   - [V] `patient()` - belongsTo Patient
   - [V] `logs()` - hasMany AppointmentLog
+  - [V] `prescriptions()` - hasMany Prescription
+  - [V] `diagnoses()` - hasMany Diagnosis
+  - [V] `examinations()` - hasMany Examination
+  - [V] `clinicalNotes()` - hasMany ClinicalNote
+  - [V] `medicalCertificates()` - hasMany MedicalCertificate
+  - [V] `vitalSigns()` - hasMany VitalSign
+  - [V] `medicalDocuments()` - hasMany MedicalDocument
   - [V] Entender como os relacionamentos funcionam no contexto do sistema
 
 [V] **Scopes (Filtros)**
@@ -114,6 +121,23 @@ Alguns requisitos essenciais:
   - [V] Geração automática de access_code
   - [V] Definição automática de status padrão
 
+## Integração com Prontuários Médicos
+
+### Durante a Consulta
+- **Acesso ao Prontuário**: Médico pode acessar e editar prontuário durante consulta em andamento
+- **Registro em Tempo Real**: Diagnósticos, prescrições, exames, anotações e sinais vitais podem ser registrados durante a consulta
+- **Rascunho**: Sistema permite salvar rascunho da consulta antes de finalizar
+
+### Finalização da Consulta
+- **Bloqueio de Edição**: Após finalização, dados críticos (diagnóstico, prescrições) são bloqueados
+- **Complementos**: Médico pode adicionar complementos após finalização
+- **Geração de PDF**: Sistema pode gerar PDF completo da consulta com todo o prontuário
+
+### Integração com Agenda
+- **Validação de Disponibilidade**: Consultas são validadas contra slots de disponibilidade do médico
+- **Datas Bloqueadas**: Sistema verifica se data está bloqueada antes de permitir agendamento
+- **Slots Recorrentes e Específicos**: Sistema considera ambos os tipos de slots na validação
+
 ## 🔗 Referências Cruzadas
 
 ### Documentação Relacionada
@@ -127,6 +151,9 @@ Alguns requisitos essenciais:
 ### Implementações Relacionadas
 - **[Appointment Model](../../app/Models/Appointments.php)** - Entidade de consultas
 - **[Appointment Service](../../app/Services/AppointmentService.php)** - Lógica de negócio
+- **[Availability Service](../../app/Services/AvailabilityService.php)** - Gestão de disponibilidade
+- **[Schedule Service](../../app/Services/Doctor/ScheduleService.php)** - Configuração de agenda
+- **[Medical Record Service](../../app/Services/MedicalRecordService.php)** - Gestão de prontuários
 - **[Appointment Observer](../../app/Observers/AppointmentsObserver.php)** - Eventos automáticos
 - **[Appointment Migration](../../database/migrations/2025_09_10_152050_create_appointments_table.php)** - Estrutura do banco
 - **[Appointment Tests](../../tests/Unit/AppointmentsTest.php)** - Testes unitários

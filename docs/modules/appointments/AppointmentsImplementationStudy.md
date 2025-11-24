@@ -40,6 +40,13 @@ Este documento serve como guia de estudos para entender completamente a implemen
   - [V] `doctor()` - belongsTo Doctor
   - [V] `patient()` - belongsTo Patient
   - [V] `logs()` - hasMany AppointmentLog
+  - [V] `prescriptions()` - hasMany Prescription
+  - [V] `diagnoses()` - hasMany Diagnosis
+  - [V] `examinations()` - hasMany Examination
+  - [V] `clinicalNotes()` - hasMany ClinicalNote
+  - [V] `medicalCertificates()` - hasMany MedicalCertificate
+  - [V] `vitalSigns()` - hasMany VitalSign
+  - [V] `medicalDocuments()` - hasMany MedicalDocument
   - [V] Entender como os relacionamentos funcionam no contexto do sistema
 
 - [V] **Scopes (Filtros)**
@@ -211,5 +218,5 @@ Ao final deste estudo, você deve ser capaz de:
 ---
 
 **Data de Criação:** 10 de Setembro de 2025  
-**Última Atualização:** 10 de Setembro de 2025  
-**Status:** Em desenvolvimento 🚧
+**Última Atualização:** Janeiro 2025  
+**Status:** ✅ Implementado com integração completa de prontuários

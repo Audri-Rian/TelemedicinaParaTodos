@@ -31,5 +31,6 @@ Cada requisito está mapeado na [Matriz de Rastreabilidade](../index/MatrizRequi
 
 ---
 
-*Última atualização: Dezembro 2024*
+*Última atualização: Janeiro 2025*
+*Versão: 2.0*
 

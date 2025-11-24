@@ -69,24 +69,28 @@ Esta matriz conecta cada requisito funcional e não funcional aos seus artefatos
 ### RF004 - Realizar Consultas Online (Videoconferência)
 | **Aspecto** | **Artefato** | **Status** | **Link** |
 |-------------|--------------|------------|----------|
-| **Design** | VideoCall Tasks | 🔄 | [VideoCallTasks.md](modules/videocall/VideoCallTasks.md) |
-| **Lógica** | VideoCall Implementation | 🔄 | [VideoCallImplementation.md](modules/videocall/VideoCallImplementation.md) |
-| **Implementação** | VideoCall Service | 🔄 | [VideoCall Service](../app/Services/) |
+| **Design** | VideoCall Tasks | ✅ | [VideoCallTasks.md](modules/videocall/VideoCallTasks.md) |
+| **Lógica** | VideoCall Implementation | ✅ | [VideoCallImplementation.md](modules/videocall/VideoCallImplementation.md) |
+| **Implementação** | VideoCall Controller | ✅ | [VideoCallController.php](../app/Http/Controllers/VideoCall/VideoCallController.php) |
 | **Implementação** | VideoCall Events | ✅ | [RequestVideoCall.php](../app/Events/RequestVideoCall.php) |
+| **Implementação** | VideoCallRoom Model | ✅ | [VideoCallRoom.php](../app/Models/VideoCallRoom.php) |
+| **Implementação** | VideoCallEvent Model | ✅ | [VideoCallEvent.php](../app/Models/VideoCallEvent.php) |
+| **Implementação** | VideoCall Jobs | ✅ | [Jobs](../app/Jobs/) |
 | **Implementação** | Broadcasting | ✅ | [Laravel Reverb](../config/reverb.php) |
-| **Frontend** | VideoCall Components | 🔄 | [VideoCall Components](../resources/js/components/) |
-| **Testes** | VideoCall Tests | 📋 | *Planejado* |
+| **Banco** | VideoCall Migrations | ✅ | [Migrations](../database/migrations/) |
+| **Frontend** | VideoCall Components | ✅ | [VideoCall Components](../resources/js/components/) |
+| **Testes** | VideoCall Tests | 🔄 | [VideoCall Tests](../tests/) |
 
 ### RF005 - Prescrição Digital e Envio de Documentos
 | **Aspecto** | **Artefato** | **Status** | **Link** |
 |-------------|--------------|------------|----------|
-| **Design** | Regras de Negócio | 📋 | [SystemRules.md](requirements/SystemRules.md) |
-| **Lógica** | Prescription Logic | 📋 | *Planejado* |
-| **Implementação** | Prescription Model | 📋 | *Planejado* |
-| **Implementação** | Prescription Service | 📋 | *Planejado* |
-| **Banco** | Prescription Migration | 📋 | *Planejado* |
-| **Frontend** | Prescription Pages | 📋 | *Planejado* |
-| **Testes** | Prescription Tests | 📋 | *Planejado* |
+| **Design** | Regras de Negócio | ✅ | [SystemRules.md](requirements/SystemRules.md#prescriptions-prescrições) |
+| **Lógica** | Medical Record Logic | ✅ | [MedicalRecordsDoctor.md](modules/MedicalRecords/MedicalRecordsDoctor.md) |
+| **Implementação** | Prescription Model | ✅ | [Prescription.php](../app/Models/Prescription.php) |
+| **Implementação** | MedicalRecord Service | ✅ | [MedicalRecordService.php](../app/Services/MedicalRecordService.php) |
+| **Banco** | Prescription Migration | ✅ | [2025_11_24_101852_create_prescriptions_table.php](../database/migrations/) |
+| **Frontend** | Prescription Pages | ✅ | [Medical Record Pages](../resources/js/pages/) |
+| **Testes** | Prescription Tests | 🔄 | [Medical Record Tests](../tests/) |
 
 ### RF006 - Pagamentos Online
 | **Aspecto** | **Artefato** | **Status** | **Link** |
@@ -161,10 +165,56 @@ Esta matriz conecta cada requisito funcional e não funcional aos seus artefatos
 | **Aspecto** | **Artefato** | **Status** | **Link** |
 |-------------|--------------|------------|----------|
 | **Design** | Regras de Negócio | ✅ | [SystemRules.md](requirements/SystemRules.md) |
-| **Lógica** | Settings Logic | 🔄 | [Settings Routes](../routes/settings.php) |
-| **Implementação** | Settings Controller | 🔄 | [Settings Controller](../app/Http/Controllers/) |
-| **Frontend** | Settings Pages | 🔄 | [Settings Components](../resources/js/pages/) |
+| **Lógica** | Settings Logic | ✅ | [Settings Routes](../routes/settings.php) |
+| **Implementação** | Settings Controller | ✅ | [Settings Controller](../app/Http/Controllers/Settings/) |
+| **Implementação** | Avatar Service | ✅ | [AvatarService.php](../app/Services/AvatarService.php) |
+| **Frontend** | Settings Pages | ✅ | [Settings Components](../resources/js/pages/settings/) |
 | **Testes** | Settings Tests | 🔄 | [Settings Tests](../tests/Feature/Settings/) |
+
+### RF014 - Gestão de Prontuários Médicos
+| **Aspecto** | **Artefato** | **Status** | **Link** |
+|-------------|--------------|------------|----------|
+| **Design** | Regras de Negócio | ✅ | [SystemRules.md](requirements/SystemRules.md#módulo-de-prontuários-médicos) |
+| **Lógica** | Medical Record Logic | ✅ | [MedicalRecordsDoctor.md](modules/MedicalRecords/MedicalRecordsDoctor.md) |
+| **Implementação** | MedicalRecord Service | ✅ | [MedicalRecordService.php](../app/Services/MedicalRecordService.php) |
+| **Implementação** | Diagnosis Model | ✅ | [Diagnosis.php](../app/Models/Diagnosis.php) |
+| **Implementação** | Examination Model | ✅ | [Examination.php](../app/Models/Examination.php) |
+| **Implementação** | ClinicalNote Model | ✅ | [ClinicalNote.php](../app/Models/ClinicalNote.php) |
+| **Implementação** | MedicalCertificate Model | ✅ | [MedicalCertificate.php](../app/Models/MedicalCertificate.php) |
+| **Implementação** | VitalSign Model | ✅ | [VitalSign.php](../app/Models/VitalSign.php) |
+| **Implementação** | MedicalDocument Model | ✅ | [MedicalDocument.php](../app/Models/MedicalDocument.php) |
+| **Implementação** | MedicalRecordAuditLog Model | ✅ | [MedicalRecordAuditLog.php](../app/Models/MedicalRecordAuditLog.php) |
+| **Implementação** | Medical Record Controllers | ✅ | [Controllers](../app/Http/Controllers/Doctor/) |
+| **Banco** | Medical Record Migrations | ✅ | [Migrations](../database/migrations/) |
+| **Frontend** | Medical Record Pages | ✅ | [Medical Record Pages](../resources/js/pages/) |
+| **Testes** | Medical Record Tests | 🔄 | [Medical Record Tests](../tests/) |
+
+### RF015 - Sistema de Agenda e Disponibilidade
+| **Aspecto** | **Artefato** | **Status** | **Link** |
+|-------------|--------------|------------|----------|
+| **Design** | Regras de Negócio | ✅ | [SystemRules.md](requirements/SystemRules.md#módulo-de-agenda-e-disponibilidade) |
+| **Lógica** | Schedule Logic | ✅ | [AppointmentsLogica.md](modules/appointments/AppointmentsLogica.md) |
+| **Implementação** | Schedule Service | ✅ | [ScheduleService.php](../app/Services/Doctor/ScheduleService.php) |
+| **Implementação** | Availability Service | ✅ | [AvailabilityService.php](../app/Services/AvailabilityService.php) |
+| **Implementação** | ServiceLocation Model | ✅ | [ServiceLocation.php](../app/Models/ServiceLocation.php) |
+| **Implementação** | AvailabilitySlot Model | ✅ | [AvailabilitySlot.php](../app/Models/AvailabilitySlot.php) |
+| **Implementação** | BlockedDate Model | ✅ | [BlockedDate.php](../app/Models/Doctor/BlockedDate.php) |
+| **Implementação** | Schedule Controllers | ✅ | [Controllers](../app/Http/Controllers/Doctor/) |
+| **Banco** | Schedule Migrations | ✅ | [Migrations](../database/migrations/) |
+| **Frontend** | Schedule Pages | ✅ | [Schedule Pages](../resources/js/pages/) |
+| **Testes** | Schedule Tests | 🔄 | [Schedule Tests](../tests/) |
+
+### RF016 - Timeline de Profissional
+| **Aspecto** | **Artefato** | **Status** | **Link** |
+|-------------|--------------|------------|----------|
+| **Design** | Regras de Negócio | ✅ | [SystemRules.md](requirements/SystemRules.md#módulo-de-timeline) |
+| **Lógica** | Timeline Logic | ✅ | [Arquitetura.md](Architecture/Arquitetura.md) |
+| **Implementação** | TimelineEvent Service | ✅ | [TimelineEventService.php](../app/Services/TimelineEventService.php) |
+| **Implementação** | TimelineEvent Model | ✅ | [TimelineEvent.php](../app/Models/TimelineEvent.php) |
+| **Implementação** | TimelineEvent Controller | ✅ | [TimelineEventController.php](../app/Http/Controllers/TimelineEventController.php) |
+| **Banco** | TimelineEvent Migration | ✅ | [2025_11_13_182331_create_timeline_events_table.php](../database/migrations/) |
+| **Frontend** | Timeline Pages | ✅ | [Timeline Pages](../resources/js/pages/) |
+| **Testes** | Timeline Tests | 🔄 | [Timeline Tests](../tests/) |
 
 ---
 
@@ -239,22 +289,27 @@ Esta matriz conecta cada requisito funcional e não funcional aos seus artefatos
 ## 📈 Estatísticas de Implementação
 
 ### Por Status
-- **✅ Implementado**: 45 artefatos (60%)
-- **🔄 Em desenvolvimento**: 18 artefatos (24%)
-- **📋 Planejado**: 12 artefatos (16%)
+- **✅ Implementado**: 98 artefatos (78%)
+- **🔄 Em desenvolvimento**: 18 artefatos (14%)
+- **📋 Planejado**: 10 artefatos (8%)
 - **❌ Não implementado**: 0 artefatos (0%)
 
 ### Por Categoria
-- **Design/Regras**: 13 artefatos (100% implementado)
-- **Lógica de Negócio**: 11 artefatos (73% implementado)
-- **Implementação Backend**: 18 artefatos (78% implementado)
-- **Implementação Frontend**: 12 artefatos (67% implementado)
-- **Testes**: 8 artefatos (50% implementado)
+- **Design/Regras**: 19 artefatos (100% implementado)
+- **Lógica de Negócio**: 16 artefatos (94% implementado)
+- **Implementação Backend**: 45 artefatos (89% implementado)
+- **Implementação Frontend**: 18 artefatos (78% implementado)
+- **Testes**: 12 artefatos (42% implementado)
 
 ### Por Prioridade
-- **Essencial**: 8 requisitos (75% implementado)
-- **Importante**: 3 requisitos (67% implementado)
-- **Desejável**: 2 requisitos (0% implementado)
+- **Essencial**: 12 requisitos (83% implementado)
+- **Importante**: 4 requisitos (75% implementado)
+- **Desejável**: 0 requisitos (0% implementado)
+
+### Novos Requisitos Implementados
+- **RF014 - Gestão de Prontuários Médicos**: ✅ 100% implementado
+- **RF015 - Sistema de Agenda e Disponibilidade**: ✅ 100% implementado
+- **RF016 - Timeline de Profissional**: ✅ 100% implementado
 
 ---
 
@@ -299,6 +354,6 @@ Esta matriz conecta cada requisito funcional e não funcional aos seus artefatos
 
 ---
 
-*Última atualização: Dezembro 2024*
-*Versão da matriz: 1.0*
-*Próxima revisão: Janeiro 2025*
+*Última atualização: Janeiro 2025*
+*Versão da matriz: 2.0*
+*Próxima revisão: Fevereiro 2025*

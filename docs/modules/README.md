@@ -11,10 +11,16 @@ Esta pasta contém a documentação detalhada de cada módulo específico do sis
 ### 📅 [Consultas](appointments/)
 - **[⚙️ Lógica de Consultas](appointments/AppointmentsLogica.md)** - Regras de agendamento e fluxos
 - **[🔧 Implementação de Consultas](appointments/AppointmentsImplementationStudy.md)** - Detalhes técnicos
+- **[📋 README](appointments/README.md)** - Visão geral do módulo
 
 ### 📹 [Videochamadas](videocall/)
 - **[🔧 Implementação de Videochamadas](videocall/VideoCallImplementation.md)** - Sistema de vídeo em tempo real
 - **[📋 Tarefas de Videochamadas](videocall/VideoCallTasks.md)** - Checklist de implementação
+- **[📋 README](videocall/README.md)** - Visão geral do módulo
+
+### 🩺 [Prontuários Médicos](MedicalRecords/)
+- **[👨‍⚕️ Visão do Médico](MedicalRecords/MedicalRecordsDoctor.md)** - Gestão completa de prontuários
+- **[👤 Visão do Paciente](MedicalRecords/MedicalRecordsPatient.md)** - Visualização de prontuários
 
 ## 🎯 Propósito
 
@@ -49,5 +55,6 @@ Cada módulo segue a estrutura:
 
 ---
 
-*Última atualização: Dezembro 2024*
+*Última atualização: Janeiro 2025*
+*Versão: 2.0*
 

@@ -494,4 +494,146 @@ Monitoring (Laravel Telescope)
 
 ---
 
+# 5. FUNCIONALIDADES IMPLEMENTADAS (Atualização Janeiro 2025)
+
+## 5.1 Sistema de Prontuários Médicos
+
+### RF008 - Gestão de Prontuários Médicos (Implementado)
+
+#### Funcionalidades para Médicos:
+- **Visualização de Prontuário Completo**: Médico pode visualizar prontuário completo de pacientes atendidos
+- **Registro de Diagnóstico**: Registrar diagnóstico com CID-10 durante consulta
+- **Prescrição Digital**: Emitir prescrições digitais com medicamentos estruturados
+- **Solicitação de Exames**: Solicitar exames (laboratoriais, imagem, outros)
+- **Anotações Clínicas**: Criar anotações clínicas (públicas ou privadas)
+- **Atestados Médicos**: Emitir atestados com código de verificação único
+- **Registro de Sinais Vitais**: Registrar sinais vitais durante consulta
+- **Anexar Documentos**: Anexar documentos médicos ao prontuário
+- **Geração de PDF**: Gerar PDF completo de consulta com prontuário
+- **Exportação de Prontuário**: Exportar prontuário completo em PDF
+
+#### Funcionalidades para Pacientes:
+- **Visualização de Prontuário**: Paciente pode visualizar seu prontuário (itens não privados)
+- **Histórico de Consultas**: Ver histórico completo de consultas
+- **Visualização de Prescrições**: Ver prescrições ativas e expiradas
+- **Visualização de Exames**: Ver exames solicitados e resultados
+- **Visualização de Atestados**: Ver atestados emitidos
+- **Exportação de Prontuário**: Exportar próprio prontuário em PDF
+
+#### Auditoria:
+- **Logs Completos**: Todas as ações em prontuários são registradas
+- **Rastreabilidade**: IP, user agent e metadados registrados
+- **Compliance LGPD**: Logs não podem ser excluídos
+
+## 5.2 Sistema de Agenda e Disponibilidade
+
+### RF009 - Sistema de Agenda e Disponibilidade (Implementado)
+
+#### Funcionalidades:
+- **Locais de Atendimento**: Médico pode cadastrar múltiplos locais (teleconsulta, consultório, hospital, clínica)
+- **Slots Recorrentes**: Configurar disponibilidade semanal (ex: toda segunda-feira 8h-12h)
+- **Slots Específicos**: Configurar disponibilidade para datas específicas
+- **Datas Bloqueadas**: Bloquear datas específicas (feriados, férias)
+- **Validação de Conflitos**: Sistema valida conflitos de horários
+- **Disponibilidade Padrão**: Sistema cria disponibilidade padrão se médico não configurar
+- **Consulta de Disponibilidade**: Pacientes podem consultar disponibilidade de médicos por data
+
+## 5.3 Timeline de Profissional
+
+### RF010 - Timeline de Profissional (Implementado)
+
+#### Funcionalidades:
+- **Eventos de Educação**: Registrar formação acadêmica (fundamental, médio, graduação, pós)
+- **Cursos**: Registrar cursos realizados
+- **Certificados**: Registrar certificações profissionais
+- **Projetos**: Registrar projetos profissionais
+- **Visibilidade**: Controlar se evento aparece no perfil público
+- **Ordenação**: Controlar ordem de exibição dos eventos
+- **Mídia**: Anexar imagens/certificados aos eventos
+
+## 5.4 Videoconferência Avançada
+
+### RF004 - Realizar Consultas Online (Atualizado)
+
+#### Novas Funcionalidades:
+- **Salas de Videoconferência**: Sistema cria salas automaticamente para consultas
+- **Eventos de Videoconferência**: Rastreamento de eventos (entrada, saída, ações)
+- **Expiração Automática**: Salas expiram automaticamente após período configurado
+- **Limpeza Automática**: Jobs automáticos para limpeza de eventos antigos
+- **Integração com Consultas**: Consultas atualizadas automaticamente a partir das salas
+
+## 5.5 Consultas Expandidas
+
+### RF003 - Agendamento de Consultas (Atualizado)
+
+#### Novas Funcionalidades:
+- **Status Rescheduled**: Novo status para consultas reagendadas
+- **Integração com Prontuário**: Consultas agora conectam com múltiplas entidades de prontuário
+- **Prontuário Durante Consulta**: Médico pode acessar e editar prontuário durante consulta
+- **Finalização com Prontuário**: Ao finalizar, prontuário é bloqueado (exceto complementos)
+- **Complementos**: Médico pode adicionar complementos após finalização
+- **PDF de Consulta**: Gerar PDF completo da consulta com prontuário
+
+## 5.6 Rotas Adicionais Implementadas
+
+### Rotas de Prontuários:
+- `GET /doctor/patients/{patient}/medical-record` - Visualizar prontuário
+- `POST /doctor/patients/{patient}/medical-record/export` - Exportar prontuário
+- `POST /doctor/patients/{patient}/medical-record/diagnoses` - Criar diagnóstico
+- `POST /doctor/patients/{patient}/medical-record/prescriptions` - Criar prescrição
+- `POST /doctor/patients/{patient}/medical-record/examinations` - Criar exame
+- `POST /doctor/patients/{patient}/medical-record/notes` - Criar anotação
+- `POST /doctor/patients/{patient}/medical-record/certificates` - Criar atestado
+- `POST /doctor/patients/{patient}/medical-record/vital-signs` - Registrar sinais vitais
+- `POST /doctor/patients/{patient}/medical-record/consultations/pdf` - Gerar PDF de consulta
+- `POST /patient/medical-records/export` - Paciente exportar prontuário
+- `POST /patient/medical-records/documents` - Paciente anexar documento
+
+### Rotas de Agenda:
+- `GET /doctor/schedule` - Visualizar agenda
+- `GET /doctor/doctors/{doctor}/schedule` - Visualizar agenda de médico
+- `POST /doctor/doctors/{doctor}/schedule/save` - Salvar configuração de agenda
+- `POST /doctor/doctors/{doctor}/locations` - Criar local de atendimento
+- `PUT /doctor/doctors/{doctor}/locations/{location}` - Atualizar local
+- `DELETE /doctor/doctors/{doctor}/locations/{location}` - Excluir local
+- `POST /doctor/doctors/{doctor}/availability` - Criar slot de disponibilidade
+- `PUT /doctor/doctors/{doctor}/availability/{slot}` - Atualizar slot
+- `DELETE /doctor/doctors/{doctor}/availability/{slot}` - Excluir slot
+- `POST /doctor/doctors/{doctor}/blocked-dates` - Bloquear data
+- `DELETE /doctor/doctors/{doctor}/blocked-dates/{blockedDate}` - Desbloquear data
+- `GET /api/doctors/{doctor}/availability/{date}` - Consultar disponibilidade (público)
+
+### Rotas de Timeline:
+- `GET /api/timeline-events` - Listar eventos
+- `POST /api/timeline-events` - Criar evento
+- `GET /api/timeline-events/{timelineEvent}` - Visualizar evento
+- `PUT /api/timeline-events/{timelineEvent}` - Atualizar evento
+- `DELETE /api/timeline-events/{timelineEvent}` - Excluir evento
+
+### Rotas de Consultas (Atualizadas):
+- `GET /doctor/consultations/{appointment}` - Detalhes da consulta
+- `POST /doctor/consultations/{appointment}/start` - Iniciar consulta
+- `POST /doctor/consultations/{appointment}/save-draft` - Salvar rascunho
+- `POST /doctor/consultations/{appointment}/finalize` - Finalizar consulta
+- `POST /doctor/consultations/{appointment}/complement` - Adicionar complemento
+- `GET /doctor/consultations/{appointment}/pdf` - Gerar PDF da consulta
+
+---
+
+## Histórico de Revisão (Atualizado)
+
+| Data       | Versão | Descrição                                                                                                 | Autor                              |
+| ---------- | -----: | --------------------------------------------------------------------------------------------------------- | ---------------------------------- |
+| 08/08/2025 |    1.0 | Elaboração dos primeiros conteúdos para implementação no documento.                                      | Audri Rian Cordeiro Carvalho Alves |
+| 14/08/2025 |    1.1 | Detalhamento de todos os tópicos já existentes na documentação.                                          | Audri Rian Cordeiro Carvalho Alves |
+| 21/08/2025 |    1.2 | Inclusão dos requisitos funcionais e não funcionais, regras de negócio e classes.                       | Audri Rian Cordeiro Carvalho Alves |
+| 28/08/2025 |    1.4 | Adição dos mockups de tela e o fluxo de navegação.                                                       | Audri Rian Cordeiro Carvalho Alves |
+| 13/09/2025 |    1.5 | Alinhado com implementação: Especializações, cadastro separado, videoconferência P2P, modelo Consultas. | Audri Rian Cordeiro Carvalho Alves |
+| 15/01/2025 |    2.0 | Adição de funcionalidades implementadas: Prontuários, Agenda, Timeline, Videoconferência avançada.      | Atualização Automática             |
+
+---
+
+*Última atualização: Janeiro 2025*
+*Versão: 2.0*
+
 *Fim do documento.*

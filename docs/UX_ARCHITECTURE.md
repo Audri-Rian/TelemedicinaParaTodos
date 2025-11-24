@@ -172,6 +172,200 @@ Formulários específicos (reutilizados em ambas as páginas)
 
 ---
 
+### 5. `/doctor/schedule` - Gestão de Agenda
+**Propósito**: Configurar disponibilidade e locais de atendimento
+
+**Componentes**:
+- Lista de locais de atendimento (teleconsulta, consultório, hospital, clínica)
+- Slots de disponibilidade recorrentes (semanal)
+- Slots de disponibilidade específicos (datas específicas)
+- Datas bloqueadas
+- Calendário visual de disponibilidade
+
+**Ações**:
+- Criar/editar/excluir locais de atendimento
+- Criar/editar/excluir slots recorrentes
+- Criar/editar/excluir slots específicos
+- Bloquear/desbloquear datas
+- Visualizar disponibilidade em calendário
+
+**Rotas**:
+- `GET /doctor/schedule` - Visualizar agenda
+- `GET /doctor/doctors/{doctor}/schedule` - Visualizar agenda de médico
+- `POST /doctor/doctors/{doctor}/schedule/save` - Salvar configuração completa
+- `POST /doctor/doctors/{doctor}/locations` - Criar local
+- `PUT /doctor/doctors/{doctor}/locations/{location}` - Atualizar local
+- `DELETE /doctor/doctors/{doctor}/locations/{location}` - Excluir local
+- `POST /doctor/doctors/{doctor}/availability` - Criar slot
+- `PUT /doctor/doctors/{doctor}/availability/{slot}` - Atualizar slot
+- `DELETE /doctor/doctors/{doctor}/availability/{slot}` - Excluir slot
+- `POST /doctor/doctors/{doctor}/blocked-dates` - Bloquear data
+- `DELETE /doctor/doctors/{doctor}/blocked-dates/{blockedDate}` - Desbloquear data
+
+---
+
+### 6. `/patient/schedule-consultation` - Agendamento de Consulta
+**Propósito**: Paciente agenda consulta com médico
+
+**Componentes**:
+- Busca de médicos
+- Seleção de médico
+- Visualização de disponibilidade
+- Seleção de data e horário
+- Confirmação de agendamento
+
+**Fluxo**:
+1. Buscar médico
+2. Visualizar perfil e disponibilidade
+3. Selecionar data e horário disponível
+4. Confirmar agendamento
+5. Receber confirmação
+
+---
+
+### 7. `/patient/medical-records` - Prontuário do Paciente
+**Propósito**: Paciente visualiza seu próprio prontuário
+
+**Componentes**:
+- Tabs: Consultas, Diagnósticos, Prescrições, Exames, Documentos, Atestados, Sinais Vitais
+- Filtros e busca
+- Exportação em PDF
+- Upload de documentos próprios
+
+**Ações**:
+- Visualizar histórico completo
+- Exportar prontuário em PDF
+- Anexar documentos próprios
+- Visualizar prescrições ativas e expiradas
+
+---
+
+### 8. Timeline Profissional (Médico)
+**Propósito**: Gerenciar timeline de formação e experiência
+
+**Componentes**:
+- Lista de eventos (educação, cursos, certificados, projetos)
+- Formulário de criação/edição
+- Controle de visibilidade (público/privado)
+- Ordenação por prioridade
+
+**Rotas**:
+- `GET /api/timeline-events` - Listar eventos
+- `POST /api/timeline-events` - Criar evento
+- `PUT /api/timeline-events/{timelineEvent}` - Atualizar evento
+- `DELETE /api/timeline-events/{timelineEvent}` - Excluir evento
+
+---
+
+## Fluxos de Uso Atualizados
+
+### Fluxo D: Configuração de Agenda (Médico)
+
+```
+1. /doctor/schedule
+   ↓ (configura locais e disponibilidade)
+2. Cria locais de atendimento
+   ↓
+3. Configura slots recorrentes (ex: toda segunda 8h-12h)
+   ↓
+4. Adiciona slots específicos (ex: 15/01/2025 14h-18h)
+   ↓
+5. Bloqueia datas (ex: feriados, férias)
+   ↓
+6. Salva configuração completa
+   ↓
+7. Pacientes podem agendar nas disponibilidades configuradas
+```
+
+### Fluxo E: Agendamento (Paciente)
+
+```
+1. /patient/search-consultations
+   ↓ (busca médico)
+2. Seleciona médico
+   ↓
+3. Visualiza disponibilidade via /api/doctors/{doctor}/availability/{date}
+   ↓
+4. Seleciona data e horário disponível
+   ↓
+5. Confirma agendamento
+   ↓
+6. Sistema cria Appointment com status scheduled
+   ↓
+7. Recebe notificação de confirmação
+```
+
+### Fluxo F: Consulta com Prontuário Integrado
+
+```
+1. /doctor/consultations/{appointment}
+   ↓ (inicia consulta)
+2. Status muda para in_progress
+   ↓
+3. Sala de videoconferência é criada
+   ↓
+4. Durante consulta:
+   - Registra diagnóstico (CID-10)
+   - Emite prescrição
+   - Solicita exames
+   - Registra sinais vitais
+   - Cria anotações clínicas
+   - Emite atestado (se necessário)
+   ↓
+5. Salva rascunho (opcional)
+   ↓
+6. Finaliza consulta
+   ↓
+7. Status muda para completed
+   ↓
+8. Dados críticos são bloqueados
+   ↓
+9. Paciente recebe notificações
+```
+
+---
+
+## Componentes Reutilizáveis Atualizados
+
+### 1. `ConsultationForm.vue`
+Formulário principal da consulta (usado em `/consultations/{id}`)
+- Integrado com prontuário
+- Suporta rascunho
+- Validação em tempo real
+
+### 2. `MedicalRecordSidebar.vue`
+Sidebar com resumo do prontuário (usado em `/consultations/{id}`)
+- Histórico resumido
+- Alertas (alergias, medicações)
+- Links para prontuário completo
+
+### 3. `ScheduleManagement.vue`
+Interface de gestão de agenda (usado em `/doctor/schedule`)
+- Calendário visual
+- Gestão de slots
+- Gestão de locais
+- Gestão de datas bloqueadas
+
+### 4. `AvailabilityCalendar.vue`
+Calendário de disponibilidade (usado em agendamento)
+- Visualização de slots disponíveis
+- Seleção de data e horário
+- Validação de conflitos
+
+### 5. `TimelineEventForm.vue`
+Formulário de eventos de timeline
+- Tipos: educação, curso, certificado, projeto
+- Controle de visibilidade
+- Upload de mídia
+
+### 6. `DiagnosisForm.vue`, `PrescriptionForm.vue`, `ExaminationForm.vue`, etc.
+Formulários específicos (reutilizados em ambas as páginas)
+- Validação de CID-10
+- Busca de medicamentos
+- Catálogo de exames
+
+---
+
 ## Melhorias Futuras
 
 1. **Modo Consulta Compacto**: Tela dividida com vídeo + formulário
@@ -179,4 +373,12 @@ Formulários específicos (reutilizados em ambas as páginas)
 3. **Atalhos**: Teclado shortcuts para ações frequentes
 4. **Auto-complete**: CID-10, medicamentos, exames
 5. **Rascunho Inteligente**: Recuperar rascunhos automaticamente
+6. **Dashboard de Métricas**: Estatísticas de consultas para médicos
+7. **Notificações em Tempo Real**: Push notifications para ações importantes
+8. **Integração com Laboratórios**: Status automático de exames
+
+---
+
+*Última atualização: Janeiro 2025*
+*Versão: 2.0*
 

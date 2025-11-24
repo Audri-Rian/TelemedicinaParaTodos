@@ -35,12 +35,27 @@ app/
 │   └── ProfileController.php            # Controlador de perfil
 ├── Events/
 │   ├── RequestVideoCall.php            # Evento de solicitação
-│   └── RequestVideoCallStatus.php      # Evento de status
-└── Models/User.php                      # Modelo de usuário
+│   ├── RequestVideoCallStatus.php      # Evento de status
+│   ├── VideoCallRoomCreated.php        # Evento de criação de sala
+│   ├── VideoCallRoomExpired.php         # Evento de expiração de sala
+│   ├── VideoCallUserJoined.php          # Evento de entrada na sala
+│   └── VideoCallUserLeft.php            # Evento de saída da sala
+├── Jobs/
+│   ├── CleanupOldVideoCallEvents.php    # Limpeza de eventos antigos
+│   ├── ExpireVideoCallRooms.php         # Expiração automática de salas
+│   └── UpdateAppointmentFromRoom.php    # Atualização de consulta
+├── Models/
+│   ├── User.php                        # Modelo de usuário
+│   ├── VideoCallRoom.php               # Modelo de sala de videoconferência
+│   └── VideoCallEvent.php              # Modelo de evento de videoconferência
 
 routes/
 ├── web.php                             # Rotas da aplicação
 └── channels.php                        # Canais de broadcasting
+
+database/migrations/
+├── 2025_11_21_193554_create_video_call_rooms_table.php
+└── 2025_11_21_193603_create_video_call_events_table.php
 ```
 
 ### **Frontend (Vue.js):**
@@ -140,11 +155,56 @@ window.Echo = new Echo({
 - ✅ Interface responsiva
 - ✅ Gerenciamento de estado da chamada
 - ✅ Limpeza automática de recursos
+- ✅ Salas de videoconferência (VideoCallRoom)
+- ✅ Eventos de videoconferência (VideoCallEvent)
+- ✅ Expiração automática de salas
+- ✅ Integração com appointments
 
 ### **🔄 Estados de Chamada:**
 - `isCalling: false` - Nenhuma chamada ativa
 - `isCalling: true` - Chamada em andamento
 - Transições automáticas entre estados
+
+## 🏠 Salas de Videoconferência (VideoCallRoom)
+
+### Funcionalidade
+- **Criação Automática**: Salas são criadas automaticamente para consultas
+- **Expiração**: Salas expiram automaticamente após período configurado
+- **Integração**: Relacionadas com Appointments para rastreamento
+
+### Jobs Relacionados
+- **ExpireVideoCallRooms**: Executa periodicamente para expirar salas antigas
+- **UpdateAppointmentFromRoom**: Atualiza status de consulta a partir da sala
+- **CleanupOldVideoCallEvents**: Remove eventos antigos para manter performance
+
+## 📊 Eventos de Videoconferência (VideoCallEvent)
+
+### Rastreamento
+- **Entrada na Sala**: Registra quando usuário entra na videoconferência
+- **Saída da Sala**: Registra quando usuário sai da videoconferência
+- **Ações**: Registra ações importantes durante a chamada
+- **Auditoria**: Todos os eventos são registrados para auditoria e análise
+
+### Limpeza Automática
+- **Job Automático**: CleanupOldVideoCallEvents remove eventos antigos
+- **Performance**: Mantém banco de dados otimizado
+- **Retenção**: Configurável por período (ex: 90 dias)
+
+## 🔗 Integração com Consultas
+
+### Fluxo Integrado
+1. **Consulta Agendada**: Sistema prepara sala de videoconferência
+2. **Início da Consulta**: Sala é ativada quando consulta inicia
+3. **Durante Consulta**: Eventos são registrados em tempo real
+4. **Finalização**: Sala expira e consulta é atualizada automaticamente
+5. **Limpeza**: Jobs automáticos limpam recursos antigos
+
+### Eventos Relacionados
+- **VideoCallRoomCreated**: Disparado quando sala é criada
+- **VideoCallRoomExpired**: Disparado quando sala expira
+- **VideoCallUserJoined**: Disparado quando usuário entra
+- **VideoCallUserLeft**: Disparado quando usuário sai
+- **AppointmentStatusChanged**: Disparado quando consulta muda de status
 
 ## 🐛 Troubleshooting
 

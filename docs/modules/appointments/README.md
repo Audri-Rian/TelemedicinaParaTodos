@@ -29,6 +29,17 @@ Este módulo gerencia todo o sistema de agendamento e gestão de consultas médi
 - **NO_SHOW** - Paciente não compareceu
 - **RESCHEDULED** - Consulta reagendada
 
+### Relacionamentos Expandidos
+O modelo `Appointments` agora possui relacionamentos com múltiplas entidades de prontuário:
+- **Prescriptions** - Prescrições médicas digitais
+- **Diagnoses** - Diagnósticos com CID-10
+- **Examinations** - Exames solicitados
+- **ClinicalNotes** - Anotações clínicas
+- **MedicalCertificates** - Atestados médicos
+- **VitalSigns** - Sinais vitais registrados
+- **MedicalDocuments** - Documentos anexados
+- **AppointmentLogs** - Logs de auditoria
+
 ## 🔗 Relacionamentos
 
 ### Dependências
@@ -59,7 +70,9 @@ Este módulo gerencia todo o sistema de agendamento e gestão de consultas médi
 ## 📊 Requisitos Implementados
 
 - **RF003** - Agendamento de Consultas ✅
-- **RF004** - Realizar Consultas Online 🔄 (parcial)
+- **RF004** - Realizar Consultas Online ✅
+- **RF014** - Gestão de Prontuários Médicos ✅ (integrado com consultas)
+- **RF015** - Sistema de Agenda e Disponibilidade ✅ (suporte a agendamento)
 
 ## 🧪 Testes
 
@@ -69,5 +82,6 @@ Este módulo gerencia todo o sistema de agendamento e gestão de consultas médi
 
 ---
 
-*Última atualização: Dezembro 2024*
+*Última atualização: Janeiro 2025*
+*Versão: 2.0*
 

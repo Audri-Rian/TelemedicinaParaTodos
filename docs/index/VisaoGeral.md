@@ -31,9 +31,20 @@ Este documento cobre toda a documentação do sistema, desde requisitos até imp
 
 O **Telemedicina para Todos** é uma plataforma moderna de telemedicina que conecta médicos e pacientes de forma remota, oferecendo:
 
-- 📅 **Agendamento inteligente** de consultas
-- 📹 **Consultas por vídeo** em tempo real
-- 📋 **Prontuários digitais** organizados
+- 📅 **Agendamento inteligente** de consultas com sistema completo de agenda e disponibilidade
+- 📹 **Consultas por vídeo** em tempo real com salas de videoconferência
+- 📋 **Prontuários digitais** completos e organizados
+- 💊 **Prescrições digitais** com validação e rastreamento
+- 🔬 **Solicitação de exames** e gestão de resultados
+- 📝 **Anotações clínicas** públicas e privadas
+- 📜 **Atestados médicos** digitais com código de verificação
+- 💓 **Registro de sinais vitais** durante consultas
+- 📎 **Gestão de documentos** médicos anexados
+- 📊 **Auditoria completa** de todas as ações (LGPD)
+- ⏰ **Sistema de agenda** com slots recorrentes e específicos
+- 📍 **Locais de atendimento** múltiplos por médico
+- 🚫 **Datas bloqueadas** para controle de disponibilidade
+- 📅 **Timeline profissional** (educação, cursos, certificados)
 - 🔒 **Comunicação segura** entre médico e paciente
 - 📱 **Interface moderna** e acessível
 
@@ -66,6 +77,8 @@ O **Telemedicina para Todos** é uma plataforma moderna de telemedicina que cone
 - **[Lógica de Autenticação](../modules/auth/RegistrationLogic.md)** - Fluxos de registro e login
 - **[Implementação de Videochamadas](../modules/videocall/VideoCallImplementation.md)** - Sistema de vídeo
 - **[Tarefas de Videochamadas](../modules/videocall/VideoCallTasks.md)** - Checklist de implementação
+- **[Prontuários Médicos - Médico](../modules/MedicalRecords/MedicalRecordsDoctor.md)** - Gestão completa de prontuários
+- **[Prontuários Médicos - Paciente](../modules/MedicalRecords/MedicalRecordsPatient.md)** - Visualização de prontuários
 
 ### 5. 🔧 Configuração e Instalação
 - **[Guia de Instalação](../setup/Start.md)** - Como configurar o ambiente de desenvolvimento
@@ -90,9 +103,12 @@ O **Telemedicina para Todos** é uma plataforma moderna de telemedicina que cone
 
 ### Por Tipo de Documentação
 - **📋 Requisitos**: [SystemRules.md](../requirements/SystemRules.md) + [FuncionalitsGuide.md](../requirements/FuncionalitsGuide.md)
-- **🏗️ Técnico**: [Arquitetura.md](../architecture/Arquitetura.md) + [VueGuide.md](../architecture/VueGuide.md)
+- **🏗️ Técnico**: [Arquitetura.md](../Architecture/Arquitetura.md) + [VueGuide.md](../Architecture/VueGuide.md)
 - **💾 Dados**: [diagrama_banco_dados.md](../database/diagrama_banco_dados.md)
-- **⚙️ Lógica**: [AppointmentsLogica.md](../modules/appointments/AppointmentsLogica.md) + [VideoCallImplementation.md](../modules/videocall/VideoCallImplementation.md)
+- **⚙️ Lógica**: 
+  - [AppointmentsLogica.md](../modules/appointments/AppointmentsLogica.md) - Consultas
+  - [VideoCallImplementation.md](../modules/videocall/VideoCallImplementation.md) - Videoconferência
+  - [MedicalRecordsDoctor.md](../modules/MedicalRecords/MedicalRecordsDoctor.md) - Prontuários
 - **☁️ Cloud**: [CloudScalabilityStrategy.md](../aws/CloudScalabilityStrategy.md)
 
 ---
@@ -130,13 +146,15 @@ O **Telemedicina para Todos** é uma plataforma moderna de telemedicina que cone
 
 | Módulo | Status | Documentação |
 |--------|--------|--------------|
-| ✅ Autenticação | Completo | [RegistrationLogic.md](Auth/RegistrationLogic.md) |
-| ✅ Consultas | Completo | [AppointmentsLogica.md](Appointments/AppointmentsLogica.md) |
-| ✅ Videochamadas | Em Desenvolvimento | [VideoCallTasks.md](VideoCall/VideoCallTasks.md) |
-| ✅ Arquitetura | Completo | [Arquitetura.md](Architecture/Arquitetura.md) |
+| ✅ Autenticação | Completo | [RegistrationLogic.md](../modules/auth/RegistrationLogic.md) |
+| ✅ Consultas | Completo | [AppointmentsLogica.md](../modules/appointments/AppointmentsLogica.md) |
+| ✅ Videochamadas | Completo | [VideoCallImplementation.md](../modules/videocall/VideoCallImplementation.md) |
+| ✅ Prontuários Médicos | Completo | [MedicalRecordsDoctor.md](../modules/MedicalRecords/MedicalRecordsDoctor.md) |
+| ✅ Prescrições Digitais | Completo | [MedicalRecordsDoctor.md](../modules/MedicalRecords/MedicalRecordsDoctor.md) |
+| ✅ Sistema de Agenda | Completo | [SystemRules.md](../requirements/SystemRules.md) |
+| ✅ Timeline Profissional | Completo | [Arquitetura.md](../Architecture/Arquitetura.md) |
+| ✅ Arquitetura | Completo | [Arquitetura.md](../Architecture/Arquitetura.md) |
 | ✅ Cloud/AWS | Completo | [CloudScalabilityStrategy.md](../aws/CloudScalabilityStrategy.md) |
-| 🔄 Prontuários | Planejado | *Em breve* |
-| 🔄 Prescrições | Planejado | *Em breve* |
 
 ---
 
@@ -167,5 +185,5 @@ Para dúvidas sobre a documentação ou sugestões de melhoria:
 
 ---
 
-*Última atualização: Dezembro 2024*
-*Versão da documentação: 1.0*
+*Última atualização: Janeiro 2025*
+*Versão da documentação: 2.0*

@@ -35,7 +35,10 @@ Este módulo implementa o sistema de videoconferência em tempo real para consul
 - **[📊 Matriz de Requisitos](../index/MatrizRequisitos.md)** - RF004, RF012
 
 ### Implementações
-- **[VideoCall Events](../../../app/Events/)** - Eventos de sinalização
+- **[VideoCall Controller](../../../app/Http/Controllers/VideoCall/VideoCallController.php)** - Controlador principal
+- **[VideoCall Events](../../../app/Events/)** - Eventos de sinalização e sala
+- **[VideoCall Models](../../../app/Models/)** - VideoCallRoom, VideoCallEvent
+- **[VideoCall Jobs](../../../app/Jobs/)** - Limpeza e expiração automática
 - **[Broadcasting Config](../../../config/broadcasting.php)** - Configuração WebSockets
 - **[Frontend Components](../../../resources/js/components/)** - Interface de vídeo
 
@@ -56,25 +59,30 @@ Este módulo implementa o sistema de videoconferência em tempo real para consul
 
 ## 📊 Requisitos Implementados
 
-- **RF004** - Realizar Consultas Online (Videoconferência) 🔄
-- **RF012** - Videoconferência de Consultas (Tempo Real) 🔄
+- **RF004** - Realizar Consultas Online (Videoconferência) ✅
+- **RF012** - Videoconferência de Consultas (Tempo Real) ✅
 
 ## 🚧 Status de Implementação
 
 ### ✅ Implementado
-- Eventos de sinalização
-- Configuração WebSockets
-- Estrutura básica
+- Eventos de sinalização (RequestVideoCall, RequestVideoCallStatus)
+- Eventos de sala (VideoCallRoomCreated, VideoCallRoomExpired, VideoCallUserJoined, VideoCallUserLeft)
+- Configuração WebSockets (Laravel Reverb)
+- Salas de videoconferência (VideoCallRoom)
+- Eventos de videoconferência (VideoCallEvent)
+- Jobs automáticos (CleanupOldVideoCallEvents, ExpireVideoCallRooms, UpdateAppointmentFromRoom)
+- Integração completa com consultas (Appointments)
+- Interface de vídeo P2P (PeerJS)
+- Controles de mídia (áudio/vídeo)
 
 ### 🔄 Em Desenvolvimento
-- Interface de vídeo
-- Controles de mídia
-- Integração com consultas
+- Melhorias de UX na interface
+- Dashboard de métricas de videoconferência
 
 ### 📋 Planejado
 - Gravação de consultas
 - Compartilhamento de tela
-- Testes de integração
+- Testes de integração completos
 
 ## 🧪 Testes
 
@@ -84,5 +92,6 @@ Este módulo implementa o sistema de videoconferência em tempo real para consul
 
 ---
 
-*Última atualização: Dezembro 2024*
+*Última atualização: Janeiro 2025*
+*Versão: 2.0*
 

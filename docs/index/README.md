@@ -24,5 +24,6 @@ Estes documentos servem como **pontos de entrada** para a documentação, permit
 
 ---
 
-*Última atualização: Dezembro 2024*
+*Última atualização: Janeiro 2025*
+*Versão: 2.0*
 

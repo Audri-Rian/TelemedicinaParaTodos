@@ -30,11 +30,36 @@ Esta documentação define **como** os dados são estruturados e relacionados:
 - **Appointments** - Consultas agendadas
 - **Specializations** - Especialidades médicas
 
+### Entidades de Prontuário
+- **Prescriptions** - Prescrições médicas digitais
+- **Diagnoses** - Diagnósticos com CID-10
+- **Examinations** - Exames solicitados
+- **ClinicalNotes** - Anotações clínicas
+- **MedicalCertificates** - Atestados médicos
+- **VitalSigns** - Sinais vitais
+- **MedicalDocuments** - Documentos médicos
+- **MedicalRecordAuditLogs** - Logs de auditoria
+
+### Entidades de Agenda
+- **ServiceLocations** - Locais de atendimento
+- **AvailabilitySlots** - Slots de disponibilidade
+- **BlockedDates** - Datas bloqueadas
+
+### Entidades de Videoconferência
+- **VideoCallRooms** - Salas de videoconferência
+- **VideoCallEvents** - Eventos de videoconferência
+
+### Entidades de Timeline
+- **TimelineEvents** - Eventos de timeline profissional
+
 ### Relacionamentos
 - **1:1** User ↔ Doctor/Patient
-- **1:N** Doctor ↔ Appointments
-- **1:N** Patient ↔ Appointments
+- **1:N** Doctor ↔ Appointments, Prescriptions, Diagnoses, Examinations, ClinicalNotes, MedicalCertificates, VitalSigns, MedicalDocuments
+- **1:N** Patient ↔ Appointments, Prescriptions, Diagnoses, Examinations, ClinicalNotes, MedicalCertificates, VitalSigns, MedicalDocuments, MedicalRecordAuditLogs
+- **1:N** Appointment ↔ Prescriptions, Diagnoses, Examinations, ClinicalNotes, MedicalCertificates, VitalSigns, MedicalDocuments, AppointmentLogs
 - **N:N** Doctor ↔ Specializations
+- **1:N** Doctor ↔ ServiceLocations, AvailabilitySlots, BlockedDates
+- **1:N** User ↔ TimelineEvents
 
 ## 📊 Implementação
 
@@ -44,5 +69,6 @@ Esta documentação define **como** os dados são estruturados e relacionados:
 
 ---
 
-*Última atualização: Dezembro 2024*
+*Última atualização: Janeiro 2025*
+*Versão: 2.0*
 
