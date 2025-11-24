@@ -84,6 +84,21 @@ class Doctor extends Model
         return $this->hasMany(VitalSign::class);
     }
 
+    public function diagnoses(): HasMany
+    {
+        return $this->hasMany(Diagnosis::class);
+    }
+
+    public function clinicalNotes(): HasMany
+    {
+        return $this->hasMany(ClinicalNote::class);
+    }
+
+    public function medicalCertificates(): HasMany
+    {
+        return $this->hasMany(MedicalCertificate::class);
+    }
+
     // Relacionamento com AvailabilitySlot
     public function availabilitySlots(): HasMany
     {

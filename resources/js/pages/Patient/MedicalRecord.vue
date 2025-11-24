@@ -109,6 +109,46 @@ interface VitalSignEntry {
     notes?: string | null;
 }
 
+interface Diagnosis {
+    id: string;
+    appointment_id: string;
+    cid10_code: string;
+    cid10_description?: string | null;
+    type: 'principal' | 'secondary';
+    description?: string | null;
+    doctor: { id: string; name: string };
+    created_at?: string | null;
+}
+
+interface ClinicalNote {
+    id: string;
+    appointment_id: string;
+    title: string;
+    content: string;
+    is_private: boolean;
+    category: string;
+    tags?: string[] | null;
+    version: number;
+    doctor: { id: string; name: string };
+    created_at?: string | null;
+}
+
+interface MedicalCertificate {
+    id: string;
+    appointment_id: string;
+    type: string;
+    start_date?: string | null;
+    end_date?: string | null;
+    days?: number | null;
+    reason: string;
+    restrictions?: string | null;
+    status: string;
+    verification_code: string;
+    pdf_url?: string | null;
+    doctor: { id: string; name: string; crm?: string | null };
+    created_at?: string | null;
+}
+
 interface Metrics {
     total_consultations: number;
     total_prescriptions: number;
@@ -141,6 +181,9 @@ interface Props {
     examinations?: Examination[];
     documents?: MedicalDocument[];
     vital_signs?: VitalSignEntry[];
+    diagnoses?: Diagnosis[];
+    clinical_notes?: ClinicalNote[];
+    medical_certificates?: MedicalCertificate[];
     upcoming_appointments?: Appointment[];
     metrics?: Metrics;
     filters?: Record<string, unknown>;
@@ -157,6 +200,9 @@ const props = withDefaults(defineProps<Props>(), {
     examinations: () => [],
     documents: () => [],
     vital_signs: () => [],
+    diagnoses: () => [],
+    clinical_notes: () => [],
+    medical_certificates: () => [],
     upcoming_appointments: () => [],
     metrics: () => ({
         total_consultations: 0,
@@ -197,7 +243,17 @@ const breadcrumbs = computed(() => {
     ];
 });
 
-type TabId = 'historico' | 'consultas' | 'prescricoes' | 'exames' | 'documentos' | 'evolucao' | 'consultas-futuras';
+type TabId =
+    | 'historico'
+    | 'consultas'
+    | 'prescricoes'
+    | 'exames'
+    | 'documentos'
+    | 'diagnosticos'
+    | 'anotacoes'
+    | 'atestados'
+    | 'evolucao'
+    | 'consultas-futuras';
 
 const tabs: Array<{ id: TabId; label: string }> = [
     { id: 'historico', label: 'Histórico' },
@@ -205,6 +261,9 @@ const tabs: Array<{ id: TabId; label: string }> = [
     { id: 'prescricoes', label: 'Prescrições' },
     { id: 'exames', label: 'Exames' },
     { id: 'documentos', label: 'Documentos' },
+    { id: 'diagnosticos', label: 'Diagnósticos' },
+    { id: 'anotacoes', label: 'Anotações' },
+    { id: 'atestados', label: 'Atestados' },
     { id: 'evolucao', label: 'Evolução' },
     { id: 'consultas-futuras', label: 'Consultas Futuras' },
 ];
@@ -321,13 +380,242 @@ const handleFileChange = (event: Event) => {
 };
 
 const consultations = computed(() => props.consultations?.length ? props.consultations : props.timeline);
-const upcomingAppointments = computed(() => props.upcoming_appointments ?? []);
 
+// Helper functions (definidas antes de serem usadas)
 const formatDate = (value?: string | null, withTime = false) => {
     if (!value) return '—';
     const date = new Date(value);
     return date.toLocaleDateString('pt-BR', withTime ? { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' } : { day: '2-digit', month: '2-digit', year: 'numeric' });
 };
+
+const appointmentOptions = computed(() =>
+    consultations.value?.map((appointment) => ({
+        id: appointment.id,
+        label: `${formatDate(appointment.scheduled_at, true)} · ${appointment.doctor.user.name}`,
+    })) ?? [],
+);
+
+const defaultAppointmentId = computed(() => appointmentOptions.value[0]?.id ?? '');
+const doctorRecordBaseUrl = computed(() =>
+    isDoctorViewer.value ? `/doctor/patients/${props.patient.id}/medical-record` : null,
+);
+
+const doctorActionTabs = [
+    { id: 'diagnosis', label: 'Diagnóstico' },
+    { id: 'prescription', label: 'Prescrição' },
+    { id: 'examination', label: 'Exame' },
+    { id: 'note', label: 'Anotação' },
+    { id: 'certificate', label: 'Atestado' },
+    { id: 'vitals', label: 'Sinais Vitais' },
+] as const;
+
+type DoctorActionTab = (typeof doctorActionTabs)[number]['id'];
+const activeDoctorActionTab = ref<DoctorActionTab>('diagnosis');
+
+const diagnosisForm = useForm({
+    appointment_id: '',
+    cid10_code: '',
+    cid10_description: '',
+    description: '',
+    type: 'principal',
+});
+
+const prescriptionForm = useForm({
+    appointment_id: '',
+    medications: [
+        {
+            name: '',
+            dosage: '',
+            frequency: '',
+        },
+    ],
+    instructions: '',
+    valid_until: '',
+});
+
+const examinationForm = useForm({
+    appointment_id: '',
+    name: '',
+    type: 'lab',
+    justification: '',
+    instructions: '',
+    priority: 'normal',
+});
+
+const noteForm = useForm({
+    appointment_id: '',
+    title: '',
+    content: '',
+    is_private: true,
+    category: 'general',
+    tags: [] as string[],
+    parent_id: '',
+});
+const noteTagsInput = ref('');
+
+const certificateForm = useForm({
+    appointment_id: '',
+    type: 'attendance',
+    start_date: '',
+    end_date: '',
+    days: 1,
+    reason: '',
+    restrictions: '',
+});
+
+const vitalSignsForm = useForm({
+    appointment_id: '',
+    recorded_at: '',
+    blood_pressure_systolic: '',
+    blood_pressure_diastolic: '',
+    temperature: '',
+    heart_rate: '',
+    respiratory_rate: '',
+    oxygen_saturation: '',
+    weight: '',
+    height: '',
+    notes: '',
+});
+
+watch(
+    () => defaultAppointmentId.value,
+    (value) => {
+        if (!value) return;
+        const formsWithAppointment = [
+            diagnosisForm,
+            prescriptionForm,
+            examinationForm,
+            noteForm,
+            certificateForm,
+            vitalSignsForm,
+        ];
+
+        formsWithAppointment.forEach((form) => {
+            if (!form.appointment_id) {
+                form.appointment_id = value;
+            }
+        });
+    },
+    { immediate: true },
+);
+
+const addMedication = () => {
+    prescriptionForm.medications.push({
+        name: '',
+        dosage: '',
+        frequency: '',
+    });
+};
+
+const removeMedication = (index: number) => {
+    if (prescriptionForm.medications.length === 1) return;
+    prescriptionForm.medications.splice(index, 1);
+};
+
+const submitDiagnosis = () => {
+    if (!doctorRecordBaseUrl.value) return;
+    const currentAppointment = diagnosisForm.appointment_id;
+    diagnosisForm.post(`${doctorRecordBaseUrl.value}/diagnoses`, {
+        preserveScroll: true,
+        onSuccess: () => {
+            diagnosisForm.reset();
+            diagnosisForm.appointment_id = currentAppointment || defaultAppointmentId.value;
+        },
+    });
+};
+
+const submitPrescription = () => {
+    if (!doctorRecordBaseUrl.value) return;
+    const currentAppointment = prescriptionForm.appointment_id;
+    prescriptionForm.post(`${doctorRecordBaseUrl.value}/prescriptions`, {
+        preserveScroll: true,
+        onSuccess: () => {
+            prescriptionForm.reset();
+            prescriptionForm.appointment_id = currentAppointment || defaultAppointmentId.value;
+            prescriptionForm.medications = [
+                {
+                    name: '',
+                    dosage: '',
+                    frequency: '',
+                },
+            ];
+        },
+    });
+};
+
+const submitExamination = () => {
+    if (!doctorRecordBaseUrl.value) return;
+    const currentAppointment = examinationForm.appointment_id;
+    examinationForm.post(`${doctorRecordBaseUrl.value}/examinations`, {
+        preserveScroll: true,
+        onSuccess: () => {
+            examinationForm.reset();
+            examinationForm.appointment_id = currentAppointment || defaultAppointmentId.value;
+        },
+    });
+};
+
+const submitNote = () => {
+    if (!doctorRecordBaseUrl.value) return;
+    const currentAppointment = noteForm.appointment_id;
+    noteForm.tags = noteTagsInput.value
+        ? noteTagsInput.value.split(',').map((tag) => tag.trim()).filter(Boolean)
+        : [];
+
+    noteForm.post(`${doctorRecordBaseUrl.value}/notes`, {
+        preserveScroll: true,
+        onSuccess: () => {
+            noteForm.reset();
+            noteForm.appointment_id = currentAppointment || defaultAppointmentId.value;
+            noteTagsInput.value = '';
+        },
+    });
+};
+
+const submitCertificate = () => {
+    if (!doctorRecordBaseUrl.value) return;
+    const currentAppointment = certificateForm.appointment_id;
+    certificateForm.post(`${doctorRecordBaseUrl.value}/certificates`, {
+        preserveScroll: true,
+        onSuccess: () => {
+            certificateForm.reset();
+            certificateForm.appointment_id = currentAppointment || defaultAppointmentId.value;
+        },
+    });
+};
+
+const submitVitalSigns = () => {
+    if (!doctorRecordBaseUrl.value) return;
+    const currentAppointment = vitalSignsForm.appointment_id;
+    vitalSignsForm.post(`${doctorRecordBaseUrl.value}/vital-signs`, {
+        preserveScroll: true,
+        onSuccess: () => {
+            vitalSignsForm.reset();
+            vitalSignsForm.appointment_id = currentAppointment || defaultAppointmentId.value;
+        },
+    });
+};
+
+const consultationPdfLoading = ref<string | null>(null);
+const generateConsultationPdf = (appointmentId: string) => {
+    if (!doctorRecordBaseUrl.value) return;
+    consultationPdfLoading.value = appointmentId;
+    router.post(
+        `${doctorRecordBaseUrl.value}/consultations/pdf`,
+        { appointment_id: appointmentId },
+        {
+            preserveScroll: true,
+            onFinish: () => {
+                consultationPdfLoading.value = null;
+            },
+        },
+    );
+};
+
+const upcomingAppointments = computed(() => props.upcoming_appointments ?? []);
+const diagnoses = computed(() => props.diagnoses ?? []);
+const clinicalNotes = computed(() => props.clinical_notes ?? []);
+const medicalCertificates = computed(() => props.medical_certificates ?? []);
 
 const formatGender = (gender: string) => {
     const map: Record<string, string> = { male: 'Masculino', female: 'Feminino', other: 'Outro' };
@@ -460,6 +748,402 @@ const exportError = computed(() => page.props.errors?.export ?? null);
                     </CardContent>
                 </Card>
 
+                <Card v-if="isDoctorViewer" class="border border-blue-100 bg-white shadow-sm">
+                    <CardHeader>
+                        <CardTitle class="text-lg text-gray-900">Ações clínicas rápidas</CardTitle>
+                        <p class="text-sm text-gray-600">
+                            Registre diagnósticos, prescrições, exames e notas diretamente durante a consulta em andamento.
+                        </p>
+                    </CardHeader>
+                    <CardContent class="space-y-4">
+                        <div class="flex flex-wrap gap-2">
+                            <button
+                                v-for="tab in doctorActionTabs"
+                                :key="tab.id"
+                                @click="activeDoctorActionTab = tab.id"
+                                :class="[
+                                    'rounded-full px-4 py-2 text-sm font-medium transition-colors',
+                                    activeDoctorActionTab === tab.id
+                                        ? 'bg-blue-600 text-white shadow'
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200',
+                                ]"
+                            >
+                                {{ tab.label }}
+                            </button>
+                        </div>
+
+                        <p v-if="!appointmentOptions.length" class="text-sm text-gray-500">
+                            Registre ao menos uma consulta para habilitar os formulários.
+                        </p>
+
+                        <div v-if="appointmentOptions.length">
+                            <div v-if="activeDoctorActionTab === 'diagnosis'" class="grid gap-4 md:grid-cols-2">
+                                <div class="flex flex-col gap-1">
+                                    <label class="text-sm font-medium text-gray-700">Consulta</label>
+                                    <select
+                                        v-model="diagnosisForm.appointment_id"
+                                        class="rounded-md border border-gray-300 px-3 py-2 text-sm"
+                                    >
+                                        <option v-for="option in appointmentOptions" :key="option.id" :value="option.id">
+                                            {{ option.label }}
+                                        </option>
+                                    </select>
+                                    <p v-if="diagnosisForm.errors.appointment_id" class="text-xs text-red-600">
+                                        {{ diagnosisForm.errors.appointment_id }}
+                                    </p>
+                                </div>
+                                <div class="flex flex-col gap-1">
+                                    <label class="text-sm font-medium text-gray-700">CID-10</label>
+                                    <Input v-model="diagnosisForm.cid10_code" placeholder="Ex: J00" />
+                                    <p v-if="diagnosisForm.errors.cid10_code" class="text-xs text-red-600">
+                                        {{ diagnosisForm.errors.cid10_code }}
+                                    </p>
+                                </div>
+                                <div class="flex flex-col gap-1">
+                                    <label class="text-sm font-medium text-gray-700">Descrição do CID</label>
+                                    <Input v-model="diagnosisForm.cid10_description" placeholder="Rinite aguda" />
+                                </div>
+                                <div class="flex flex-col gap-1">
+                                    <label class="text-sm font-medium text-gray-700">Tipo</label>
+                                    <select
+                                        v-model="diagnosisForm.type"
+                                        class="rounded-md border border-gray-300 px-3 py-2 text-sm"
+                                    >
+                                        <option value="principal">Principal</option>
+                                        <option value="secondary">Secundário</option>
+                                    </select>
+                                </div>
+                                <div class="md:col-span-2 flex flex-col gap-1">
+                                    <label class="text-sm font-medium text-gray-700">Descrição clínica</label>
+                                    <Textarea
+                                        v-model="diagnosisForm.description"
+                                        :rows="3"
+                                        placeholder="Detalhe os achados clínicos relevantes"
+                                    />
+                                </div>
+                                <div class="md:col-span-2 flex justify-end">
+                                    <Button
+                                        class="bg-blue-600 text-white hover:bg-blue-700"
+                                        :disabled="diagnosisForm.processing"
+                                        @click="submitDiagnosis"
+                                    >
+                                        Registrar diagnóstico
+                                    </Button>
+                                </div>
+                            </div>
+
+                            <div v-if="activeDoctorActionTab === 'prescription'" class="space-y-4">
+                                <div class="flex flex-col gap-1">
+                                    <label class="text-sm font-medium text-gray-700">Consulta</label>
+                                    <select
+                                        v-model="prescriptionForm.appointment_id"
+                                        class="rounded-md border border-gray-300 px-3 py-2 text-sm"
+                                    >
+                                        <option v-for="option in appointmentOptions" :key="option.id" :value="option.id">
+                                            {{ option.label }}
+                                        </option>
+                                    </select>
+                                    <p v-if="prescriptionForm.errors.appointment_id" class="text-xs text-red-600">
+                                        {{ prescriptionForm.errors.appointment_id }}
+                                    </p>
+                                </div>
+                                <div class="space-y-3">
+                                    <div
+                                        v-for="(medication, index) in prescriptionForm.medications"
+                                        :key="index"
+                                        class="rounded-lg border border-gray-200 p-3"
+                                    >
+                                        <div class="flex justify-between text-xs font-medium text-gray-600">
+                                            Medicamento {{ index + 1 }}
+                                            <button
+                                                type="button"
+                                                class="text-rose-600 hover:underline"
+                                                :disabled="prescriptionForm.medications.length === 1"
+                                                @click="removeMedication(index)"
+                                            >
+                                                Remover
+                                            </button>
+                                        </div>
+                                        <div class="mt-2 grid gap-2 md:grid-cols-3">
+                                            <Input v-model="medication.name" placeholder="Nome" />
+                                            <Input v-model="medication.dosage" placeholder="Dosagem (ex: 500mg)" />
+                                            <Input v-model="medication.frequency" placeholder="Frequência (ex: 8/8h)" />
+                                        </div>
+                                    </div>
+                                    <Button variant="outline" size="sm" @click="addMedication">
+                                        + Adicionar medicamento
+                                    </Button>
+                                </div>
+                                <div class="grid gap-4 md:grid-cols-2">
+                                    <div class="flex flex-col gap-1">
+                                        <label class="text-sm font-medium text-gray-700">Validade</label>
+                                        <Input v-model="prescriptionForm.valid_until" type="date" />
+                                    </div>
+                                    <div class="flex flex-col gap-1 md:col-span-2">
+                                        <label class="text-sm font-medium text-gray-700">Instruções gerais</label>
+                                        <Textarea
+                                            v-model="prescriptionForm.instructions"
+                                            :rows="3"
+                                            placeholder="Orientações adicionais ao paciente"
+                                        />
+                                    </div>
+                                </div>
+                                <div class="flex justify-end">
+                                    <Button
+                                        class="bg-blue-600 text-white hover:bg-blue-700"
+                                        :disabled="prescriptionForm.processing"
+                                        @click="submitPrescription"
+                                    >
+                                        Emitir prescrição
+                                    </Button>
+                                </div>
+                            </div>
+
+                            <div v-if="activeDoctorActionTab === 'examination'" class="grid gap-4 md:grid-cols-2">
+                                <div class="flex flex-col gap-1">
+                                    <label class="text-sm font-medium text-gray-700">Consulta</label>
+                                    <select
+                                        v-model="examinationForm.appointment_id"
+                                        class="rounded-md border border-gray-300 px-3 py-2 text-sm"
+                                    >
+                                        <option v-for="option in appointmentOptions" :key="option.id" :value="option.id">
+                                            {{ option.label }}
+                                        </option>
+                                    </select>
+                                    <p v-if="examinationForm.errors.appointment_id" class="text-xs text-red-600">
+                                        {{ examinationForm.errors.appointment_id }}
+                                    </p>
+                                </div>
+                                <div class="flex flex-col gap-1">
+                                    <label class="text-sm font-medium text-gray-700">Nome do exame</label>
+                                    <Input v-model="examinationForm.name" placeholder="Ex: Hemograma completo" />
+                                </div>
+                                <div class="flex flex-col gap-1">
+                                    <label class="text-sm font-medium text-gray-700">Tipo</label>
+                                    <select
+                                        v-model="examinationForm.type"
+                                        class="rounded-md border border-gray-300 px-3 py-2 text-sm"
+                                    >
+                                        <option value="lab">Laboratorial</option>
+                                        <option value="image">Imagem</option>
+                                        <option value="other">Outro</option>
+                                    </select>
+                                </div>
+                                <div class="flex flex-col gap-1">
+                                    <label class="text-sm font-medium text-gray-700">Prioridade</label>
+                                    <select
+                                        v-model="examinationForm.priority"
+                                        class="rounded-md border border-gray-300 px-3 py-2 text-sm"
+                                    >
+                                        <option value="normal">Normal</option>
+                                        <option value="urgent">Urgente</option>
+                                    </select>
+                                </div>
+                                <div class="md:col-span-2 flex flex-col gap-1">
+                                    <label class="text-sm font-medium text-gray-700">Justificativa clínica</label>
+                                    <Textarea
+                                        v-model="examinationForm.justification"
+                                        :rows="3"
+                                        placeholder="Informe a motivação clínica para o exame"
+                                    />
+                                </div>
+                                <div class="md:col-span-2 flex flex-col gap-1">
+                                    <label class="text-sm font-medium text-gray-700">Instruções ao paciente</label>
+                                    <Textarea
+                                        v-model="examinationForm.instructions"
+                                        :rows="2"
+                                        placeholder="Ex: Jejum de 8 horas"
+                                    />
+                                </div>
+                                <div class="md:col-span-2 flex justify-end">
+                                    <Button
+                                        class="bg-blue-600 text-white hover:bg-blue-700"
+                                        :disabled="examinationForm.processing"
+                                        @click="submitExamination"
+                                    >
+                                        Solicitar exame
+                                    </Button>
+                                </div>
+                            </div>
+
+                            <div v-if="activeDoctorActionTab === 'note'" class="grid gap-4 md:grid-cols-2">
+                                <div class="flex flex-col gap-1">
+                                    <label class="text-sm font-medium text-gray-700">Consulta</label>
+                                    <select
+                                        v-model="noteForm.appointment_id"
+                                        class="rounded-md border border-gray-300 px-3 py-2 text-sm"
+                                    >
+                                        <option v-for="option in appointmentOptions" :key="option.id" :value="option.id">
+                                            {{ option.label }}
+                                        </option>
+                                    </select>
+                                </div>
+                                <div class="flex flex-col gap-1">
+                                    <label class="text-sm font-medium text-gray-700">Título</label>
+                                    <Input v-model="noteForm.title" placeholder="Resumo rápido da evolução" />
+                                </div>
+                                <div class="flex flex-col gap-1 md:col-span-2">
+                                    <label class="text-sm font-medium text-gray-700">Conteúdo</label>
+                                    <Textarea v-model="noteForm.content" :rows="4" placeholder="Digite sua anotação clínica" />
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <input
+                                        id="note-private"
+                                        v-model="noteForm.is_private"
+                                        type="checkbox"
+                                        class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                    />
+                                    <label for="note-private" class="text-sm text-gray-700">Anotação privada (apenas o médico visualiza)</label>
+                                </div>
+                                <div class="flex flex-col gap-1">
+                                    <label class="text-sm font-medium text-gray-700">Categoria</label>
+                                    <select
+                                        v-model="noteForm.category"
+                                        class="rounded-md border border-gray-300 px-3 py-2 text-sm"
+                                    >
+                                        <option value="general">Geral</option>
+                                        <option value="diagnosis">Diagnóstico</option>
+                                        <option value="treatment">Tratamento</option>
+                                        <option value="follow_up">Follow-up</option>
+                                        <option value="other">Outro</option>
+                                    </select>
+                                </div>
+                                <div class="flex flex-col gap-1">
+                                    <label class="text-sm font-medium text-gray-700">Tags (separadas por vírgula)</label>
+                                    <Input v-model="noteTagsInput" placeholder="Ex: respiração, acompanhamento" />
+                                </div>
+                                <div class="md:col-span-2 flex justify-end">
+                                    <Button
+                                        class="bg-blue-600 text-white hover:bg-blue-700"
+                                        :disabled="noteForm.processing"
+                                        @click="submitNote"
+                                    >
+                                        Salvar anotação
+                                    </Button>
+                                </div>
+                            </div>
+
+                            <div v-if="activeDoctorActionTab === 'certificate'" class="grid gap-4 md:grid-cols-2">
+                                <div class="flex flex-col gap-1">
+                                    <label class="text-sm font-medium text-gray-700">Consulta</label>
+                                    <select
+                                        v-model="certificateForm.appointment_id"
+                                        class="rounded-md border border-gray-300 px-3 py-2 text-sm"
+                                    >
+                                        <option v-for="option in appointmentOptions" :key="option.id" :value="option.id">
+                                            {{ option.label }}
+                                        </option>
+                                    </select>
+                                </div>
+                                <div class="flex flex-col gap-1">
+                                    <label class="text-sm font-medium text-gray-700">Tipo</label>
+                                    <select
+                                        v-model="certificateForm.type"
+                                        class="rounded-md border border-gray-300 px-3 py-2 text-sm"
+                                    >
+                                        <option value="attendance">Comparecimento</option>
+                                        <option value="absence">Afastamento</option>
+                                        <option value="disability">Incapacidade</option>
+                                        <option value="other">Outro</option>
+                                    </select>
+                                </div>
+                                <div class="flex flex-col gap-1">
+                                    <label class="text-sm font-medium text-gray-700">Início</label>
+                                    <Input v-model="certificateForm.start_date" type="date" />
+                                </div>
+                                <div class="flex flex-col gap-1">
+                                    <label class="text-sm font-medium text-gray-700">Fim</label>
+                                    <Input v-model="certificateForm.end_date" type="date" />
+                                </div>
+                                <div class="flex flex-col gap-1">
+                                    <label class="text-sm font-medium text-gray-700">Dias</label>
+                                    <Input v-model="certificateForm.days" type="number" min="1" max="60" />
+                                </div>
+                                <div class="md:col-span-2 flex flex-col gap-1">
+                                    <label class="text-sm font-medium text-gray-700">Motivo</label>
+                                    <Textarea v-model="certificateForm.reason" :rows="3" />
+                                </div>
+                                <div class="md:col-span-2 flex flex-col gap-1">
+                                    <label class="text-sm font-medium text-gray-700">Restrições</label>
+                                    <Textarea v-model="certificateForm.restrictions" :rows="2" />
+                                </div>
+                                <div class="md:col-span-2 flex justify-end">
+                                    <Button
+                                        class="bg-blue-600 text-white hover:bg-blue-700"
+                                        :disabled="certificateForm.processing"
+                                        @click="submitCertificate"
+                                    >
+                                        Emitir atestado
+                                    </Button>
+                                </div>
+                            </div>
+
+                            <div v-if="activeDoctorActionTab === 'vitals'" class="grid gap-4 md:grid-cols-2">
+                                <div class="flex flex-col gap-1">
+                                    <label class="text-sm font-medium text-gray-700">Consulta</label>
+                                    <select
+                                        v-model="vitalSignsForm.appointment_id"
+                                        class="rounded-md border border-gray-300 px-3 py-2 text-sm"
+                                    >
+                                        <option v-for="option in appointmentOptions" :key="option.id" :value="option.id">
+                                            {{ option.label }}
+                                        </option>
+                                    </select>
+                                </div>
+                                <div class="flex flex-col gap-1">
+                                    <label class="text-sm font-medium text-gray-700">Registrado em</label>
+                                    <Input v-model="vitalSignsForm.recorded_at" type="datetime-local" />
+                                </div>
+                                <div class="flex flex-col gap-1">
+                                    <label class="text-sm font-medium text-gray-700">Pressão sistólica</label>
+                                    <Input v-model="vitalSignsForm.blood_pressure_systolic" type="number" placeholder="120" />
+                                </div>
+                                <div class="flex flex-col gap-1">
+                                    <label class="text-sm font-medium text-gray-700">Pressão diastólica</label>
+                                    <Input v-model="vitalSignsForm.blood_pressure_diastolic" type="number" placeholder="80" />
+                                </div>
+                                <div class="flex flex-col gap-1">
+                                    <label class="text-sm font-medium text-gray-700">Temperatura (°C)</label>
+                                    <Input v-model="vitalSignsForm.temperature" type="number" step="0.1" />
+                                </div>
+                                <div class="flex flex-col gap-1">
+                                    <label class="text-sm font-medium text-gray-700">Frequência cardíaca</label>
+                                    <Input v-model="vitalSignsForm.heart_rate" type="number" />
+                                </div>
+                                <div class="flex flex-col gap-1">
+                                    <label class="text-sm font-medium text-gray-700">Frequência respiratória</label>
+                                    <Input v-model="vitalSignsForm.respiratory_rate" type="number" />
+                                </div>
+                                <div class="flex flex-col gap-1">
+                                    <label class="text-sm font-medium text-gray-700">Saturação O₂ (%)</label>
+                                    <Input v-model="vitalSignsForm.oxygen_saturation" type="number" />
+                                </div>
+                                <div class="flex flex-col gap-1">
+                                    <label class="text-sm font-medium text-gray-700">Peso (kg)</label>
+                                    <Input v-model="vitalSignsForm.weight" type="number" step="0.1" />
+                                </div>
+                                <div class="flex flex-col gap-1">
+                                    <label class="text-sm font-medium text-gray-700">Altura (cm)</label>
+                                    <Input v-model="vitalSignsForm.height" type="number" step="0.1" />
+                                </div>
+                                <div class="md:col-span-2 flex flex-col gap-1">
+                                    <label class="text-sm font-medium text-gray-700">Notas</label>
+                                    <Textarea v-model="vitalSignsForm.notes" :rows="2" />
+                                </div>
+                                <div class="md:col-span-2 flex justify-end">
+                                    <Button
+                                        class="bg-blue-600 text-white hover:bg-blue-700"
+                                        :disabled="vitalSignsForm.processing"
+                                        @click="submitVitalSigns"
+                                    >
+                                        Registrar sinais vitais
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
                 <Card class="border border-gray-200">
                     <CardContent class="flex flex-col gap-4 p-4 md:flex-row md:items-end">
                         <div class="flex flex-1 flex-col gap-2">
@@ -582,6 +1266,7 @@ const exportError = computed(() => page.props.errors?.export ?? null);
                                         <th class="px-4 py-3 text-left">Médico</th>
                                         <th class="px-4 py-3 text-left">Status</th>
                                         <th class="px-4 py-3 text-left">Diagnóstico</th>
+                                        <th v-if="isDoctorViewer" class="px-4 py-3 text-left">Ações</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-gray-100 bg-white">
@@ -590,6 +1275,16 @@ const exportError = computed(() => page.props.errors?.export ?? null);
                                         <td class="px-4 py-3">{{ appointment.doctor.user.name }}</td>
                                         <td class="px-4 py-3">{{ formatStatus(appointment.status) }}</td>
                                         <td class="px-4 py-3">{{ appointment.diagnosis || '—' }}</td>
+                                        <td v-if="isDoctorViewer" class="px-4 py-3">
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                :disabled="consultationPdfLoading === appointment.id"
+                                                @click="generateConsultationPdf(appointment.id)"
+                                            >
+                                                {{ consultationPdfLoading === appointment.id ? 'Gerando...' : 'Gerar PDF' }}
+                                            </Button>
+                                        </td>
                                     </tr>
                                     <tr v-if="consultations.length === 0">
                                         <td colspan="4" class="px-4 py-6 text-center text-gray-500">
@@ -747,7 +1442,7 @@ const exportError = computed(() => page.props.errors?.export ?? null);
                                 <label class="text-sm font-medium text-gray-700">Descrição</label>
                                 <Textarea
                                     v-model="documentForm.description"
-                                    rows="3"
+                                    :rows="3"
                                     placeholder="Contexto ou observações adicionais"
                                 />
                             </div>
@@ -775,6 +1470,81 @@ const exportError = computed(() => page.props.errors?.export ?? null);
                             </p>
                         </CardContent>
                     </Card>
+                </div>
+
+                <div v-if="activeTab === 'diagnosticos'" class="grid gap-4 md:grid-cols-2">
+                    <Card v-for="diagnosis in diagnoses" :key="diagnosis.id" class="border border-gray-200">
+                        <CardHeader>
+                            <CardTitle class="flex items-center justify-between text-base text-gray-900">
+                                <span>{{ diagnosis.cid10_code }} · {{ diagnosis.cid10_description }}</span>
+                                <span class="text-xs text-gray-500">{{ diagnosis.type === 'principal' ? 'Principal' : 'Secundário' }}</span>
+                            </CardTitle>
+                            <p class="text-sm text-gray-600">Registrado em {{ formatDate(diagnosis.created_at, true) }}</p>
+                        </CardHeader>
+                        <CardContent class="space-y-2 text-sm text-gray-700">
+                            <p><span class="font-medium">Descrição:</span> {{ diagnosis.description || '—' }}</p>
+                            <p class="text-xs text-gray-500">Médico: {{ diagnosis.doctor.name }}</p>
+                        </CardContent>
+                    </Card>
+                    <p v-if="diagnoses.length === 0" class="text-sm text-gray-500">Nenhum diagnóstico registrado.</p>
+                </div>
+
+                <div v-if="activeTab === 'anotacoes'" class="grid gap-4 md:grid-cols-2">
+                    <Card v-for="note in clinicalNotes" :key="note.id" class="border border-gray-200">
+                        <CardHeader>
+                            <CardTitle class="text-base text-gray-900">{{ note.title }}</CardTitle>
+                            <p class="text-xs text-gray-500 flex items-center gap-2">
+                                {{ formatDate(note.created_at, true) }} • {{ note.doctor.name }}
+                                <span
+                                    class="rounded-full px-2 py-0.5 text-[11px]"
+                                    :class="note.is_private ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'"
+                                >
+                                    {{ note.is_private ? 'Privada' : 'Compartilhada' }}
+                                </span>
+                            </p>
+                        </CardHeader>
+                        <CardContent class="space-y-2 text-sm text-gray-700">
+                            <p>{{ note.content }}</p>
+                            <p v-if="note.tags?.length" class="text-xs text-gray-500">
+                                Tags: {{ note.tags.join(', ') }}
+                            </p>
+                        </CardContent>
+                    </Card>
+                    <p v-if="clinicalNotes.length === 0" class="text-sm text-gray-500">
+                        Nenhuma anotação disponível para este paciente.
+                    </p>
+                </div>
+
+                <div v-if="activeTab === 'atestados'" class="grid gap-4 md:grid-cols-2">
+                    <Card v-for="certificate in medicalCertificates" :key="certificate.id" class="border border-gray-200">
+                        <CardHeader>
+                            <CardTitle class="text-base text-gray-900">
+                                {{ formatStatus(certificate.type) }} · {{ formatStatus(certificate.status) }}
+                            </CardTitle>
+                            <p class="text-xs text-gray-500">
+                                Emitido em {{ formatDate(certificate.created_at, true) }} • Código {{ certificate.verification_code }}
+                            </p>
+                        </CardHeader>
+                        <CardContent class="space-y-2 text-sm text-gray-700">
+                            <p><span class="font-medium">Período:</span> {{ formatDate(certificate.start_date) }} - {{ formatDate(certificate.end_date) }}</p>
+                            <p><span class="font-medium">Motivo:</span> {{ certificate.reason }}</p>
+                            <p><span class="font-medium">Restrições:</span> {{ certificate.restrictions || '—' }}</p>
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs text-gray-500">Médico: {{ certificate.doctor.name }}</span>
+                                <Link
+                                    v-if="certificate.pdf_url"
+                                    :href="certificate.pdf_url"
+                                    target="_blank"
+                                    class="text-xs text-blue-600 hover:underline"
+                                >
+                                    Download PDF
+                                </Link>
+                            </div>
+                        </CardContent>
+                    </Card>
+                    <p v-if="medicalCertificates.length === 0" class="text-sm text-gray-500">
+                        Nenhum atestado emitido até o momento.
+                    </p>
                 </div>
 
                 <div v-if="activeTab === 'evolucao'" class="grid gap-4 md:grid-cols-2">

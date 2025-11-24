@@ -3,6 +3,13 @@
 namespace App\Http\Controllers\Doctor;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Doctor\MedicalRecords\StoreClinicalNoteRequest;
+use App\Http\Requests\Doctor\MedicalRecords\StoreDiagnosisRequest;
+use App\Http\Requests\Doctor\MedicalRecords\StoreExaminationRequest;
+use App\Http\Requests\Doctor\MedicalRecords\StoreMedicalCertificateRequest;
+use App\Http\Requests\Doctor\MedicalRecords\StorePrescriptionRequest;
+use App\Http\Requests\Doctor\MedicalRecords\StoreVitalSignRequest;
+use App\Models\Appointments;
 use App\Models\Patient;
 use App\Services\MedicalRecordService;
 use Illuminate\Http\Request;
@@ -29,7 +36,7 @@ class DoctorPatientMedicalRecordController extends Controller
         $this->authorize('view', $patient);
 
         $filters = $this->extractFilters($request);
-        $payload = $this->medicalRecordService->getPatientMedicalRecord($patient, $filters);
+        $payload = $this->medicalRecordService->getDoctorPatientMedicalRecord($user->doctor, $patient, $filters);
 
         $this->medicalRecordService->logAccess($user, $patient, 'view', [
             'by' => 'doctor',
@@ -79,6 +86,91 @@ class DoctorPatientMedicalRecordController extends Controller
         return Storage::disk('public')->download($document['path'], $document['filename']);
     }
 
+    public function storeDiagnosis(StoreDiagnosisRequest $request, Patient $patient)
+    {
+        $this->authorize('registerDiagnosis', $patient);
+
+        $doctor = $request->user()->doctor;
+        $appointment = $this->resolveAppointment($request->validated('appointment_id'), $patient, $doctor->id);
+
+        $this->medicalRecordService->registerDiagnosis($appointment, $doctor, $request->validated());
+
+        return back()->with('status', 'Diagnóstico registrado com sucesso.');
+    }
+
+    public function storePrescription(StorePrescriptionRequest $request, Patient $patient)
+    {
+        $this->authorize('issuePrescription', $patient);
+
+        $doctor = $request->user()->doctor;
+        $appointment = $this->resolveAppointment($request->validated('appointment_id'), $patient, $doctor->id);
+
+        $this->medicalRecordService->issuePrescription($doctor, $patient, $appointment, $request->validated());
+
+        return back()->with('status', 'Prescrição emitida com sucesso.');
+    }
+
+    public function storeExamination(StoreExaminationRequest $request, Patient $patient)
+    {
+        $this->authorize('requestExamination', $patient);
+
+        $doctor = $request->user()->doctor;
+        $appointment = $this->resolveAppointment($request->validated('appointment_id'), $patient, $doctor->id);
+
+        $this->medicalRecordService->requestExamination($doctor, $patient, $appointment, $request->validated());
+
+        return back()->with('status', 'Exame solicitado com sucesso.');
+    }
+
+    public function storeClinicalNote(StoreClinicalNoteRequest $request, Patient $patient)
+    {
+        $this->authorize('createNote', $patient);
+
+        $doctor = $request->user()->doctor;
+        $appointment = $this->resolveAppointment($request->validated('appointment_id'), $patient, $doctor->id);
+
+        $this->medicalRecordService->createClinicalNote($doctor, $patient, $appointment, $request->validated());
+
+        return back()->with('status', 'Anotação registrada com sucesso.');
+    }
+
+    public function storeMedicalCertificate(StoreMedicalCertificateRequest $request, Patient $patient)
+    {
+        $this->authorize('issueCertificate', $patient);
+
+        $doctor = $request->user()->doctor;
+        $appointment = $this->resolveAppointment($request->validated('appointment_id'), $patient, $doctor->id);
+
+        $this->medicalRecordService->issueCertificate($doctor, $patient, $appointment, $request->validated());
+
+        return back()->with('status', 'Atestado emitido com sucesso.');
+    }
+
+    public function storeVitalSigns(StoreVitalSignRequest $request, Patient $patient)
+    {
+        $this->authorize('registerVitalSigns', $patient);
+
+        $doctor = $request->user()->doctor;
+        $appointment = $this->resolveAppointment($request->validated('appointment_id'), $patient, $doctor->id);
+
+        $this->medicalRecordService->registerVitalSigns($appointment, $doctor, $request->validated());
+
+        return back()->with('status', 'Sinais vitais registrados com sucesso.');
+    }
+
+    public function generateConsultationPdf(Request $request, Patient $patient)
+    {
+        $this->authorize('generateConsultationPdf', $patient);
+
+        $doctor = $request->user()->doctor;
+        $appointmentId = $request->string('appointment_id');
+        $appointment = $this->resolveAppointment($appointmentId, $patient, $doctor->id);
+
+        $document = $this->medicalRecordService->generateConsultationPdf($appointment, $request->user());
+
+        return Storage::disk('public')->download($document['path'], $document['filename']);
+    }
+
     private function extractFilters(Request $request): array
     {
         return array_filter([
@@ -99,6 +191,15 @@ class DoctorPatientMedicalRecordController extends Controller
 
             return $value !== null && $value !== '';
         });
+    }
+
+    private function resolveAppointment(?string $appointmentId, Patient $patient, string $doctorId): Appointments
+    {
+        return Appointments::query()
+            ->where('id', $appointmentId)
+            ->where('patient_id', $patient->id)
+            ->where('doctor_id', $doctorId)
+            ->firstOrFail();
     }
 }
 

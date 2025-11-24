@@ -3,10 +3,13 @@
 namespace App\Services;
 
 use App\Models\Appointments;
+use App\Models\ClinicalNote;
+use App\Models\Diagnosis;
 use App\Models\Doctor;
 use App\Models\Examination;
 use App\Models\MedicalDocument;
 use App\Models\MedicalRecordAuditLog;
+use App\Models\MedicalCertificate;
 use App\Models\Patient;
 use App\Models\Prescription;
 use App\Models\User;
@@ -15,7 +18,9 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class MedicalRecordService
 {
@@ -35,10 +40,109 @@ class MedicalRecordService
             'examinations' => $this->getExaminationsForRecord($patient, $normalizedFilters),
             'documents' => $this->getDocumentsForRecord($patient, $normalizedFilters),
             'vital_signs' => $this->getVitalSignsForRecord($patient, $normalizedFilters),
+            'diagnoses' => $this->getDiagnosesForRecord($patient, $normalizedFilters),
+            'clinical_notes' => $this->getClinicalNotesForRecord($patient, $normalizedFilters),
+            'medical_certificates' => $this->getMedicalCertificatesForRecord($patient, $normalizedFilters),
             'upcoming_appointments' => $this->getUpcomingAppointments($patient),
             'metrics' => $this->buildMetrics($patient),
             'filters' => $normalizedFilters,
         ];
+    }
+
+    /**
+     * Lista pacientes atendidos pelo médico com indicadores agregados.
+     */
+    public function getDoctorPatientList(Doctor $doctor, array $filters = []): Collection
+    {
+        $query = Appointments::query()
+            ->with([
+                'patient.user',
+                'patient.medicalDocuments',
+            ])
+            ->where('doctor_id', $doctor->id);
+
+        if (!empty($filters['search'])) {
+            $search = $filters['search'];
+            $query->whereHas('patient.user', function (Builder $builder) use ($search) {
+                $builder->where('name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        if (!empty($filters['date_from'])) {
+            $query->whereDate('scheduled_at', '>=', $filters['date_from']);
+        }
+
+        if (!empty($filters['date_to'])) {
+            $query->whereDate('scheduled_at', '<=', $filters['date_to']);
+        }
+
+        if (!empty($filters['diagnosis'])) {
+            $diagnosis = $filters['diagnosis'];
+            $query->where('metadata->diagnosis', 'like', "%{$diagnosis}%");
+        }
+
+        $appointments = $query
+            ->orderByDesc('scheduled_at')
+            ->get();
+
+        return $appointments
+            ->groupBy('patient_id')
+            ->map(function (Collection $patientAppointments) {
+                /** @var Appointments $latest */
+                $latest = $patientAppointments->sortByDesc('scheduled_at')->first();
+                $patient = $latest->patient;
+
+                $pendingExams = $patientAppointments
+                    ->flatMap(fn (Appointments $appt) => $appt->examinations)
+                    ->whereIn('status', [Examination::STATUS_REQUESTED, Examination::STATUS_IN_PROGRESS])
+                    ->count();
+
+                return [
+                    'patient' => $this->formatPatient($patient),
+                    'last_consultation_at' => $latest->scheduled_at?->toIso8601String(),
+                    'consultations_count' => $patientAppointments->count(),
+                    'last_diagnosis' => $latest->metadata['diagnosis'] ?? null,
+                    'alerts' => [
+                        'pending_exams' => $pendingExams,
+                        'next_appointment' => $patient->appointments()
+                            ->where('scheduled_at', '>', now())
+                            ->orderBy('scheduled_at')
+                            ->first()?->scheduled_at?->toIso8601String(),
+                    ],
+                ];
+            })
+            ->values();
+    }
+
+    /**
+     * Retorna o prontuário com filtros aplicados ao contexto do médico.
+     */
+    public function getDoctorPatientMedicalRecord(Doctor $doctor, Patient $patient, array $filters = []): array
+    {
+        $record = $this->getPatientMedicalRecord($patient, $filters);
+
+        $filterByDoctor = static fn (Collection $items, ?string $doctorPath = 'doctor.id'): Collection => $items
+            ->filter(static fn ($item) => data_get($item, $doctorPath) === $doctor->id)
+            ->values();
+
+        $record['timeline'] = $filterByDoctor($record['timeline']);
+        $record['consultations'] = $record['timeline'];
+        $record['prescriptions'] = $filterByDoctor($record['prescriptions']);
+        $record['examinations'] = $filterByDoctor($record['examinations']);
+        $record['documents'] = collect($record['documents'])
+            ->filter(function ($document) use ($doctor) {
+                $visibility = $document['visibility'] ?? MedicalDocument::VISIBILITY_SHARED;
+                return $visibility !== MedicalDocument::VISIBILITY_PATIENT
+                    || ($document['doctor']['id'] ?? null) === $doctor->id;
+            })
+            ->values();
+        $record['vital_signs'] = $filterByDoctor($record['vital_signs']);
+        $record['diagnoses'] = $this->getDiagnosesForRecord($patient, $filters, $doctor);
+        $record['clinical_notes'] = $this->getClinicalNotesForRecord($patient, $filters, $doctor);
+        $record['medical_certificates'] = $this->getMedicalCertificatesForRecord($patient, $filters, $doctor);
+
+        return $record;
     }
 
     /**
@@ -202,6 +306,109 @@ class MedicalRecordService
             ->limit($filters['vitals_limit'] ?? 50)
             ->get()
             ->map(fn (VitalSign $vital) => $this->formatVitalSign($vital));
+    }
+
+    /**
+     * Busca diagnósticos registrados para o paciente.
+     */
+    public function getDiagnosesForRecord(Patient $patient, array $filters = [], ?Doctor $doctor = null): Collection
+    {
+        $query = Diagnosis::with(['doctor.user', 'appointment'])
+            ->where('patient_id', $patient->id);
+
+        if ($doctor) {
+            $query->where('doctor_id', $doctor->id);
+        }
+
+        if (!empty($filters['date_from'])) {
+            $query->whereDate('created_at', '>=', $filters['date_from']);
+        }
+
+        if (!empty($filters['date_to'])) {
+            $query->whereDate('created_at', '<=', $filters['date_to']);
+        }
+
+        if (!empty($filters['search'])) {
+            $search = $filters['search'];
+            $query->where(function (Builder $builder) use ($search) {
+                $builder->where('cid10_code', 'like', "%{$search}%")
+                    ->orWhere('cid10_description', 'like', "%{$search}%")
+                    ->orWhere('description', 'like', "%{$search}%");
+            });
+        }
+
+        return $query
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(fn (Diagnosis $diagnosis) => $this->formatDiagnosis($diagnosis));
+    }
+
+    /**
+     * Busca notas clínicas.
+     */
+    public function getClinicalNotesForRecord(Patient $patient, array $filters = [], ?Doctor $doctor = null): Collection
+    {
+        $query = ClinicalNote::with(['doctor.user', 'appointment'])
+            ->where('patient_id', $patient->id);
+
+        if (!$doctor) {
+            $query->where('is_private', false);
+        }
+
+        if ($doctor) {
+            $query->where(function (Builder $builder) use ($doctor) {
+                $builder->where('is_private', false)
+                    ->orWhere('doctor_id', $doctor->id);
+            });
+        }
+
+        if (!empty($filters['note_category'])) {
+            $query->where('category', $filters['note_category']);
+        }
+
+        if (!empty($filters['search'])) {
+            $search = $filters['search'];
+            $query->where(function (Builder $builder) use ($search) {
+                $builder->where('title', 'like', "%{$search}%")
+                    ->orWhere('content', 'like', "%{$search}%")
+                    ->orWhereJsonContains('tags', $search);
+            });
+        }
+
+        return $query
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(fn (ClinicalNote $note) => $this->formatClinicalNote($note));
+    }
+
+    /**
+     * Busca atestados emitidos.
+     */
+    public function getMedicalCertificatesForRecord(Patient $patient, array $filters = [], ?Doctor $doctor = null): Collection
+    {
+        $query = MedicalCertificate::with(['doctor.user', 'appointment'])
+            ->where('patient_id', $patient->id);
+
+        if ($doctor) {
+            $query->where('doctor_id', $doctor->id);
+        }
+
+        if (!empty($filters['certificate_status'])) {
+            $query->whereIn('status', (array) $filters['certificate_status']);
+        }
+
+        if (!empty($filters['date_from'])) {
+            $query->whereDate('start_date', '>=', $filters['date_from']);
+        }
+
+        if (!empty($filters['date_to'])) {
+            $query->whereDate('start_date', '<=', $filters['date_to']);
+        }
+
+        return $query
+            ->orderByDesc('start_date')
+            ->get()
+            ->map(fn (MedicalCertificate $certificate) => $this->formatMedicalCertificate($certificate));
     }
 
     /**
@@ -457,6 +664,65 @@ class MedicalRecordService
         ];
     }
 
+    protected function formatDiagnosis(Diagnosis $diagnosis): array
+    {
+        return [
+            'id' => $diagnosis->id,
+            'appointment_id' => $diagnosis->appointment_id,
+            'cid10_code' => $diagnosis->cid10_code,
+            'cid10_description' => $diagnosis->cid10_description,
+            'type' => $diagnosis->diagnosis_type,
+            'description' => $diagnosis->description,
+            'doctor' => [
+                'id' => $diagnosis->doctor->id,
+                'name' => $diagnosis->doctor->user->name,
+            ],
+            'created_at' => $diagnosis->created_at?->toIso8601String(),
+        ];
+    }
+
+    protected function formatClinicalNote(ClinicalNote $note): array
+    {
+        return [
+            'id' => $note->id,
+            'appointment_id' => $note->appointment_id,
+            'title' => $note->title,
+            'content' => $note->content,
+            'is_private' => $note->is_private,
+            'category' => $note->category,
+            'tags' => $note->tags,
+            'version' => $note->version,
+            'doctor' => [
+                'id' => $note->doctor->id,
+                'name' => $note->doctor->user->name,
+            ],
+            'created_at' => $note->created_at?->toIso8601String(),
+        ];
+    }
+
+    protected function formatMedicalCertificate(MedicalCertificate $certificate): array
+    {
+        return [
+            'id' => $certificate->id,
+            'appointment_id' => $certificate->appointment_id,
+            'type' => $certificate->type,
+            'start_date' => $certificate->start_date?->toDateString(),
+            'end_date' => $certificate->end_date?->toDateString(),
+            'days' => $certificate->days,
+            'reason' => $certificate->reason,
+            'restrictions' => $certificate->restrictions,
+            'status' => $certificate->status,
+            'verification_code' => $certificate->verification_code,
+            'pdf_url' => $certificate->pdf_url,
+            'doctor' => [
+                'id' => $certificate->doctor->id,
+                'name' => $certificate->doctor->user->name,
+                'crm' => $certificate->doctor->crm,
+            ],
+            'created_at' => $certificate->created_at?->toIso8601String(),
+        ];
+    }
+
     protected function buildMetrics(Patient $patient): array
     {
         $lastAppointment = $patient->appointments()
@@ -469,6 +735,257 @@ class MedicalRecordService
             'total_prescriptions' => $patient->prescriptions()->count(),
             'total_examinations' => $patient->examinations()->count(),
             'last_consultation_at' => $lastAppointment?->scheduled_at?->toIso8601String(),
+        ];
+    }
+
+    public function registerDiagnosis(Appointments $appointment, Doctor $doctor, array $payload): Diagnosis
+    {
+        $this->ensureDoctorOwnsAppointment($appointment, $doctor);
+
+        return DB::transaction(function () use ($appointment, $doctor, $payload) {
+            $diagnosis = Diagnosis::create([
+                'appointment_id' => $appointment->id,
+                'doctor_id' => $doctor->id,
+                'patient_id' => $appointment->patient_id,
+                'cid10_code' => $payload['cid10_code'],
+                'cid10_description' => $payload['cid10_description'] ?? null,
+                'diagnosis_type' => $payload['type'] ?? Diagnosis::TYPE_PRINCIPAL,
+                'description' => $payload['description'] ?? null,
+            ]);
+
+            $metadata = $appointment->metadata ?? [];
+            $metadata['diagnosis'] = $diagnosis->description ?? $diagnosis->cid10_description;
+            $metadata['cid10'] = $diagnosis->cid10_code;
+            $metadata['cid10_description'] = $diagnosis->cid10_description;
+
+            $appointment->update(['metadata' => $metadata]);
+
+            $this->logAccess(
+                $this->resolveDoctorUser($doctor),
+                $appointment->patient,
+                'diagnosis_registered',
+                ['diagnosis_id' => $diagnosis->id],
+            );
+
+            return $diagnosis;
+        });
+    }
+
+    public function issuePrescription(Doctor $doctor, Patient $patient, Appointments $appointment, array $payload): Prescription
+    {
+        $this->ensureDoctorOwnsAppointment($appointment, $doctor);
+
+        if ($appointment->patient_id !== $patient->id) {
+            throw new \RuntimeException('Paciente não está associado à consulta.');
+        }
+
+        $prescription = Prescription::create([
+            'appointment_id' => $appointment->id,
+            'doctor_id' => $doctor->id,
+            'patient_id' => $patient->id,
+            'medications' => $payload['medications'],
+            'instructions' => $payload['instructions'] ?? null,
+            'valid_until' => !empty($payload['valid_until'])
+                ? Carbon::parse($payload['valid_until'])
+                : now()->addDays(30),
+            'status' => Prescription::STATUS_ACTIVE,
+            'metadata' => $payload['metadata'] ?? null,
+            'issued_at' => now(),
+        ]);
+
+        $this->logAccess(
+            $this->resolveDoctorUser($doctor),
+            $patient,
+            'prescription_issued',
+            ['prescription_id' => $prescription->id],
+        );
+
+        return $prescription;
+    }
+
+    public function requestExamination(Doctor $doctor, Patient $patient, Appointments $appointment, array $payload): Examination
+    {
+        $this->ensureDoctorOwnsAppointment($appointment, $doctor);
+
+        $examination = Examination::create([
+            'appointment_id' => $appointment->id,
+            'doctor_id' => $doctor->id,
+            'patient_id' => $patient->id,
+            'type' => $payload['type'] ?? Examination::TYPE_LAB,
+            'name' => $payload['name'],
+            'requested_at' => now(),
+            'status' => Examination::STATUS_REQUESTED,
+            'metadata' => [
+                'justification' => $payload['justification'] ?? null,
+                'priority' => $payload['priority'] ?? 'normal',
+                'instructions' => $payload['instructions'] ?? null,
+            ],
+        ]);
+
+        $this->logAccess(
+            $this->resolveDoctorUser($doctor),
+            $patient,
+            'examination_requested',
+            ['examination_id' => $examination->id],
+        );
+
+        return $examination;
+    }
+
+    public function createClinicalNote(Doctor $doctor, Patient $patient, Appointments $appointment, array $payload): ClinicalNote
+    {
+        $this->ensureDoctorOwnsAppointment($appointment, $doctor);
+
+        $version = 1;
+        if (!empty($payload['parent_id'])) {
+            $parent = ClinicalNote::findOrFail($payload['parent_id']);
+            $version = ($parent->version ?? 1) + 1;
+        }
+
+        $note = ClinicalNote::create([
+            'appointment_id' => $appointment->id,
+            'doctor_id' => $doctor->id,
+            'patient_id' => $patient->id,
+            'title' => $payload['title'],
+            'content' => $payload['content'],
+            'is_private' => $payload['is_private'] ?? true,
+            'category' => $payload['category'] ?? ClinicalNote::CATEGORY_GENERAL,
+            'tags' => $payload['tags'] ?? [],
+            'version' => $version,
+            'parent_id' => $payload['parent_id'] ?? null,
+            'metadata' => $payload['metadata'] ?? null,
+        ]);
+
+        $this->logAccess(
+            $this->resolveDoctorUser($doctor),
+            $patient,
+            'clinical_note_created',
+            ['note_id' => $note->id],
+        );
+
+        return $note;
+    }
+
+    public function issueCertificate(Doctor $doctor, Patient $patient, Appointments $appointment, array $payload): MedicalCertificate
+    {
+        $this->ensureDoctorOwnsAppointment($appointment, $doctor);
+
+        $verificationCode = $this->generateVerificationCode();
+
+        $certificate = MedicalCertificate::create([
+            'appointment_id' => $appointment->id,
+            'doctor_id' => $doctor->id,
+            'patient_id' => $patient->id,
+            'type' => $payload['type'] ?? MedicalCertificate::TYPE_ATTENDANCE,
+            'start_date' => Carbon::parse($payload['start_date']),
+            'end_date' => !empty($payload['end_date']) ? Carbon::parse($payload['end_date']) : null,
+            'days' => $payload['days'] ?? 1,
+            'reason' => $payload['reason'],
+            'restrictions' => $payload['restrictions'] ?? null,
+            'signature_hash' => $payload['signature_hash'] ?? null,
+            'crm_number' => $doctor->crm,
+            'verification_code' => $verificationCode,
+            'status' => MedicalCertificate::STATUS_ACTIVE,
+            'metadata' => $payload['metadata'] ?? null,
+        ]);
+
+        $pdf = $this->buildMedicalCertificatePdf($certificate);
+        if ($pdf) {
+            $certificate->forceFill(['pdf_url' => $pdf['public_path']])->save();
+        }
+
+        $this->logAccess(
+            $this->resolveDoctorUser($doctor),
+            $patient,
+            'medical_certificate_issued',
+            ['certificate_id' => $certificate->id],
+        );
+
+        return $certificate;
+    }
+
+    public function registerVitalSigns(Appointments $appointment, Doctor $doctor, array $payload): VitalSign
+    {
+        $this->ensureDoctorOwnsAppointment($appointment, $doctor);
+
+        $vitalSign = VitalSign::create([
+            'appointment_id' => $appointment->id,
+            'patient_id' => $appointment->patient_id,
+            'doctor_id' => $doctor->id,
+            'recorded_at' => !empty($payload['recorded_at']) ? Carbon::parse($payload['recorded_at']) : now(),
+            'blood_pressure_systolic' => $payload['blood_pressure_systolic'] ?? null,
+            'blood_pressure_diastolic' => $payload['blood_pressure_diastolic'] ?? null,
+            'temperature' => $payload['temperature'] ?? null,
+            'heart_rate' => $payload['heart_rate'] ?? null,
+            'respiratory_rate' => $payload['respiratory_rate'] ?? null,
+            'oxygen_saturation' => $payload['oxygen_saturation'] ?? null,
+            'weight' => $payload['weight'] ?? null,
+            'height' => $payload['height'] ?? null,
+            'notes' => $payload['notes'] ?? null,
+            'metadata' => $payload['metadata'] ?? null,
+        ]);
+
+        $this->logAccess(
+            $this->resolveDoctorUser($doctor),
+            $appointment->patient,
+            'vital_signs_recorded',
+            ['vital_sign_id' => $vitalSign->id],
+        );
+
+        return $vitalSign;
+    }
+
+    public function generateConsultationPdf(Appointments $appointment, User $requester): array
+    {
+        $appointment->loadMissing([
+            'doctor.user',
+            'patient.user',
+            'prescriptions.doctor.user',
+            'examinations',
+            'vitalSigns',
+        ]);
+
+        $payload = [
+            'appointment' => $this->formatAppointment($appointment),
+            'patient' => $this->formatPatient($appointment->patient),
+            'doctor' => [
+                'id' => $appointment->doctor->id,
+                'name' => $appointment->doctor->user->name,
+                'crm' => $appointment->doctor->crm,
+            ],
+            'generated_at' => now()->toIso8601String(),
+        ];
+
+        $pdf = Pdf::loadView('pdf.consultation-summary', $payload)->setPaper('a4');
+
+        $timestamp = now();
+        $filename = sprintf('consultation-%s.pdf', $timestamp->format('YmdHis'));
+        $path = "medical-records/consultations/{$appointment->patient_id}/{$filename}";
+
+        $disk = Storage::disk('public');
+        $disk->put($path, $pdf->output());
+        $fileSize = $disk->size($path);
+
+        MedicalDocument::create([
+            'patient_id' => $appointment->patient_id,
+            'doctor_id' => $appointment->doctor_id,
+            'uploaded_by' => $requester->id,
+            'appointment_id' => $appointment->id,
+            'category' => MedicalDocument::CATEGORY_REPORT,
+            'name' => sprintf('Resumo da consulta - %s', $timestamp->format('d/m/Y H:i')),
+            'file_path' => $path,
+            'file_type' => 'application/pdf',
+            'file_size' => $fileSize,
+            'description' => 'Resumo automático da consulta',
+            'metadata' => [
+                'appointment_id' => $appointment->id,
+            ],
+            'visibility' => MedicalDocument::VISIBILITY_DOCTOR,
+        ]);
+
+        return [
+            'path' => $path,
+            'filename' => $filename,
         ];
     }
 
@@ -511,6 +1028,83 @@ class MedicalRecordService
             'path' => $path,
             'filename' => $filename,
         ];
+    }
+
+    protected function buildMedicalCertificatePdf(MedicalCertificate $certificate): ?array
+    {
+        $certificate->loadMissing(['doctor.user', 'patient.user', 'appointment']);
+
+        $payload = [
+            'certificate' => $certificate,
+            'patient' => $this->formatPatient($certificate->patient),
+            'doctor' => [
+                'id' => $certificate->doctor->id,
+                'name' => $certificate->doctor->user->name,
+                'crm' => $certificate->doctor->crm,
+            ],
+        ];
+
+        $pdf = Pdf::loadView('pdf.medical-certificate', $payload)->setPaper('a4');
+
+        $timestamp = now();
+        $filename = sprintf('certificate-%s.pdf', $timestamp->format('YmdHis'));
+        $path = "medical-records/certificates/{$certificate->patient_id}/{$filename}";
+
+        $disk = Storage::disk('public');
+        $disk->put($path, $pdf->output());
+        MedicalDocument::create([
+            'patient_id' => $certificate->patient_id,
+            'doctor_id' => $certificate->doctor_id,
+            'uploaded_by' => $certificate->doctor->user?->id,
+            'appointment_id' => $certificate->appointment_id,
+            'category' => MedicalDocument::CATEGORY_REPORT,
+            'name' => 'Atestado médico',
+            'file_path' => $path,
+            'file_type' => 'application/pdf',
+            'file_size' => $disk->size($path),
+            'description' => 'Atestado emitido pela plataforma',
+            'metadata' => [
+                'certificate_id' => $certificate->id,
+            ],
+            'visibility' => MedicalDocument::VISIBILITY_SHARED,
+        ]);
+
+        return [
+            'path' => $path,
+            'filename' => $filename,
+            'public_path' => "/storage/{$path}",
+        ];
+    }
+
+    protected function ensureDoctorOwnsAppointment(Appointments $appointment, Doctor $doctor): void
+    {
+        if ($appointment->doctor_id !== $doctor->id) {
+            throw new \RuntimeException('O médico não está associado a esta consulta.');
+        }
+    }
+
+    protected function resolveDoctorUser(Doctor $doctor): User
+    {
+        $user = $doctor->user;
+
+        if (!$user) {
+            $user = $doctor->load('user')->user;
+        }
+
+        if (!$user) {
+            throw new \RuntimeException('Usuário do médico não encontrado.');
+        }
+
+        return $user;
+    }
+
+    protected function generateVerificationCode(): string
+    {
+        do {
+            $code = Str::upper(Str::random(10));
+        } while (MedicalCertificate::where('verification_code', $code)->exists());
+
+        return $code;
     }
 }
 

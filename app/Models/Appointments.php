@@ -79,6 +79,21 @@ class Appointments extends Model
         return $this->hasMany(VitalSign::class, 'appointment_id');
     }
 
+    public function diagnoses()
+    {
+        return $this->hasMany(Diagnosis::class, 'appointment_id');
+    }
+
+    public function clinicalNotes()
+    {
+        return $this->hasMany(ClinicalNote::class, 'appointment_id');
+    }
+
+    public function medicalCertificates()
+    {
+        return $this->hasMany(MedicalCertificate::class, 'appointment_id');
+    }
+
     /**
      * Helper method para criar log de evento
      */

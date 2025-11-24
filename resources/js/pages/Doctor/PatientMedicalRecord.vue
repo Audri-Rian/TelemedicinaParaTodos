@@ -11,3 +11,4 @@ defineProps<MedicalRecordProps>();
 </template>
 
 
+

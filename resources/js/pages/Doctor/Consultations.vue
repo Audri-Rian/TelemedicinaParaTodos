@@ -1,15 +1,77 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
-import { Head, usePage } from '@inertiajs/vue3';
+import { Head, usePage, router } from '@inertiajs/vue3';
 import axios from 'axios';
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { useVideoCall } from '@/composables/useVideoCall';
 import * as appointmentsRoutes from '@/routes/appointments';
 import * as doctorRoutes from '@/routes/doctor';
 import { type BreadcrumbItem } from '@/types';
 import { useRouteGuard } from '@/composables/auth';
+import ConsultationSidebar from '@/components/Doctor/ConsultationSidebar.vue';
+// @ts-ignore - route helper from Ziggy
+declare const route: (name: string, params?: any) => string;
 
 const { canAccessDoctorRoute } = useRouteGuard();
+
+// Helper function para construir URL da rota de detalhes da consulta
+const getConsultationDetailUrl = (appointmentId: string): string => {
+    return `/doctor/consultations/${appointmentId}`;
+};
+
+// Abrir sidebar com prontuário
+const openMedicalRecordSidebar = async () => {
+    if (!selectedUser.value?.appointment?.id) return;
+
+    isLoadingConsultation.value = true;
+    showMedicalRecordSidebar.value = true;
+
+    try {
+        const response = await axios.get(`/doctor/consultations/${selectedUser.value.appointment.id}`, {
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        });
+        consultationData.value = response.data;
+    } catch (error) {
+        console.error('Erro ao carregar dados da consulta:', error);
+        // Se der erro, ainda abre a sidebar mas sem dados
+        consultationData.value = {
+            appointment: {
+                id: selectedUser.value.appointment.id,
+                chief_complaint: '',
+                anamnesis: '',
+                physical_exam: '',
+                diagnosis: '',
+                cid10: '',
+                instructions: '',
+                notes: '',
+            },
+            patient: {
+                id: selectedUser.value.id,
+                name: selectedUser.value.name,
+                age: 0,
+                gender: '',
+                allergies: [],
+            },
+            isCompleted: selectedUser.value.appointment.status === 'completed',
+        };
+    } finally {
+        isLoadingConsultation.value = false;
+    }
+};
+
+// Fechar sidebar
+const closeMedicalRecordSidebar = () => {
+    showMedicalRecordSidebar.value = false;
+};
+
+// Quando dados são salvos na sidebar, atualizar
+const onSidebarSaved = () => {
+    // Pode atualizar estado se necessário
+    console.log('Dados salvos na sidebar');
+};
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -51,6 +113,9 @@ const users = (page.props.users as User[]) || [];
 const selectedUser = ref<User | null>(null);
 const isMuted = ref(false);
 const isVideoEnabled = ref(true);
+const showMedicalRecordSidebar = ref(false);
+const consultationData = ref<any>(null);
+const isLoadingConsultation = ref(false);
 
 const {
     isCalling,
@@ -254,27 +319,27 @@ const updateAppointmentStatus = (appointment: any) => {
     } else if (['scheduled', 'rescheduled'].includes(appointment.status)) {
         if (diffMinutes >= -10 && diffMinutes <= 10) {
             selectedUser.value.canStartCall = true;
-            if (diffMinutes < 0) {
-                selectedUser.value.timeWindowMessage = `Tempo restante: ${Math.abs(diffMinutes)} min`;
-            } else if (diffMinutes === 0) {
-                selectedUser.value.timeWindowMessage = 'Horário da consulta';
-            } else {
-                selectedUser.value.timeWindowMessage = `Início em ${diffMinutes} min`;
-            }
-        } else {
-            selectedUser.value.canStartCall = false;
-            if (diffMinutes < -10) {
-                selectedUser.value.timeWindowMessage = 'Janela de tempo expirada';
-            } else {
-                const daysUntil = Math.floor(diffMinutes / (24 * 60));
-                if (daysUntil > 0) {
-                    selectedUser.value.timeWindowMessage = `Agendado para ${daysUntil} ${daysUntil === 1 ? 'dia' : 'dias'}`;
+                    if (diffMinutes < 0) {
+                        selectedUser.value.timeWindowMessage = `${Math.abs(diffMinutes)} min`;
+                    } else if (diffMinutes === 0) {
+                        selectedUser.value.timeWindowMessage = 'Agora';
+                    } else {
+                        selectedUser.value.timeWindowMessage = `Em ${diffMinutes} min`;
+                    }
                 } else {
-                    const hoursUntil = Math.floor(diffMinutes / 60);
-                    selectedUser.value.timeWindowMessage = `Início em ${hoursUntil} ${hoursUntil === 1 ? 'hora' : 'horas'}`;
+                    selectedUser.value.canStartCall = false;
+                    if (diffMinutes < -10) {
+                        selectedUser.value.timeWindowMessage = 'Expirado';
+                    } else {
+                        const daysUntil = Math.floor(diffMinutes / (24 * 60));
+                        if (daysUntil > 0) {
+                            selectedUser.value.timeWindowMessage = `${daysUntil} ${daysUntil === 1 ? 'dia' : 'dias'}`;
+                        } else {
+                            const hoursUntil = Math.floor(diffMinutes / 60);
+                            selectedUser.value.timeWindowMessage = `Em ${hoursUntil}${hoursUntil === 1 ? 'h' : 'h'}`;
+                        }
+                    }
                 }
-            }
-        }
     }
 };
 
@@ -362,13 +427,57 @@ onUnmounted(() => {
                             </span>
                         </div>
                         <div class="text-primary text-sm font-medium">00:00</div>
+                        <!-- Botão para abrir prontuário -->
+                        <button
+                            v-if="selectedUser.appointment"
+                            @click="openMedicalRecordSidebar"
+                            class="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors flex items-center gap-2"
+                        >
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            Prontuário
+                        </button>
                     </div>
                 </div>
 
                 <!-- Container Principal de Vídeo -->
                 <div class="flex-1 flex gap-4 p-4 relative max-h-[calc(100vh-200px)]">
+                    <!-- Sidebar do Prontuário -->
+                    <Transition
+                        enter-active-class="transition-all duration-300 ease-out"
+                        enter-from-class="translate-x-full opacity-0"
+                        enter-to-class="translate-x-0 opacity-100"
+                        leave-active-class="transition-all duration-300 ease-in"
+                        leave-from-class="translate-x-0 opacity-100"
+                        leave-to-class="translate-x-full opacity-0"
+                    >
+                        <div
+                            v-if="showMedicalRecordSidebar"
+                            class="w-96 border-l border-gray-200 bg-white shadow-xl z-10 h-full"
+                        >
+                            <ConsultationSidebar
+                                v-if="consultationData && !isLoadingConsultation && selectedUser?.appointment"
+                                :appointment-id="selectedUser.appointment.id"
+                                :patient="consultationData.patient"
+                                :consultation-data="consultationData.appointment"
+                                :is-completed="consultationData.appointment?.status === 'completed'"
+                                @close="closeMedicalRecordSidebar"
+                                @saved="onSidebarSaved"
+                            />
+                            <div v-else class="flex items-center justify-center h-full">
+                                <div class="text-center">
+                                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+                                    <p class="text-sm text-gray-600">Carregando prontuário...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </Transition>
                     <!-- Vídeo Remoto (Paciente) -->
-                    <div class="flex-1 relative bg-white rounded-lg overflow-hidden border border-gray-200 max-h-full">
+                    <div :class="[
+                        'relative bg-white rounded-lg overflow-hidden border border-gray-200 max-h-full transition-all duration-300',
+                        showMedicalRecordSidebar ? 'flex-1' : 'flex-1'
+                    ]">
                         <video 
                             ref="remoteVideoRef" 
                             autoplay 
@@ -529,6 +638,15 @@ onUnmounted(() => {
                                 <div v-else class="text-xs text-gray-400 mt-1">
                                     Sem agendamento
                                 </div>
+                                <!-- Botão rápido para abrir consulta -->
+                                <div v-if="user.appointment" class="mt-2">
+                                    <button
+                                        @click.stop="router.get(getConsultationDetailUrl(user.appointment.id))"
+                                        class="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                                    >
+                                        {{ user.appointment.status === 'completed' ? 'Complementar' : user.appointment.status === 'in_progress' ? 'Abrir' : 'Ver' }}
+                                    </button>
+                                </div>
                             </div>
                             <svg v-if="user.id === selectedUser?.id" class="w-5 h-5 text-gray-900" fill="currentColor" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
@@ -647,6 +765,25 @@ onUnmounted(() => {
                                     <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
                                 </svg>
                                 {{ selectedUser.appointment?.status === 'in_progress' ? 'Reconectar' : 'Iniciar Consulta' }}
+                            </button>
+                            
+                            <!-- Botão para abrir página de detalhes da consulta -->
+                            <button
+                                v-if="selectedUser.appointment"
+                                @click="router.get(getConsultationDetailUrl(selectedUser.appointment.id))"
+                                :class="[
+                                    'px-6 py-2 rounded-lg transition-all font-medium shadow-md flex items-center gap-2 text-sm',
+                                    selectedUser.appointment.status === 'completed'
+                                        ? 'bg-blue-500 text-white hover:bg-blue-600'
+                                        : selectedUser.appointment.status === 'in_progress'
+                                        ? 'bg-green-500 text-white hover:bg-green-600'
+                                        : 'bg-gray-500 text-white hover:bg-gray-600'
+                                ]"
+                            >
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                {{ selectedUser.appointment.status === 'completed' ? 'Complementar Consulta' : selectedUser.appointment.status === 'in_progress' ? 'Abrir Consulta' : 'Ver Detalhes' }}
                             </button>
                             
                             <!-- Botão "Chamar Novamente" para rejeições acidentais -->

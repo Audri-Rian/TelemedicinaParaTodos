@@ -24,13 +24,29 @@ class DoctorConsultationsController extends Controller
 
         $doctor = $currentUser->doctor;
 
+        // Primeiro, buscar apenas os IDs de pacientes que têm consultas com este médico
+        $patientIdsWithAppointments = Appointments::where('doctor_id', $doctor->id)
+            ->where('status', '!=', Appointments::STATUS_CANCELLED)
+            ->distinct()
+            ->pluck('patient_id')
+            ->toArray();
+
+        // Se não houver pacientes com consultas, retornar vazio
+        if (empty($patientIdsWithAppointments)) {
+            return Inertia::render('Doctor/Consultations', [
+                'users' => [],
+            ]);
+        }
+
+        // Buscar apenas os pacientes que têm relacionamento com o médico
         $patients = Patient::with('user')
+            ->whereIn('id', $patientIdsWithAppointments)
             ->active()
             ->get();
-        $patientIds = $patients->pluck('id');
 
+        // Buscar todas as consultas desses pacientes com este médico
         $appointments = Appointments::where('doctor_id', $doctor->id)
-            ->whereIn('patient_id', $patientIds)
+            ->whereIn('patient_id', $patientIdsWithAppointments)
             ->where('status', '!=', Appointments::STATUS_CANCELLED)
             ->orderBy('scheduled_at', 'asc')
             ->get()
@@ -105,38 +121,25 @@ class DoctorConsultationsController extends Controller
                         $diffMinutes = $primaryAppointment->scheduled_at->diffInMinutes($now, false);
 
                         if ($diffMinutes < 0) {
-                            $timeWindowMessage = __('Tempo restante: :minutes min', [
-                                'minutes' => abs($diffMinutes),
-                            ]);
+                            $timeWindowMessage = abs($diffMinutes) . ' min';
                         } elseif ($diffMinutes === 0) {
-                            $timeWindowMessage = __('Horário da consulta');
+                            $timeWindowMessage = 'Agora';
                         } else {
-                            $timeWindowMessage = __('Início em :minutes min', [
-                                'minutes' => $diffMinutes,
-                            ]);
+                            $timeWindowMessage = 'Em ' . $diffMinutes . ' min';
                         }
                     } elseif ($primaryAppointment->scheduled_at->lessThan($startWindow)) {
-                        $timeWindowMessage = __('Janela de tempo expirada');
+                        $timeWindowMessage = 'Expirado';
                     } else {
                         $daysUntil = (int) $now->diffInDays($primaryAppointment->scheduled_at, false);
                         if ($daysUntil > 0) {
-                            $dayText = $daysUntil === 1 ? 'dia' : 'dias';
-                            $timeWindowMessage = __('Agendado para :days :day_text', [
-                                'days' => $daysUntil,
-                                'day_text' => $dayText,
-                            ]);
+                            $timeWindowMessage = $daysUntil . ($daysUntil === 1 ? ' dia' : ' dias');
                         } else {
                             $hoursUntil = (int) $now->diffInHours($primaryAppointment->scheduled_at, false);
                             if ($hoursUntil > 0) {
-                                $hourText = $hoursUntil === 1 ? 'hora' : 'horas';
-                                $timeWindowMessage = __('Início em :hours :hour_text', [
-                                    'hours' => $hoursUntil,
-                                    'hour_text' => $hourText,
-                                ]);
+                                $timeWindowMessage = 'Em ' . $hoursUntil . ($hoursUntil === 1 ? 'h' : 'h');
                             } else {
-                                $timeWindowMessage = __('Início em :minutes min', [
-                                    'minutes' => $now->diffInMinutes($primaryAppointment->scheduled_at, false),
-                                ]);
+                                $minutesUntil = $now->diffInMinutes($primaryAppointment->scheduled_at, false);
+                                $timeWindowMessage = 'Em ' . $minutesUntil . ' min';
                             }
                         }
                     }
@@ -158,6 +161,11 @@ class DoctorConsultationsController extends Controller
                 ];
             })->sortByDesc('scheduled_at')->values()->toArray();
 
+            // Só retornar pacientes que têm pelo menos uma consulta
+            if ($relatedAppointments->isEmpty()) {
+                return null;
+            }
+
             return [
                 'id' => $patient->user->id,
                 'name' => $patient->user->name,
@@ -174,7 +182,9 @@ class DoctorConsultationsController extends Controller
                 'allAppointments' => $allAppointments,
                 'timeWindowMessage' => $timeWindowMessage,
             ];
-        })->values();
+        })
+        ->filter(fn ($user) => $user !== null) // Remover pacientes sem consultas
+        ->values();
 
         return Inertia::render('Doctor/Consultations', [
             'users' => $users,
