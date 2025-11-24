@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Carbon\Carbon;
 
 class Patient extends Model
@@ -56,6 +57,36 @@ class Patient extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function appointments(): HasMany
+    {
+        return $this->hasMany(Appointments::class);
+    }
+
+    public function prescriptions(): HasMany
+    {
+        return $this->hasMany(Prescription::class);
+    }
+
+    public function examinations(): HasMany
+    {
+        return $this->hasMany(Examination::class);
+    }
+
+    public function medicalDocuments(): HasMany
+    {
+        return $this->hasMany(MedicalDocument::class);
+    }
+
+    public function vitalSigns(): HasMany
+    {
+        return $this->hasMany(VitalSign::class);
+    }
+
+    public function auditLogs(): HasMany
+    {
+        return $this->hasMany(MedicalRecordAuditLog::class);
     }
 
     // Scopes para filtros

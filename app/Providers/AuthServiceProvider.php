@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Models\Appointments;
+use App\Models\Patient;
 use App\Models\ServiceLocation;
 use App\Models\AvailabilitySlot;
 use App\Models\Doctor\BlockedDate;
@@ -11,6 +12,7 @@ use App\Policies\AppointmentPolicy;
 use App\Policies\Doctor\ServiceLocationPolicy;
 use App\Policies\Doctor\AvailabilitySlotPolicy;
 use App\Policies\Doctor\BlockedDatePolicy;
+use App\Policies\MedicalRecordPolicy;
 use App\Policies\TimelineEventPolicy;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 
@@ -27,6 +29,7 @@ class AuthServiceProvider extends ServiceProvider
         AvailabilitySlot::class => AvailabilitySlotPolicy::class,
         BlockedDate::class => BlockedDatePolicy::class,
         TimelineEvent::class => TimelineEventPolicy::class,
+        Patient::class => MedicalRecordPolicy::class,
     ];
 
     /**

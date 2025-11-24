@@ -1,8 +1,9 @@
 <?php
 
-namespace App\Http\Controllers\Patient;
+namespace App\Http\Controllers\Doctor;
 
 use App\Http\Controllers\Controller;
+use App\Models\Patient;
 use App\Services\MedicalRecordService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -10,22 +11,19 @@ use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 
-class PatientMedicalRecordController extends Controller
+class DoctorPatientMedicalRecordController extends Controller
 {
     public function __construct(
         private readonly MedicalRecordService $medicalRecordService,
     ) {
     }
 
-    /**
-     * Exibe a página de prontuário médico do paciente.
-     */
-    public function index(Request $request): Response
+    public function show(Request $request, Patient $patient): Response
     {
-        $patient = $request->user()?->patient;
+        $user = $request->user();
 
-        if (!$patient) {
-            abort(403, 'Perfil de paciente não encontrado.');
+        if (!$user?->doctor) {
+            abort(403, 'Apenas médicos podem visualizar prontuários de pacientes.');
         }
 
         $this->authorize('view', $patient);
@@ -33,50 +31,54 @@ class PatientMedicalRecordController extends Controller
         $filters = $this->extractFilters($request);
         $payload = $this->medicalRecordService->getPatientMedicalRecord($patient, $filters);
 
-        $this->medicalRecordService->logAccess($request->user(), $patient, 'view');
+        $this->medicalRecordService->logAccess($user, $patient, 'view', [
+            'by' => 'doctor',
+            'doctor_id' => $user->doctor->id,
+        ]);
 
-        return Inertia::render('Patient/MedicalRecord', $payload);
+        $payload['context'] = [
+            'viewer' => [
+                'id' => $user->doctor->id,
+                'name' => $user->name,
+            ],
+            'mode' => 'doctor',
+        ];
+
+        return Inertia::render('Doctor/PatientMedicalRecord', $payload);
     }
 
-    /**
-     * Solicita exportação do prontuário em PDF.
-     */
-    public function export(Request $request)
+    public function export(Request $request, Patient $patient)
     {
-        $patient = $request->user()?->patient;
+        $user = $request->user();
 
-        if (!$patient) {
-            abort(403, 'Perfil de paciente não encontrado.');
+        if (!$user?->doctor) {
+            abort(403, 'Apenas médicos podem exportar prontuários de pacientes.');
         }
 
         $this->authorize('export', $patient);
 
         $filters = $this->extractFilters($request);
 
-        $rateLimiterKey = sprintf('medical-record-export:%s', $patient->id);
+        $rateLimiterKey = sprintf('medical-record-export:%s:%s', $patient->id, $user->id);
         if (RateLimiter::tooManyAttempts($rateLimiterKey, 1)) {
             return back()->withErrors([
-                'export' => 'Você já solicitou uma exportação na última hora. Por favor, aguarde.',
+                'export' => 'Você já solicitou uma exportação recentemente. Tente novamente em alguns minutos.',
             ]);
         }
 
         RateLimiter::hit($rateLimiterKey, 3600);
 
-        $document = $this->medicalRecordService->generatePdfDocument($patient, $request->user(), $filters);
+        $document = $this->medicalRecordService->generatePdfDocument($patient, $user, $filters);
 
-        $this->medicalRecordService->logAccess(
-            $request->user(),
-            $patient,
-            'export',
-            ['filters' => $filters]
-        );
+        $this->medicalRecordService->logAccess($user, $patient, 'export', [
+            'by' => 'doctor',
+            'doctor_id' => $user->doctor->id,
+            'filters' => $filters,
+        ]);
 
         return Storage::disk('public')->download($document['path'], $document['filename']);
     }
 
-    /**
-     * Normaliza filtros vindos da requisição.
-     */
     private function extractFilters(Request $request): array
     {
         return array_filter([
@@ -99,3 +101,4 @@ class PatientMedicalRecordController extends Controller
         });
     }
 }
+

@@ -59,6 +59,31 @@ class Doctor extends Model
         return $this->hasMany(ServiceLocation::class, 'doctor_id');
     }
 
+    public function appointments(): HasMany
+    {
+        return $this->hasMany(Appointments::class);
+    }
+
+    public function prescriptions(): HasMany
+    {
+        return $this->hasMany(Prescription::class);
+    }
+
+    public function examinations(): HasMany
+    {
+        return $this->hasMany(Examination::class);
+    }
+
+    public function medicalDocuments(): HasMany
+    {
+        return $this->hasMany(MedicalDocument::class);
+    }
+
+    public function vitalSigns(): HasMany
+    {
+        return $this->hasMany(VitalSign::class);
+    }
+
     // Relacionamento com AvailabilitySlot
     public function availabilitySlots(): HasMany
     {
