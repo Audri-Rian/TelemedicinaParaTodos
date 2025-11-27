@@ -6,4 +6,11 @@ Pensar em sistema de notificação.
 
 Pensar em sistema de chat.
 
-Na pagina de consultations preciso colocar um botão para envio de 
+Na pagina de consultations preciso colocar um botão para envio de
+
+
+SOAP na medicina, retirar anamnese
+
+CID colocar lista
+
+Retirar Sinais Vitais
