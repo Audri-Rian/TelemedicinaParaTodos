@@ -10,6 +10,10 @@ Broadcast::channel('video-call.{id}', function ($user, $id) {
     return (int) $user->id === (int) $id;
 });
 
+Broadcast::channel('messages.{id}', function ($user, $id) {
+    return (string) $user->id === (string) $id;
+});
+
 Broadcast::channel('appointment.{participantId}', function ($user, string $participantId) {
     if ($user->relationLoaded('doctor') ? $user->doctor?->id === $participantId : $user->doctor()->where('id', $participantId)->exists()) {
         return true;

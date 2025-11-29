@@ -2,11 +2,12 @@
 import AppLayout from '@/layouts/AppLayout.vue';
 import * as doctorRoutes from '@/routes/doctor';
 import { type BreadcrumbItem } from '@/types';
-import { Head } from '@inertiajs/vue3';
+import { Head, usePage } from '@inertiajs/vue3';
 import { Search, MessageCircle, Send } from 'lucide-vue-next';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useInitials } from '@/composables/useInitials';
-import { ref } from 'vue';
+import { useMessages, type Message } from '@/composables/useMessages';
+import { ref, onMounted, computed, nextTick } from 'vue';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -19,89 +20,103 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-// Dados mock das conversas
-const conversations = ref([
-    {
-        id: 1,
-        patientName: 'Sofia Almeida',
-        patientAvatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face',
-        lastMessage: 'Olá doutor, gostaria de agendar uma consulta.',
-        time: '10:30',
-        unread: 2,
-    },
-    {
-        id: 2,
-        patientName: 'Carlos Pereira',
-        patientAvatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face',
-        lastMessage: 'Obrigado pela consulta de hoje!',
-        time: '09:15',
-        unread: 0,
-    },
-    {
-        id: 3,
-        patientName: 'Ana Costa',
-        patientAvatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face',
-        lastMessage: 'Posso tirar uma dúvida sobre a receita?',
-        time: 'Ontem',
-        unread: 1,
-    },
-    {
-        id: 4,
-        patientName: 'João Silva',
-        patientAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face',
-        lastMessage: 'Confirmado para amanhã às 14h.',
-        time: '14/07',
-        unread: 0,
-    },
-]);
+// Dados das conversas vindos do backend via Inertia
+const page = usePage();
+const conversationsData = (page.props.conversations as Array<{
+    id: string;
+    name: string;
+    avatar: string | null;
+    lastMessage: string;
+    lastMessageTime: string | null;
+    unread: number;
+}>) || [];
+
+// Usar composable de mensagens para funcionalidades de mensagens
+const {
+    messages,
+    selectedConversationId,
+    isLoading,
+    isSending,
+    error,
+    loadMessages,
+    sendMessage: sendMessageApi,
+    markAsRead,
+    isMyMessage,
+    formatMessageTime,
+} = useMessages();
+
+const currentUserId = (page.props.auth as any)?.user?.id;
+
+// Estado das conversas (vindas do backend)
+const conversations = ref(
+    conversationsData.map((conv) => ({
+        id: conv.id,
+        name: conv.name,
+        avatar: conv.avatar || null,
+        lastMessage: conv.lastMessage,
+        lastMessageTime: conv.lastMessageTime,
+        unread: conv.unread,
+    }))
+);
 
 // Estado da conversa selecionada
 const selectedConversation = ref<typeof conversations.value[0] | null>(null);
 const searchQuery = ref('');
-
-// Mensagens mock da conversa selecionada
-const messages = ref([
-    {
-        id: 1,
-        sender: 'patient',
-        text: 'Olá doutor, gostaria de agendar uma consulta.',
-        time: '10:25',
-    },
-    {
-        id: 2,
-        sender: 'doctor',
-        text: 'Olá Sofia! Claro, posso agendar. Qual dia e horário prefere?',
-        time: '10:28',
-    },
-    {
-        id: 3,
-        sender: 'patient',
-        text: 'Prefiro na próxima semana, de preferência de manhã.',
-        time: '10:30',
-    },
-]);
+const newMessage = ref('');
 
 const { getInitials } = useInitials();
 
-const newMessage = ref('');
+// Filtrar conversas baseado na busca
+const filteredConversations = computed(() => {
+    if (!searchQuery.value.trim()) {
+        return conversations.value;
+    }
+    
+    const query = searchQuery.value.toLowerCase();
+    return conversations.value.filter(conv => 
+        conv.name.toLowerCase().includes(query)
+    );
+});
 
-const sendMessage = () => {
-    if (!newMessage.value.trim() || !selectedConversation.value) return;
+// Selecionar conversa
+const selectConversation = async (conversation: typeof conversations.value[0]) => {
+    selectedConversation.value = conversation;
+    await loadMessages(conversation.id);
+    await markAsRead(conversation.id);
     
-    messages.value.push({
-        id: messages.value.length + 1,
-        sender: 'doctor',
-        text: newMessage.value,
-        time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-    });
-    
-    newMessage.value = '';
+    // Scroll para baixo após carregar mensagens
+    await nextTick();
+    scrollToBottom();
 };
 
-const selectConversation = (conversation: typeof conversations.value[0]) => {
-    selectedConversation.value = conversation;
-    // Resetar mensagens não lidas
-    conversation.unread = 0;
+// Enviar mensagem
+const sendMessage = async () => {
+    if (!newMessage.value.trim() || !selectedConversation.value || isSending.value) return;
+    
+    const messageText = newMessage.value.trim();
+    const receiverId = selectedConversation.value.id;
+    
+    const success = await sendMessageApi(receiverId, messageText);
+    
+    if (success) {
+        newMessage.value = '';
+        // Scroll para baixo após enviar
+        await nextTick();
+        scrollToBottom();
+    }
+};
+
+// Scroll para baixo
+const scrollToBottom = () => {
+    const messagesContainer = document.getElementById('messages-container');
+    if (messagesContainer) {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+};
+
+// Verificar se mensagem é do usuário atual
+const isMyMsg = (message: Message): boolean => {
+    return isMyMessage(message, currentUserId);
 };
 </script>
 
@@ -129,8 +144,19 @@ const selectConversation = (conversation: typeof conversations.value[0]) => {
 
                     <!-- Lista de conversas -->
                     <div class="flex-1 overflow-y-auto">
+                        <div v-if="isLoading && conversations.length === 0" class="p-4 text-center text-gray-500">
+                            <p>Carregando conversas...</p>
+                        </div>
+                        <div v-else-if="conversations.length === 0" class="p-4 text-center text-gray-500">
+                            <MessageCircle class="w-12 h-12 mx-auto mb-2 text-gray-300" />
+                            <p class="font-medium">Nenhuma conversa disponível</p>
+                            <p class="text-sm mt-1">Você precisa ter consultas com pacientes para iniciar conversas</p>
+                        </div>
+                        <div v-else-if="filteredConversations.length === 0" class="p-4 text-center text-gray-500">
+                            <p>Nenhuma conversa encontrada</p>
+                        </div>
                         <div
-                            v-for="conversation in conversations"
+                            v-for="conversation in filteredConversations"
                             :key="conversation.id"
                             @click="selectConversation(conversation)"
                             :class="[
@@ -139,18 +165,18 @@ const selectConversation = (conversation: typeof conversations.value[0]) => {
                             ]"
                         >
                             <Avatar class="h-12 w-12 flex-shrink-0">
-                                <AvatarImage :src="conversation.patientAvatar" :alt="conversation.patientName" />
-                                <AvatarFallback class="bg-gray-200 text-gray-600">
-                                    {{ getInitials(conversation.patientName) }}
+                                <AvatarImage v-if="conversation.avatar" :src="conversation.avatar" :alt="conversation.name" />
+                                <AvatarFallback class="bg-gray-200 text-gray-600" :delay-ms="600">
+                                    {{ getInitials(conversation.name) }}
                                 </AvatarFallback>
                             </Avatar>
                             <div class="flex-1 min-w-0">
                                 <div class="flex items-center justify-between mb-1">
                                     <h3 class="font-semibold text-gray-900 truncate">
-                                        {{ conversation.patientName }}
+                                        {{ conversation.name }}
                                     </h3>
                                     <span class="text-xs text-gray-500 flex-shrink-0 ml-2">
-                                        {{ conversation.time }}
+                                        {{ conversation.lastMessageTime ? formatMessageTime(conversation.lastMessageTime) : '' }}
                                     </span>
                                 </div>
                                 <div class="flex items-center justify-between">
@@ -183,42 +209,71 @@ const selectConversation = (conversation: typeof conversations.value[0]) => {
                         <!-- Header da conversa -->
                         <div class="p-4 border-b border-gray-200 flex items-center gap-3">
                             <Avatar class="h-10 w-10">
-                                <AvatarImage :src="selectedConversation.patientAvatar" :alt="selectedConversation.patientName" />
-                                <AvatarFallback class="bg-gray-200 text-gray-600">
-                                    {{ getInitials(selectedConversation.patientName) }}
+                                <AvatarImage v-if="selectedConversation.avatar" :src="selectedConversation.avatar" :alt="selectedConversation.name" />
+                                <AvatarFallback class="bg-gray-200 text-gray-600" :delay-ms="600">
+                                    {{ getInitials(selectedConversation.name) }}
                                 </AvatarFallback>
                             </Avatar>
                             <div>
-                                <h3 class="font-semibold text-gray-900">{{ selectedConversation.patientName }}</h3>
+                                <h3 class="font-semibold text-gray-900">{{ selectedConversation.name }}</h3>
                                 <p class="text-sm text-gray-500">Online</p>
                             </div>
                         </div>
 
                         <!-- Área de mensagens -->
-                        <div class="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+                        <div 
+                            id="messages-container"
+                            class="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50"
+                        >
+                            <div v-if="isLoading" class="text-center text-gray-500 py-4">
+                                <p>Carregando mensagens...</p>
+                            </div>
+                            <div v-else-if="error" class="text-center text-red-500 py-4">
+                                <p>{{ error }}</p>
+                            </div>
+                            <div v-else-if="messages.length === 0" class="text-center text-gray-500 py-4">
+                                <p>Nenhuma mensagem ainda. Inicie a conversa!</p>
+                            </div>
                             <div
                                 v-for="message in messages"
                                 :key="message.id"
                                 :class="[
                                     'flex',
-                                    message.sender === 'doctor' ? 'justify-end' : 'justify-start'
+                                    isMyMsg(message) ? 'justify-end' : 'justify-start'
                                 ]"
                             >
                                 <div
                                     :class="[
                                         'max-w-xs lg:max-w-md px-4 py-2 rounded-lg',
-                                        message.sender === 'doctor'
+                                        isMyMsg(message)
                                             ? 'bg-primary text-gray-900'
                                             : 'bg-white text-gray-900 border border-gray-200'
                                     ]"
                                 >
-                                    <p class="text-sm">{{ message.text }}</p>
-                                    <p :class="[
-                                        'text-xs mt-1',
-                                        message.sender === 'doctor' ? 'text-gray-700' : 'text-gray-500'
-                                    ]">
-                                        {{ message.time }}
-                                    </p>
+                                    <p class="text-sm">{{ message.content }}</p>
+                                    <div class="flex items-center justify-between mt-1">
+                                        <p :class="[
+                                            'text-xs',
+                                            isMyMsg(message) ? 'text-gray-700' : 'text-gray-500'
+                                        ]">
+                                            {{ formatMessageTime(message.created_at) }}
+                                        </p>
+                                        <!-- Indicador de status (apenas para minhas mensagens) -->
+                                        <div v-if="isMyMsg(message)" class="ml-2 flex items-center">
+                                            <span v-if="message.status === 'sending'" class="text-xs text-gray-400">
+                                                Enviando...
+                                            </span>
+                                            <span v-else-if="message.status === 'sent'" class="text-xs text-gray-400">
+                                                ✓
+                                            </span>
+                                            <span v-else-if="message.status === 'delivered'" class="text-xs text-gray-500">
+                                                ✓✓
+                                            </span>
+                                            <span v-else-if="message.status === 'failed'" class="text-xs text-red-500" title="Falha ao enviar">
+                                                ✗
+                                            </span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -231,11 +286,12 @@ const selectConversation = (conversation: typeof conversations.value[0]) => {
                                     @keyup.enter="sendMessage"
                                     type="text"
                                     placeholder="Digite uma mensagem..."
-                                    class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                    :disabled="isSending"
+                                    class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent disabled:opacity-50"
                                 />
                                 <button
                                     @click="sendMessage"
-                                    :disabled="!newMessage.trim()"
+                                    :disabled="!newMessage.trim() || isSending"
                                     class="p-2 bg-primary text-gray-900 rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     <Send class="w-5 h-5" />
@@ -248,4 +304,3 @@ const selectConversation = (conversation: typeof conversations.value[0]) => {
         </div>
     </AppLayout>
 </template>
-

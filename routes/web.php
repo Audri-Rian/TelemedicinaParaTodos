@@ -130,6 +130,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('timeline-events/{timelineEvent}', [App\Http\Controllers\TimelineEventController::class, 'show'])->name('api.timeline-events.show');
         Route::put('timeline-events/{timelineEvent}', [App\Http\Controllers\TimelineEventController::class, 'update'])->name('api.timeline-events.update');
         Route::delete('timeline-events/{timelineEvent}', [App\Http\Controllers\TimelineEventController::class, 'destroy'])->name('api.timeline-events.destroy');
+        
+        // Rotas para mensagens
+        Route::get('messages/conversations', [App\Http\Controllers\Api\MessageController::class, 'conversations'])->name('api.messages.conversations');
+        Route::get('messages/{userId}', [App\Http\Controllers\Api\MessageController::class, 'messages'])->name('api.messages.show');
+        Route::post('messages', [App\Http\Controllers\Api\MessageController::class, 'store'])->name('api.messages.store');
+        Route::post('messages/{userId}/read', [App\Http\Controllers\Api\MessageController::class, 'markAsRead'])->name('api.messages.mark-read');
+        Route::post('messages/{messageId}/delivered', [App\Http\Controllers\Api\MessageController::class, 'markAsDelivered'])->name('api.messages.mark-delivered');
+        Route::get('messages/unread/count', [App\Http\Controllers\Api\MessageController::class, 'unreadCount'])->name('api.messages.unread-count');
     });
 });
 
