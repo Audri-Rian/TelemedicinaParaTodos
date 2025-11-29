@@ -3,10 +3,62 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import * as doctorRoutes from '@/routes/doctor';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/vue3';
-import { Search } from 'lucide-vue-next';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Input } from '@/components/ui/input';
 import { useInitials } from '@/composables/useInitials';
-import { ref } from 'vue';
+import { Calendar, Clock, Filter, History, Search, UserCheck, UserPlus } from 'lucide-vue-next';
+import { computed, ref } from 'vue';
+
+type FilterOption = 'todos' | 'futuros' | 'historico';
+
+interface PatientStats {
+    totalPatients: number;
+    activePatients: number;
+    consultedThisWeek: number;
+    upcomingAppointments: number;
+}
+
+interface UpcomingPatient {
+    id: string | number;
+    name: string;
+    avatar?: string;
+    initials?: string;
+    reason?: string;
+    scheduled_date?: string;
+    scheduled_time?: string;
+    status?: string;
+    status_class?: string;
+    channel?: string;
+}
+
+interface PatientHistory {
+    id: string | number;
+    name: string;
+    avatar?: string;
+    initials?: string;
+    lastConsultation?: string;
+    nextConsultation?: string;
+    status?: string;
+    status_class?: string;
+    notes?: string;
+}
+
+interface Props {
+    stats?: PatientStats;
+    upcomingPatients?: UpcomingPatient[];
+    patientHistory?: PatientHistory[];
+}
+
+const props = withDefaults(defineProps<Props>(), {
+    stats: () => ({
+        totalPatients: 0,
+        activePatients: 0,
+        consultedThisWeek: 0,
+        upcomingAppointments: 0,
+    }),
+    upcomingPatients: () => [],
+    patientHistory: () => [],
+});
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -15,228 +67,323 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
     {
         title: 'Pacientes',
-        href: '/doctor/patients',
+        href: doctorRoutes.patients().url,
     },
 ];
 
-// Dados mock dos pacientes
-const patients = ref([
-    {
-        id: 1,
-        name: 'Sofia Almeida',
-        avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face',
-        age: 35,
-        lastConsultation: '15/03/2024',
-        status: 'Ativo',
-        statusClass: 'bg-green-100 text-green-800'
-    },
-    {
-        id: 2,
-        name: 'Carlos Mendes',
-        avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face',
-        age: 50,
-        lastConsultation: '20/02/2024',
-        status: 'Ativo',
-        statusClass: 'bg-green-100 text-green-800'
-    },
-    {
-        id: 3,
-        name: 'Isabela Pereira',
-        avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face',
-        age: 28,
-        lastConsultation: '10/01/2024',
-        status: 'Inativo',
-        statusClass: 'bg-red-100 text-red-800'
-    },
-    {
-        id: 4,
-        name: 'Ricardo Santos',
-        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face',
-        age: 42,
-        lastConsultation: '05/04/2024',
-        status: 'Ativo',
-        statusClass: 'bg-green-100 text-green-800'
-    },
-    {
-        id: 5,
-        name: 'Mariana Costa',
-        avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&h=150&fit=crop&crop=face',
-        age: 60,
-        lastConsultation: '22/03/2024',
-        status: 'Ativo',
-        statusClass: 'bg-green-100 text-green-800'
-    },
-    {
-        id: 6,
-        name: 'Pedro Oliveira',
-        avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=face',
-        age: 30,
-        lastConsultation: '18/02/2024',
-        status: 'Inativo',
-        statusClass: 'bg-red-100 text-red-800'
-    }
-]);
-
-const searchQuery = ref('');
-const selectedFilter = ref('todos');
-
 const { getInitials } = useInitials();
 
-// Filtrar pacientes baseado na busca e filtro selecionado
-const filteredPatients = ref(patients.value);
+const searchQuery = ref('');
+const statusFilter = ref<FilterOption>('todos');
 
-const filterPatients = () => {
-    let filtered = patients.value;
-    
-    // Filtrar por texto de busca
-    if (searchQuery.value) {
-        filtered = filtered.filter(patient => 
-            patient.name.toLowerCase().includes(searchQuery.value.toLowerCase())
-        );
+const handleFilterChange = (option: FilterOption) => {
+    statusFilter.value = option;
+};
+
+const matchesSearch = (name?: string) => {
+    if (!name) return false;
+    if (!searchQuery.value) return true;
+    return name.toLowerCase().includes(searchQuery.value.toLowerCase());
+};
+
+const resolveStatusClass = (status?: string, fallback?: string) => {
+    if (fallback) return fallback;
+
+    const normalized = (status || '').toLowerCase();
+
+    if (normalized.includes('agend') || normalized.includes('confirm') || normalized.includes('ativo')) {
+        return 'bg-emerald-100 text-emerald-800';
     }
-    
-    // Filtrar por status
-    if (selectedFilter.value !== 'todos') {
-        filtered = filtered.filter(patient => 
-            patient.status.toLowerCase() === selectedFilter.value
-        );
+
+    if (normalized.includes('pend') || normalized.includes('aguard')) {
+        return 'bg-amber-100 text-amber-800';
     }
-    
-    filteredPatients.value = filtered;
+
+    if (normalized.includes('cancel') || normalized.includes('inativ') || normalized.includes('ausente')) {
+        return 'bg-rose-100 text-rose-800';
+    }
+
+    return 'bg-gray-100 text-gray-800';
 };
 
-// Observar mudanças na busca
-const handleSearch = () => {
-    filterPatients();
-};
+const filteredUpcoming = computed(() => {
+    if (statusFilter.value === 'historico') {
+        return [];
+    }
 
-// Observar mudanças no filtro
-const handleFilterChange = (filter: string) => {
-    selectedFilter.value = filter;
-    filterPatients();
-};
+    return props.upcomingPatients.filter(patient => matchesSearch(patient.name));
+});
+
+const filteredHistory = computed(() => {
+    if (statusFilter.value === 'futuros') {
+        return [];
+    }
+
+    return props.patientHistory.filter(patient => matchesSearch(patient.name));
+});
+
+const hasResults = computed(() => filteredUpcoming.value.length > 0 || filteredHistory.value.length > 0);
 </script>
 
 <template>
-    <Head title="Resumo de Pacientes" />
+    <Head title="Pacientes do Médico" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-6 bg-gray-50">
-            <!-- Header -->
-            <div class="flex flex-col gap-1">
-                <h1 class="text-3xl font-bold text-gray-900">Resumo de Pacientes</h1>
-                <p class="text-gray-600">Gerencie e visualize as informações dos seus pacientes.</p>
-            </div>
-
-            <!-- Search and Filters -->
-            <div class="flex items-center justify-between gap-4">
-                <!-- Search Bar -->
-                <div class="relative flex-1 max-w-md">
-                    <Search class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                    <input
-                        v-model="searchQuery"
-                        @input="handleSearch"
-                        type="text"
-                        placeholder="Pesquisar pacientes por nome..."
-                        class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                    />
+        <div class="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl bg-gray-50 p-6">
+            <!-- Header + stats -->
+            <div class="flex flex-col gap-4">
+                <div>
+                    <p class="text-sm font-semibold uppercase tracking-wide text-primary">Central do médico</p>
+                    <h1 class="text-3xl font-bold text-gray-900">Pacientes acompanhados</h1>
+                    <p class="text-sm text-gray-600">
+                        Visualize quem já passou em consulta e quem está agendado para os próximos dias.
+                    </p>
                 </div>
 
-                <!-- Filter Buttons -->
-                <div class="flex items-center gap-2">
-                    <button 
-                        @click="handleFilterChange('todos')"
-                        :class="[
-                            'px-4 py-2 rounded-lg font-medium transition-colors',
-                            selectedFilter === 'todos' 
-                                ? 'bg-primary text-gray-900' 
-                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                        ]"
-                    >
-                        Todos
-                    </button>
-                    <button 
-                        @click="handleFilterChange('ativo')"
-                        :class="[
-                            'px-4 py-2 rounded-lg font-medium transition-colors',
-                            selectedFilter === 'ativo' 
-                                ? 'bg-primary text-gray-900' 
-                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                        ]"
-                    >
-                        Ativos
-                    </button>
-                    <button 
-                        @click="handleFilterChange('inativo')"
-                        :class="[
-                            'px-4 py-2 rounded-lg font-medium transition-colors',
-                            selectedFilter === 'inativo' 
-                                ? 'bg-primary text-gray-900' 
-                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                        ]"
-                    >
-                        Inativos
-                    </button>
-                </div>
-            </div>
-
-            <!-- Patients Grid -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div 
-                    v-for="patient in filteredPatients" 
-                    :key="patient.id"
-                    class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow"
-                >
-                    <!-- Patient Info -->
-                    <div class="flex items-start gap-4 mb-4">
-                        <Avatar class="h-12 w-12">
-                            <AvatarImage :src="patient.avatar" :alt="patient.name" />
-                            <AvatarFallback class="bg-gray-200 text-gray-600">
-                                {{ getInitials(patient.name) }}
-                            </AvatarFallback>
-                        </Avatar>
-                        
-                        <div class="flex-1">
-                            <h3 class="font-semibold text-gray-900 text-lg">{{ patient.name }}</h3>
-                            <p class="text-gray-600 text-sm">{{ patient.age }} anos</p>
+                <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+                    <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+                        <div class="flex items-center gap-3">
+                            <span class="rounded-xl bg-primary/15 p-3 text-primary">
+                                <UserPlus class="h-5 w-5" />
+                            </span>
+                            <div>
+                                <p class="text-xs uppercase text-gray-500">Pacientes ativos</p>
+                                <p class="text-2xl font-bold text-gray-900">{{ props.stats.activePatients }}</p>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Last Consultation -->
-                    <div class="mb-4">
-                        <p class="text-gray-600 text-sm">
-                            Última Consulta: <span class="font-medium">{{ patient.lastConsultation }}</span>
-                        </p>
+                    <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+                        <div class="flex items-center gap-3">
+                            <span class="rounded-xl bg-primary/15 p-3 text-primary">
+                                <UserCheck class="h-5 w-5" />
+                            </span>
+                            <div>
+                                <p class="text-xs uppercase text-gray-500">Consultados nesta semana</p>
+                                <p class="text-2xl font-bold text-gray-900">{{ props.stats.consultedThisWeek }}</p>
+                            </div>
+                        </div>
                     </div>
 
-                    <!-- Status -->
-                    <div class="mb-6">
-                        <span :class="patient.statusClass" 
-                              class="inline-flex px-2 py-1 text-xs font-semibold rounded-full">
-                            {{ patient.status }}
-                        </span>
+                    <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+                        <div class="flex items-center gap-3">
+                            <span class="rounded-xl bg-primary/15 p-3 text-primary">
+                                <Calendar class="h-5 w-5" />
+                            </span>
+                            <div>
+                                <p class="text-xs uppercase text-gray-500">Consultas agendadas</p>
+                                <p class="text-2xl font-bold text-gray-900">{{ props.stats.upcomingAppointments }}</p>
+                            </div>
+                        </div>
                     </div>
 
-                    <!-- View Details Button -->
-                    <Link 
-                        :href="`/doctor/patient/${patient.id}`"
-                        class="w-full bg-primary hover:bg-primary/90 text-gray-900 font-semibold py-2 px-4 rounded-lg transition-colors text-center block"
-                    >
-                        Ver Detalhes
-                    </Link>
+                    <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+                        <div class="flex items-center gap-3">
+                            <span class="rounded-xl bg-primary/15 p-3 text-primary">
+                                <History class="h-5 w-5" />
+                            </span>
+                            <div>
+                                <p class="text-xs uppercase text-gray-500">Total de pacientes</p>
+                                <p class="text-2xl font-bold text-gray-900">{{ props.stats.totalPatients }}</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <!-- Empty State -->
-            <div v-if="filteredPatients.length === 0" class="text-center py-12">
-                <div class="text-gray-400 mb-4">
-                    <svg class="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
-                    </svg>
+            <!-- Search + filters -->
+            <div class="flex flex-col gap-4 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm lg:flex-row lg:items-center lg:justify-between">
+                <div class="flex flex-1 items-center gap-3">
+                    <div class="relative flex-1">
+                        <Search class="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+                        <Input
+                            v-model="searchQuery"
+                            type="text"
+                            placeholder="Buscar por nome do paciente..."
+                            class="pl-10"
+                        />
+                    </div>
+                    <div class="flex items-center gap-2 text-sm font-medium text-gray-500">
+                        <Filter class="h-4 w-4" />
+                        Filtrar visão
+                    </div>
                 </div>
-                <h3 class="text-lg font-medium text-gray-900 mb-2">Nenhum paciente encontrado</h3>
-                <p class="text-gray-600">Tente ajustar os filtros ou termo de busca.</p>
+                <div class="flex flex-wrap items-center gap-2">
+                    <button
+                        v-for="option in ['todos', 'futuros', 'historico']"
+                        :key="option"
+                        @click="handleFilterChange(option as FilterOption)"
+                        :class="[
+                            'px-4 py-2 rounded-xl text-sm font-semibold transition',
+                            statusFilter === option
+                                ? 'bg-primary text-gray-900 shadow-sm'
+                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        ]"
+                    >
+                        {{ option === 'todos' ? 'Todos' : option === 'futuros' ? 'Próximos' : 'Consultados' }}
+                    </button>
+                </div>
+            </div>
+
+            <!-- Upcoming consultations -->
+            <div v-if="filteredUpcoming.length" class="space-y-4">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-900">Consultas futuras</h2>
+                        <p class="text-sm text-gray-600">Pacientes agendados para hoje e próximos dias.</p>
+                    </div>
+                    <Link
+                        :href="doctorRoutes.appointments().url"
+                        class="inline-flex items-center rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 transition hover:border-primary/40 hover:text-primary"
+                    >
+                        Acessar agenda
+                    </Link>
+                </div>
+
+                <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    <div
+                        v-for="patient in filteredUpcoming"
+                        :key="patient.id"
+                        class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
+                    >
+                        <div class="flex items-start gap-4">
+                            <Avatar class="h-12 w-12">
+                                <AvatarImage v-if="patient.avatar" :src="patient.avatar" :alt="patient.name" />
+                                <AvatarFallback class="bg-primary/10 text-sm text-primary" :delay-ms="600">
+                                    {{ patient.initials || getInitials(patient.name) }}
+                                </AvatarFallback>
+                            </Avatar>
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2">
+                                    <h3 class="text-lg font-semibold text-gray-900">{{ patient.name }}</h3>
+                                    <span
+                                        class="rounded-full px-2 py-0.5 text-xs font-semibold"
+                                        :class="resolveStatusClass(patient.status, patient.status_class)"
+                                    >
+                                        {{ patient.status || 'Agendado' }}
+                                    </span>
+                                </div>
+                                <p class="text-sm text-gray-600">
+                                    {{ patient.reason || 'Consulta geral' }}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 space-y-2 rounded-xl bg-gray-50 p-4 text-sm">
+                            <div class="flex items-center justify-between text-gray-700">
+                                <span class="flex items-center gap-2 text-gray-500">
+                                    <Calendar class="h-4 w-4" /> Data
+                                </span>
+                                <span class="font-semibold">{{ patient.scheduled_date || 'A confirmar' }}</span>
+                            </div>
+                            <div class="flex items-center justify-between text-gray-700">
+                                <span class="flex items-center gap-2 text-gray-500">
+                                    <Clock class="h-4 w-4" /> Horário
+                                </span>
+                                <span class="font-semibold">{{ patient.scheduled_time || patient.scheduled_date || '—' }}</span>
+                            </div>
+                            <div class="flex items-center justify-between text-gray-700">
+                                <span class="flex items-center gap-2 text-gray-500">
+                                    <History class="h-4 w-4" /> Canal
+                                </span>
+                                <span class="font-semibold">{{ patient.channel || 'Teleconsulta' }}</span>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 flex gap-2">
+                            <Link
+                                :href="doctorRoutes.videoCall?.().url ?? doctorRoutes.appointments().url"
+                                class="flex-1 rounded-xl bg-primary px-4 py-2 text-center text-sm font-semibold text-gray-900 transition hover:bg-primary/90"
+                            >
+                                Iniciar vídeo
+                            </Link>
+                            <Link
+                                :href="doctorRoutes.patient.details({ id: patient.id }).url"
+                                class="flex-1 rounded-xl border border-gray-200 px-4 py-2 text-center text-sm font-semibold text-gray-700 transition hover:border-primary/40 hover:text-primary"
+                            >
+                                Prontuário
+                            </Link>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- History -->
+            <div v-if="filteredHistory.length" class="space-y-4">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-900">Pacientes consultados</h2>
+                    <p class="text-sm text-gray-600">Histórico de atendimentos recentes e próximos retornos.</p>
+                </div>
+
+                <div class="rounded-2xl border border-gray-200 bg-white shadow-sm">
+                    <div class="divide-y divide-gray-100">
+                        <div
+                            v-for="patient in filteredHistory"
+                            :key="patient.id"
+                            class="flex flex-col gap-4 p-5 md:flex-row md:items-center md:justify-between"
+                        >
+                            <div class="flex flex-1 items-center gap-4">
+                                <Avatar class="h-12 w-12">
+                                    <AvatarImage v-if="patient.avatar" :src="patient.avatar" :alt="patient.name" />
+                                    <AvatarFallback class="bg-primary/10 text-sm text-primary" :delay-ms="600">
+                                        {{ patient.initials || getInitials(patient.name) }}
+                                    </AvatarFallback>
+                                </Avatar>
+                                <div>
+                                    <p class="text-base font-semibold text-gray-900">{{ patient.name }}</p>
+                                    <p class="text-sm text-gray-500">
+                                        Última consulta em {{ patient.lastConsultation || '—' }}
+                                    </p>
+                                    <p v-if="patient.notes" class="text-xs text-gray-500">
+                                        {{ patient.notes }}
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="flex flex-1 flex-wrap items-center gap-3 text-sm text-gray-600">
+                                <div class="flex flex-col">
+                                    <span class="uppercase text-xs text-gray-400">Próximo retorno</span>
+                                    <span class="font-semibold text-gray-800">{{ patient.nextConsultation || 'Sob demanda' }}</span>
+                                </div>
+                                <span
+                                    class="rounded-full px-3 py-1 text-xs font-semibold"
+                                    :class="resolveStatusClass(patient.status, patient.status_class)"
+                                >
+                                    {{ patient.status || 'Ativo' }}
+                                </span>
+                            </div>
+                            <div class="flex gap-2">
+                                <Link
+                                    :href="doctorRoutes.patient.details({ id: patient.id }).url"
+                                    class="rounded-xl bg-primary/20 px-4 py-2 text-sm font-semibold text-primary transition hover:bg-primary/30"
+                                >
+                                    Abrir prontuário
+                                </Link>
+                                <Link
+                                    :href="doctorRoutes.appointments().url"
+                                    class="rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 transition hover:border-primary/40 hover:text-primary"
+                                >
+                                    Agendar retorno
+                                </Link>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Empty state -->
+            <div v-if="!hasResults" class="flex flex-1 flex-col items-center justify-center rounded-2xl border border-dashed border-gray-300 bg-white/70 p-12 text-center">
+                <div class="mb-4 rounded-full bg-primary/10 p-4 text-primary">
+                    <UserPlus class="h-8 w-8" />
+                </div>
+                <h3 class="text-xl font-semibold text-gray-900">Nenhum paciente encontrado</h3>
+                <p class="mt-2 max-w-md text-sm text-gray-600">
+                    Ajuste o termo de busca ou aguarde novos atendimentos para ver esta lista preenchida.
+                </p>
             </div>
         </div>
     </AppLayout>
 </template>
+
+
+
+

@@ -4,6 +4,21 @@ Esta pasta contém todos os diagramas, fluxogramas e visualizações do projeto.
 
 ## 📁 Estrutura
 
+### 📂 Diagramas Principais
+
+#### Arquitetura
+- **[01_ArquiteturaGeral.md](01_ArquiteturaGeral.md)** - Visão geral da arquitetura do sistema
+- **[07_ArquiteturaCamadas.md](07_ArquiteturaCamadas.md)** - Arquitetura detalhada em camadas
+
+#### Fluxos de Processo
+- **[02_FluxoConsulta.md](02_FluxoConsulta.md)** - Fluxo completo de uma consulta (do agendamento à finalização)
+- **[03_FluxoAutenticacao.md](03_FluxoAutenticacao.md)** - Fluxo de autenticação e registro
+- **[04_FluxoVideoconferencia.md](04_FluxoVideoconferencia.md)** - Fluxo de videoconferência WebRTC
+- **[06_FluxoAgendamento.md](06_FluxoAgendamento.md)** - Fluxo de agendamento de consultas
+
+#### Componentes
+- **[05_ComponentesFrontend.md](05_ComponentesFrontend.md)** - Estrutura de componentes Vue.js
+
 ### 📂 [visuals/](visuals/)
 Diagramas específicos organizados por módulo:
 - **Autenticação** - Fluxos de login e registro
@@ -73,5 +88,22 @@ Diagramas específicos organizados por módulo:
 
 ---
 
-*Última atualização: Dezembro 2024*
+## 📋 Lista de Diagramas
+
+### Diagramas de Arquitetura
+1. **Arquitetura Geral** - Visão geral do sistema com todas as tecnologias
+2. **Arquitetura em Camadas** - Detalhamento das responsabilidades por camada
+
+### Diagramas de Fluxo
+3. **Fluxo de Consulta** - Processo completo de uma consulta médica
+4. **Fluxo de Autenticação** - Login, registro e redirecionamento
+5. **Fluxo de Videoconferência** - Comunicação WebRTC em tempo real
+6. **Fluxo de Agendamento** - Busca, seleção e agendamento de consultas
+
+### Diagramas de Componentes
+7. **Componentes Frontend** - Estrutura e hierarquia dos componentes Vue.js
+
+---
+
+*Última atualização: Janeiro 2025*
 
