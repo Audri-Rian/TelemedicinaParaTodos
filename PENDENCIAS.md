@@ -27,22 +27,6 @@
 
 ---
 
-### RF008 - Notificações de Consultas
-**Status:** 🔄 Em Desenvolvimento  
-**Prioridade:** Desejável  
-**Descrição:** Sistema completo de notificações sobre consultas.
-
-**Pendências:**
-- [ ] Sistema de notificações em tempo real (push notifications)
-- [ ] Notificações no painel da plataforma
-- [ ] Lembretes automáticos de consultas
-- [ ] Notificações de cancelamento/reagendamento
-- [ ] Notificações de prescrições emitidas
-- [ ] Notificações de exames solicitados
-- [ ] Notificações de atestados emitidos
-- [ ] Preferências de notificação por usuário
-- [ ] Histórico de notificações
-
 **Referências:**
 - [SystemRules.md](docs/requirements/SystemRules.md)
 - [FuncionalitsGuide.md](docs/requirements/FuncionalitsGuide.md#rf008)
@@ -50,37 +34,31 @@
 
 ---
 
-### Sistema de Chat
-**Status:** 📋 Planejado  
-**Prioridade:** Importante  
-**Descrição:** Sistema de mensagens entre médicos e pacientes.
-
-**Pendências:**
-- [ ] Modelo de dados para mensagens
-- [ ] Interface de chat em tempo real
-- [ ] Histórico de conversas
-- [ ] Notificações de novas mensagens
-- [ ] Integração com consultas
-- [ ] Suporte a anexos
-- [ ] Mensagens automáticas do sistema
-
-**Referências:**
-- [Problems.md](Problems.md)
-
 ---
 
 ## 🎨 Melhorias de UX/UI
 
 ### Ajustes de UX para Videoconferência
-**Status:** 📋 Planejado  
+**Status:** ✅ Concluído  
 **Prioridade:** Importante
 
 **Pendências:**
-- [ ] Ajustar UX para caso alguém recuse acidentalmente a chamada
-- [ ] Botão de reenvio de solicitação de chamada
-- [ ] Feedback visual melhorado para estados da chamada
-- [ ] Indicadores de conexão (qualidade de rede)
-- [ ] Modal de confirmação antes de recusar chamada
+- [x] Ajustar UX para caso alguém recuse acidentalmente a chamada
+- [x] Botão de reenvio de solicitação de chamada
+- [x] Feedback visual melhorado para estados da chamada
+- [x] Indicadores de conexão (qualidade de rede)
+- [x] Modal de confirmação antes de recusar chamada
+
+**Implementações realizadas:**
+- ✅ Sistema de estados detalhados da chamada (idle, ringing_out, ringing_in, connecting, in_call, ending, ended, error)
+- ✅ Monitoramento de qualidade de rede em tempo real (latência, largura de banda, perda de pacotes)
+- ✅ Indicadores visuais de qualidade de conexão com tooltip informativo
+- ✅ Timer de duração da chamada formatado (MM:SS)
+- ✅ Modal de confirmação aprimorado com informações detalhadas sobre rejeição acidental
+- ✅ Botão "Chamar Novamente" disponível por 2 minutos após rejeição
+- ✅ Botão "Reenviar Solicitação" quando a chamada não é atendida
+- ✅ Feedback visual melhorado para cada estado da chamada (ícones animados, cores, mensagens)
+- ✅ Tratamento de rejeições acidentais com opção de callback
 
 **Referências:**
 - [Problems.md](Problems.md)

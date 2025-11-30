@@ -147,6 +147,12 @@ const {
     confirmRejectCall,
     cancelRejectCall,
     callBack,
+    // Novos estados detalhados
+    callState,
+    callDuration,
+    networkQuality,
+    formatCallDuration,
+    resendCallRequest,
 } = useVideoCall({
     routePrefix: '/doctor',
     onCallReceived: (user) => {
@@ -876,35 +882,60 @@ onUnmounted(() => {
         </div>
 
         <!-- Modal de Confirmação de Rejeição -->
-        <div v-if="showRejectionConfirmModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-            <div class="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 overflow-hidden">
+        <div v-if="showRejectionConfirmModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50" @click.self="cancelRejectCall">
+            <div class="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 overflow-hidden animate-in fade-in zoom-in duration-200">
                 <!-- Header -->
-                <div class="p-6 border-b border-gray-100">
+                <div class="p-6 border-b border-gray-100 bg-gradient-to-r from-orange-50 to-amber-50">
                     <div class="flex items-center gap-3">
-                        <div class="flex items-center justify-center w-12 h-12 rounded-full bg-orange-100">
-                            <svg class="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div class="flex items-center justify-center w-14 h-14 rounded-full bg-orange-100 ring-4 ring-orange-50">
+                            <svg class="w-7 h-7 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
                             </svg>
                         </div>
-                        <div>
-                            <h3 class="text-lg font-semibold text-gray-900">Confirmar Rejeição</h3>
-                            <p class="text-sm text-gray-600">Tem certeza que deseja recusar esta chamada?</p>
+                        <div class="flex-1">
+                            <h3 class="text-xl font-bold text-gray-900">Confirmar Rejeição</h3>
+                            <p class="text-sm text-gray-600 mt-1">Tem certeza que deseja recusar esta chamada?</p>
                         </div>
                     </div>
                 </div>
 
                 <!-- Content -->
                 <div class="p-6">
-                    <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
+                    <!-- Informações do chamador -->
+                    <div v-if="selectedUser" class="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center">
+                                <span class="text-primary font-bold text-sm">
+                                    {{ selectedUser.name?.charAt(0)?.toUpperCase() || 'P' }}
+                                </span>
+                            </div>
+                            <div>
+                                <p class="font-semibold text-gray-900">{{ selectedUser.name }}</p>
+                                <p class="text-xs text-gray-500">está tentando iniciar a consulta</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Aviso sobre rejeição acidental -->
+                    <div class="bg-amber-50 border-l-4 border-amber-400 rounded-lg p-4 mb-4">
                         <div class="flex items-start gap-3">
                             <svg class="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
-                            <div class="text-sm">
-                                <p class="font-medium text-amber-800 mb-1">Rejeição acidental?</p>
-                                <p class="text-amber-700">Se recusar por engano, você poderá usar o botão "Chamar Novamente" por 2 minutos.</p>
+                            <div class="text-sm flex-1">
+                                <p class="font-semibold text-amber-900 mb-1">Rejeição acidental?</p>
+                                <p class="text-amber-800 leading-relaxed">
+                                    Se você recusar por engano, poderá usar o botão <strong>"Chamar Novamente"</strong> que aparecerá por <strong>2 minutos</strong> após a rejeição.
+                                </p>
                             </div>
                         </div>
+                    </div>
+                    
+                    <!-- Informações adicionais -->
+                    <div class="text-xs text-gray-500 space-y-1">
+                        <p>• A chamada será encerrada imediatamente</p>
+                        <p>• Você poderá iniciar uma nova chamada a qualquer momento</p>
+                        <p>• O botão "Chamar Novamente" estará disponível por 2 minutos</p>
                     </div>
                 </div>
 
@@ -912,13 +943,13 @@ onUnmounted(() => {
                 <div class="px-6 py-4 bg-gray-50 border-t border-gray-100 flex gap-3">
                     <button
                         @click="cancelRejectCall"
-                        class="flex-1 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 font-medium transition-colors"
+                        class="flex-1 px-4 py-3 text-gray-700 bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 font-semibold transition-all duration-200"
                     >
-                        Cancelar
+                        Voltar
                     </button>
                     <button
                         @click="confirmRejectCall"
-                        class="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium transition-colors"
+                        class="flex-1 px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 font-semibold transition-all duration-200 shadow-md hover:shadow-lg"
                     >
                         Sim, Recusar
                     </button>

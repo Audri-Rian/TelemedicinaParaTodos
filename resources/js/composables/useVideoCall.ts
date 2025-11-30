@@ -35,6 +35,15 @@ interface MediaConfig {
     turnServer?: string;
 }
 
+interface NetworkQuality {
+    level: 'excellent' | 'good' | 'fair' | 'poor' | 'none';
+    latency: number; // em ms
+    bandwidth: number; // em kbps (estimado)
+    packetLoss: number; // em porcentagem
+}
+
+type CallState = 'idle' | 'ringing_out' | 'ringing_in' | 'connecting' | 'in_call' | 'ending' | 'ended' | 'error';
+
 interface UseVideoCallOptions {
     /**
      * Prefixo da rota base (ex: '/patient' ou '/doctor')
@@ -114,6 +123,25 @@ export function useVideoCall(options: UseVideoCallOptions = {}) {
     const canCallBack = ref(false);
     const showRejectionConfirmModal = ref(false);
     const pendingRejectCall = ref<any>(null);
+    
+    // Estados detalhados da chamada
+    const callState = ref<CallState>('idle');
+    const callStartTime = ref<number>(0);
+    const callDuration = ref<number>(0);
+    
+    // Qualidade de rede
+    const networkQuality = ref<NetworkQuality>({
+        level: 'none',
+        latency: 0,
+        bandwidth: 0,
+        packetLoss: 0,
+    });
+    
+    // Timer para duração da chamada
+    let callDurationInterval: ReturnType<typeof setInterval> | null = null;
+    
+    // Timer para monitoramento de qualidade de rede
+    let networkQualityInterval: ReturnType<typeof setInterval> | null = null;
 
     // Refs para elementos de vídeo
     const remoteVideoRef = ref<HTMLVideoElement | null>(null);
@@ -185,6 +213,126 @@ export function useVideoCall(options: UseVideoCallOptions = {}) {
     };
 
     /**
+     * Monitora a qualidade da rede baseado em estatísticas RTC
+     */
+    const monitorNetworkQuality = async (peerConnection: RTCPeerConnection) => {
+        if (!peerConnection) return;
+
+        try {
+            const stats = await peerConnection.getStats();
+            let totalBytesReceived = 0;
+            let totalBytesSent = 0;
+            let totalPacketsReceived = 0;
+            let totalPacketsLost = 0;
+            let rtt = 0;
+
+            stats.forEach((report) => {
+                if (report.type === 'inbound-rtp' && report.mediaType === 'video') {
+                    totalBytesReceived += report.bytesReceived || 0;
+                    totalPacketsReceived += report.packetsReceived || 0;
+                    totalPacketsLost += report.packetsLost || 0;
+                    rtt = report.roundTripTime ? report.roundTripTime * 1000 : rtt;
+                }
+                if (report.type === 'outbound-rtp' && report.mediaType === 'video') {
+                    totalBytesSent += report.bytesSent || 0;
+                }
+            });
+
+            // Calcular qualidade
+            const packetLoss = totalPacketsReceived > 0 
+                ? (totalPacketsLost / (totalPacketsReceived + totalPacketsLost)) * 100 
+                : 0;
+            
+            // Estimar largura de banda (simplificado)
+            const bandwidth = totalBytesReceived > 0 ? (totalBytesReceived / 1024) * 8 : 0;
+
+            // Determinar nível de qualidade
+            let level: NetworkQuality['level'] = 'none';
+            if (rtt > 0) {
+                if (rtt < 100 && packetLoss < 1) {
+                    level = 'excellent';
+                } else if (rtt < 200 && packetLoss < 3) {
+                    level = 'good';
+                } else if (rtt < 400 && packetLoss < 5) {
+                    level = 'fair';
+                } else {
+                    level = 'poor';
+                }
+            }
+
+            networkQuality.value = {
+                level,
+                latency: Math.round(rtt),
+                bandwidth: Math.round(bandwidth),
+                packetLoss: Math.round(packetLoss * 100) / 100,
+            };
+        } catch (error) {
+            console.error('Erro ao monitorar qualidade de rede:', error);
+        }
+    };
+
+    /**
+     * Inicia monitoramento periódico de qualidade de rede
+     */
+    const startNetworkQualityMonitoring = (peerConnection: RTCPeerConnection) => {
+        if (networkQualityInterval) {
+            clearInterval(networkQualityInterval);
+        }
+
+        networkQualityInterval = setInterval(() => {
+            if (peerConnection && callState.value === 'in_call') {
+                monitorNetworkQuality(peerConnection);
+            }
+        }, 3000); // A cada 3 segundos
+    };
+
+    /**
+     * Para o monitoramento de qualidade de rede
+     */
+    const stopNetworkQualityMonitoring = () => {
+        if (networkQualityInterval) {
+            clearInterval(networkQualityInterval);
+            networkQualityInterval = null;
+        }
+    };
+
+    /**
+     * Inicia o timer de duração da chamada
+     */
+    const startCallTimer = () => {
+        callStartTime.value = Date.now();
+        if (callDurationInterval) {
+            clearInterval(callDurationInterval);
+        }
+        callDurationInterval = setInterval(() => {
+            if (callStartTime.value > 0) {
+                callDuration.value = Math.floor((Date.now() - callStartTime.value) / 1000);
+            }
+        }, 1000);
+    };
+
+    /**
+     * Para o timer de duração da chamada
+     */
+    const stopCallTimer = () => {
+        if (callDurationInterval) {
+            clearInterval(callDurationInterval);
+            callDurationInterval = null;
+        }
+        callDuration.value = 0;
+        callStartTime.value = 0;
+    };
+
+    /**
+     * Formata duração da chamada em formato MM:SS
+     */
+    const formatCallDuration = (seconds: number): string => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    };
+
+    /**
      * Monitora o estado da conexão ICE
      * Baseado na lógica do VideoTest.vue para garantir reconexão correta em ambos os lados
      */
@@ -199,6 +347,8 @@ export function useVideoCall(options: UseVideoCallOptions = {}) {
                 if (!connectionLost.value && isCalling.value) {
                     connectionLost.value = true;
                     hasRemoteStream.value = false;
+                    callState.value = 'error';
+                    stopNetworkQualityMonitoring();
                     
                     if (options.onConnectionLost) {
                         options.onConnectionLost();
@@ -210,6 +360,8 @@ export function useVideoCall(options: UseVideoCallOptions = {}) {
             if (state === 'connected' || state === 'completed') {
                 if (connectionLost.value) {
                     connectionLost.value = false;
+                    callState.value = 'in_call';
+                    startNetworkQualityMonitoring(peerConnection);
                     
                     if (options.onConnectionRestored) {
                         options.onConnectionRestored();
@@ -286,12 +438,19 @@ export function useVideoCall(options: UseVideoCallOptions = {}) {
         isReceivingCall.value = false;
         hasRemoteStream.value = false;
         showIncomingCallModal.value = false;
+        
+        // Parar timers e monitoramentos
+        stopCallTimer();
+        stopNetworkQualityMonitoring();
 
         // Se não for perda de conexão, limpar tudo
         if (!preservePeerId) {
             connectionLost.value = false;
             savedRemotePeerId.value = '';
             incomingCallPeerId.value = '';
+            callState.value = 'ended';
+        } else {
+            callState.value = 'error';
         }
 
         // Chamar callback se fornecido
@@ -416,6 +575,8 @@ export function useVideoCall(options: UseVideoCallOptions = {}) {
         }
 
         try {
+            callState.value = 'ringing_out';
+            
             const payload = {
                 peerId: peer.value.id,
             };
@@ -437,8 +598,17 @@ export function useVideoCall(options: UseVideoCallOptions = {}) {
 
             // Aguardar o stream local estar pronto
             await displayLocalVideo();
+            
+            // Timeout para ringing (30 segundos)
+            setTimeout(() => {
+                if (callState.value === 'ringing_out') {
+                    callState.value = 'error';
+                    endCall();
+                }
+            }, 30000);
         } catch (error: any) {
             console.error('Erro ao iniciar chamada:', error);
+            callState.value = 'error';
         }
     };
 
@@ -451,6 +621,8 @@ export function useVideoCall(options: UseVideoCallOptions = {}) {
         }
 
         try {
+            callState.value = 'connecting';
+            
             // Obter stream local se ainda não tiver
             if (!localStreamRef.value) {
                 await displayLocalVideo();
@@ -465,9 +637,12 @@ export function useVideoCall(options: UseVideoCallOptions = {}) {
                 isCalling.value = true;
                 connectionLost.value = false;
                 showIncomingCallModal.value = false;
+                
+                // Estado será atualizado quando o stream for recebido
             }
         } catch (error: any) {
             console.error('Erro ao aceitar chamada:', error);
+            callState.value = 'error';
         }
     };
 
@@ -539,6 +714,7 @@ export function useVideoCall(options: UseVideoCallOptions = {}) {
 
     /**
      * Permite chamar de volta após rejeição acidental
+     * Reenvia a solicitação de chamada para o usuário que foi rejeitado
      */
     const callBack = async () => {
         if (!canCallBack.value || !lastRejectedPeerId.value) {
@@ -546,49 +722,57 @@ export function useVideoCall(options: UseVideoCallOptions = {}) {
         }
 
         try {
-            // Usar o mesmo fluxo de callUser mas com o peer rejeitado
-            if (!localStreamRef.value) {
-                await displayLocalVideo();
-            }
-
-            if (!peer.value || !isConnected.value) {
-                console.error('Peer não está conectado');
+            // Encontrar o usuário que foi rejeitado
+            const rejectedUser = selectedUser.value;
+            if (!rejectedUser) {
+                console.error('Usuário não encontrado para reenvio');
                 return;
             }
 
-            if (!localStreamRef.value) {
-                console.error('Stream local não disponível');
-                return;
-            }
-
-            // Iniciar chamada para o peer que foi rejeitado
-            const call = peer.value.call(lastRejectedPeerId.value, localStreamRef.value);
-            peerCall.value = call;
-
-            // Salvar PeerID para reconexão
-            savedRemotePeerId.value = lastRejectedPeerId.value;
-
-            // Escutar o stream do receptor
-            call.on('stream', (remoteStream) => {
-                if (remoteVideoRef.value) {
-                    remoteVideoRef.value.srcObject = remoteStream;
-                    hasRemoteStream.value = true;
-                }
-            });
-
-            call.on('close', () => {
-                hasRemoteStream.value = false;
-                if (remoteVideoRef.value) {
-                    remoteVideoRef.value.srcObject = null;
-                }
-            });
-
-            isCalling.value = true;
-            canCallBack.value = false; // Limpar após usar
+            // Usar o mesmo fluxo de callUser para reenviar a solicitação
+            await callUser(rejectedUser);
+            
+            // Limpar estado de callback após reenvio
+            canCallBack.value = false;
             lastRejectedPeerId.value = '';
 
         } catch (error: any) {
             console.error('Erro ao chamar de volta:', error);
+            callState.value = 'error';
+        }
+    };
+    
+    /**
+     * Reenvia a solicitação de chamada para o usuário atual
+     */
+    const resendCallRequest = async () => {
+        if (!selectedUser.value || !peer.value || !peer.value.id) {
+            return;
+        }
+
+        try {
+            callState.value = 'ringing_out';
+            
+            const payload = {
+                peerId: peer.value.id,
+            };
+
+            const baseRoute = getRoutePrefix();
+            await axios.post(`${baseRoute}/video-call/request/${selectedUser.value.id}`, payload);
+
+            isCalling.value = true;
+            connectionLost.value = false;
+
+            // Timeout para ringing (30 segundos)
+            setTimeout(() => {
+                if (callState.value === 'ringing_out') {
+                    callState.value = 'error';
+                    endCall();
+                }
+            }, 30000);
+        } catch (error: any) {
+            console.error('Erro ao reenviar solicitação:', error);
+            callState.value = 'error';
         }
     };
 
@@ -628,6 +812,8 @@ export function useVideoCall(options: UseVideoCallOptions = {}) {
         const receiverId = e.user.peerId;
 
         try {
+            callState.value = 'connecting';
+            
             // Iniciar a chamada com o stream local já obtido
             const call = peer.value.call(receiverId, localStreamRef.value);
             peerCall.value = call;
@@ -642,6 +828,9 @@ export function useVideoCall(options: UseVideoCallOptions = {}) {
                 }
                 hasRemoteStream.value = true;
                 connectionLost.value = false;
+                callState.value = 'in_call';
+                startCallTimer();
+                startNetworkQualityMonitoring(call.peerConnection);
 
                 // Monitorar ICE connection state
                 monitorIceConnectionState(call.peerConnection);
@@ -788,6 +977,7 @@ export function useVideoCall(options: UseVideoCallOptions = {}) {
                 savedRemotePeerId.value = call.peer; // Salvar apenas quando for nova chamada
                 isReceivingCall.value = true;
                 showIncomingCallModal.value = true;
+                callState.value = 'ringing_in';
             }
 
             // Configurar listeners da chamada
@@ -797,6 +987,9 @@ export function useVideoCall(options: UseVideoCallOptions = {}) {
                 }
                 hasRemoteStream.value = true;
                 connectionLost.value = false;
+                callState.value = 'in_call';
+                startCallTimer();
+                startNetworkQualityMonitoring(call.peerConnection);
 
                 // Monitorar ICE connection state
                 monitorIceConnectionState(call.peerConnection);
@@ -844,6 +1037,9 @@ export function useVideoCall(options: UseVideoCallOptions = {}) {
      * Limpa recursos ao desmontar
      */
     const cleanup = () => {
+        stopCallTimer();
+        stopNetworkQualityMonitoring();
+        
         if (echoInstance) {
             echoInstance.disconnect();
             echoInstance = null;
@@ -890,6 +1086,11 @@ export function useVideoCall(options: UseVideoCallOptions = {}) {
         canCallBack,
         showRejectionConfirmModal,
         lastRejectedPeerId,
+        
+        // Novos estados detalhados
+        callState,
+        callDuration,
+        networkQuality,
 
         // Refs
         remoteVideoRef,
@@ -914,6 +1115,10 @@ export function useVideoCall(options: UseVideoCallOptions = {}) {
         confirmRejectCall,
         cancelRejectCall,
         callBack,
+        
+        // Novos métodos utilitários
+        formatCallDuration,
+        resendCallRequest,
     };
 }
 
