@@ -23,6 +23,10 @@ class User extends Authenticatable
         'password',
         'avatar_path',
         'timeline_completed',
+        'has_seen_welcome_screen',
+        'has_seen_dashboard_tour',
+        'has_seen_doctor_welcome_screen',
+        'has_seen_doctor_dashboard_tour',
     ];
 
     /**
@@ -46,6 +50,10 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'timeline_completed' => 'boolean',
+            'has_seen_welcome_screen' => 'boolean',
+            'has_seen_dashboard_tour' => 'boolean',
+            'has_seen_doctor_welcome_screen' => 'boolean',
+            'has_seen_doctor_dashboard_tour' => 'boolean',
         ];
     }
 

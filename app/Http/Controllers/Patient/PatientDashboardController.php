@@ -91,30 +91,17 @@ class PatientDashboardController extends Controller
                 ];
             });
 
-        // Lembretes (mockados por enquanto - pode ser expandido no futuro)
-        $reminders = [
-            [
-                'id' => '1',
-                'title' => 'Tomar medicamento X',
-                'time' => 'Próxima dose às 18:00',
-                'icon' => 'medication',
-            ],
-            [
-                'id' => '2',
-                'title' => 'Jejum para exame',
-                'message' => 'Lembre-se do jejum de 8h amanhã',
-                'icon' => 'exam',
-            ],
-        ];
+        // Lembretes - array vazio até implementação futura
+        $reminders = [];
 
-        // Dicas de saúde (mockadas por enquanto)
-        $healthTips = [
-            [
-                'id' => '1',
-                'title' => 'Importância da hidratação diária',
-                'description' => 'Descubra os benefícios de se manter hidratado ao longo do dia para sua saúde e bem-estar.',
-            ],
-        ];
+        // Dicas de saúde - array vazio até implementação futura
+        $healthTips = [];
+
+        // Dados do tour e onboarding
+        // Para testes: removemos a verificação de email temporariamente
+        // Em produção, descomente as linhas abaixo e remova as linhas de teste
+        $showWelcome = !$user->has_seen_welcome_screen; // && $user->email_verified_at;
+        $showTour = !$user->has_seen_dashboard_tour && $user->has_seen_welcome_screen; // && $user->email_verified_at;
 
         return Inertia::render('Patient/Dashboard', [
             'upcomingAppointments' => $upcomingAppointments,
@@ -126,6 +113,11 @@ class PatientDashboardController extends Controller
             'doctors' => $doctors,
             'reminders' => $reminders,
             'healthTips' => $healthTips,
+            'onboarding' => [
+                'showWelcome' => $showWelcome,
+                'showTour' => $showTour,
+                'userName' => $user->name,
+            ],
         ]);
     }
 

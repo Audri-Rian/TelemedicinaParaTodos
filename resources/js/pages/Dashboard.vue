@@ -12,10 +12,13 @@ import {
     TrendingUp, 
     Clock 
 } from 'lucide-vue-next';
-import { computed, onMounted } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useRouteGuard } from '@/composables/auth';
 import { useInitials } from '@/composables/useInitials';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import EmptyState from '@/components/EmptyState.vue';
+import WelcomeScreen from '@/components/onboarding/WelcomeScreen.vue';
+import DashboardTour from '@/components/onboarding/DashboardTour.vue';
 
 interface UpcomingAppointment {
     id: string;
@@ -49,12 +52,19 @@ interface AppointmentData {
     max: number;
 }
 
+interface Onboarding {
+    showWelcome?: boolean;
+    showTour?: boolean;
+    userName?: string;
+}
+
 interface Props {
     upcomingAppointments?: UpcomingAppointment[];
     weeklyStats?: WeeklyStats;
     monthlyStats?: MonthlyStats;
     weeklyAppointments?: AppointmentData[];
     monthlyAppointments?: AppointmentData[];
+    onboarding?: Onboarding;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -62,8 +72,42 @@ const props = withDefaults(defineProps<Props>(), {
     weeklyStats: () => ({ total: 0, period: 'Esta Semana' }),
     monthlyStats: () => ({ total: 0, period: 'Este Mês' }),
     weeklyAppointments: () => [],
-    monthlyAppointments: () => []
+    monthlyAppointments: () => [],
+    onboarding: () => ({
+        showWelcome: false,
+        showTour: false,
+        userName: '',
+    }),
 });
+
+const showWelcomeScreen = ref(props.onboarding?.showWelcome ?? false);
+const showTour = ref(props.onboarding?.showTour ?? false);
+
+// Atualizar estados quando props mudarem
+watch(() => props.onboarding?.showWelcome, (newValue) => {
+    showWelcomeScreen.value = newValue ?? false;
+});
+
+watch(() => props.onboarding?.showTour, (newValue) => {
+    showTour.value = newValue ?? false;
+});
+
+const handleStartTour = () => {
+    showWelcomeScreen.value = false;
+    showTour.value = true;
+};
+
+const handleWelcomeClose = () => {
+    showWelcomeScreen.value = false;
+};
+
+const handleTourComplete = () => {
+    showTour.value = false;
+};
+
+const handleTourClose = () => {
+    showTour.value = false;
+};
 
 const { canAccessDoctorRoute } = useRouteGuard();
 const { getInitials } = useInitials();
@@ -124,6 +168,45 @@ const breadcrumbs: BreadcrumbItem[] = [
         href: doctorRoutes.dashboard().url,
     },
 ];
+
+// Passos do tour para médico
+const doctorTourSteps = [
+    {
+        id: 'gerenciar-agenda',
+        title: 'Gerenciar Sua Agenda',
+        description: 'Este é o botão principal para gerenciar sua agenda de consultas. Clique aqui para visualizar todos os seus compromissos, ajustar horários disponíveis e configurar sua disponibilidade para receber novos agendamentos.',
+        target: '[data-tour="gerenciar-agenda"]',
+        position: 'bottom' as const,
+    },
+    {
+        id: 'estatisticas',
+        title: 'Suas Estatísticas',
+        description: 'Aqui você vê um resumo rápido das suas atividades: consultas da semana, taxa de cumprimento e pacientes agendados. Essas métricas ajudam você a acompanhar seu desempenho e planejar melhor sua agenda.',
+        target: '[data-tour="estatisticas"]',
+        position: 'bottom' as const,
+    },
+    {
+        id: 'proxima-consulta',
+        title: 'Sua Próxima Consulta',
+        description: 'Este card mostra os detalhes da sua próxima consulta agendada: paciente, data, horário e motivo. Quando chegar o momento, você poderá iniciar a videochamada diretamente daqui. Se ainda não tem consultas agendadas, este espaço ficará disponível para quando receber agendamentos.',
+        target: '[data-tour="proxima-consulta"]',
+        position: 'left' as const,
+    },
+    {
+        id: 'acessos-rapidos',
+        title: 'Acessos Rápidos',
+        description: 'Estes três cards dão acesso rápido às principais funcionalidades: agenda diária, prontuários recentes e salas de vídeo. Tudo fica organizado e acessível aqui no seu dashboard para otimizar seu trabalho.',
+        target: '[data-tour="acessos-rapidos"]',
+        position: 'top' as const,
+    },
+    {
+        id: 'consultas-futuras',
+        title: 'Consultas Futuras',
+        description: 'Use esta seção para visualizar todas as suas consultas agendadas em uma tabela completa. Você pode ver os detalhes de cada paciente, horários e status das consultas. Clique em "Ver agenda completa" para gerenciar todos os seus compromissos.',
+        target: '[data-tour="consultas-futuras"]',
+        position: 'top' as const,
+    },
+];
 </script>
 
 <template>
@@ -144,7 +227,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                         </p>
                     </div>
 
-                    <div class="mt-8 grid grid-cols-1 gap-4 md:grid-cols-3">
+                    <div class="mt-8 grid grid-cols-1 gap-4 md:grid-cols-3" data-tour="estatisticas">
                         <div class="rounded-xl border border-white/60 bg-white/70 p-4 shadow-sm backdrop-blur">
                             <div class="flex items-center gap-3">
                                 <span class="rounded-lg bg-primary/20 p-3 text-primary">
@@ -203,16 +286,17 @@ const breadcrumbs: BreadcrumbItem[] = [
                     </div>
                 </div>
 
-                <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+                <!-- Próxima Consulta -->
+                <div v-if="nextAppointment" class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm" data-tour="proxima-consulta">
                     <div class="bg-gray-100 px-6 py-6 text-center">
                         <Avatar class="mx-auto h-24 w-24">
                             <AvatarImage
-                                v-if="nextAppointment?.patient_avatar"
+                                v-if="nextAppointment.patient_avatar"
                                 :src="nextAppointment.patient_avatar"
                                 :alt="nextAppointment.patient_name"
                             />
                             <AvatarFallback class="bg-white text-3xl text-gray-900" :delay-ms="600">
-                                {{ nextAppointment ? (nextAppointment.patient_initials || getInitials(nextAppointment.patient_name)) : 'PT' }}
+                                {{ nextAppointment.patient_initials || getInitials(nextAppointment.patient_name) }}
                             </AvatarFallback>
                         </Avatar>
                     </div>
@@ -221,10 +305,10 @@ const breadcrumbs: BreadcrumbItem[] = [
                         <div>
                             <p class="text-xs uppercase tracking-wide text-gray-500">Próxima consulta</p>
                             <h2 class="text-2xl font-bold text-gray-900">
-                                {{ nextAppointment ? nextAppointment.patient_name : 'Nenhum paciente agendado' }}
+                                {{ nextAppointment.patient_name }}
                             </h2>
                             <p class="text-sm text-gray-600">
-                                {{ nextAppointment?.reason || 'Quando novos agendamentos chegarem, você verá os detalhes aqui.' }}
+                                {{ nextAppointment.reason || 'Consulta online' }}
                             </p>
                         </div>
 
@@ -232,22 +316,22 @@ const breadcrumbs: BreadcrumbItem[] = [
                             <div class="flex items-center justify-between text-gray-700">
                                 <span>Data</span>
                                 <span class="font-semibold">
-                                    {{ nextAppointment?.scheduled_date || nextAppointment?.scheduled_at || '—' }}
+                                    {{ nextAppointment.scheduled_date || nextAppointment.scheduled_at }}
                                 </span>
                             </div>
                             <div class="flex items-center justify-between text-gray-700">
                                 <span>Horário</span>
                                 <span class="font-semibold">
-                                    {{ nextAppointment?.scheduled_time || nextAppointment?.scheduled_at || '—' }}
+                                    {{ nextAppointment.scheduled_time || nextAppointment.scheduled_at }}
                                 </span>
                             </div>
                             <div class="flex items-center justify-between text-gray-700">
                                 <span>Duração</span>
-                                <span class="font-semibold">{{ nextAppointment?.duration || '45 min' }}</span>
+                                <span class="font-semibold">{{ nextAppointment.duration || '45 min' }}</span>
                             </div>
                             <div class="flex items-center justify-between text-gray-700">
                                 <span>Local</span>
-                                <span class="font-semibold">{{ nextAppointment?.location || 'Teleconsulta' }}</span>
+                                <span class="font-semibold">{{ nextAppointment.location || 'Teleconsulta' }}</span>
                             </div>
                         </div>
 
@@ -277,10 +361,23 @@ const breadcrumbs: BreadcrumbItem[] = [
                         </div>
                     </div>
                 </div>
+
+                <!-- Estado vazio para próxima consulta -->
+                <div v-else class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm p-6" data-tour="proxima-consulta">
+                    <EmptyState
+                        :icon="Calendar"
+                        title="Nenhuma consulta agendada"
+                        description="Quando pacientes agendarem consultas com você, elas aparecerão aqui. Você pode começar configurando sua disponibilidade para receber agendamentos."
+                        action-label="Configurar disponibilidade"
+                        :action-href="doctorRoutes.availability().url"
+                        :action-icon="Calendar"
+                        variant="subtle"
+                    />
+                </div>
             </div>
 
             <!-- Acessos rápidos -->
-            <div class="grid grid-cols-1 gap-6 md:grid-cols-3">
+            <div class="grid grid-cols-1 gap-6 md:grid-cols-3" data-tour="acessos-rapidos">
                 <Link
                     :href="doctorRoutes.appointments()"
                     class="rounded-2xl border border-gray-200 bg-white p-6 text-center shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
@@ -317,7 +414,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 
             <!-- Conteúdo principal -->
             <div class="grid flex-1 grid-cols-1 gap-6 lg:grid-cols-3">
-                <div class="space-y-6 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm lg:col-span-2">
+                <div class="space-y-6 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm lg:col-span-2" data-tour="consultas-futuras">
                     <div class="flex flex-wrap items-center justify-between gap-3">
                         <div>
                             <h2 class="text-2xl font-bold text-gray-900">Consultas futuras</h2>
@@ -403,13 +500,15 @@ const breadcrumbs: BreadcrumbItem[] = [
                         </table>
                     </div>
 
-                    <div v-else class="flex flex-col items-center justify-center rounded-2xl border border-dashed border-gray-300 px-6 py-12 text-center text-gray-500">
-                        <Calendar class="mb-3 h-10 w-10 text-gray-300" />
-                        <p class="font-semibold text-gray-700">Nenhuma consulta agendada</p>
-                        <p class="text-sm text-gray-500">
-                            Assim que um paciente reservar um horário, você verá o detalhe aqui.
-                        </p>
-                    </div>
+                    <EmptyState
+                        v-else
+                        :icon="Calendar"
+                        title="Nenhuma consulta futura"
+                        description="Ainda não há consultas agendadas. Quando pacientes agendarem horários com você, eles aparecerão nesta lista. Configure sua disponibilidade para começar a receber agendamentos."
+                        action-label="Ver agenda completa"
+                        :action-href="doctorRoutes.appointments().url"
+                        :action-icon="Calendar"
+                    />
                 </div>
 
                 <div class="space-y-6">
@@ -438,9 +537,13 @@ const breadcrumbs: BreadcrumbItem[] = [
                                 <span class="w-6 text-xs font-semibold text-gray-600">{{ day.count }}</span>
                             </div>
                         </div>
-                        <div v-else class="mt-6 text-sm text-gray-500">
-                            Sem dados suficientes para montar o gráfico desta semana.
-                        </div>
+                        <EmptyState
+                            v-else
+                            :icon="Clock"
+                            title="Sem dados desta semana"
+                            description="Ainda não há consultas agendadas para esta semana. Quando você começar a receber agendamentos, o gráfico será atualizado automaticamente."
+                            variant="minimal"
+                        />
                     </div>
 
                     <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
@@ -465,12 +568,30 @@ const breadcrumbs: BreadcrumbItem[] = [
                                 </div>
                             </div>
                         </div>
-                        <div v-else class="mt-6 text-sm text-gray-500">
-                            Aguarde o fechamento do primeiro ciclo mensal para visualizar os dados.
-                        </div>
+                        <EmptyState
+                            v-else
+                            :icon="TrendingUp"
+                            title="Sem dados mensais"
+                            description="Ainda não há consultas suficientes para gerar estatísticas mensais. Continue atendendo pacientes para ver seus dados de volume mensal aqui."
+                            variant="minimal"
+                        />
                     </div>
                 </div>
             </div>
         </div>
+
+        <!-- Componentes de Onboarding -->
+        <WelcomeScreen
+            :show="showWelcomeScreen"
+            :user-name="props.onboarding?.userName || ''"
+            @start-tour="handleStartTour"
+            @close="handleWelcomeClose"
+        />
+        <DashboardTour
+            :show="showTour"
+            :steps="doctorTourSteps"
+            @complete="handleTourComplete"
+            @close="handleTourClose"
+        />
     </AppLayout>
 </template>

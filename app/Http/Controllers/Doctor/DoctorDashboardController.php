@@ -50,12 +50,21 @@ class DoctorDashboardController extends Controller
         $weeklyAppointments = $this->getWeeklyAppointmentsData($doctor->id);
         $monthlyAppointments = $this->getMonthlyAppointmentsData($doctor->id);
 
+        // Dados do tour e onboarding
+        $showWelcome = !$user->has_seen_doctor_welcome_screen;
+        $showTour = !$user->has_seen_doctor_dashboard_tour && $user->has_seen_doctor_welcome_screen;
+
         return Inertia::render('Dashboard', [
             'upcomingAppointments' => $upcomingAppointments,
             'weeklyStats' => $weeklyStats,
             'monthlyStats' => $monthlyStats,
             'weeklyAppointments' => $weeklyAppointments,
             'monthlyAppointments' => $monthlyAppointments,
+            'onboarding' => [
+                'showWelcome' => $showWelcome,
+                'showTour' => $showTour,
+                'userName' => $user->name,
+            ],
         ]);
     }
 

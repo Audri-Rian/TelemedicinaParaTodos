@@ -19,6 +19,10 @@ return new class extends Migration
             $table->string('password');
             $table->string('avatar_path')->nullable();
             $table->boolean('timeline_completed')->default(false);
+            $table->boolean('has_seen_welcome_screen')->default(false);
+            $table->boolean('has_seen_dashboard_tour')->default(false);
+            $table->boolean('has_seen_doctor_welcome_screen')->default(false);
+            $table->boolean('has_seen_doctor_dashboard_tour')->default(false);
             $table->rememberToken();
             $table->timestamps();
         });

@@ -84,6 +84,33 @@
         --font-sans:
             'Nunito', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
     }
+
+    /* Esconder scrollbar mas manter funcionalidade de scroll */
+    .scrollbar-hide {
+        -ms-overflow-style: none;  /* IE e Edge */
+        scrollbar-width: none;  /* Firefox */
+    }
+
+    .scrollbar-hide::-webkit-scrollbar {
+        display: none;  /* Chrome, Safari e Opera */
+    }
+
+    /* Estilos para o Tour Contextual */
+    .tour-highlight {
+        position: relative;
+        z-index: 40 !important;
+        outline: 2px solid rgb(59 130 246) !important;
+        outline-offset: 2px !important;
+        border-radius: 0.5rem;
+        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2) !important;
+        transition: outline 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .tour-highlight {
+            transition: none !important;
+        }
+    }
 }
 
 :root {

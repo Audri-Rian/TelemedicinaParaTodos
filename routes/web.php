@@ -85,6 +85,10 @@ Route::middleware(['auth', 'verified', 'doctor'])->prefix('doctor')->name('docto
     // Rotas para datas bloqueadas (médicos)
     Route::post('doctors/{doctor}/blocked-dates', [App\Http\Controllers\Doctor\DoctorBlockedDateController::class, 'store'])->name('blocked-dates.store');
     Route::delete('doctors/{doctor}/blocked-dates/{blockedDate}', [App\Http\Controllers\Doctor\DoctorBlockedDateController::class, 'destroy'])->name('blocked-dates.destroy');
+    
+    // Rotas de onboarding (médicos)
+    Route::post('tour/completed', [App\Http\Controllers\Patient\OnboardingController::class, 'completeTour'])->name('tour.completed');
+    Route::post('onboarding/skip-welcome', [App\Http\Controllers\Patient\OnboardingController::class, 'skipWelcome'])->name('onboarding.skip-welcome');
 });
 
 // Rotas para Pacientes
@@ -105,6 +109,10 @@ Route::middleware(['auth', 'verified', 'patient'])->prefix('patient')->name('pat
     // Rotas para videoconferência (pacientes)
     Route::post('video-call/request/{user}', [VideoCallController::class, 'requestVideoCall'])->name('video-call.request');
     Route::post('video-call/request/status/{user}', [VideoCallController::class, 'requestVideoCallStatus'])->name('video-call.request-status');
+    
+    // Rotas de onboarding
+    Route::post('tour/completed', [App\Http\Controllers\Patient\OnboardingController::class, 'completeTour'])->name('tour.completed');
+    Route::post('onboarding/skip-welcome', [App\Http\Controllers\Patient\OnboardingController::class, 'skipWelcome'])->name('onboarding.skip-welcome');
 });
 
 // Rotas compartilhadas (ambos os tipos de usuário)

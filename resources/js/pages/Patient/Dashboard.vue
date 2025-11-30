@@ -14,16 +14,26 @@ import {
     Clock,
     CheckCircle2,
     MoreVertical,
-    X
+    X,
+    Users
 } from 'lucide-vue-next';
 import * as patientRoutes from '@/routes/patient';
-import { onMounted, ref, computed } from 'vue';
+import { onMounted, onUnmounted, ref, computed, watch } from 'vue';
 import { useRouteGuard } from '@/composables/auth';
 import { usePage } from '@inertiajs/vue3';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useInitials } from '@/composables/useInitials';
+import EmptyState from '@/components/EmptyState.vue';
+import WelcomeScreen from '@/components/onboarding/WelcomeScreen.vue';
+import DashboardTour from '@/components/onboarding/DashboardTour.vue';
+
+// Ref para o container de médicos
+const doctorsContainer = ref<HTMLElement | null>(null);
+const isDragging = ref(false);
+const startX = ref(0);
+const scrollLeft = ref(0);
 
 interface UpcomingAppointment {
     id: string;
@@ -73,6 +83,12 @@ interface Stats {
     completed: number;
 }
 
+interface Onboarding {
+    showWelcome?: boolean;
+    showTour?: boolean;
+    userName?: string;
+}
+
 interface Props {
     upcomingAppointments?: UpcomingAppointment[];
     recentAppointments?: RecentAppointment[];
@@ -80,6 +96,7 @@ interface Props {
     doctors?: Doctor[];
     reminders?: Reminder[];
     healthTips?: HealthTip[];
+    onboarding?: Onboarding;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -89,7 +106,41 @@ const props = withDefaults(defineProps<Props>(), {
     doctors: () => [],
     reminders: () => [],
     healthTips: () => [],
+    onboarding: () => ({
+        showWelcome: false,
+        showTour: false,
+        userName: '',
+    }),
 });
+
+const showWelcomeScreen = ref(props.onboarding?.showWelcome ?? false);
+const showTour = ref(props.onboarding?.showTour ?? false);
+
+// Atualizar estados quando props mudarem
+watch(() => props.onboarding?.showWelcome, (newValue) => {
+    showWelcomeScreen.value = newValue ?? false;
+});
+
+watch(() => props.onboarding?.showTour, (newValue) => {
+    showTour.value = newValue ?? false;
+});
+
+const handleStartTour = () => {
+    showWelcomeScreen.value = false;
+    showTour.value = true;
+};
+
+const handleWelcomeClose = () => {
+    showWelcomeScreen.value = false;
+};
+
+const handleTourComplete = () => {
+    showTour.value = false;
+};
+
+const handleTourClose = () => {
+    showTour.value = false;
+};
 
 const { canAccessPatientRoute } = useRouteGuard();
 const { getInitials } = useInitials();
@@ -106,9 +157,55 @@ const searchQuery = ref('');
 const specialtyFilter = ref('');
 const insuranceFilter = ref('');
 
+// Funções para drag scroll
+const handleMouseDown = (e: MouseEvent) => {
+    if (!doctorsContainer.value) return;
+    // Verificar se o clique foi em um link ou botão
+    const target = e.target as HTMLElement;
+    if (target.closest('a') || target.closest('button')) {
+        return; // Não iniciar drag se clicou em um link/botão
+    }
+    isDragging.value = true;
+    startX.value = e.pageX - doctorsContainer.value.offsetLeft;
+    scrollLeft.value = doctorsContainer.value.scrollLeft;
+    doctorsContainer.value.style.cursor = 'grabbing';
+    e.preventDefault();
+};
+
+const handleMouseLeave = () => {
+    if (!doctorsContainer.value) return;
+    isDragging.value = false;
+    doctorsContainer.value.style.cursor = 'grab';
+};
+
+const handleMouseUp = () => {
+    if (!doctorsContainer.value) return;
+    isDragging.value = false;
+    doctorsContainer.value.style.cursor = 'grab';
+};
+
+const handleMouseMove = (e: MouseEvent) => {
+    if (!isDragging.value || !doctorsContainer.value) return;
+    e.preventDefault();
+    const x = e.pageX - doctorsContainer.value.offsetLeft;
+    const walk = (x - startX.value) * 2; // Velocidade do scroll
+    doctorsContainer.value.scrollLeft = scrollLeft.value - walk;
+};
+
 // Verificar acesso ao montar componente
 onMounted(() => {
     canAccessPatientRoute();
+    // Adicionar event listener global para mouseup (caso solte fora do container)
+    document.addEventListener('mouseup', handleMouseUp);
+    // Configurar cursor inicial
+    if (doctorsContainer.value) {
+        doctorsContainer.value.style.cursor = 'grab';
+    }
+});
+
+// Limpar event listener ao desmontar
+onUnmounted(() => {
+    document.removeEventListener('mouseup', handleMouseUp);
 });
 
 // Próxima consulta (primeira da lista ou null)
@@ -165,56 +262,28 @@ const breadcrumbs: BreadcrumbItem[] = [
                             </p>
 
                             <!-- Lista de Médicos Disponíveis -->
-                            <div class="mb-6">
+                            <div v-if="doctors.length > 0" class="mb-6" data-tour="medicos-disponiveis">
                                 <h3 class="text-sm font-semibold text-gray-700 mb-3">Médicos Disponíveis Agora:</h3>
                                 <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
-                                    <!-- Dra. Ana Costa -->
                                     <Link 
+                                        v-for="doctor in doctors.slice(0, 6)"
+                                        :key="doctor.id"
                                         :href="patientRoutes.searchConsultations()"
                                         class="bg-white/80 hover:bg-white rounded-lg p-3 border border-gray-200 hover:border-primary/30 hover:shadow-md transition cursor-pointer group">
                                         <div class="flex items-center gap-3">
                                             <Avatar class="w-10 h-10 shrink-0">
-                                                <AvatarFallback class="bg-amber-50 text-gray-900 text-sm group-hover:bg-primary/20 transition" :delay-ms="600">
-                                                    AC
-                                                </AvatarFallback>
-                                            </Avatar>
-                                            <div class="min-w-0 flex-1">
-                                                <p class="font-semibold text-gray-900 text-sm truncate">Dra. Ana Costa</p>
-                                                <p class="text-xs text-emerald-700 truncate">Dermatologista</p>
-                                            </div>
-                                        </div>
-                                    </Link>
-
-                                    <!-- Dr. Pedro Martins -->
-                                    <Link 
-                                        :href="patientRoutes.searchConsultations()"
-                                        class="bg-white/80 hover:bg-white rounded-lg p-3 border border-gray-200 hover:border-primary/30 hover:shadow-md transition cursor-pointer group">
-                                        <div class="flex items-center gap-3">
-                                            <Avatar class="w-10 h-10 shrink-0">
+                                                <AvatarImage 
+                                                    v-if="doctor.image" 
+                                                    :src="doctor.image" 
+                                                    :alt="doctor.name" 
+                                                />
                                                 <AvatarFallback class="bg-primary/20 text-gray-900 text-sm group-hover:bg-primary/30 transition" :delay-ms="600">
-                                                    PM
+                                                    {{ getInitials(doctor.name) }}
                                                 </AvatarFallback>
                                             </Avatar>
                                             <div class="min-w-0 flex-1">
-                                                <p class="font-semibold text-gray-900 text-sm truncate">Dr. Pedro Martins</p>
-                                                <p class="text-xs text-emerald-700 truncate">Clínico Geral</p>
-                                            </div>
-                                        </div>
-                                    </Link>
-
-                                    <!-- Dr. Carlos Andrade -->
-                                    <Link 
-                                        :href="patientRoutes.searchConsultations()"
-                                        class="bg-white/80 hover:bg-white rounded-lg p-3 border border-gray-200 hover:border-primary/30 hover:shadow-md transition cursor-pointer group">
-                                        <div class="flex items-center gap-3">
-                                            <Avatar class="w-10 h-10 shrink-0">
-                                                <AvatarFallback class="bg-blue-50 text-gray-900 text-sm group-hover:bg-primary/20 transition" :delay-ms="600">
-                                                    CA
-                                                </AvatarFallback>
-                                            </Avatar>
-                                            <div class="min-w-0 flex-1">
-                                                <p class="font-semibold text-gray-900 text-sm truncate">Dr. Carlos Andrade</p>
-                                                <p class="text-xs text-emerald-700 truncate">Cardiologista</p>
+                                                <p class="font-semibold text-gray-900 text-sm truncate">{{ doctor.name }}</p>
+                                                <p class="text-xs text-emerald-700 truncate">{{ doctor.specialty }}</p>
                                             </div>
                                         </div>
                                     </Link>
@@ -223,10 +292,23 @@ const breadcrumbs: BreadcrumbItem[] = [
                                     Clique em qualquer médico para agendar uma consulta
                                 </p>
                             </div>
+                            <div v-else class="mb-6">
+                                <EmptyState
+                                    :icon="Users"
+                                    title="Nenhum médico disponível no momento"
+                                    description="Esta área mostra os médicos que estão disponíveis para consultas agora. Quando médicos estiverem online e com horários abertos, eles aparecerão aqui para acesso rápido."
+                                    sub-description="Explore nossa lista completa de médicos especialistas e encontre o profissional ideal para sua necessidade."
+                                    action-label="Ver todos os médicos"
+                                    :action-href="patientRoutes.searchConsultations().url"
+                                    :action-icon="Search"
+                                    variant="minimal"
+                                />
+                            </div>
                         </div>
                         
                         <Link 
                             :href="patientRoutes.searchConsultations()"
+                            data-tour="agendar-consulta"
                             class="inline-flex items-center justify-center bg-primary hover:bg-primary/90 text-gray-900 font-semibold py-3 px-8 rounded-lg transition shadow-md hover:shadow-lg">
                             <Calendar class="w-5 h-5 mr-2" />
                             <span>Agendar Nova Consulta</span>
@@ -234,18 +316,18 @@ const breadcrumbs: BreadcrumbItem[] = [
                     </div>
                 </div>
 
-                <!-- Próxima Consulta Section (Direita) - Reduzida -->
-                <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-                    <!-- Foto do Médico (Seção Superior - Menor) -->
+                <!-- Próxima Consulta Section (Direita) -->
+                <div v-if="nextAppointment" class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden" data-tour="proxima-consulta">
+                    <!-- Foto do Médico (Seção Superior) -->
                     <div class="bg-gray-100 flex justify-center items-center py-4 px-4">
                         <Avatar class="w-24 h-24 md:w-28 md:h-28">
                             <AvatarImage 
-                                v-if="nextAppointment?.doctor_image" 
+                                v-if="nextAppointment.doctor_image" 
                                 :src="nextAppointment.doctor_image" 
-                                :alt="nextAppointment?.doctor_name || 'Dr. Carlos Andrade'" 
+                                :alt="nextAppointment.doctor_name" 
                             />
                             <AvatarFallback class="bg-white text-gray-900 text-3xl" :delay-ms="600">
-                                {{ nextAppointment ? getInitials(nextAppointment.doctor_name) : 'CA' }}
+                                {{ getInitials(nextAppointment.doctor_name) }}
                             </AvatarFallback>
                         </Avatar>
                     </div>
@@ -254,13 +336,13 @@ const breadcrumbs: BreadcrumbItem[] = [
                     <div class="bg-white p-4">
                         <p class="text-xs text-gray-500 mb-1">Próxima Consulta</p>
                         <h2 class="text-xl font-bold text-gray-900 mb-1">
-                            {{ nextAppointment ? `Dr. ${nextAppointment.doctor_name}` : 'Dr. Carlos Andrade' }}
+                            Dr. {{ nextAppointment.doctor_name }}
                         </h2>
                         <p class="text-sm text-gray-700 mb-3">
-                            {{ nextAppointment ? (nextAppointment.doctor_specialty || 'Especialista') : 'Cardiologista' }} • 
-                            {{ nextAppointment ? (nextAppointment.scheduled_date || nextAppointment.scheduled_at) : '25 de Outubro' }}, 
-                            {{ nextAppointment ? (nextAppointment.scheduled_time || '') : '14:30' }}
-                            <span>{{ nextAppointment?.duration || ' (45 min)' }}</span>
+                            {{ nextAppointment.doctor_specialty || 'Especialista' }} • 
+                            {{ nextAppointment.scheduled_date || nextAppointment.scheduled_at }}, 
+                            {{ nextAppointment.scheduled_time }}
+                            <span>{{ nextAppointment.duration || ' (45 min)' }}</span>
                         </p>
                         <p class="text-xs text-gray-500 mb-4">
                             Por videochamada
@@ -291,10 +373,24 @@ const breadcrumbs: BreadcrumbItem[] = [
                         </div>
                     </div>
                 </div>
+
+                <!-- Estado vazio para próxima consulta -->
+                <div v-else class="bg-white rounded-lg shadow-sm border border-gray-200 p-6" data-tour="proxima-consulta">
+                    <EmptyState
+                        :icon="Calendar"
+                        title="Você ainda não tem consultas agendadas"
+                        description="Este espaço mostra sua próxima consulta médica. Quando você agendar uma consulta, verá aqui os detalhes do médico, data, horário e poderá acessar a videochamada diretamente."
+                        sub-description="Agende sua primeira consulta e comece a cuidar da sua saúde de forma prática, segura e no conforto da sua casa."
+                        action-label="Agendar minha primeira consulta"
+                        :action-href="patientRoutes.searchConsultations().url"
+                        :action-icon="Calendar"
+                        variant="subtle"
+                    />
+                </div>
             </div>
 
             <!-- Cards de Acesso Rápido -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6" data-tour="documentos-medicos">
                 <Link 
                     :href="patientRoutes.searchConsultations()"
                     class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition cursor-pointer">
@@ -333,7 +429,7 @@ const breadcrumbs: BreadcrumbItem[] = [
             </div>
 
             <!-- Encontrar Médico Section -->
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6" data-tour="encontrar-medico">
                 <h2 class="text-2xl font-bold text-gray-900 mb-6">Encontrar Médico</h2>
                 
                 <!-- Barra de Busca e Filtros -->
@@ -377,49 +473,18 @@ const breadcrumbs: BreadcrumbItem[] = [
                 </div>
 
                 <!-- Lista de Médicos -->
-                <div class="flex gap-4 overflow-x-auto pb-2">
-                    <!-- Dra. Ana Costa -->
-                    <div class="shrink-0 bg-white rounded-lg p-4 min-w-[280px] border border-gray-200 hover:shadow-md transition">
-                        <div class="flex items-center gap-4">
-                            <Avatar class="w-16 h-16 shrink-0">
-                                <AvatarFallback class="bg-amber-50 text-gray-900 text-lg" :delay-ms="600">
-                                    AC
-                                </AvatarFallback>
-                            </Avatar>
-                            <div class="flex-1 min-w-0">
-                                <h3 class="font-bold text-gray-900 mb-1">Dra. Ana Costa</h3>
-                                <p class="text-sm text-emerald-700">Dermatologista</p>
-                            </div>
-                            <Link 
-                                :href="patientRoutes.searchConsultations()"
-                                class="shrink-0 bg-primary/30 hover:bg-primary/40 text-gray-900 p-3 rounded-lg transition flex items-center justify-center">
-                                <Calendar class="w-5 h-5" />
-                            </Link>
-                        </div>
-                    </div>
-
-                    <!-- Dr. Pedro Martins -->
-                    <div class="shrink-0 bg-white rounded-lg p-4 min-w-[280px] border border-gray-200 hover:shadow-md transition">
-                        <div class="flex items-center gap-4">
-                            <Avatar class="w-16 h-16 shrink-0">
-                                <AvatarFallback class="bg-primary/20 text-gray-900 text-lg" :delay-ms="600">
-                                    PM
-                                </AvatarFallback>
-                            </Avatar>
-                            <div class="flex-1 min-w-0">
-                                <h3 class="font-bold text-gray-900 mb-1">Dr. Pedro Martins</h3>
-                                <p class="text-sm text-emerald-700">Clínico Geral</p>
-                            </div>
-                            <Link 
-                                :href="patientRoutes.searchConsultations()"
-                                class="shrink-0 bg-primary/30 hover:bg-primary/40 text-gray-900 p-3 rounded-lg transition flex items-center justify-center">
-                                <Calendar class="w-5 h-5" />
-                            </Link>
-                        </div>
-                    </div>
-
-                    <!-- Médicos dinâmicos (se houver) -->
-                    <template v-for="doctor in filteredDoctors.slice(0, 4)" :key="doctor.id">
+                <div 
+                    v-if="filteredDoctors.length > 0" 
+                    ref="doctorsContainer"
+                    class="flex gap-4 overflow-x-auto pb-2 scrollbar-hide cursor-grab"
+                    style="scrollbar-width: none; -ms-overflow-style: none;"
+                    @mousedown="handleMouseDown"
+                    @mouseleave="handleMouseLeave"
+                    @mouseup="handleMouseUp"
+                    @mousemove="handleMouseMove"
+                >
+                    <!-- Médicos dinâmicos -->
+                    <template v-for="doctor in filteredDoctors.slice(0, 6)" :key="doctor.id">
                         <div class="shrink-0 bg-white rounded-lg p-4 min-w-[280px] border border-gray-200 hover:shadow-md transition">
                             <div class="flex items-center gap-4">
                                 <Avatar class="w-16 h-16 shrink-0">
@@ -445,6 +510,19 @@ const breadcrumbs: BreadcrumbItem[] = [
                         </div>
                     </template>
                 </div>
+
+                <!-- Estado vazio para médicos -->
+                <EmptyState
+                    v-else
+                    :icon="Search"
+                    title="Nenhum médico encontrado com esses filtros"
+                    description="Não encontramos médicos que correspondam à sua busca atual. Este espaço mostra os profissionais disponíveis para consulta, permitindo que você encontre o médico ideal para sua necessidade."
+                    sub-description="Tente ajustar os filtros de especialidade ou convênio, ou explore nossa lista completa de médicos cadastrados."
+                    action-label="Ver todos os médicos disponíveis"
+                    :action-href="patientRoutes.searchConsultations().url"
+                    :action-icon="Search"
+                    variant="subtle"
+                />
             </div>
 
             <!-- Lembretes & Dicas de Saúde -->
@@ -474,11 +552,15 @@ const breadcrumbs: BreadcrumbItem[] = [
                             </button>
                         </div>
 
-                        <!-- Placeholder para quando não houver lembretes -->
-                        <div v-if="reminders.length === 0" class="text-center py-8 text-gray-500">
-                            <Clock class="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                            <p>Nenhum lembrete no momento</p>
-                        </div>
+                        <!-- Estado vazio para lembretes -->
+                        <EmptyState
+                            v-if="reminders.length === 0"
+                            :icon="Clock"
+                            title="Você ainda não tem lembretes configurados"
+                            description="Esta área centraliza seus lembretes de saúde, como horários de medicamentos, exames agendados e outras atividades importantes relacionadas ao seu cuidado médico."
+                            sub-description="Quando você tiver consultas com prescrições, exames marcados ou outros compromissos de saúde, os lembretes aparecerão automaticamente aqui para te ajudar a manter sua rotina de cuidados."
+                            variant="minimal"
+                        />
                     </div>
                 </div>
 
@@ -506,19 +588,31 @@ const breadcrumbs: BreadcrumbItem[] = [
                         </div>
                     </div>
                     
-                    <!-- Placeholder -->
-                    <div v-else class="space-y-3">
-                        <div class="w-full h-48 bg-linear-to-br from-primary/20 to-primary/5 rounded-lg flex items-center justify-center">
-                            <Activity class="w-16 h-16 text-primary/50" />
-                        </div>
-                        <h4 class="font-semibold text-gray-900">Importância da hidratação diária</h4>
-                        <p class="text-sm text-gray-600">
-                            Descubra os benefícios de se manter hidratado ao longo do dia para sua saúde e bem-estar.
-                        </p>
-                    </div>
+                    <!-- Estado vazio para dicas de saúde -->
+                    <EmptyState
+                        v-else
+                        :icon="Activity"
+                        title="Suas dicas personalizadas de saúde"
+                        description="Este espaço traz dicas e orientações de saúde personalizadas para você, baseadas no seu histórico de consultas, prescrições e necessidades específicas."
+                        sub-description="Conforme você usa a plataforma e realiza consultas, receberá dicas relevantes para melhorar seu bem-estar e qualidade de vida."
+                        variant="minimal"
+                    />
                 </div>
             </div>
         </div>
+
+        <!-- Componentes de Onboarding -->
+        <WelcomeScreen
+            :show="showWelcomeScreen"
+            :user-name="props.onboarding?.userName || ''"
+            @start-tour="handleStartTour"
+            @close="handleWelcomeClose"
+        />
+        <DashboardTour
+            :show="showTour"
+            @complete="handleTourComplete"
+            @close="handleTourClose"
+        />
     </AppLayout>
 </template>
 
