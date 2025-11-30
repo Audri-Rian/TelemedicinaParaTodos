@@ -20,20 +20,6 @@
 
 ## 🎯 Requisitos Funcionais Pendentes
 
-### RF006 - Pagamentos Online
-**Status:** 📋 Planejado  
-**Prioridade:** Desejável  
-**Descrição:** Sistema completo de pagamentos online para consultas.
-
-**Pendências:**
-- [ ] Integração com gateway de pagamento (Stripe, PagSeguro, Mercado Pago)
-- [ ] Modelo de dados para transações
-- [ ] Interface de pagamento para pacientes
-- [ ] Painel de recebimentos para médicos
-- [ ] Histórico de pagamentos
-- [ ] Reembolsos e cancelamentos
-- [ ] Notificações de pagamento
-- [ ] Relatórios financeiros
 
 **Referências:**
 - [SystemRules.md](docs/requirements/SystemRules.md)
@@ -48,7 +34,6 @@
 
 **Pendências:**
 - [ ] Sistema de notificações em tempo real (push notifications)
-- [ ] Notificações por email
 - [ ] Notificações no painel da plataforma
 - [ ] Lembretes automáticos de consultas
 - [ ] Notificações de cancelamento/reagendamento

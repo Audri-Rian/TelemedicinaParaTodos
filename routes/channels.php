@@ -25,3 +25,7 @@ Broadcast::channel('appointment.{participantId}', function ($user, string $parti
 
     return false;
 });
+
+Broadcast::channel('notifications.{id}', function ($user, string $id) {
+    return (string) $user->id === (string) $id;
+});

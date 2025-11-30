@@ -181,5 +181,38 @@ Route::middleware([\App\Http\Middleware\EnsureDevelopmentEnvironment::class])->p
     Route::get('video-test', [App\Http\Controllers\Dev\VideoTestController::class, 'index'])->name('dev.video-test');
 });
 
+// Rotas de Notificações
+Route::middleware(['auth'])->prefix('api/notifications')->name('notifications.')->group(function () {
+    Route::get('test', function () {
+        try {
+            $user = \Illuminate\Support\Facades\Auth::user();
+            if (!$user) {
+                return response()->json(['error' => 'Não autenticado'], 401);
+            }
+            
+            $count = \App\Models\Notification::where('user_id', $user->id)->count();
+            return response()->json([
+                'user_id' => $user->id,
+                'total_notifications' => $count,
+                'table_exists' => \Illuminate\Support\Facades\Schema::hasTable('notifications'),
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+            ], 500);
+        }
+    });
+    
+    Route::get('/', [App\Http\Controllers\NotificationController::class, 'index'])->name('index');
+    Route::get('unread', [App\Http\Controllers\NotificationController::class, 'unread'])->name('unread');
+    Route::get('unread-count', [App\Http\Controllers\NotificationController::class, 'unreadCount'])->name('unread-count');
+    Route::get('{id}', [App\Http\Controllers\NotificationController::class, 'show'])->name('show');
+    Route::post('{id}/read', [App\Http\Controllers\NotificationController::class, 'markAsRead'])->name('mark-as-read');
+    Route::post('read-all', [App\Http\Controllers\NotificationController::class, 'markAllAsRead'])->name('mark-all-as-read');
+});
+
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';

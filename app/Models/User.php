@@ -82,6 +82,22 @@ class User extends Authenticatable
     }
 
     /**
+     * Get the notifications associated with the user.
+     */
+    public function notifications()
+    {
+        return $this->hasMany(Notification::class);
+    }
+
+    /**
+     * Get the notification preferences associated with the user.
+     */
+    public function notificationPreferences()
+    {
+        return $this->hasMany(NotificationPreference::class);
+    }
+
+    /**
      * Check if the user is a doctor.
      */
     public function isDoctor(): bool

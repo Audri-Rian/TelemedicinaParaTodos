@@ -30,8 +30,8 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withExceptions(function (Exceptions $exceptions) {
         // Renderizar página de erro customizada para erros HTTP
         $exceptions->render(function (\Symfony\Component\HttpKernel\Exception\HttpExceptionInterface $e, \Illuminate\Http\Request $request) {
-            // Verificar se a requisição espera uma resposta JSON (API)
-            if ($request->expectsJson()) {
+            // Verificar se a requisição espera uma resposta JSON (API) ou se é uma rota de API
+            if ($request->expectsJson() || $request->is('api/*')) {
                 return response()->json([
                     'message' => $e->getMessage() ?: 'Erro na requisição',
                     'status' => $e->getStatusCode(),
@@ -44,6 +44,26 @@ return Application::configure(basePath: dirname(__DIR__))
                     'status' => $e->getStatusCode(),
                     'message' => $e->getMessage() ?: 'Algo deu errado',
                 ])->toResponse($request)->setStatusCode($e->getStatusCode());
+            }
+        });
+        
+        // Capturar todas as exceções não tratadas para rotas de API (apenas se não for HttpException)
+        $exceptions->render(function (\Throwable $e, \Illuminate\Http\Request $request) {
+            // Se for uma rota de API e não for uma HttpException (já tratada acima)
+            if ($request->is('api/*') && !($e instanceof \Symfony\Component\HttpKernel\Exception\HttpExceptionInterface)) {
+                \Log::error('Erro não tratado em API: ' . $e->getMessage(), [
+                    'trace' => $e->getTraceAsString(),
+                    'url' => $request->url(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                ]);
+                
+                return response()->json([
+                    'message' => app()->environment('production') 
+                        ? 'Erro interno do servidor' 
+                        : $e->getMessage(),
+                    'status' => 500,
+                ], 500);
             }
         });
 

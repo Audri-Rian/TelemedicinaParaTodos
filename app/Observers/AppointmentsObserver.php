@@ -2,6 +2,9 @@
 
 namespace App\Observers;
 
+use App\Events\AppointmentCancelled;
+use App\Events\AppointmentCreated;
+use App\Events\AppointmentRescheduled;
 use App\Events\AppointmentStatusChanged;
 use App\Models\AppointmentLog;
 use App\Models\Appointments;
@@ -37,6 +40,9 @@ class AppointmentsObserver
             ],
             auth()->id()
         );
+
+        // Disparar evento de notificação
+        event(new AppointmentCreated($appointment->fresh()));
     }
 
     /**
@@ -48,6 +54,20 @@ class AppointmentsObserver
         if ($appointment->wasChanged('status')) {
             $oldStatus = $appointment->getOriginal('status');
             $newStatus = $appointment->status;
+
+            // Disparar eventos de notificação baseado na mudança de status
+            if ($newStatus === Appointments::STATUS_CANCELLED) {
+                $reason = $appointment->notes ?: null;
+                event(new AppointmentCancelled($appointment->fresh(), $reason));
+            } elseif ($newStatus === Appointments::STATUS_RESCHEDULED) {
+                $oldScheduledAt = $appointment->getOriginal('scheduled_at');
+                if ($oldScheduledAt) {
+                    $oldScheduledAt = is_string($oldScheduledAt) 
+                        ? $oldScheduledAt 
+                        : \Carbon\Carbon::parse($oldScheduledAt)->toIso8601String();
+                    event(new AppointmentRescheduled($appointment->fresh(), $oldScheduledAt));
+                }
+            }
 
             // Logs específicos de mudança de status já são criados pelo Service
             // Aqui registramos apenas mudanças gerais
@@ -70,6 +90,15 @@ class AppointmentsObserver
             }
 
             event(new AppointmentStatusChanged($appointment->fresh()));
+        } elseif ($appointment->wasChanged('scheduled_at')) {
+            // Reagendamento detectado pela mudança de scheduled_at
+            $oldScheduledAt = $appointment->getOriginal('scheduled_at');
+            if ($oldScheduledAt && $appointment->status === Appointments::STATUS_SCHEDULED) {
+                $oldScheduledAt = is_string($oldScheduledAt) 
+                    ? $oldScheduledAt 
+                    : \Carbon\Carbon::parse($oldScheduledAt)->toIso8601String();
+                event(new AppointmentRescheduled($appointment->fresh(), $oldScheduledAt));
+            }
         } else {
             // Mudanças em outros campos (não status)
             $appointment->logEvent(
