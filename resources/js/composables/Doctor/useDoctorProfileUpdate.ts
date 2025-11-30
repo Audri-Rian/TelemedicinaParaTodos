@@ -1,6 +1,9 @@
 import { ref, computed } from 'vue';
+import { router } from '@inertiajs/vue3';
 import { useRealTimeValidation, type ValidationRule } from '../useRealTimeValidation';
 import { useDoctorFormValidation } from './useDoctorFormValidation';
+// @ts-ignore - route helper from Ziggy
+declare const route: (name: string, params?: any) => string;
 
 /**
  * Interface para dados do perfil complementar do médico
@@ -105,13 +108,57 @@ export function useDoctorProfileUpdate() {
         return false;
       }
 
-      // TODO: Implementar chamada real da API para atualizar perfil
-      // await updateDoctorProfile(formData.value);
+      // Preparar dados para envio (remover campos vazios e formatar)
+      const payload: Record<string, any> = {};
       
-      // Simulação de submissão
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      return true;
+      Object.keys(formData.value).forEach(key => {
+        const value = formData.value[key as keyof DoctorProfileData];
+        
+        // Tratamento especial para campos específicos
+        if (key === 'consultation_fee') {
+          payload[key] = value !== null && value !== undefined ? value : null;
+        } else if (key === 'availability_schedule') {
+          payload[key] = value !== null && value !== undefined ? value : null;
+        } else if (key === 'license_expiry_date') {
+          // Enviar data no formato correto ou null
+          payload[key] = value && value !== '' ? value : null;
+        } else if (key === 'status') {
+          // Status sempre deve ter um valor
+          payload[key] = value || 'active';
+        } else {
+          // Incluir apenas campos que foram preenchidos
+          if (value !== '' && value !== null && value !== undefined) {
+            payload[key] = value;
+          } else {
+            // Enviar null explicitamente para campos que devem ser limpos
+            payload[key] = null;
+          }
+        }
+      });
+
+      // Chamada real da API usando Inertia
+      return new Promise<boolean>((resolve) => {
+        router.patch(route('profile.update'), payload, {
+          preserveScroll: true,
+          preserveState: true,
+          onSuccess: () => {
+            // Sucesso - dados salvos
+            resolve(true);
+          },
+          onError: (errors) => {
+            // Tratar erros de validação do backend
+            if (errors) {
+              const errorMessages = Object.values(errors).flat();
+              submitError.value = errorMessages.length > 0 
+                ? errorMessages[0] as string
+                : 'Erro ao salvar dados do perfil. Verifique os campos e tente novamente.';
+            } else {
+              submitError.value = 'Erro ao salvar dados do perfil. Tente novamente.';
+            }
+            resolve(false);
+          },
+        });
+      });
     } catch (error) {
       console.error('Erro ao atualizar perfil:', error);
       submitError.value = 'Erro ao salvar dados do perfil. Tente novamente.';

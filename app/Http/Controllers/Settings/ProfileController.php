@@ -23,6 +23,9 @@ class ProfileController extends Controller
         // Carregar o relacionamento patient explicitamente
         $patient = $user->patient;
         
+        // Carregar o relacionamento doctor explicitamente
+        $doctor = $user->doctor;
+        
         // Carregar timeline events se for doctor
         $timelineEvents = [];
         if ($user->isDoctor()) {
@@ -74,6 +77,15 @@ class ProfileController extends Controller
                 'insurance_number' => $patient->insurance_number,
                 'consent_telemedicine' => (bool) $patient->consent_telemedicine,
             ] : null,
+            'doctor' => $doctor ? [
+                'id' => $doctor->id,
+                'biography' => $doctor->biography,
+                'license_number' => $doctor->license_number,
+                'license_expiry_date' => $doctor->license_expiry_date?->format('Y-m-d'),
+                'consultation_fee' => $doctor->consultation_fee ? (float) $doctor->consultation_fee : null,
+                'status' => $doctor->status,
+                'availability_schedule' => $doctor->availability_schedule,
+            ] : null,
             'timelineEvents' => $timelineEvents,
             'bloodTypes' => \App\Models\Patient::BLOOD_TYPES,
         ]);
@@ -120,6 +132,22 @@ class ProfileController extends Controller
             ];
 
             $user->patient->update($patientData);
+        }
+
+        // Atualizar dados do Doctor se o usuário for médico
+        if ($user->isDoctor() && $user->doctor) {
+            $doctorData = [
+                'biography' => $validated['biography'] ?? null,
+                'license_number' => $validated['license_number'] ?? null,
+                'license_expiry_date' => isset($validated['license_expiry_date']) 
+                    ? $validated['license_expiry_date'] 
+                    : null,
+                'consultation_fee' => $validated['consultation_fee'] ?? null,
+                'status' => $validated['status'] ?? $user->doctor->status,
+                'availability_schedule' => $validated['availability_schedule'] ?? null,
+            ];
+
+            $user->doctor->update($doctorData);
         }
 
         return to_route('profile.edit')->with('status', 'profile-updated');

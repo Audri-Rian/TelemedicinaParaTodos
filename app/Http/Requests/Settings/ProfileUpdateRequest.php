@@ -39,6 +39,13 @@ class ProfileUpdateRequest extends FormRequest
             'insurance_provider' => ['nullable', 'string', 'max:100'],
             'insurance_number' => ['nullable', 'string', 'max:50'],
             'consent_telemedicine' => ['nullable', 'boolean', 'sometimes'],
+            // Dados do Doctor (campos opcionais)
+            'biography' => ['nullable', 'string', 'max:5000'],
+            'license_number' => ['nullable', 'string', 'max:50'],
+            'license_expiry_date' => ['nullable', 'date'],
+            'consultation_fee' => ['nullable', 'numeric', 'min:0', 'max:999999.99'],
+            'status' => ['nullable', 'string', Rule::in(['active', 'inactive', 'suspended'])],
+            'availability_schedule' => ['nullable', 'array'],
         ];
     }
 }

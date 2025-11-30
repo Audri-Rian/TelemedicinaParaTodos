@@ -40,9 +40,9 @@ Route::middleware(['auth', 'verified', 'doctor'])->prefix('doctor')->name('docto
     Route::get('availability', [App\Http\Controllers\Doctor\DoctorAvailabilityController::class, 'index'])->name('availability');
     Route::get('consultations', [App\Http\Controllers\Doctor\DoctorConsultationsController::class, 'index'])->name('consultations');
     Route::get('consultations/{appointment}', [App\Http\Controllers\Doctor\DoctorConsultationDetailController::class, 'show'])->name('consultations.detail');
-    Route::post('consultations/{appointment}/start', [App\Http\Controllers\Doctor\DoctorConsultationDetailController::class, 'start'])->name('consultations.detail.start');
-    Route::post('consultations/{appointment}/save-draft', [App\Http\Controllers\Doctor\DoctorConsultationDetailController::class, 'saveDraft'])->name('consultations.detail.save-draft');
-    Route::post('consultations/{appointment}/finalize', [App\Http\Controllers\Doctor\DoctorConsultationDetailController::class, 'finalize'])->name('consultations.detail.finalize');
+    Route::post('consultations/{appointment}/start', [App\Http\Controllers\Doctor\DoctorConsultationDetailController::class, 'start'])->middleware('throttle:10,1')->name('consultations.detail.start');
+    Route::post('consultations/{appointment}/save-draft', [App\Http\Controllers\Doctor\DoctorConsultationDetailController::class, 'saveDraft'])->middleware('throttle:30,1')->name('consultations.detail.save-draft');
+    Route::post('consultations/{appointment}/finalize', [App\Http\Controllers\Doctor\DoctorConsultationDetailController::class, 'finalize'])->middleware('throttle:10,1')->name('consultations.detail.finalize');
     Route::post('consultations/{appointment}/complement', [App\Http\Controllers\Doctor\DoctorConsultationDetailController::class, 'complement'])->name('consultations.detail.complement');
     Route::get('consultations/{appointment}/pdf', [App\Http\Controllers\Doctor\DoctorConsultationDetailController::class, 'generatePdf'])->name('consultations.detail.pdf');
     Route::get('messages', [App\Http\Controllers\Doctor\DoctorMessagesController::class, 'index'])->name('messages');
@@ -51,7 +51,7 @@ Route::middleware(['auth', 'verified', 'doctor'])->prefix('doctor')->name('docto
     Route::get('documents', [App\Http\Controllers\Doctor\DoctorDocumentsController::class, 'index'])->name('documents');
     Route::get('patient/{id}', [App\Http\Controllers\Doctor\PatientDetailsController::class, 'show'])->name('patient.details');
     Route::get('patients/{patient}/medical-record', [App\Http\Controllers\Doctor\DoctorPatientMedicalRecordController::class, 'show'])->name('patients.medical-record');
-    Route::post('patients/{patient}/medical-record/export', [App\Http\Controllers\Doctor\DoctorPatientMedicalRecordController::class, 'export'])->name('patients.medical-record.export');
+    Route::post('patients/{patient}/medical-record/export', [App\Http\Controllers\Doctor\DoctorPatientMedicalRecordController::class, 'export'])->middleware('throttle:5,1')->name('patients.medical-record.export');
     Route::post('patients/{patient}/medical-record/documents', [App\Http\Controllers\MedicalRecordDocumentController::class, 'storeForPatient'])->name('patients.medical-record.documents.store');
     Route::post('patients/{patient}/medical-record/diagnoses', [App\Http\Controllers\Doctor\DoctorPatientMedicalRecordController::class, 'storeDiagnosis'])->name('patients.medical-record.diagnoses.store');
     Route::post('patients/{patient}/medical-record/prescriptions', [App\Http\Controllers\Doctor\DoctorPatientMedicalRecordController::class, 'storePrescription'])->name('patients.medical-record.prescriptions.store');
@@ -62,8 +62,8 @@ Route::middleware(['auth', 'verified', 'doctor'])->prefix('doctor')->name('docto
     Route::post('patients/{patient}/medical-record/consultations/pdf', [App\Http\Controllers\Doctor\DoctorPatientMedicalRecordController::class, 'generateConsultationPdf'])->name('patients.medical-record.consultations.pdf');
     
     // Rotas para videoconferência (médicos)
-    Route::post('video-call/request/{user}', [VideoCallController::class, 'requestVideoCall'])->name('video-call.request');
-    Route::post('video-call/request/status/{user}', [VideoCallController::class, 'requestVideoCallStatus'])->name('video-call.request-status');
+    Route::post('video-call/request/{user}', [VideoCallController::class, 'requestVideoCall'])->middleware('throttle:20,1')->name('video-call.request');
+    Route::post('video-call/request/status/{user}', [VideoCallController::class, 'requestVideoCallStatus'])->middleware('throttle:30,1')->name('video-call.request-status');
     
     // Rotas para configuração de agenda (médicos)
     Route::get('schedule', function () {
@@ -103,16 +103,33 @@ Route::middleware(['auth', 'verified', 'patient'])->prefix('patient')->name('pat
     Route::get('consultation-details/{appointment}', [App\Http\Controllers\Patient\PatientConsultationDetailsController::class, 'show'])->name('consultation-details');
     Route::get('next-consultation', [App\Http\Controllers\Patient\PatientNextConsultationController::class, 'index'])->name('next-consultation');
     Route::get('medical-records', [App\Http\Controllers\Patient\PatientMedicalRecordController::class, 'index'])->name('medical-records');
-    Route::post('medical-records/export', [App\Http\Controllers\Patient\PatientMedicalRecordController::class, 'export'])->name('medical-records.export');
+    Route::post('medical-records/export', [App\Http\Controllers\Patient\PatientMedicalRecordController::class, 'export'])->middleware('throttle:5,1')->name('medical-records.export');
     Route::post('medical-records/documents', [App\Http\Controllers\MedicalRecordDocumentController::class, 'store'])->name('medical-records.documents.store');
     
     // Rotas para videoconferência (pacientes)
-    Route::post('video-call/request/{user}', [VideoCallController::class, 'requestVideoCall'])->name('video-call.request');
-    Route::post('video-call/request/status/{user}', [VideoCallController::class, 'requestVideoCallStatus'])->name('video-call.request-status');
+    Route::post('video-call/request/{user}', [VideoCallController::class, 'requestVideoCall'])->middleware('throttle:20,1')->name('video-call.request');
+    Route::post('video-call/request/status/{user}', [VideoCallController::class, 'requestVideoCallStatus'])->middleware('throttle:30,1')->name('video-call.request-status');
     
     // Rotas de onboarding
     Route::post('tour/completed', [App\Http\Controllers\Patient\OnboardingController::class, 'completeTour'])->name('tour.completed');
     Route::post('onboarding/skip-welcome', [App\Http\Controllers\Patient\OnboardingController::class, 'skipWelcome'])->name('onboarding.skip-welcome');
+});
+
+// Rotas LGPD (compliance)
+Route::middleware(['auth', 'verified', 'throttle:10,1'])->prefix('lgpd')->name('lgpd.')->group(function () {
+    Route::get('consents', [App\Http\Controllers\LGPD\ConsentController::class, 'index'])->name('consents.index');
+    Route::post('consents/grant', [App\Http\Controllers\LGPD\ConsentController::class, 'grant'])->name('consents.grant');
+    Route::post('consents/revoke', [App\Http\Controllers\LGPD\ConsentController::class, 'revoke'])->name('consents.revoke');
+    Route::get('consents/check', [App\Http\Controllers\LGPD\ConsentController::class, 'check'])->name('consents.check');
+    
+    Route::get('data-portability', [App\Http\Controllers\LGPD\DataPortabilityController::class, 'index'])->name('data-portability.index');
+    Route::get('data-portability/export', [App\Http\Controllers\LGPD\DataPortabilityController::class, 'export'])->middleware('throttle:3,1')->name('data-portability.export');
+    
+    Route::get('right-to-be-forgotten', [App\Http\Controllers\LGPD\RightToBeForgottenController::class, 'index'])->name('right-to-be-forgotten.index');
+    Route::post('right-to-be-forgotten/request', [App\Http\Controllers\LGPD\RightToBeForgottenController::class, 'request'])->middleware('throttle:1,60')->name('right-to-be-forgotten.request');
+    
+    Route::get('data-access-report', [App\Http\Controllers\LGPD\DataAccessReportController::class, 'index'])->name('data-access-report.index');
+    Route::post('data-access-report/generate', [App\Http\Controllers\LGPD\DataAccessReportController::class, 'generate'])->name('data-access-report.generate');
 });
 
 // Rotas compartilhadas (ambos os tipos de usuário)
@@ -124,10 +141,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('appointments', AppointmentsController::class);
     
     // Rotas customizadas para appointments
-    Route::post('appointments/{appointment}/start', [AppointmentsController::class, 'start'])->name('appointments.start');
-    Route::post('appointments/{appointment}/end', [AppointmentsController::class, 'end'])->name('appointments.end');
-    Route::post('appointments/{appointment}/cancel', [AppointmentsController::class, 'cancel'])->name('appointments.cancel');
-    Route::post('appointments/{appointment}/reschedule', [AppointmentsController::class, 'reschedule'])->name('appointments.reschedule');
+    Route::post('appointments/{appointment}/start', [AppointmentsController::class, 'start'])->middleware('throttle:10,1')->name('appointments.start');
+    Route::post('appointments/{appointment}/end', [AppointmentsController::class, 'end'])->middleware('throttle:10,1')->name('appointments.end');
+    Route::post('appointments/{appointment}/cancel', [AppointmentsController::class, 'cancel'])->middleware('throttle:10,1')->name('appointments.cancel');
+    Route::post('appointments/{appointment}/reschedule', [AppointmentsController::class, 'reschedule'])->middleware('throttle:10,1')->name('appointments.reschedule');
 
     Route::get('api/appointments/availability', [AppointmentsController::class, 'availability'])->name('appointments.availability');
     
@@ -142,7 +159,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         // Rotas para mensagens
         Route::get('messages/conversations', [App\Http\Controllers\Api\MessageController::class, 'conversations'])->name('api.messages.conversations');
         Route::get('messages/{userId}', [App\Http\Controllers\Api\MessageController::class, 'messages'])->name('api.messages.show');
-        Route::post('messages', [App\Http\Controllers\Api\MessageController::class, 'store'])->name('api.messages.store');
+        Route::post('messages', [App\Http\Controllers\Api\MessageController::class, 'store'])->middleware('throttle:30,1')->name('api.messages.store');
         Route::post('messages/{userId}/read', [App\Http\Controllers\Api\MessageController::class, 'markAsRead'])->name('api.messages.mark-read');
         Route::post('messages/{messageId}/delivered', [App\Http\Controllers\Api\MessageController::class, 'markAsDelivered'])->name('api.messages.mark-delivered');
         Route::get('messages/unread/count', [App\Http\Controllers\Api\MessageController::class, 'unreadCount'])->name('api.messages.unread-count');

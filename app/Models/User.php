@@ -161,4 +161,97 @@ class User extends Authenticatable
     {
         return !empty($this->avatar_path);
     }
+
+    /**
+     * Get the consents associated with the user.
+     */
+    public function consents()
+    {
+        return $this->hasMany(Consent::class);
+    }
+
+    /**
+     * Get the audit logs associated with the user.
+     */
+    public function auditLogs()
+    {
+        return $this->hasMany(AuditLog::class);
+    }
+
+    /**
+     * Get appointments where user is doctor or patient
+     */
+    public function appointments()
+    {
+        if ($this->isDoctor()) {
+            return $this->doctor->appointments();
+        }
+        if ($this->isPatient()) {
+            return $this->patient->appointments();
+        }
+        return null;
+    }
+
+    /**
+     * Get prescriptions
+     */
+    public function prescriptions()
+    {
+        if ($this->isPatient()) {
+            return $this->patient->prescriptions();
+        }
+        if ($this->isDoctor()) {
+            return $this->doctor->prescriptions();
+        }
+        return null;
+    }
+
+    /**
+     * Get examinations
+     */
+    public function examinations()
+    {
+        if ($this->isPatient()) {
+            return $this->patient->examinations();
+        }
+        return null;
+    }
+
+    /**
+     * Get medical certificates
+     */
+    public function medicalCertificates()
+    {
+        if ($this->isPatient()) {
+            return $this->patient->medicalCertificates();
+        }
+        return null;
+    }
+
+    /**
+     * Get messages sent by user
+     */
+    public function sentMessages()
+    {
+        return $this->hasMany(Message::class, 'sender_id');
+    }
+
+    /**
+     * Get messages received by user
+     */
+    public function receivedMessages()
+    {
+        return $this->hasMany(Message::class, 'receiver_id');
+    }
+
+    /**
+     * Get all messages (sent and received) - use query builder
+     */
+    public function messages()
+    {
+        return Message::where(function ($query) {
+            $query->where('sender_id', $this->id)
+                  ->orWhere('receiver_id', $this->id);
+        });
+    }
 }

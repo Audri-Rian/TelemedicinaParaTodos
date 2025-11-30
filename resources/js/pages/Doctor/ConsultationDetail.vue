@@ -38,7 +38,10 @@ import {
     Download,
     Video,
     X,
+    MessageSquare,
+    Loader2,
 } from 'lucide-vue-next';
+import CID10Autocomplete from '@/components/CID10Autocomplete.vue';
 
 interface Props {
     appointment: {
@@ -49,7 +52,6 @@ interface Props {
         status: string;
         notes?: string | null;
         chief_complaint?: string;
-        anamnesis?: string;
         physical_exam?: string;
         diagnosis?: string;
         cid10?: string;
@@ -57,7 +59,6 @@ interface Props {
         prescriptions?: Array<any>;
         examinations?: Array<any>;
         diagnoses?: Array<any>;
-        vital_signs?: Array<any>;
         clinical_notes?: Array<any>;
     };
     patient: {
@@ -92,24 +93,25 @@ const sidebarCollapsed = ref(false);
 const showFinalizeModal = ref(false);
 const lastSaved = ref<Date | null>(null);
 const isSaving = ref(false);
+const autoSaveStatus = ref<'idle' | 'saving' | 'saved' | 'error'>('idle');
+const hasUnsavedChanges = ref(false);
+let autoSaveTimer: ReturnType<typeof setTimeout> | null = null;
+let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
 // Estado dos cards (colapsáveis)
 const collapsedCards = ref<Record<string, boolean>>({
     chief_complaint: false,
-    anamnesis: false,
     physical_exam: false,
     diagnosis: false,
     prescription: false,
     examinations: false,
-    vital_signs: false,
     notes: false,
     instructions: false,
 });
 
-// Formulário principal
+// Formulário principal (SOAP - sem Anamnese)
 const consultationForm = useForm({
     chief_complaint: props.appointment.chief_complaint || '',
-    anamnesis: props.appointment.anamnesis || '',
     physical_exam: props.appointment.physical_exam || '',
     diagnosis: props.appointment.diagnosis || '',
     cid10: props.appointment.cid10 || '',
@@ -171,11 +173,18 @@ const scheduledDateFormatted = computed(() => {
 
 const showSuccessNotification = ref(false);
 
-// Salvar manualmente
-const saveDraft = async () => {
+// Salvar manualmente ou automaticamente
+const saveDraft = async (isAutoSave = false) => {
     if (isSaving.value) return;
+    
+    // Se for auto-save e não houver mudanças, não salvar
+    if (isAutoSave && !hasUnsavedChanges.value) {
+        return;
+    }
 
     isSaving.value = true;
+    autoSaveStatus.value = 'saving';
+    
     try {
         await consultationForm.post(
             route('doctor.consultations.detail.save-draft', props.appointment.id),
@@ -185,19 +194,90 @@ const saveDraft = async () => {
                 only: [],
                 onSuccess: () => {
                     lastSaved.value = new Date();
-                    showSuccessNotification.value = true;
+                    hasUnsavedChanges.value = false;
+                    autoSaveStatus.value = 'saved';
+                    
+                    if (!isAutoSave) {
+                        showSuccessNotification.value = true;
+                        setTimeout(() => {
+                            showSuccessNotification.value = false;
+                        }, 3000);
+                    }
+                    
+                    // Resetar status após 2 segundos
                     setTimeout(() => {
-                        showSuccessNotification.value = false;
+                        if (autoSaveStatus.value === 'saved') {
+                            autoSaveStatus.value = 'idle';
+                        }
+                    }, 2000);
+                },
+                onError: () => {
+                    autoSaveStatus.value = 'error';
+                    setTimeout(() => {
+                        autoSaveStatus.value = 'idle';
                     }, 3000);
                 },
             }
         );
     } catch (error) {
         console.error('Erro ao salvar rascunho:', error);
+        autoSaveStatus.value = 'error';
+        setTimeout(() => {
+            autoSaveStatus.value = 'idle';
+        }, 3000);
     } finally {
         isSaving.value = false;
     }
 };
+
+// Auto-save com debounce
+const triggerAutoSave = () => {
+    hasUnsavedChanges.value = true;
+    
+    // Limpar timer anterior
+    if (debounceTimer) {
+        clearTimeout(debounceTimer);
+    }
+    
+    // Salvar após 3 segundos de inatividade
+    debounceTimer = setTimeout(() => {
+        if (isInProgress.value && hasUnsavedChanges.value) {
+            saveDraft(true);
+        }
+    }, 3000);
+};
+
+// Auto-save periódico (a cada 30 segundos se houver mudanças)
+const startAutoSaveInterval = () => {
+    if (autoSaveTimer) {
+        clearInterval(autoSaveTimer);
+    }
+    
+    autoSaveTimer = setInterval(() => {
+        if (isInProgress.value && hasUnsavedChanges.value && !isSaving.value) {
+            saveDraft(true);
+        }
+    }, 30000); // 30 segundos
+};
+
+// Parar auto-save
+const stopAutoSaveInterval = () => {
+    if (autoSaveTimer) {
+        clearInterval(autoSaveTimer);
+        autoSaveTimer = null;
+    }
+    if (debounceTimer) {
+        clearTimeout(debounceTimer);
+        debounceTimer = null;
+    }
+};
+
+// Watch para detectar mudanças no formulário
+watch(() => consultationForm.data(), () => {
+    if (isInProgress.value) {
+        triggerAutoSave();
+    }
+}, { deep: true });
 
 // Hotkeys
 const handleKeyDown = (e: KeyboardEvent) => {
@@ -218,6 +298,12 @@ const handleKeyDown = (e: KeyboardEvent) => {
         e.preventDefault();
         collapsedCards.value.examinations = false;
         document.getElementById('examinations-card')?.scrollIntoView({ behavior: 'smooth' });
+    }
+    // Ctrl/Cmd + Q = Queixa Principal
+    if ((e.ctrlKey || e.metaKey) && e.key === 'q') {
+        e.preventDefault();
+        collapsedCards.value.chief_complaint = false;
+        document.getElementById('chief-complaint-card')?.scrollIntoView({ behavior: 'smooth' });
     }
     // Ctrl/Cmd + S = Salvar
     if ((e.ctrlKey || e.metaKey) && e.key === 's') {
@@ -263,13 +349,31 @@ const toggleCard = (cardId: string) => {
 onMounted(() => {
     // Hotkeys
     window.addEventListener('keydown', handleKeyDown);
+    
+    // Iniciar auto-save se consulta estiver em andamento
+    if (isInProgress.value) {
+        startAutoSaveInterval();
+    }
 });
 
 onUnmounted(() => {
     window.removeEventListener('keydown', handleKeyDown);
+    stopAutoSaveInterval();
+    
+    // Salvar mudanças pendentes antes de sair
+    if (hasUnsavedChanges.value && isInProgress.value) {
+        saveDraft(true);
+    }
 });
 
-// Auto-save desabilitado - salva apenas manualmente via botão ou Ctrl+S
+// Watch para iniciar/parar auto-save quando status mudar
+watch(() => props.mode, (newMode) => {
+    if (newMode === 'in_progress') {
+        startAutoSaveInterval();
+    } else {
+        stopAutoSaveInterval();
+    }
+});
 </script>
 
 <template>
@@ -298,7 +402,31 @@ onUnmounted(() => {
                     </div>
 
                     <div class="flex items-center gap-2">
-                        <div v-if="isSaving" class="text-sm text-gray-500 flex items-center gap-2">
+                        <!-- Status de Auto-save -->
+                        <div v-if="isInProgress" class="flex items-center gap-2 text-xs">
+                            <div v-if="autoSaveStatus === 'saving'" class="flex items-center gap-1 text-blue-600">
+                                <Loader2 class="w-3 h-3 animate-spin" />
+                                <span>Salvando...</span>
+                            </div>
+                            <div v-else-if="autoSaveStatus === 'saved'" class="flex items-center gap-1 text-green-600">
+                                <CheckCircle2 class="w-3 h-3" />
+                                <span>Salvo</span>
+                            </div>
+                            <div v-else-if="autoSaveStatus === 'error'" class="flex items-center gap-1 text-red-600">
+                                <AlertCircle class="w-3 h-3" />
+                                <span>Erro ao salvar</span>
+                            </div>
+                            <div v-else-if="hasUnsavedChanges" class="flex items-center gap-1 text-amber-600">
+                                <Clock class="w-3 h-3" />
+                                <span>Alterações não salvas</span>
+                            </div>
+                            <div v-else-if="lastSaved" class="text-gray-400">
+                                Salvo às {{ formatTime(lastSaved) }}
+                            </div>
+                        </div>
+                        
+                        <!-- Status manual -->
+                        <div v-else-if="isSaving" class="text-sm text-gray-500 flex items-center gap-2">
                             <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900"></div>
                             Salvando...
                         </div>
@@ -340,6 +468,17 @@ onUnmounted(() => {
                         >
                             <Download class="w-4 h-4 mr-2" />
                             Gerar PDF
+                        </Button>
+                        
+                        <!-- Botão de Mensagens -->
+                        <Button
+                            v-if="isInProgress || isCompleted"
+                            variant="outline"
+                            @click="router.get(route('doctor.messages'))"
+                            title="Enviar mensagem ao paciente"
+                        >
+                            <MessageSquare class="w-4 h-4 mr-2" />
+                            Mensagens
                         </Button>
                     </div>
                 </div>
@@ -386,11 +525,11 @@ onUnmounted(() => {
                                 <ChevronDown v-else class="w-4 h-4" />
                             </Button>
                         </CardHeader>
-                        <CardContent v-if="!sidebarCollapsed" class="space-y-4">
+                        <CardContent v-if="!sidebarCollapsed" class="space-y-4 max-h-[calc(100vh-200px)] overflow-y-auto">
                             <!-- Alergias -->
-                            <div v-if="patient.allergies.length > 0">
-                                <h3 class="text-sm font-semibold mb-2 flex items-center gap-2">
-                                    <AlertCircle class="w-4 h-4 text-red-500" />
+                            <div v-if="patient.allergies.length > 0" class="border-b pb-3">
+                                <h3 class="text-sm font-semibold mb-2 flex items-center gap-2 text-red-600">
+                                    <AlertCircle class="w-4 h-4" />
                                     Alergias
                                 </h3>
                                 <div class="flex flex-wrap gap-2">
@@ -398,6 +537,7 @@ onUnmounted(() => {
                                         v-for="allergy in patient.allergies"
                                         :key="allergy"
                                         variant="destructive"
+                                        class="text-xs"
                                     >
                                         {{ allergy }}
                                     </Badge>
@@ -405,44 +545,76 @@ onUnmounted(() => {
                             </div>
 
                             <!-- Medicações -->
-                            <div v-if="patient.current_medications">
+                            <div v-if="patient.current_medications" class="border-b pb-3">
                                 <h3 class="text-sm font-semibold mb-2 flex items-center gap-2">
-                                    <Pill class="w-4 h-4" />
+                                    <Pill class="w-4 h-4 text-blue-600" />
                                     Medicações em Uso
                                 </h3>
-                                <p class="text-sm text-gray-600">{{ patient.current_medications }}</p>
+                                <p class="text-sm text-gray-700 leading-relaxed">{{ patient.current_medications }}</p>
+                            </div>
+                            
+                            <!-- Histórico Médico -->
+                            <div v-if="patient.medical_history" class="border-b pb-3">
+                                <h3 class="text-sm font-semibold mb-2 flex items-center gap-2">
+                                    <FileText class="w-4 h-4 text-purple-600" />
+                                    Histórico Médico
+                                </h3>
+                                <p class="text-sm text-gray-700 leading-relaxed line-clamp-3">{{ patient.medical_history }}</p>
                             </div>
 
                             <!-- Dados Básicos -->
-                            <div>
-                                <h3 class="text-sm font-semibold mb-2">Dados Básicos</h3>
-                                <div class="text-sm space-y-1">
-                                    <p><span class="font-medium">Idade:</span> {{ patient.age }} anos</p>
-                                    <p><span class="font-medium">Gênero:</span> {{ patient.gender }}</p>
-                                    <p v-if="patient.blood_type">
-                                        <span class="font-medium">Tipo Sanguíneo:</span> {{ patient.blood_type }}
-                                    </p>
-                                    <p v-if="patient.height && patient.weight">
-                                        <span class="font-medium">IMC:</span> {{ patient.bmi?.toFixed(1) }}
-                                    </p>
+                            <div class="border-b pb-3">
+                                <h3 class="text-sm font-semibold mb-2 flex items-center gap-2">
+                                    <Heart class="w-4 h-4 text-primary" />
+                                    Dados Básicos
+                                </h3>
+                                <div class="text-sm space-y-2">
+                                    <div class="flex justify-between">
+                                        <span class="font-medium text-gray-600">Idade:</span>
+                                        <span class="text-gray-900">{{ patient.age }} anos</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="font-medium text-gray-600">Gênero:</span>
+                                        <span class="text-gray-900 capitalize">{{ patient.gender === 'male' ? 'Masculino' : patient.gender === 'female' ? 'Feminino' : 'Outro' }}</span>
+                                    </div>
+                                    <div v-if="patient.blood_type" class="flex justify-between">
+                                        <span class="font-medium text-gray-600">Tipo Sanguíneo:</span>
+                                        <span class="text-gray-900">{{ patient.blood_type }}</span>
+                                    </div>
+                                    <div v-if="patient.height && patient.weight" class="flex justify-between">
+                                        <span class="font-medium text-gray-600">IMC:</span>
+                                        <span class="text-gray-900 font-semibold">{{ patient.bmi?.toFixed(1) }}</span>
+                                    </div>
+                                    <div v-if="patient.height" class="flex justify-between">
+                                        <span class="font-medium text-gray-600">Altura:</span>
+                                        <span class="text-gray-900">{{ patient.height }} cm</span>
+                                    </div>
+                                    <div v-if="patient.weight" class="flex justify-between">
+                                        <span class="font-medium text-gray-600">Peso:</span>
+                                        <span class="text-gray-900">{{ patient.weight }} kg</span>
+                                    </div>
                                 </div>
                             </div>
 
                             <!-- Histórico Recente -->
-                            <div v-if="recent_consultations.length > 0">
-                                <h3 class="text-sm font-semibold mb-2">Últimas Consultas</h3>
+                            <div v-if="recent_consultations.length > 0" class="border-b pb-3">
+                                <h3 class="text-sm font-semibold mb-2 flex items-center gap-2">
+                                    <Clock class="w-4 h-4 text-amber-600" />
+                                    Últimas Consultas
+                                </h3>
                                 <div class="space-y-2">
                                     <div
                                         v-for="consultation in recent_consultations"
                                         :key="consultation.id"
-                                        class="text-sm p-2 bg-gray-50 rounded"
+                                        class="text-sm p-2 bg-gray-50 rounded border border-gray-200 hover:bg-gray-100 transition-colors cursor-pointer"
+                                        @click="router.get(route('doctor.consultations.detail', consultation.id))"
                                     >
-                                        <p class="font-medium">{{ consultation.date }}</p>
-                                        <p v-if="consultation.diagnosis" class="text-gray-600 text-xs">
+                                        <p class="font-medium text-gray-900">{{ consultation.date }}</p>
+                                        <p v-if="consultation.diagnosis" class="text-gray-700 text-xs mt-1">
                                             {{ consultation.diagnosis }}
                                         </p>
-                                        <p v-if="consultation.cid10" class="text-xs text-gray-500">
-                                            CID-10: {{ consultation.cid10 }}
+                                        <p v-if="consultation.cid10" class="text-xs text-gray-500 mt-1">
+                                            CID-10: <span class="font-mono">{{ consultation.cid10 }}</span>
                                         </p>
                                     </div>
                                 </div>
@@ -451,8 +623,9 @@ onUnmounted(() => {
                             <Button
                                 variant="outline"
                                 class="w-full"
-                                @click="router.get(route('doctor.patients.medical-record', patient.id))"
+                                @click="router.get(`/doctor/patients/${patient.id}/medical-record`)"
                             >
+                                <FileText class="w-4 h-4 mr-2" />
                                 Ver Prontuário Completo
                             </Button>
                         </CardContent>
@@ -474,27 +647,13 @@ onUnmounted(() => {
                         <CardContent v-if="!collapsedCards.chief_complaint">
                             <Textarea
                                 v-model="consultationForm.chief_complaint"
+                                @input="triggerAutoSave"
                                 placeholder="Descreva a queixa principal do paciente..."
-                                class="min-h-[100px]"
+                                class="min-h-[100px] resize-y"
                             />
-                        </CardContent>
-                    </Card>
-
-                    <!-- Card: Anamnese -->
-                    <Card id="anamnesis-card">
-                        <CardHeader class="flex flex-row items-center justify-between cursor-pointer" @click="toggleCard('anamnesis')">
-                            <CardTitle class="flex items-center gap-2">
-                                <FileText class="w-5 h-5" />
-                                Anamnese (HMA)
-                            </CardTitle>
-                            <component :is="collapsedCards.anamnesis ? ChevronDown : ChevronUp" class="w-4 h-4" />
-                        </CardHeader>
-                        <CardContent v-if="!collapsedCards.anamnesis">
-                            <Textarea
-                                v-model="consultationForm.anamnesis"
-                                placeholder="História da moléstia atual..."
-                                class="min-h-[150px]"
-                            />
+                            <p class="text-xs text-gray-500 mt-2">
+                                {{ consultationForm.chief_complaint.length }}/1000 caracteres
+                            </p>
                         </CardContent>
                     </Card>
 
@@ -510,9 +669,13 @@ onUnmounted(() => {
                         <CardContent v-if="!collapsedCards.physical_exam">
                             <Textarea
                                 v-model="consultationForm.physical_exam"
+                                @input="triggerAutoSave"
                                 placeholder="Descreva o exame físico realizado..."
-                                class="min-h-[150px]"
+                                class="min-h-[150px] resize-y"
                             />
+                            <p class="text-xs text-gray-500 mt-2">
+                                {{ consultationForm.physical_exam.length }}/5000 caracteres
+                            </p>
                         </CardContent>
                     </Card>
 
@@ -535,18 +698,31 @@ onUnmounted(() => {
                             <div class="space-y-4">
                                 <div class="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label class="text-sm font-medium mb-2 block">CID-10</label>
-                                        <Input
+                                        <label class="text-sm font-medium mb-2 block text-gray-700">
+                                            CID-10 <span class="text-gray-400 text-xs">(opcional)</span>
+                                        </label>
+                                        <CID10Autocomplete
                                             v-model="consultationForm.cid10"
-                                            placeholder="Ex: J00"
+                                            @select="triggerAutoSave"
+                                            placeholder="Digite o código CID-10 (ex: J00)"
                                         />
+                                        <p class="text-xs text-gray-500 mt-1">
+                                            Código da Classificação Internacional de Doenças
+                                        </p>
                                     </div>
                                     <div>
-                                        <label class="text-sm font-medium mb-2 block">Descrição</label>
+                                        <label class="text-sm font-medium mb-2 block text-gray-700">
+                                            Descrição do Diagnóstico
+                                        </label>
                                         <Input
                                             v-model="consultationForm.diagnosis"
+                                            @input="triggerAutoSave"
                                             placeholder="Descrição do diagnóstico"
+                                            maxlength="500"
                                         />
+                                        <p class="text-xs text-gray-500 mt-1">
+                                            {{ consultationForm.diagnosis.length }}/500 caracteres
+                                        </p>
                                     </div>
                                 </div>
                             </div>
@@ -626,44 +802,6 @@ onUnmounted(() => {
                         </CardContent>
                     </Card>
 
-                    <!-- Card: Sinais Vitais -->
-                    <Card id="vital-signs-card">
-                        <CardHeader class="flex flex-row items-center justify-between cursor-pointer" @click="toggleCard('vital_signs')">
-                            <CardTitle class="flex items-center gap-2">
-                                <Activity class="w-5 h-5" />
-                                Sinais Vitais
-                            </CardTitle>
-                            <component :is="collapsedCards.vital_signs ? ChevronDown : ChevronUp" class="w-4 h-4" />
-                        </CardHeader>
-                        <CardContent v-if="!collapsedCards.vital_signs">
-                            <div v-if="appointment.vital_signs && appointment.vital_signs.length > 0" class="space-y-2">
-                                <div
-                                    v-for="vital in appointment.vital_signs"
-                                    :key="vital.id"
-                                    class="p-3 bg-gray-50 rounded border"
-                                >
-                                    <div class="grid grid-cols-3 gap-4 text-sm">
-                                        <div>
-                                            <span class="font-medium">PA:</span>
-                                            {{ vital.blood_pressure_systolic }}/{{ vital.blood_pressure_diastolic }} mmHg
-                                        </div>
-                                        <div>
-                                            <span class="font-medium">FC:</span>
-                                            {{ vital.heart_rate }} bpm
-                                        </div>
-                                        <div>
-                                            <span class="font-medium">Temp:</span>
-                                            {{ vital.temperature }}°C
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="text-sm text-gray-500">
-                                Use o botão "Registrar Sinais Vitais" no prontuário completo.
-                            </div>
-                        </CardContent>
-                    </Card>
-
                     <!-- Card: Anotações -->
                     <Card id="notes-card">
                         <CardHeader class="flex flex-row items-center justify-between cursor-pointer" @click="toggleCard('notes')">
@@ -676,9 +814,13 @@ onUnmounted(() => {
                         <CardContent v-if="!collapsedCards.notes">
                             <Textarea
                                 v-model="consultationForm.notes"
+                                @input="triggerAutoSave"
                                 placeholder="Anotações adicionais sobre a consulta..."
-                                class="min-h-[100px]"
+                                class="min-h-[100px] resize-y"
                             />
+                            <p class="text-xs text-gray-500 mt-2">
+                                {{ consultationForm.notes.length }}/5000 caracteres
+                            </p>
                         </CardContent>
                     </Card>
 
@@ -694,9 +836,13 @@ onUnmounted(() => {
                         <CardContent v-if="!collapsedCards.instructions">
                             <Textarea
                                 v-model="consultationForm.instructions"
+                                @input="triggerAutoSave"
                                 placeholder="Orientações para o paciente..."
-                                class="min-h-[100px]"
+                                class="min-h-[100px] resize-y"
                             />
+                            <p class="text-xs text-gray-500 mt-2">
+                                {{ consultationForm.instructions.length }}/2000 caracteres
+                            </p>
                         </CardContent>
                     </Card>
                 </div>

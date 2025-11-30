@@ -93,9 +93,8 @@ class DoctorConsultationDetailController extends Controller
             'status' => $appointment->status,
             'notes' => $appointment->notes,
             'metadata' => $metadata,
-            // Dados clínicos da consulta
+            // Dados clínicos da consulta (SOAP - sem anamnese)
             'chief_complaint' => $metadata['chief_complaint'] ?? '',
-            'anamnesis' => $metadata['anamnesis'] ?? '',
             'physical_exam' => $metadata['physical_exam'] ?? '',
             'diagnosis' => $metadata['diagnosis'] ?? '',
             'cid10' => $metadata['cid10'] ?? '',
@@ -205,7 +204,6 @@ class DoctorConsultationDetailController extends Controller
 
         $validated = $request->validate([
             'chief_complaint' => ['nullable', 'string', 'max:1000'],
-            'anamnesis' => ['nullable', 'string', 'max:5000'],
             'physical_exam' => ['nullable', 'string', 'max:5000'],
             'diagnosis' => ['nullable', 'string', 'max:500'],
             'cid10' => ['nullable', 'string', 'max:10'],
