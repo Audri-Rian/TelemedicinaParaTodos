@@ -2,6 +2,29 @@ version: '3.8'
 
 services:
   # ===================================
+  # Banco de Dados MySQL
+  # ===================================
+  mysql:
+    image: mysql:8.0
+    container_name: telemedicina_mysql
+    restart: always
+    environment:
+      MYSQL_DATABASE: telemedicina
+      MYSQL_USER: telemedicina_user
+      MYSQL_PASSWORD: secret
+      MYSQL_ROOT_PASSWORD: root_secret
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot_secret"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    command: --default-authentication-plugin=mysql_native_password
+
+  # ===================================
   # Banco de Dados PostgreSQL
   # ===================================
   postgres:
@@ -49,6 +72,8 @@ services:
     container_name: telemedicina_app
     restart: always
     depends_on:
+      mysql:
+        condition: service_healthy
       postgres:
         condition: service_healthy
       redis:
@@ -63,12 +88,21 @@ services:
       APP_KEY: base64:Vr23j63EFvgERAmlx3eUK4dwSNdCrvmyeYMerRPUD5s=
       APP_URL: http://localhost:8000
 
-      DB_CONNECTION: pgsql
-      DB_HOST: postgres
-      DB_PORT: 5432
+      # Configuração MySQL
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
       DB_DATABASE: telemedicina
-      DB_USERNAME: postgres
+      DB_USERNAME: telemedicina_user
       DB_PASSWORD: secret
+      
+      # Configuração PostgreSQL (alternativa)
+      # DB_CONNECTION: pgsql
+      # DB_HOST: postgres
+      # DB_PORT: 5432
+      # DB_DATABASE: telemedicina
+      # DB_USERNAME: postgres
+      # DB_PASSWORD: secret
 
       REDIS_HOST: redis
       REDIS_PORT: 6379
@@ -84,6 +118,8 @@ services:
              php artisan serve --host=0.0.0.0 --port=8000"
 
 volumes:
+  mysql_data:
+    driver: local
   postgres_data:
     driver: local
   redis_data:

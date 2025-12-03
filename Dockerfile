@@ -1,8 +1,13 @@
 FROM php:8.3-fpm-alpine
 
 RUN apk add --no-cache \
-    bash git curl zip unzip libpq-dev postgresql-dev \
-    && docker-php-ext-install pdo pdo_pgsql
+    bash git curl zip unzip \
+    libpq-dev postgresql-dev \
+    mysql-dev \
+    $PHPIZE_DEPS \
+    && docker-php-ext-install pdo pdo_mysql pdo_pgsql \
+    && docker-php-ext-enable pdo_mysql pdo_pgsql \
+    && apk del $PHPIZE_DEPS
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 

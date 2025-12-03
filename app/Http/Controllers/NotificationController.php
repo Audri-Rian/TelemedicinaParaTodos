@@ -154,11 +154,12 @@ class NotificationController extends Controller
                 'line' => $e->getLine(),
                 'user_id' => Auth::id(),
             ]);
+            // Retornar 200 com dados vazios em caso de erro, para não quebrar o frontend
             return response()->json([
                 'data' => [],
                 'count' => 0,
                 'error' => app()->environment('local') ? $e->getMessage() : null,
-            ], 500);
+            ]);
         }
     }
 

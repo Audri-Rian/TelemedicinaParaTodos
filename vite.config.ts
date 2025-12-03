@@ -25,6 +25,10 @@ export default defineConfig({
             },
         }),
     ],
+    server: {
+        host: '127.0.0.1', // Força IPv4 para evitar problemas com CSP e IPv6
+        port: 5173,
+    },
     resolve: {
         alias: {
             '@': fileURLToPath(new URL('./resources/js', import.meta.url)),

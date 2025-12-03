@@ -63,20 +63,37 @@ class SecurityHeaders
      */
     private function buildCSP(): string
     {
+        $isDevelopment = app()->environment('local', 'development');
+        
+        // Domínios do Vite para desenvolvimento
+        // Nota: localhost resolve para IPv4 e IPv6, então não precisamos especificar [::1] separadamente
+        $viteDevSources = $isDevelopment 
+            ? ' http://localhost:5173 http://127.0.0.1:5173 ws://localhost:5173 ws://127.0.0.1:5173'
+            : '';
+
+        // Conexões WebSocket do Reverb (porta 8090)
+        $reverbWebSocketSources = $isDevelopment
+            ? ' ws://127.0.0.1:8090 wss://127.0.0.1:8090 ws://localhost:8090 wss://localhost:8090'
+            : '';
+
         $directives = [
             "default-src 'self'",
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://fonts.googleapis.com https://fonts.bunny.net https://cdn.jsdelivr.net", // unsafe-inline/unsafe-eval necessário para Vite/Inertia
-            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.bunny.net",
-            "font-src 'self' https://fonts.gstatic.com https://fonts.bunny.net data:",
-            "img-src 'self' data: https: blob:",
-            "connect-src 'self' https://api.peerjs.com wss://*.pusher.com ws://localhost:* http://localhost:*",
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://fonts.googleapis.com https://fonts.bunny.net https://cdn.jsdelivr.net{$viteDevSources}", // unsafe-inline/unsafe-eval necessário para Vite/Inertia
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.bunny.net https://rsms.me{$viteDevSources}", // rsms.me para fonte Inter
+            "font-src 'self' https://fonts.gstatic.com https://fonts.bunny.net https://rsms.me data:", // rsms.me para fonte Inter
+            "img-src 'self' data: https: blob:{$viteDevSources}", // Permite imagens do Vite em desenvolvimento
+            "connect-src 'self' https://api.peerjs.com https://cdn.jsdelivr.net https://unpkg.com wss://*.pusher.com ws://localhost:* http://localhost:*{$viteDevSources}{$reverbWebSocketSources}", // cdn.jsdelivr.net e unpkg.com para WASM do LottieFiles, Reverb WebSocket
             "media-src 'self' blob:",
             "object-src 'none'",
             "base-uri 'self'",
             "form-action 'self'",
             "frame-ancestors 'self'",
-            "upgrade-insecure-requests",
         ];
+
+        // upgrade-insecure-requests apenas em produção
+        if (!$isDevelopment) {
+            $directives[] = "upgrade-insecure-requests";
+        }
 
         return implode('; ', $directives);
     }

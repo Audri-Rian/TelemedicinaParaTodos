@@ -152,5 +152,45 @@ class AvailabilitySlot extends Model
             default => $this->day_of_week ?? '',
         };
     }
+
+    /**
+     * Accessor para start_time - sempre retorna no formato H:i (sem segundos)
+     */
+    public function getStartTimeAttribute($value): string
+    {
+        if (!$value) {
+            return '';
+        }
+        
+        // Normalizar formato de hora (remover segundos se existirem)
+        $time = is_string($value) ? $value : (string)$value;
+        
+        // Se tiver segundos (formato H:i:s), remover
+        if (strlen($time) > 5 && substr_count($time, ':') === 2) {
+            return substr($time, 0, 5);
+        }
+        
+        return $time;
+    }
+
+    /**
+     * Accessor para end_time - sempre retorna no formato H:i (sem segundos)
+     */
+    public function getEndTimeAttribute($value): string
+    {
+        if (!$value) {
+            return '';
+        }
+        
+        // Normalizar formato de hora (remover segundos se existirem)
+        $time = is_string($value) ? $value : (string)$value;
+        
+        // Se tiver segundos (formato H:i:s), remover
+        if (strlen($time) > 5 && substr_count($time, ':') === 2) {
+            return substr($time, 0, 5);
+        }
+        
+        return $time;
+    }
 }
 

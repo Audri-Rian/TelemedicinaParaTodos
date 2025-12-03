@@ -207,7 +207,7 @@ class AvailabilityService
 
     /**
      * Gerar slots de tempo a partir de um intervalo
-     * Gera slots de 45 minutos por padrão
+     * Gera slots de 45 minutos por padrão, mas sempre inclui o horário de início exato
      */
     private function generateTimeSlotsFromInterval(
         string $startTime,
@@ -215,26 +215,52 @@ class AvailabilityService
     ): array {
         $slots = [];
         
+        // Normalizar formatos de hora (remover segundos se existirem)
+        $startTime = $this->normalizeTimeFormat($startTime);
+        $endTime = $this->normalizeTimeFormat($endTime);
+        
         [$startHour, $startMin] = explode(':', $startTime);
         [$endHour, $endMin] = explode(':', $endTime);
         
         $startMinutes = (int)$startHour * 60 + (int)$startMin;
         $endMinutes = (int)$endHour * 60 + (int)$endMin;
         
-        $currentMinutes = $startMinutes;
         $slotDuration = 45; // 45 minutos
         
-        while ($currentMinutes + $slotDuration <= $endMinutes) {
-            $slotEnd = $currentMinutes + $slotDuration;
-                
-                $hours = floor($currentMinutes / 60);
-                $minutes = $currentMinutes % 60;
-                $slots[] = sprintf('%02d:%02d', $hours, $minutes);
+        // Sempre incluir o horário de início exato como primeiro slot (já normalizado)
+        $slots[] = $startTime;
+        
+        // Calcular o próximo slot múltiplo de 45 minutos a partir do início
+        $nextSlotMinutes = $startMinutes + $slotDuration;
+        
+        // Gerar slots adicionais de 45 em 45 minutos
+        while ($nextSlotMinutes + $slotDuration <= $endMinutes) {
+            $hours = floor($nextSlotMinutes / 60);
+            $minutes = $nextSlotMinutes % 60;
+            $slotTime = sprintf('%02d:%02d', $hours, $minutes);
             
-            $currentMinutes += $slotDuration;
+            // Evitar duplicatas (caso o horário de início já seja múltiplo de 45)
+            if ($slotTime !== $startTime) {
+                $slots[] = $slotTime;
+            }
+            
+            $nextSlotMinutes += $slotDuration;
         }
         
         return $slots;
+    }
+
+    /**
+     * Normalizar formato de hora para H:i (remover segundos se existirem)
+     */
+    private function normalizeTimeFormat(string $time): string
+    {
+        // Se tiver segundos (formato H:i:s), remover
+        if (strlen($time) > 5 && substr_count($time, ':') === 2) {
+            return substr($time, 0, 5); // Retorna apenas HH:mm
+        }
+        
+        return $time;
     }
 
     /**
