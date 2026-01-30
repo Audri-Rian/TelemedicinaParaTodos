@@ -956,7 +956,7 @@ const testimonials = [
             </div>
         </section>
         <!-- Testimonials Carousel Section -->
-        <section class="py-24 bg-white overflow-hidden">
+        <section class="py-24 bg-[#fafafa] overflow-hidden">
             <div class="container mx-auto px-4 sm:px-6 lg:px-8">
                 <!-- Header with Navigation -->
                 <div class="flex items-end justify-between mb-12">
@@ -982,52 +982,52 @@ const testimonials = [
 
                         <!-- Video Card Type -->
                         <div v-if="testimonial.type === 'video'"
-                            class="h-full bg-[#1e1b4b] rounded-[32px] p-8 flex flex-col justify-between text-white relative overflow-hidden group">
+                            class="h-full bg-primary/20 rounded-[32px] p-8 flex flex-col justify-between text-[#0F172A] relative overflow-hidden group">
                             <div class="relative h-64 w-full rounded-2xl overflow-hidden mb-6">
                                 <video v-if="testimonial.video" :src="testimonial.video"
-                                    class="w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-500"
+                                    class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                     autoplay muted loop playsinline></video>
                                 <img v-else :src="testimonial.image"
                                     class="w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-500" />
                             </div>
                             <div>
                                 <h4 class="text-xl font-bold mb-1">{{ testimonial.name }}</h4>
-                                <p class="text-sm text-gray-400">{{ testimonial.role }}</p>
-                                <p class="text-sm text-gray-400">{{ testimonial.company }}</p>
+                                <p class="text-sm text-[#0F172A]/70">{{ testimonial.role }}</p>
+                                <p class="text-sm text-[#0F172A]/70">{{ testimonial.company }}</p>
                             </div>
                             <button @click="testimonial.video ? openVideo(testimonial.video) : null"
-                                class="mt-8 px-6 py-3 rounded-full border border-white/30 w-fit text-sm font-bold hover:bg-white/10 transition-colors">
+                                class="mt-8 px-6 py-3 rounded-full border border-[#0F172A]/30 w-fit text-sm font-bold hover:bg-[#0F172A]/10 transition-colors">
                                 {{ testimonial.linkText }}
                             </button>
                         </div>
 
                         <!-- Quote Card Type -->
                         <div v-else-if="testimonial.type === 'quote'"
-                            class="h-full bg-[#1e1b4b] rounded-[32px] p-10 flex flex-col justify-between text-white">
-                            <Quote class="h-10 w-10 text-white/20" />
+                            class="h-full bg-primary/20 rounded-[32px] p-10 flex flex-col justify-between text-[#0F172A]">
+                            <Quote class="h-10 w-10 text-[#0F172A]/20" />
                             <p class="text-2xl font-bold leading-tight">
                                 "{{ testimonial.text }}"
                             </p>
-                            <div class="mt-8 pt-8 border-t border-white/10">
+                            <div class="mt-8 pt-8 border-t border-[#0F172A]/10">
                                 <h4 class="text-xl font-bold mb-1">{{ testimonial.name }}</h4>
-                                <p class="text-sm text-gray-400">{{ testimonial.role }}</p>
+                                <p class="text-sm text-[#0F172A]/70">{{ testimonial.role }}</p>
                                 <p class="text-sm text-primary font-medium mt-2">{{ testimonial.company }}</p>
                             </div>
                         </div>
 
                         <!-- Full Image Card Type -->
                         <div v-else-if="testimonial.type === 'image-full'"
-                            class="h-full rounded-[32px] relative overflow-hidden group p-8 flex flex-col justify-between text-white">
+                            class="h-full rounded-[32px] relative overflow-hidden group p-8 flex flex-col justify-between text-[#0F172A]">
                             <img :src="testimonial.image"
                                 class="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
                             <div
-                                class="absolute inset-0 bg-gradient-to-t from-[#1e1b4b] via-transparent to-transparent opacity-90">
+                                class="absolute inset-0 bg-gradient-to-t from-primary/90 via-transparent to-transparent opacity-90">
                             </div>
 
                             <div class="relative z-10">
                                 <h4 class="text-xl font-bold mb-1">{{ testimonial.name }}</h4>
-                                <p class="text-sm text-white/80">{{ testimonial.role }}</p>
-                                <p class="text-sm text-white/80">{{ testimonial.company }}</p>
+                                <p class="text-sm text-[#0F172A]/80">{{ testimonial.role }}</p>
+                                <p class="text-sm text-[#0F172A]/80">{{ testimonial.company }}</p>
                             </div>
 
                             <button
