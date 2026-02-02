@@ -86,8 +86,8 @@ Esta matriz conecta cada requisito funcional e não funcional aos seus artefatos
 |-------------|--------------|------------|----------|
 | **Design** | Regras de Negócio | ✅ | [SystemRules.md](requirements/SystemRules.md#prescriptions-prescrições) |
 | **Lógica** | Medical Record Logic | ✅ | [MedicalRecordsDoctor.md](modules/MedicalRecords/MedicalRecordsDoctor.md) |
-| **Implementação** | Prescription Model | ✅ | [Prescription.php](../app/Models/Prescription.php) |
-| **Implementação** | MedicalRecord Service | ✅ | [MedicalRecordService.php](../app/Services/MedicalRecordService.php) |
+| **Implementação** | Prescription Model | ✅ | [Prescription.php](../app/MedicalRecord/Infrastructure/Persistence/Models/Prescription.php) |
+| **Implementação** | MedicalRecord Service | ✅ | [MedicalRecordService.php](../app/MedicalRecord/Application/Services/MedicalRecordService.php) |
 | **Banco** | Prescription Migration | ✅ | [2025_11_24_101852_create_prescriptions_table.php](../database/migrations/) |
 | **Frontend** | Prescription Pages | ✅ | [Medical Record Pages](../resources/js/pages/) |
 | **Testes** | Prescription Tests | 🔄 | [Medical Record Tests](../tests/) |
@@ -176,7 +176,7 @@ Esta matriz conecta cada requisito funcional e não funcional aos seus artefatos
 |-------------|--------------|------------|----------|
 | **Design** | Regras de Negócio | ✅ | [SystemRules.md](requirements/SystemRules.md#módulo-de-prontuários-médicos) |
 | **Lógica** | Medical Record Logic | ✅ | [MedicalRecordsDoctor.md](modules/MedicalRecords/MedicalRecordsDoctor.md) |
-| **Implementação** | MedicalRecord Service | ✅ | [MedicalRecordService.php](../app/Services/MedicalRecordService.php) |
+| **Implementação** | MedicalRecord Service | ✅ | [MedicalRecordService.php](../app/MedicalRecord/Application/Services/MedicalRecordService.php) |
 | **Implementação** | Diagnosis Model | ✅ | [Diagnosis.php](../app/Models/Diagnosis.php) |
 | **Implementação** | Examination Model | ✅ | [Examination.php](../app/Models/Examination.php) |
 | **Implementação** | ClinicalNote Model | ✅ | [ClinicalNote.php](../app/Models/ClinicalNote.php) |

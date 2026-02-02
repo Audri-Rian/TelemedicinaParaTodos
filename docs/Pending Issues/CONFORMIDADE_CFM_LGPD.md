@@ -237,7 +237,7 @@ public function isAvailable(): bool
      - `medicalDocuments()` - Documentos médicos
      - `vitalSigns()` - Sinais vitais (se necessário)
 
-2. ✅ **Model `Prescription`** (`app/Models/Prescription.php`)
+2. ✅ **Model `Prescription`** (`app/MedicalRecord/Infrastructure/Persistence/Models/Prescription.php`)
    - Campos: `medications`, `instructions`, `valid_until`, `status`, `issued_at`
 
 3. ✅ **Model `Examination`** (`app/Models/Examination.php`)
@@ -310,7 +310,7 @@ Conforme linha 185-194 do arquivo `PENDENCIAS.md`:
 
 **Backend:**
 
-1. ✅ **Model `Prescription`** (`app/Models/Prescription.php`)
+1. ✅ **Model `Prescription`** (`app/MedicalRecord/Infrastructure/Persistence/Models/Prescription.php`)
    - Campos de prescrição médica implementados
    - Status: `active`, `expired`, `cancelled`
    - **⚠️ Faltando:** Campos de assinatura digital
@@ -322,7 +322,7 @@ Conforme linha 185-194 do arquivo `PENDENCIAS.md`:
    - Campo `pdf_url` (presente)
    - **✅ Estrutura pronta para assinatura digital**
 
-3. ✅ **Service `MedicalRecordService`** (`app/Services/MedicalRecordService.php`)
+3. ✅ **Service `MedicalRecordService`** (`app/MedicalRecord/Application/Services/MedicalRecordService.php`)
    - Linha 885: `'signature_hash' => $payload['signature_hash'] ?? null`
    - Geração de PDF implementada
    - **⚠️ Faltando:** Integração com certificado ICP-Brasil

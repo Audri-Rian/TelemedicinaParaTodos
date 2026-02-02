@@ -2,15 +2,18 @@
 
 namespace Database\Factories;
 
+use App\MedicalRecord\Infrastructure\Persistence\Models\Examination;
 use App\Models\Doctor;
 use App\Models\Patient;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<\App\Models\Examination>
+ * @extends Factory<\App\MedicalRecord\Infrastructure\Persistence\Models\Examination>
  */
 class ExaminationFactory extends Factory
 {
+    protected $model = Examination::class;
+
     /**
      * Define the model's default state.
      *

@@ -3,7 +3,7 @@
 namespace App\Observers;
 
 use App\Events\PrescriptionIssued;
-use App\Models\Prescription;
+use App\MedicalRecord\Infrastructure\Persistence\Models\Prescription;
 
 class PrescriptionObserver
 {

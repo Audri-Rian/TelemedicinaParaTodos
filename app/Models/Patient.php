@@ -2,6 +2,14 @@
 
 namespace App\Models;
 
+use App\MedicalRecord\Infrastructure\Persistence\Models\ClinicalNote;
+use App\MedicalRecord\Infrastructure\Persistence\Models\Diagnosis;
+use App\MedicalRecord\Infrastructure\Persistence\Models\Examination;
+use App\MedicalRecord\Infrastructure\Persistence\Models\MedicalCertificate;
+use App\MedicalRecord\Infrastructure\Persistence\Models\MedicalRecordAuditLog;
+use App\MedicalRecord\Infrastructure\Persistence\Models\MedicalDocument;
+use App\MedicalRecord\Infrastructure\Persistence\Models\Prescription;
+use App\MedicalRecord\Infrastructure\Persistence\Models\VitalSign;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;

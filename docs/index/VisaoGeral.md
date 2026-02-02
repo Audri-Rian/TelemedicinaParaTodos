@@ -63,9 +63,10 @@ O **Telemedicina para Todos** é uma plataforma moderna de telemedicina que cone
 - **[Matriz de Rastreabilidade](MatrizRequisitos.md)** - Mapeamento completo requisito → implementação
 
 ### 2. 🏗️ Arquitetura e Padrões
-- **[Arquitetura do Sistema](../architecture/Arquitetura.md)** - Estrutura geral, camadas e padrões
-- **[Guia do Frontend](../architecture/VueGuide.md)** - Convenções Vue.js e estrutura do frontend
-- **[Guia de Desenvolvimento](../architecture/DevGuide.md)** - Padrões de código e boas práticas
+- **[Arquitetura do Sistema](../Architecture/Arquitetura.md)** - Estrutura geral, camadas e padrões
+- **[Bounded Contexts](../Architecture/BoundedContexts.md)** - Contextos de domínio (Medical Record, etc.)
+- **[Guia do Frontend](../Architecture/VueGuide.md)** - Convenções Vue.js e estrutura do frontend
+- **[Guia de Desenvolvimento](../Architecture/DevGuide.md)** - Padrões de código e boas práticas
 
 ### 3. 💾 Modelo de Dados
 - **[Diagrama do Banco de Dados](../database/diagrama_banco_dados.md)** - Estrutura das tabelas e relacionamentos

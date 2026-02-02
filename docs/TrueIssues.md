@@ -779,7 +779,7 @@ $q2->where('scheduled_at', '<=', $startTime)
 **Status:** ⚠️ **REVISÃO NECESSÁRIA**
 
 **Arquivos Afetados:**
-- `app/Services/MedicalRecordService.php` (linhas 67, 82, 372, 513)
+- `app/MedicalRecord/Application/Services/MedicalRecordService.php` (linhas 67, 82, 372, 513)
 - `app/Services/AppointmentService.php`
 - Múltiplos controllers
 

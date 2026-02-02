@@ -2,9 +2,9 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-
-class VideoCallRoom extends Model
+/**
+ * @deprecated Use App\Consultation\Infrastructure\Persistence\Models\VideoCallRoom
+ */
+class VideoCallRoom extends \App\Consultation\Infrastructure\Persistence\Models\VideoCallRoom
 {
-    //
 }

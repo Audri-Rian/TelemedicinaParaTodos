@@ -2,7 +2,7 @@
 
 namespace App\Events;
 
-use App\Models\Prescription;
+use App\MedicalRecord\Infrastructure\Persistence\Models\Prescription;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 

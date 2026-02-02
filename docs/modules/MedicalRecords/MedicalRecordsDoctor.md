@@ -495,7 +495,7 @@ Enquanto o paciente tem acesso apenas para **visualizar** seu prontuário, o mé
   - `/doctor/patients/{patient}/medical-record/documents` - Anexar documento
 
 #### 2. Service Layer para Medical Records (Médico)
-- **Arquivo**: `app/Services/MedicalRecordService.php` ✅ Implementado
+- **Arquivo**: `app/MedicalRecord/Application/Services/MedicalRecordService.php` ✅ Implementado
 - **Métodos Implementados**:
   - `getDoctorPatientList(Doctor $doctor, array $filters = []): Collection` ✅
   - `getDoctorPatientMedicalRecord(Doctor $doctor, Patient $patient): array` ✅
@@ -1531,7 +1531,7 @@ Enquanto o paciente tem acesso apenas para **visualizar** seu prontuário, o mé
 
 #### Arquivos Relacionados
 - `app/Models/Patient.php`
-- `app/Services/MedicalRecordService.php`
+- `app/MedicalRecord/Application/Services/MedicalRecordService.php`
 
 ### 3. Módulo de Médicos (Doctors)
 

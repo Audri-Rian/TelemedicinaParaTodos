@@ -1,19 +1,21 @@
 <?php
 
-namespace App\Services;
+namespace App\MedicalRecord\Application\Services;
 
+use App\MedicalRecord\Domain\Contracts\ICPBrasilAdapter;
+use App\MedicalRecord\Domain\ValueObjects\CID10Code;
+use App\MedicalRecord\Infrastructure\Persistence\Models\ClinicalNote;
+use App\MedicalRecord\Infrastructure\Persistence\Models\Diagnosis;
+use App\MedicalRecord\Infrastructure\Persistence\Models\Examination;
+use App\MedicalRecord\Infrastructure\Persistence\Models\MedicalDocument;
+use App\MedicalRecord\Infrastructure\Persistence\Models\MedicalRecordAuditLog;
+use App\MedicalRecord\Infrastructure\Persistence\Models\MedicalCertificate;
+use App\MedicalRecord\Infrastructure\Persistence\Models\Prescription;
+use App\MedicalRecord\Infrastructure\Persistence\Models\VitalSign;
 use App\Models\Appointments;
-use App\Models\ClinicalNote;
-use App\Models\Diagnosis;
 use App\Models\Doctor;
-use App\Models\Examination;
-use App\Models\MedicalDocument;
-use App\Models\MedicalRecordAuditLog;
-use App\Models\MedicalCertificate;
 use App\Models\Patient;
-use App\Models\Prescription;
 use App\Models\User;
-use App\Models\VitalSign;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
@@ -24,6 +26,11 @@ use Illuminate\Support\Str;
 
 class MedicalRecordService
 {
+    public function __construct(
+        private readonly ICPBrasilAdapter $icpBrasilAdapter,
+    ) {
+    }
+
     /**
      * Retorna o payload completo para o prontuário do paciente.
      */
@@ -742,12 +749,14 @@ class MedicalRecordService
     {
         $this->ensureDoctorOwnsAppointment($appointment, $doctor);
 
-        return DB::transaction(function () use ($appointment, $doctor, $payload) {
+        $cid10 = new CID10Code($payload['cid10_code']);
+
+        return DB::transaction(function () use ($appointment, $doctor, $payload, $cid10) {
             $diagnosis = Diagnosis::create([
                 'appointment_id' => $appointment->id,
                 'doctor_id' => $doctor->id,
                 'patient_id' => $appointment->patient_id,
-                'cid10_code' => $payload['cid10_code'],
+                'cid10_code' => $cid10->value(),
                 'cid10_description' => $payload['cid10_description'] ?? null,
                 'diagnosis_type' => $payload['type'] ?? Diagnosis::TYPE_PRINCIPAL,
                 'description' => $payload['description'] ?? null,
@@ -779,18 +788,38 @@ class MedicalRecordService
             throw new \RuntimeException('Paciente não está associado à consulta.');
         }
 
+        $validUntil = ! empty($payload['valid_until'])
+            ? Carbon::parse($payload['valid_until'])
+            : now()->addDays(30);
+        $issuedAt = now();
+
+        $documentContent = $this->buildPrescriptionContentForSignature(
+            $appointment->id,
+            $doctor->id,
+            $patient->id,
+            $payload['medications'],
+            $payload['instructions'] ?? null,
+            $validUntil,
+            $issuedAt,
+        );
+
+        $signature = $this->icpBrasilAdapter->signDocument($documentContent, [
+            'doctor_id' => $doctor->id,
+            'document_type' => 'prescription',
+        ]);
+
         $prescription = Prescription::create([
             'appointment_id' => $appointment->id,
             'doctor_id' => $doctor->id,
             'patient_id' => $patient->id,
             'medications' => $payload['medications'],
             'instructions' => $payload['instructions'] ?? null,
-            'valid_until' => !empty($payload['valid_until'])
-                ? Carbon::parse($payload['valid_until'])
-                : now()->addDays(30),
+            'valid_until' => $validUntil,
             'status' => Prescription::STATUS_ACTIVE,
             'metadata' => $payload['metadata'] ?? null,
-            'issued_at' => now(),
+            'issued_at' => $issuedAt,
+            'signature_hash' => $signature->signatureHash(),
+            'verification_code' => $signature->verificationCode(),
         ]);
 
         $this->logAccess(
@@ -1106,5 +1135,28 @@ class MedicalRecordService
 
         return $code;
     }
-}
 
+    /**
+     * Conteúdo canônico da prescrição para assinatura digital ICP-Brasil.
+     * Formato estável para garantir integridade e não-repúdio.
+     */
+    protected function buildPrescriptionContentForSignature(
+        string $appointmentId,
+        string $doctorId,
+        string $patientId,
+        array $medications,
+        ?string $instructions,
+        Carbon $validUntil,
+        Carbon $issuedAt,
+    ): string {
+        return json_encode([
+            'appointment_id' => $appointmentId,
+            'doctor_id' => $doctorId,
+            'patient_id' => $patientId,
+            'medications' => $medications,
+            'instructions' => $instructions,
+            'valid_until' => $validUntil->toIso8601String(),
+            'issued_at' => $issuedAt->toIso8601String(),
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    }
+}

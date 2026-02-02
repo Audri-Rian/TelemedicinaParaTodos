@@ -11,7 +11,7 @@ use App\Http\Requests\Doctor\MedicalRecords\StorePrescriptionRequest;
 use App\Http\Requests\Doctor\MedicalRecords\StoreVitalSignRequest;
 use App\Models\Appointments;
 use App\Models\Patient;
-use App\Services\MedicalRecordService;
+use App\MedicalRecord\Application\Services\MedicalRecordService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Storage;

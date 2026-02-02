@@ -2,7 +2,7 @@
 
 namespace App\Events;
 
-use App\Models\MedicalCertificate;
+use App\MedicalRecord\Infrastructure\Persistence\Models\MedicalCertificate;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 

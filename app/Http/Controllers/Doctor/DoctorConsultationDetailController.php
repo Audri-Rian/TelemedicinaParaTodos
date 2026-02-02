@@ -4,7 +4,8 @@ namespace App\Http\Controllers\Doctor;
 
 use App\Http\Controllers\Controller;
 use App\Models\Appointments;
-use App\Services\MedicalRecordService;
+use App\MedicalRecord\Application\Services\MedicalRecordService;
+use App\MedicalRecord\Domain\ValueObjects\CID10Code;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -206,9 +207,22 @@ class DoctorConsultationDetailController extends Controller
             'chief_complaint' => ['nullable', 'string', 'max:1000'],
             'physical_exam' => ['nullable', 'string', 'max:5000'],
             'diagnosis' => ['nullable', 'string', 'max:500'],
-            'cid10' => ['nullable', 'string', 'max:10'],
+            'cid10' => [
+                'nullable',
+                'string',
+                'max:10',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    if ($value !== '' && $value !== null && ! CID10Code::isValid((string) $value)) {
+                        $fail('O código CID-10 é inválido. Use o formato A00.0 a Z99.9 (ex: A00.0, B20, Z99.9).');
+                    }
+                },
+            ],
             'instructions' => ['nullable', 'string', 'max:2000'],
         ]);
+
+        if (! empty($validated['cid10'])) {
+            $validated['cid10'] = (new CID10Code($validated['cid10']))->value();
+        }
 
         $metadata = $appointment->metadata ?? [];
         $metadata = array_merge($metadata, $validated);

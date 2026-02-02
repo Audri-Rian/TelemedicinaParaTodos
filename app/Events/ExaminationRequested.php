@@ -2,7 +2,7 @@
 
 namespace App\Events;
 
-use App\Models\Examination;
+use App\MedicalRecord\Infrastructure\Persistence\Models\Examination;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 

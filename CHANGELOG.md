@@ -8,7 +8,11 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
 ---
 
-## [1.0.0] - 2025-01-30
+## [1.0.1] - 02/02/2026
+
+Reestruturação a arquitetura do projeto para seguir a nomeclatura DDD para deixar o projeto redondo.
+
+## [1.0.0] - 30/01/2026
 
 Versão inicial documentada. Corresponde ao estado atual do repositório com plataforma de telemedicina funcional.
 

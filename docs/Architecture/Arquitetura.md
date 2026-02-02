@@ -47,7 +47,7 @@ O sistema segue uma arquitetura em camadas bem definida:
 - Implementados:
   - `AppointmentService` - Lógica de agendamentos
   - `AvailabilityService` - Gestão de disponibilidade
-  - `MedicalRecordService` - Gestão de prontuários médicos
+  - `MedicalRecordService` - Gestão de prontuários (em `app/MedicalRecord/Application/Services/`)
   - `TimelineEventService` - Gestão de timeline profissional
   - `AvatarService` - Gestão de avatares
   - `ScheduleService` (Doctor) - Configuração de agenda do médico
@@ -59,6 +59,7 @@ O sistema segue uma arquitetura em camadas bem definida:
 - Scopes para consultas reutilizáveis
 - Accessors/Mutators para formatação
 - Soft Deletes e UUIDs implementados
+- **Models de prontuário** (Prescription, Diagnosis, Examination, etc.) estão em `app/MedicalRecord/Infrastructure/Persistence/Models/`
 
 #### Events/Observers
 - **Events**:
@@ -79,92 +80,91 @@ O sistema segue uma arquitetura em camadas bem definida:
 
 ## Estrutura do Backend
 
+### Bounded Contexts (DDD Light)
+
+O backend utiliza **Bounded Contexts** para organizar o código por domínio. Cada contexto agrupa entidades, regras de negócio e infraestrutura relacionada, mantendo coesão e facilitando evolução futura (ex.: extração como pacote Laravel).
+
+**Contextos implementados:**
+
+| Contexto | Localização | Descrição |
+|----------|-------------|-----------|
+| **Medical Record** | `app/MedicalRecord/` | Prontuário eletrônico: prescrições, diagnósticos, exames, atestados, sinais vitais, documentos, auditoria |
+| **Auth & Scheduling** | `app/Models/`, `app/Services/` | Usuários, médicos, pacientes, agendamentos, disponibilidade (estrutura legada, migração futura) |
+| **Consultation** | `app/Models/`, `app/Events/` | Videoconferência, salas, eventos (estrutura legada, migração futura) |
+
+**Estrutura de um Bounded Context (padrão DDD Light):**
+
+```
+app/{Contexto}/
+├── Domain/                      # Núcleo do domínio (regras puras)
+│   ├── ValueObjects/            # Objetos de valor imutáveis (ex: CID10Code)
+│   ├── Events/                  # Eventos de domínio (opcional)
+│   └── Exceptions/              # Exceções específicas do domínio
+├── Application/                 # Casos de uso e orquestração
+│   └── Services/                # Services que orquestram o fluxo
+└── Infrastructure/              # Detalhes técnicos
+    ├── Persistence/Models/      # Eloquent Models (ORM)
+    └── ExternalServices/        # Integrações externas (ex: ICP-Brasil)
+```
+
+**Controllers e rotas** permanecem em `app/Http/Controllers/` (organizados por Doctor/Patient) e **chamam** os Services dos contextos. Não são movidos para dentro dos contextos.
+
+Consulte **[BoundedContexts.md](BoundedContexts.md)** para o guia completo de uso e convenções.
+
 ### Organização por Domínio
-O backend foi estruturado seguindo uma abordagem **DDD Light**, organizando as responsabilidades por domínio dentro das pastas padrão do Laravel:
+O backend combina **Bounded Contexts** (para domínios ricos) com a estrutura padrão do Laravel:
 
 ```
 app/
+├── MedicalRecord/               # BOUNDED CONTEXT - Prontuário Eletrônico
+│   ├── Domain/
+│   │   ├── ValueObjects/        # CID10Code, PrescriptionItem, VitalSignValue
+│   │   └── Exceptions/          # PrescriptionWithoutSignatureException
+│   ├── Application/
+│   │   └── Services/
+│   │       └── MedicalRecordService.php
+│   └── Infrastructure/
+│       ├── Persistence/Models/   # Prescription, Diagnosis, Examination,
+│       │                        # ClinicalNote, MedicalCertificate, VitalSign,
+│       │                        # MedicalDocument, MedicalRecordAuditLog
+│       └── ExternalServices/     # (futuro: ICPBrasilAdapter)
 ├── Http/
 │   ├── Controllers/
-│   │   ├── Api/AuthController.php           # API de autenticação
-│   │   ├── Auth/                           # Controllers de autenticação
-│   │   │   ├── AuthenticatedSessionController.php
-│   │   │   ├── DoctorRegistrationController.php
-│   │   │   ├── PatientRegistrationController.php
+│   │   ├── Api/AuthController.php
+│   │   ├── Auth/
+│   │   ├── Doctor/
+│   │   │   ├── DoctorPatientMedicalRecordController.php  # usa MedicalRecordService
 │   │   │   └── ...
-│   │   ├── Doctor/                         # Controllers do médico
-│   │   │   ├── DoctorDashboardController.php
-│   │   │   ├── DoctorAppointmentsController.php
-│   │   │   ├── DoctorAvailabilityController.php
-│   │   │   ├── DoctorConsultationsController.php
-│   │   │   ├── DoctorConsultationDetailController.php
-│   │   │   ├── DoctorMessagesController.php
-│   │   │   ├── DoctorHistoryController.php
-│   │   │   ├── DoctorPatientsController.php
-│   │   │   ├── DoctorDocumentsController.php
-│   │   │   ├── PatientDetailsController.php
-│   │   │   ├── DoctorPatientMedicalRecordController.php
-│   │   │   ├── DoctorScheduleController.php
-│   │   │   ├── DoctorServiceLocationController.php
-│   │   │   ├── DoctorAvailabilitySlotController.php
-│   │   │   └── DoctorBlockedDateController.php
-│   │   ├── Patient/                        # Controllers do paciente
-│   │   │   ├── PatientDashboardController.php
-│   │   │   ├── PatientSearchConsultationsController.php
-│   │   │   ├── ScheduleConsultationController.php
-│   │   │   ├── DoctorPerfilController.php
-│   │   │   ├── PatientMessagesController.php
-│   │   │   ├── PatientVideoCallController.php
-│   │   │   ├── PatientHistoryConsultationsController.php
-│   │   │   ├── PatientConsultationDetailsController.php
-│   │   │   ├── PatientNextConsultationController.php
-│   │   │   └── PatientMedicalRecordController.php
-│   │   ├── Settings/                       # Configurações do usuário
-│   │   │   ├── PasswordController.php
-│   │   │   ├── ProfileController.php
-│   │   │   └── BugReportController.php
-│   │   ├── VideoCall/VideoCallController.php # Videoconferência
-│   │   ├── MedicalRecordDocumentController.php # Documentos médicos
-│   │   ├── TimelineEventController.php     # Timeline events
-│   │   ├── SpecializationController.php    # Especializações médicas
-│   │   ├── AppointmentsController.php      # Consultas (compartilhado)
-│   │   ├── ConsultationsController.php     # Consultas
-│   │   ├── HealthController.php            # Saúde
-│   │   ├── AvatarController.php            # Avatares
-│   │   ├── TermsOfServiceController.php    # Termos de serviço
-│   │   └── PrivacyPolicyController.php     # Política de privacidade
-│   ├── Middleware/                         # Middleware personalizado
-│   └── Requests/                          # Form Requests de validação
-├── Models/
-│   ├── User.php                           # Modelo base de usuário
-│   ├── Doctor.php                         # Modelo do médico
-│   ├── Patient.php                        # Modelo do paciente
-│   ├── Appointments.php                   # Agendamentos
-│   ├── AppointmentLog.php                 # Log de agendamentos
-│   ├── Specialization.php                 # Especializações
-│   ├── ServiceLocation.php                # Locais de atendimento
-│   ├── AvailabilitySlot.php               # Slots de disponibilidade
-│   ├── Doctor/BlockedDate.php             # Datas bloqueadas
-│   ├── Prescription.php                   # Prescrições médicas
-│   ├── Diagnosis.php                      # Diagnósticos (CID-10)
-│   ├── Examination.php                    # Exames solicitados
-│   ├── ClinicalNote.php                   # Anotações clínicas
-│   ├── MedicalCertificate.php             # Atestados médicos
-│   ├── VitalSign.php                      # Sinais vitais
-│   ├── MedicalDocument.php                # Documentos médicos
-│   ├── MedicalRecordAuditLog.php          # Logs de auditoria
-│   ├── VideoCallRoom.php                  # Salas de videoconferência
-│   ├── VideoCallEvent.php                 # Eventos de videoconferência
-│   └── TimelineEvent.php                  # Eventos de timeline
+│   │   ├── Patient/
+│   │   │   ├── PatientMedicalRecordController.php
+│   │   │   └── ...
+│   │   ├── MedicalRecordDocumentController.php
+│   │   ├── VideoCall/
+│   │   └── ...
+│   ├── Middleware/
+│   └── Requests/
+├── Models/                      # Models compartilhados / outros contextos
+│   ├── User.php
+│   ├── Doctor.php
+│   ├── Patient.php
+│   ├── Appointments.php
+│   ├── AppointmentLog.php
+│   ├── Specialization.php
+│   ├── ServiceLocation.php
+│   ├── AvailabilitySlot.php
+│   ├── Doctor/BlockedDate.php
+│   ├── VideoCallRoom.php
+│   ├── VideoCallEvent.php
+│   ├── TimelineEvent.php
+│   └── ...
 ├── Services/
-│   ├── AppointmentService.php             # Lógica de agendamentos
-│   ├── AvailabilityService.php            # Gestão de disponibilidade
-│   ├── MedicalRecordService.php           # Gestão de prontuários
-│   ├── TimelineEventService.php           # Gestão de timeline
-│   ├── AvatarService.php                  # Gestão de avatares
+│   ├── AppointmentService.php
+│   ├── AvailabilityService.php
+│   ├── TimelineEventService.php
+│   ├── AvatarService.php
 │   └── Doctor/
-│       ├── ScheduleService.php            # Configuração de agenda
-│       └── AvailabilityTimelineService.php # Timeline de disponibilidade
+│       ├── ScheduleService.php
+│       └── AvailabilityTimelineService.php
 ├── Events/
 │   ├── RequestVideoCall.php              # Evento de solicitação de chamada
 │   ├── RequestVideoCallStatus.php        # Evento de status da chamada
@@ -396,10 +396,10 @@ Implementar testes unitários e de integração
   - `AppointmentService`, `AvailabilityService`, `MedicalRecordService`
   - `TimelineEventService`, `AvatarService`, `Doctor/ScheduleService`
 - **Models**: 
-  - `User`, `Doctor`, `Patient`, `Appointments`, `Specialization`
+  - `User`, `Doctor`, `Patient`, `Appointments`, `Specialization` (em `app/Models/`)
   - `ServiceLocation`, `AvailabilitySlot`, `Doctor/BlockedDate`
-  - `Prescription`, `Diagnosis`, `Examination`, `ClinicalNote`, `MedicalCertificate`, `VitalSign`, `MedicalDocument`
-  - `MedicalRecordAuditLog`, `VideoCallRoom`, `VideoCallEvent`, `TimelineEvent`
+  - `VideoCallRoom`, `VideoCallEvent`, `TimelineEvent`
+  - Prontuário: `Prescription`, `Diagnosis`, `Examination`, `ClinicalNote`, `MedicalCertificate`, `VitalSign`, `MedicalDocument`, `MedicalRecordAuditLog` (em `app/MedicalRecord/Infrastructure/Persistence/Models/`)
 - **Events**: 
   - `RequestVideoCall`, `RequestVideoCallStatus`, `AppointmentStatusChanged`
   - `VideoCallRoomCreated`, `VideoCallRoomExpired`, `VideoCallUserJoined`, `VideoCallUserLeft`
@@ -416,10 +416,64 @@ Implementar testes unitários e de integração
 - **Layouts**: `AppLayout.vue`, `AuthLayout.vue`
 - **Composables**: `useDoctorRegistration.ts`, `usePatientRegistration.ts`
 
+## Guia de Uso da Arquitetura (daqui para frente)
+
+### Quando criar código em um Bounded Context
+
+1. **Novas entidades de prontuário** (ex.: novo tipo de documento médico)
+   - Criar Model em `app/MedicalRecord/Infrastructure/Persistence/Models/`
+   - Namespace: `App\MedicalRecord\Infrastructure\Persistence\Models`
+   - Adicionar migration em `database/migrations/`
+   - Registrar no `MedicalRecordService` se fizer parte do fluxo de prontuário
+
+2. **Novas regras de validação de domínio** (ex.: formato de código, limites numéricos)
+   - Criar Value Object em `app/MedicalRecord/Domain/ValueObjects/`
+   - Usar no Service ou FormRequest antes de persistir
+
+3. **Integrações externas** (ex.: ICP-Brasil para assinatura digital)
+   - Criar Adapter em `app/MedicalRecord/Infrastructure/ExternalServices/`
+   - O Service chama o Adapter; o Adapter encapsula a comunicação com a API externa
+
+4. **Exceções de domínio** (ex.: prescrição sem assinatura válida)
+   - Criar em `app/MedicalRecord/Domain/Exceptions/`
+   - Lançar no Service quando a regra de negócio for violada
+
+### Quando criar código fora dos Bounded Contexts
+
+- **Controllers**: Sempre em `app/Http/Controllers/` (Doctor/, Patient/, etc.)
+- **Form Requests**: Em `app/Http/Requests/`
+- **Events Laravel** (PrescriptionIssued, etc.): Em `app/Events/` — mantidos para compatibilidade com listeners e broadcasting
+- **Observers**: Em `app/Observers/` — atualizar o `use` do model para o namespace do contexto
+- **Models compartilhados**: User, Doctor, Patient, Appointments permanecem em `app/Models/` até migração futura
+
+### Fluxo de dependências
+
+```
+Controller (Http) → Service (Application) → Models (Infrastructure) + Value Objects (Domain)
+                       ↓
+                 ExternalServices (Infrastructure) [quando houver integração]
+```
+
+- **Controllers** nunca importam Models de prontuário diretamente; usam apenas o `MedicalRecordService`
+- **Services** de um contexto podem usar Models de `app/Models/` (User, Doctor, Patient, Appointments) para relacionamentos
+- **Value Objects** são usados no Service ou FormRequest para validar antes de persistir
+
+### Novos Bounded Contexts (futuro)
+
+Ao criar um novo contexto (ex.: Scheduling, Consultation, Auth):
+
+1. Criar pasta `app/{NomeContexto}/` com Domain, Application, Infrastructure
+2. Mover models e services relacionados
+3. Atualizar imports em Controllers, Observers, Events
+4. Atualizar Factories com `$model` apontando para o novo namespace
+5. Registrar Observers no AppServiceProvider com a classe do novo namespace
+6. Atualizar esta documentação
+
 ## 🔗 Referências Cruzadas
 
 ### Documentação Relacionada
 - **[📋 Visão Geral](../index/VisaoGeral.md)** - Índice central da documentação
+- **[📦 Bounded Contexts](BoundedContexts.md)** - Guia detalhado de contextos e convenções
 - **[📊 Matriz de Rastreabilidade](../index/MatrizRequisitos.md)** - Mapeamento requisito → implementação
 - **[📚 Glossário](../index/Glossario.md)** - Definições de termos técnicos
 - **[📜 Regras do Sistema](../requirements/SystemRules.md)** - Regras de negócio e compliance
@@ -428,8 +482,9 @@ Implementar testes unitários e de integração
 
 ### Implementações Relacionadas
 - **[Controllers](../../app/Http/Controllers/)** - Camada de apresentação
-- **[Services](../../app/Services/)** - Camada de lógica de negócio
-- **[Models](../../app/Models/)** - Entidades de domínio
+- **[Services](../../app/Services/)** - Camada de lógica de negócio (Appointment, Availability, etc.)
+- **[MedicalRecord Context](../../app/MedicalRecord/)** - Bounded Context de prontuário
+- **[Models](../../app/Models/)** - Entidades compartilhadas (User, Doctor, Patient, Appointments, etc.)
 - **[Events](../../app/Events/)** - Eventos para comunicação em tempo real
 - **[Observers](../../app/Observers/)** - Hooks de modelo
 - **[Database Migrations](../../database/migrations/)** - Estrutura do banco
@@ -447,8 +502,8 @@ Implementar testes unitários e de integração
 
 ---
 
-*Última atualização: Janeiro 2025*
-*Versão: 2.0*
+*Última atualização: Janeiro 2026*
+*Versão: 3.0 - Bounded Contexts*
 
 *Este documento deve ser atualizado conforme a evolução do projeto.*
 

@@ -2,9 +2,9 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-
-class VideoCallEvent extends Model
+/**
+ * @deprecated Use App\Consultation\Infrastructure\Persistence\Models\VideoCallEvent
+ */
+class VideoCallEvent extends \App\Consultation\Infrastructure\Persistence\Models\VideoCallEvent
 {
-    //
 }
