@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\MedicalDocument;
+use App\MedicalRecord\Infrastructure\Persistence\Models\MedicalDocument;
 use App\Models\Patient;
-use App\Services\MedicalRecordService;
+use App\MedicalRecord\Application\Services\MedicalRecordService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;

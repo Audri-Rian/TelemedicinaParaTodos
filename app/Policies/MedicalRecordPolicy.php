@@ -4,7 +4,7 @@ namespace App\Policies;
 
 use App\Models\Patient;
 use App\Models\User;
-use App\Services\MedicalRecordService;
+use App\MedicalRecord\Application\Services\MedicalRecordService;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class MedicalRecordPolicy

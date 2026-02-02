@@ -2,15 +2,18 @@
 
 namespace Database\Factories;
 
+use App\MedicalRecord\Infrastructure\Persistence\Models\Prescription;
 use App\Models\Doctor;
 use App\Models\Patient;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<\App\Models\Prescription>
+ * @extends Factory<\App\MedicalRecord\Infrastructure\Persistence\Models\Prescription>
  */
 class PrescriptionFactory extends Factory
 {
+    protected $model = Prescription::class;
+
     /**
      * Define the model's default state.
      *

@@ -2,15 +2,18 @@
 
 namespace Database\Factories;
 
+use App\MedicalRecord\Infrastructure\Persistence\Models\MedicalRecordAuditLog;
 use App\Models\Patient;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<\App\Models\MedicalRecordAuditLog>
+ * @extends Factory<\App\MedicalRecord\Infrastructure\Persistence\Models\MedicalRecordAuditLog>
  */
 class MedicalRecordAuditLogFactory extends Factory
 {
+    protected $model = MedicalRecordAuditLog::class;
+
     /**
      * Define the model's default state.
      *

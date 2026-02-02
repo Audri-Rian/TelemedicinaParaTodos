@@ -1,16 +1,19 @@
 <?php
 
-namespace App\Models;
+namespace App\MedicalRecord\Infrastructure\Persistence\Models;
 
+use App\Models\Appointments;
+use App\Models\Doctor;
+use App\Models\Patient;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class Prescription extends Model
+class Diagnosis extends Model
 {
-    /** @use HasFactory<\Database\Factories\PrescriptionFactory> */
+    /** @use HasFactory<\Database\Factories\DiagnosisFactory> */
     use HasFactory;
     use HasUuids;
     use SoftDeletes;
@@ -19,24 +22,14 @@ class Prescription extends Model
         'appointment_id',
         'doctor_id',
         'patient_id',
-        'medications',
-        'instructions',
-        'valid_until',
-        'status',
-        'metadata',
-        'issued_at',
+        'cid10_code',
+        'cid10_description',
+        'diagnosis_type',
+        'description',
     ];
 
-    protected $casts = [
-        'medications' => 'array',
-        'metadata' => 'array',
-        'issued_at' => 'datetime',
-        'valid_until' => 'date',
-    ];
-
-    public const STATUS_ACTIVE = 'active';
-    public const STATUS_EXPIRED = 'expired';
-    public const STATUS_CANCELLED = 'cancelled';
+    public const TYPE_PRINCIPAL = 'principal';
+    public const TYPE_SECONDARY = 'secondary';
 
     public function appointment(): BelongsTo
     {

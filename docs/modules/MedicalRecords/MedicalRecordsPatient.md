@@ -840,7 +840,7 @@ O módulo de **Prontuários Médicos** (Medical Records) tem como objetivo centr
 ### Implementado ✅
 
 #### 1. Service Layer para Medical Records
-- **Arquivo**: `app/Services/MedicalRecordService.php` ✅
+- **Arquivo**: `app/MedicalRecord/Application/Services/MedicalRecordService.php` ✅
 - **Métodos Implementados**:
   - `getPatientMedicalRecord(Patient $patient): array` ✅
   - `canDoctorViewPatientRecord(Doctor $doctor, Patient $patient): bool` ✅

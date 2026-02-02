@@ -2,10 +2,10 @@
 
 namespace App\Jobs;
 
-use App\Models\MedicalDocument;
+use App\MedicalRecord\Infrastructure\Persistence\Models\MedicalDocument;
 use App\Models\Patient;
 use App\Models\User;
-use App\Services\MedicalRecordService;
+use App\MedicalRecord\Application\Services\MedicalRecordService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;

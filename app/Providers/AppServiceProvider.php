@@ -2,9 +2,13 @@
 
 namespace App\Providers;
 
-use Illuminate\Support\ServiceProvider;
+use App\MedicalRecord\Domain\Contracts\ICPBrasilAdapter;
+use App\MedicalRecord\Infrastructure\Persistence\Models\Examination;
+use App\MedicalRecord\Infrastructure\Persistence\Models\MedicalCertificate;
+use App\MedicalRecord\Infrastructure\Persistence\Models\Prescription;
 use App\Models\Appointments;
 use App\Observers\AppointmentsObserver;
+use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -13,7 +17,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->bind(ICPBrasilAdapter::class, function () {
+            $adapter = config('icp_brasil.providers.'.config('icp_brasil.adapter', 'unconfigured'));
+
+            return $this->app->make($adapter);
+        });
     }
 
     /**
@@ -22,9 +30,9 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Appointments::observe(AppointmentsObserver::class);
-        \App\Models\Prescription::observe(\App\Observers\PrescriptionObserver::class);
-        \App\Models\Examination::observe(\App\Observers\ExaminationObserver::class);
-        \App\Models\MedicalCertificate::observe(\App\Observers\MedicalCertificateObserver::class);
+        Prescription::observe(\App\Observers\PrescriptionObserver::class);
+        Examination::observe(\App\Observers\ExaminationObserver::class);
+        MedicalCertificate::observe(\App\Observers\MedicalCertificateObserver::class);
 
         // Registrar listeners de notificações
         \Illuminate\Support\Facades\Event::listen(

@@ -3,7 +3,7 @@
 namespace App\Observers;
 
 use App\Events\MedicalCertificateIssued;
-use App\Models\MedicalCertificate;
+use App\MedicalRecord\Infrastructure\Persistence\Models\MedicalCertificate;
 
 class MedicalCertificateObserver
 {

@@ -36,9 +36,15 @@ graph TB
     subgraph "Camada de Domínio - Models"
         D1[User/Doctor/Patient]
         D2[Appointments]
-        D3[Medical Records]
+        D3[MedicalRecord Context]
         D4[VideoCall]
         D5[Timeline Events]
+    end
+
+    subgraph "Bounded Context MedicalRecord"
+        MR1[Prescription/Diagnosis/Examination]
+        MR2[ClinicalNote/MedicalCertificate]
+        MR3[VitalSign/MedicalDocument/AuditLog]
     end
 
     subgraph "Camada de Infraestrutura - Events"
@@ -98,13 +104,18 @@ graph TB
     C1 --> D2
     C2 --> D2
     C3 --> D3
+    D3 --> MR1
+    D3 --> MR2
+    D3 --> MR3
     C4 --> D5
     C5 --> D1
     C6 --> D2
 
     D1 --> I1
     D2 --> I1
-    D3 --> I1
+    MR1 --> I1
+    MR2 --> I1
+    MR3 --> I1
     D4 --> I1
     D5 --> I1
 
@@ -235,6 +246,6 @@ graph TB
 
 ---
 
-*Última atualização: Janeiro 2025*
+*Última atualização: Janeiro 2026 - Bounded Context MedicalRecord*
 
 

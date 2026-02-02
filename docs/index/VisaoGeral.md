@@ -68,6 +68,7 @@ O **Telemedicina para Todos** é uma plataforma moderna de telemedicina que cone
 
 ### 2. 🏗️ Arquitetura e Padrões
 - **[Arquitetura do Sistema](../layers/architecture-governance/Architecture/Arquitetura.md)** - Estrutura geral, camadas e padrões
+- **[Bounded Contexts](../layers/architecture-governance/Architecture/BoundedContexts.md)** - Contextos de domínio (Medical Record, etc.)
 - **[Guia do Frontend](../layers/architecture-governance/Architecture/VueGuide.md)** - Convenções Vue.js e estrutura do frontend
 - **[Guia de Desenvolvimento](../layers/architecture-governance/Architecture/DevGuide.md)** - Padrões de código e boas práticas
 - **[Guia para Desenvolvedores](../guides/GuiaDesenvolvedor.md)** - Básico do ambiente, onde achar cada doc, Swagger e ReDoc

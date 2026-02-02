@@ -3,7 +3,7 @@
 namespace App\Observers;
 
 use App\Events\ExaminationRequested;
-use App\Models\Examination;
+use App\MedicalRecord\Infrastructure\Persistence\Models\Examination;
 
 class ExaminationObserver
 {

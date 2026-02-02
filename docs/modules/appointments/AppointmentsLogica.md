@@ -153,7 +153,7 @@ Alguns requisitos essenciais:
 - **[Appointment Service](../../app/Services/AppointmentService.php)** - Lógica de negócio
 - **[Availability Service](../../app/Services/AvailabilityService.php)** - Gestão de disponibilidade
 - **[Schedule Service](../../app/Services/Doctor/ScheduleService.php)** - Configuração de agenda
-- **[Medical Record Service](../../app/Services/MedicalRecordService.php)** - Gestão de prontuários
+- **[Medical Record Service](../../app/MedicalRecord/Application/Services/MedicalRecordService.php)** - Gestão de prontuários
 - **[Appointment Observer](../../app/Observers/AppointmentsObserver.php)** - Eventos automáticos
 - **[Appointment Migration](../../database/migrations/2025_09_10_152050_create_appointments_table.php)** - Estrutura do banco
 - **[Appointment Tests](../../tests/Unit/AppointmentsTest.php)** - Testes unitários

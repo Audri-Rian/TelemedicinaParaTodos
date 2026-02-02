@@ -5,6 +5,7 @@ Esta pasta contém a documentação sobre a arquitetura do sistema, padrões de 
 ## 📁 Arquivos
 
 - **[🏗️ Arquitetura do Sistema](Arquitetura.md)** - Estrutura geral, camadas e padrões arquiteturais
+- **[📦 Bounded Contexts](BoundedContexts.md)** - Guia de contextos de domínio (Medical Record, etc.)
 - **[🎨 Guia do Frontend](VueGuide.md)** - Convenções Vue.js e estrutura do frontend
 - **[💻 Guia de Desenvolvimento](DevGuide.md)** - Padrões de código e boas práticas
 
@@ -19,7 +20,7 @@ Estes documentos definem **como** o sistema está estruturado e **como** deve se
 
 ## 🔗 Navegação
 
-- **Arquitetos**: Foque na [Arquitetura do Sistema](Arquitetura.md)
+- **Arquitetos**: Foque na [Arquitetura do Sistema](Arquitetura.md) e em [Bounded Contexts](BoundedContexts.md)
 - **Frontend Developers**: Use o [Guia do Frontend](VueGuide.md)
 - **Backend Developers**: Consulte o [Guia de Desenvolvimento](DevGuide.md)
 
@@ -39,5 +40,5 @@ O sistema segue os princípios:
 
 ---
 
-*Última atualização: Dezembro 2024*
+*Última atualização: Janeiro 2026*
 

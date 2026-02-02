@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\MedicalRecord\Infrastructure\Persistence\Models\Diagnosis;
 use App\Models\Appointments;
-use App\Models\Diagnosis;
 use App\Models\Doctor;
 use App\Models\Patient;
 use Illuminate\Foundation\Testing\RefreshDatabase;

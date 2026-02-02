@@ -2,15 +2,18 @@
 
 namespace Database\Factories;
 
+use App\MedicalRecord\Infrastructure\Persistence\Models\VitalSign;
 use App\Models\Doctor;
 use App\Models\Patient;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<\App\Models\VitalSign>
+ * @extends Factory<\App\MedicalRecord\Infrastructure\Persistence\Models\VitalSign>
  */
 class VitalSignFactory extends Factory
 {
+    protected $model = VitalSign::class;
+
     /**
      * Define the model's default state.
      *
