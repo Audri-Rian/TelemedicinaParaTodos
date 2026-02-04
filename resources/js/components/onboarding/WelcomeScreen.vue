@@ -104,9 +104,8 @@ const handleOpenChange = (open: boolean) => {
                 <!-- Conteúdo principal -->
                 <div class="relative px-6 pt-8 pb-6">
                     <!-- Container para foto (placeholder) -->
-                    <div class="w-full h-48 bg-gray-100 rounded-lg mb-6 flex items-center justify-center">
-                        <!-- Placeholder para foto futura -->
-                        <div class="text-gray-400 text-sm">Foto aqui</div>
+                    <div class="w-full h-48 bg-gray-100 rounded-lg mb-6 overflow-hidden">
+                        <img src="/images/GuideGemini.png" alt="Bem-vindo à Telemedicina" class="w-full h-full object-cover" />
                     </div>
                     
                     <!-- Título -->
