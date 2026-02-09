@@ -8,6 +8,15 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
 ---
 
+## [1.1.0] - 2025-02-09
+
+### Added
+
+- **CodeRabbit**: Configuração super configurável para o projeto (PR #2).
+- **Regras de negócio**: Novo sistema de regras de negócio, preparatório para centralizar em `telemedicine.php` como principal arquivo de configuração (PR #1).
+
+---
+
 ## [1.0.0] - 2025-01-30
 
 Versão inicial documentada. Corresponde ao estado atual do repositório com plataforma de telemedicina funcional.
