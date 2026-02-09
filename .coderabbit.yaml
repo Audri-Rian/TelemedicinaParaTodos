@@ -1,0 +1,70 @@
+# CodeRabbit AI - Configuração para TelemedicinaParaTodos
+# https://docs.coderabbit.ai/reference/configuration
+#
+# Nota: architecture_review, guidelines, security e ignore.files não existem no schema.
+# Usamos path_instructions, path_filters, tools e tone_instructions como equivalentes.
+
+language: "pt-BR"
+early_access: false
+
+# Tom técnico para chat (equivalente a style: "technical")
+tone_instructions: "Seja conciso e técnico. Evite explicações verbosas. Foque em feedback acionável."
+
+reviews:
+  profile: "assertive"
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: true
+  review_status: true
+  review_details: true
+
+  # Guidelines Laravel + Vue via path_instructions (SOLID, Service Layer, etc.)
+  path_instructions:
+    - path: "app/**/*.php"
+      instructions: |
+        Laravel + PHP guidelines:
+        - Use princípios SOLID
+        - Evite controllers gordos; prefira classes Service
+        - Valide todas as entradas usando FormRequest
+        - Evite N+1 queries; use eager loading
+        - Evite SQL inline; use Eloquent ou Query Builder
+        - Sugira refatorações estruturais (Service Layer, Repository Pattern)
+        - Reporte violações SOLID
+    - path: "resources/js/**/*.{vue,ts,tsx,js}"
+      instructions: |
+        Vue + TypeScript guidelines:
+        - Prefira TypeScript strict mode
+        - Evite SQL inline; use Eloquent ou Query Builder em chamadas backend
+        - Componentes Vue: props tipadas, composables para lógica reutilizável
+
+  # Excluir arquivos que geram ruído (path_filters com ! para excluir)
+  path_filters:
+    - "!**/*.lock"
+    - "!**/*.min.js"
+    - "!**/node_modules/**"
+    - "!**/vendor/**"
+    - "!**/public/build/**"
+
+  auto_review:
+    enabled: true
+    drafts: false
+    # Apenas branches relevantes (evita review em branches lixo)
+    base_branches:
+      - main
+      - develop
+      - staging
+      - feature/.*
+
+  # Ferramentas para stack Laravel/PHP + Vue/TypeScript + segurança
+  tools:
+    eslint:
+      enabled: true
+    phpstan:
+      enabled: true
+    gitleaks:
+      enabled: true  # secrets_leak
+    semgrep:
+      enabled: true  # sql_injection, xss, csrf e outras vulnerabilidades
+
+chat:
+  auto_reply: true
