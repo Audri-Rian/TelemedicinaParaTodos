@@ -8,6 +8,14 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
 ---
 
+## [1.2.0] - 2025-02-09
+
+### Changed
+
+- **Governança backend (T 11.1)**: Regras de negócio centralizadas em `config/telemedicine.php`. Controllers, Services, Models, Observers, Jobs, Form Requests e rotas passaram a consumir `config('telemedicine.*')` em vez de valores fixos (consultas, vídeo-chamada, disponibilidade, lembretes, prontuário, validações, notificações, mensagens, uploads, paginação). 
+
+---
+
 ## [1.1.0] - 2025-02-09
 
 ### Added
