@@ -116,12 +116,13 @@ class DoctorAvailabilitySlotController extends Controller
                 : $slot->specific_date;
             $locationId = $validated['location_id'] ?? $slot->location_id;
 
-            // Validar duração mínima de 1 hora
+            // Validar duração mínima (config: telemedicine.availability.slot_min_duration_minutes)
             $start = Carbon::createFromFormat('H:i:s', $startTime . ':00');
             $end = Carbon::createFromFormat('H:i:s', $endTime . ':00');
             $diffInMinutes = $start->diffInMinutes($end);
+            $minMinutes = (int) config('telemedicine.availability.slot_min_duration_minutes', 60);
 
-            if ($diffInMinutes < 60) {
+            if ($diffInMinutes < $minMinutes) {
                 return response()->json([
                     'success' => false,
                     'message' => 'O horário de fim deve ser pelo menos 1 hora após o horário de início.',

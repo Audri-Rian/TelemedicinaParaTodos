@@ -24,12 +24,13 @@ class PatientDashboardController extends Controller
             abort(403, 'Perfil de paciente não encontrado.');
         }
 
-        // Consultas próximas (próximas 3)
+        $nextAppointmentsLimit = (int) config('telemedicine.dashboard.next_appointments_limit', 3);
+        // Consultas próximas
         $upcomingAppointments = Appointments::with(['patient.user', 'doctor.user', 'doctor.specializations'])
             ->byPatient($patient->id)
             ->upcoming()
             ->orderBy('scheduled_at')
-            ->limit(3)
+            ->limit($nextAppointmentsLimit)
             ->get()
             ->map(function ($appointment) {
                 $specialty = $appointment->doctor->specializations->first()?->name ?? 'Especialista';
@@ -48,7 +49,7 @@ class PatientDashboardController extends Controller
                     'scheduled_at' => $appointment->scheduled_at->format('d/m/Y H:i'),
                     'scheduled_date' => $appointment->scheduled_at->format('d') . ' de ' . $monthName,
                     'scheduled_time' => $appointment->scheduled_at->format('H:i'),
-                    'duration' => '45 min',
+                    'duration' => config('telemedicine.display.appointment_duration_fallback_minutes', 45) . ' min',
                     'status' => $this->translateStatus($appointment->status),
                     'status_class' => $this->getStatusClass($appointment->status),
                 ];
@@ -77,10 +78,11 @@ class PatientDashboardController extends Controller
             ->count();
 
         // Médicos disponíveis
+        $patientNextLimit = (int) config('telemedicine.dashboard.patient_next_consultations_limit', 10);
         $doctors = Doctor::with(['user', 'specializations'])
             ->active()
             ->available()
-            ->limit(10)
+            ->limit($patientNextLimit)
             ->get()
             ->map(function ($doctor) {
                 return [

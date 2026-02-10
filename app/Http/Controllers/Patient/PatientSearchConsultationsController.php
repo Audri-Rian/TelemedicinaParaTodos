@@ -51,9 +51,10 @@ class PatientSearchConsultationsController extends Controller
             }
         }
 
+        $doctorsPerPage = (int) config('telemedicine.pagination.doctors_search_per_page', 6);
         $availableDoctors = $doctorsQuery
             ->orderByDesc('created_at')
-            ->paginate(6)
+            ->paginate($doctorsPerPage)
             ->withQueryString()
             ->through(function (Doctor $doctor) use ($parsedDate) {
                 $schedule = $doctor->availability_schedule ?? [];
@@ -104,10 +105,11 @@ class PatientSearchConsultationsController extends Controller
             ->orderBy('name')
             ->get(['id', 'name']);
 
+        $patientNextLimit = (int) config('telemedicine.dashboard.patient_next_consultations_limit', 10);
         $appointments = Appointments::with(['doctor.user', 'doctor.specializations'])
             ->byPatient($patient->id)
             ->orderByDesc('scheduled_at')
-            ->limit(10)
+            ->limit($patientNextLimit)
             ->get()
             ->map(function (Appointments $appointment) {
                 return [

@@ -41,8 +41,9 @@ class PatientHistoryConsultationsController extends Controller
             $query->where('status', Appointments::STATUS_NO_SHOW);
         }
 
+        $perPage = (int) config('telemedicine.pagination.consultations_per_page', 10);
         $appointments = $query
-            ->paginate(10)
+            ->paginate($perPage)
             ->withQueryString()
             ->through(function (Appointments $appointment) {
                 $doctor = $appointment->doctor;

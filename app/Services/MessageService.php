@@ -46,8 +46,9 @@ class MessageService
      * Buscar mensagens entre dois usuários
      * Usa paginação reversa otimizada (padrão Slack)
      */
-    public function getMessagesBetweenUsers(string $otherUserId, ?int $limit = 50, ?string $beforeMessageId = null)
+    public function getMessagesBetweenUsers(string $otherUserId, ?int $limit = null, ?string $beforeMessageId = null)
     {
+        $limit = $limit ?? (int) config('telemedicine.messages.default_page_limit', 50);
         $currentUserId = Auth::id();
 
         $query = Message::betweenUsers($currentUserId, $otherUserId)

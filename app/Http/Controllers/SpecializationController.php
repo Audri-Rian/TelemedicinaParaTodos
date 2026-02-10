@@ -89,12 +89,13 @@ class SpecializationController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
+        $maxNameLength = (int) config('telemedicine.validation.specialization_name_max_length', 100);
         $validated = $request->validate([
-            'name' => 'required|string|max:100|unique:specializations,name'
+            'name' => 'required|string|max:' . $maxNameLength . '|unique:specializations,name'
         ], [
             'name.required' => 'O nome da especialização é obrigatório.',
             'name.unique' => 'Uma especialização com este nome já existe.',
-            'name.max' => 'O nome não pode ter mais de 100 caracteres.'
+            'name.max' => 'O nome não pode ter mais de ' . $maxNameLength . ' caracteres.'
         ]);
 
         try {
@@ -147,12 +148,13 @@ class SpecializationController extends Controller
      */
     public function update(Request $request, Specialization $specialization): JsonResponse
     {
+        $maxNameLength = (int) config('telemedicine.validation.specialization_name_max_length', 100);
         $validated = $request->validate([
-            'name' => 'required|string|max:100|unique:specializations,name,' . $specialization->id
+            'name' => 'required|string|max:' . $maxNameLength . '|unique:specializations,name,' . $specialization->id
         ], [
             'name.required' => 'O nome da especialização é obrigatório.',
             'name.unique' => 'Uma especialização com este nome já existe.',
-            'name.max' => 'O nome não pode ter mais de 100 caracteres.'
+            'name.max' => 'O nome não pode ter mais de ' . $maxNameLength . ' caracteres.'
         ]);
 
         try {

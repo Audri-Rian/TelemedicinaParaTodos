@@ -26,7 +26,7 @@ class AvatarUploadRequest extends FormRequest
                 'required',
                 'image',
                 'mimes:jpeg,png,jpg,webp',
-                'max:5120', // 5MB em kilobytes
+                'max:' . config('telemedicine.uploads.avatar_max_kb', 5120),
             ],
         ];
     }

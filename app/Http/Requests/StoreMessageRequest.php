@@ -31,7 +31,7 @@ class StoreMessageRequest extends FormRequest
                 'required',
                 'string',
                 'min:1',
-                'max:5000',
+                'max:' . config('telemedicine.messages.max_content_length', 5000),
             ],
             'appointment_id' => [
                 'nullable',

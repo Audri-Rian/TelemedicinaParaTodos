@@ -224,9 +224,9 @@ class AvailabilityService
         
         $startMinutes = (int)$startHour * 60 + (int)$startMin;
         $endMinutes = (int)$endHour * 60 + (int)$endMin;
-        
-        $slotDuration = 45; // 45 minutos
-        
+
+        $slotDuration = (int) config('telemedicine.availability.slot_duration_minutes', 45);
+
         // Sempre incluir o horário de início exato como primeiro slot (já normalizado)
         $slots[] = $startTime;
         
