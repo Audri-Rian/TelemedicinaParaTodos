@@ -49,7 +49,7 @@ class PatientDashboardController extends Controller
                     'scheduled_at' => $appointment->scheduled_at->format('d/m/Y H:i'),
                     'scheduled_date' => $appointment->scheduled_at->format('d') . ' de ' . $monthName,
                     'scheduled_time' => $appointment->scheduled_at->format('H:i'),
-                    'duration' => config('telemedicine.display.appointment_duration_fallback_minutes', 45) . ' min',
+                    'duration' => $appointment->formatted_duration,
                     'status' => $this->translateStatus($appointment->status),
                     'status_class' => $this->getStatusClass($appointment->status),
                 ];

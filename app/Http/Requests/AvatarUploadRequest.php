@@ -38,11 +38,15 @@ class AvatarUploadRequest extends FormRequest
      */
     public function messages(): array
     {
+        $maxKb = (int) config('telemedicine.uploads.avatar_max_kb', 5120);
+        $maxMb = (int) round($maxKb / 1024);
+        $maxLabel = $maxMb >= 1 ? "{$maxMb}MB" : "{$maxKb}KB";
+
         return [
             'avatar.required' => 'É necessário selecionar uma imagem.',
             'avatar.image' => 'O arquivo deve ser uma imagem válida.',
             'avatar.mimes' => 'A imagem deve ser nos formatos: JPEG, PNG ou WebP.',
-            'avatar.max' => 'A imagem não pode ser maior que 5MB.',
+            'avatar.max' => 'A imagem não pode ser maior que ' . $maxLabel . '.',
         ];
     }
 }

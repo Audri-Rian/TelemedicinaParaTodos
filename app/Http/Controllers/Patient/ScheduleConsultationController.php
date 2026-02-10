@@ -85,7 +85,7 @@ class ScheduleConsultationController extends Controller
     {
         $now = Carbon::now();
         $startDate = $now->copy()->startOfDay();
-        $windowDays = (int) config('telemedicine.maintenance.timeline_window_days', 30);
+        $windowDays = (int) config('telemedicine.availability.timeline_window_days', 30);
         $endDate = $now->copy()->addDays($windowDays)->endOfDay();
         
         $availableDates = [];

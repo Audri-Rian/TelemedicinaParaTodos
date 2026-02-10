@@ -49,7 +49,7 @@ class StoreScheduleConfigRequest extends FormRequest
                             $diffInMinutes = $start->diffInMinutes($end);
                             $minMinutes = (int) config('telemedicine.availability.slot_min_duration_minutes', 60);
                             if ($diffInMinutes < $minMinutes) {
-                                $fail('O horário de fim deve ser pelo menos 1 hora após o horário de início.');
+                                $fail("O horário de fim deve ser pelo menos {$minMinutes} minutos após o horário de início.");
                             }
                         }
                     }
@@ -77,7 +77,7 @@ class StoreScheduleConfigRequest extends FormRequest
                             $diffInMinutes = $start->diffInMinutes($end);
                             $minMinutes = (int) config('telemedicine.availability.slot_min_duration_minutes', 60);
                             if ($diffInMinutes < $minMinutes) {
-                                $fail('O horário de fim deve ser pelo menos 1 hora após o horário de início.');
+                                $fail("O horário de fim deve ser pelo menos {$minMinutes} minutos após o horário de início.");
                             }
                         }
                     }

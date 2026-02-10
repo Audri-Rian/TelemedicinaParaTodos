@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreSpecializationRequest;
+use App\Http\Requests\UpdateSpecializationRequest;
 use App\Models\Specialization;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -87,16 +89,9 @@ class SpecializationController extends Controller
     /**
      * Store a newly created specialization.
      */
-    public function store(Request $request): JsonResponse
+    public function store(StoreSpecializationRequest $request): JsonResponse
     {
-        $maxNameLength = (int) config('telemedicine.validation.specialization_name_max_length', 100);
-        $validated = $request->validate([
-            'name' => 'required|string|max:' . $maxNameLength . '|unique:specializations,name'
-        ], [
-            'name.required' => 'O nome da especialização é obrigatório.',
-            'name.unique' => 'Uma especialização com este nome já existe.',
-            'name.max' => 'O nome não pode ter mais de ' . $maxNameLength . ' caracteres.'
-        ]);
+        $validated = $request->validated();
 
         try {
             $specialization = Specialization::create($validated);
@@ -146,16 +141,9 @@ class SpecializationController extends Controller
     /**
      * Update the specified specialization.
      */
-    public function update(Request $request, Specialization $specialization): JsonResponse
+    public function update(UpdateSpecializationRequest $request, Specialization $specialization): JsonResponse
     {
-        $maxNameLength = (int) config('telemedicine.validation.specialization_name_max_length', 100);
-        $validated = $request->validate([
-            'name' => 'required|string|max:' . $maxNameLength . '|unique:specializations,name,' . $specialization->id
-        ], [
-            'name.required' => 'O nome da especialização é obrigatório.',
-            'name.unique' => 'Uma especialização com este nome já existe.',
-            'name.max' => 'O nome não pode ter mais de ' . $maxNameLength . ' caracteres.'
-        ]);
+        $validated = $request->validated();
 
         try {
             $specialization->update($validated);

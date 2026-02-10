@@ -119,6 +119,10 @@ return [
         // Duração MÍNIMA de um slot (início → fim). StoreScheduleConfigRequest, StoreAvailabilitySlotRequest.
         // Regra: "O horário de fim deve ser pelo menos 1 hora após o horário de início."
         'slot_min_duration_minutes' => env('AVAILABILITY_SLOT_MIN_MINUTES', 60),
+
+        // Janela de dias para disponibilidade/agendamento de médicos em telas de agenda.
+        // Usado em: AvailabilityTimelineService, ScheduleConsultationController, DoctorPerfilController.
+        'timeline_window_days' => (int) env('AVAILABILITY_TIMELINE_WINDOW_DAYS', 30),
     ],
 
     /*
@@ -179,9 +183,12 @@ return [
     */
 
     'maintenance' => [
-        // Janela de dias para consultas/timeline (disponibilidade, histórico).
-        // AvailabilityTimelineService, ScheduleConsultationController, DoctorPerfilController,
-        // LGPD DataAccessReportController, Patient::scopeRecentlyConsulted.
+        // Janela de dias para rotinas de manutenção gerais (backoffice, limpeza, etc).
+        // Anteriormente usada também para disponibilidade, histórico e relatórios LGPD.
+        // Mantida por compatibilidade, mas usos específicos migraram para:
+        // - availability.timeline_window_days
+        // - patient_history.recent_consultations_days
+        // - lgpd.report_window_days
         'timeline_window_days' => env('MAINTENANCE_TIMELINE_DAYS', 30),
 
         // TTL em segundos para locks Redis (ex.: evitar double-booking). Futuro: T 11.5.
@@ -261,6 +268,9 @@ return [
 
         // Limite padrão de notificações por página.
         'per_page' => env('NOTIFICATION_PER_PAGE', 15),
+
+        // Limite máximo de notificações por página (proteção de performance).
+        'max_per_page' => env('NOTIFICATION_MAX_PER_PAGE', 100),
 
         // Limite em listagens rápidas (ex.: dropdown).
         'list_limit' => env('NOTIFICATION_LIST_LIMIT', 10),
@@ -373,5 +383,50 @@ return [
         // TimelineEvent: abaixo de X dias exibe "X dias"; entre dias e meses, "X meses"; acima, "X anos".
         'timeline_days_threshold' => (int) env('DISPLAY_TIMELINE_DAYS_THRESHOLD', 30),
         'timeline_months_threshold' => (int) env('DISPLAY_TIMELINE_MONTHS_THRESHOLD', 12),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Consultation Detail
+    |--------------------------------------------------------------------------
+    |
+    | Configurações específicas da tela de detalhe de consulta do médico.
+    |
+    */
+
+    'consultation_detail' => [
+        // Quantidade de consultas anteriores exibidas no histórico da tela de detalhe.
+        // Usado em: DoctorConsultationDetailController (recent_consultations).
+        'recent_history_limit' => (int) env('CONSULTATION_DETAIL_RECENT_HISTORY_LIMIT', 3),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Patient History
+    |--------------------------------------------------------------------------
+    |
+    | Configurações para histórico do paciente (últimas consultas, relatórios).
+    |
+    */
+
+    'patient_history' => [
+        // Janela padrão em dias para considerar pacientes "recentemente consultados".
+        // Usado em: Patient::scopeRecentlyConsulted.
+        'recent_consultations_days' => (int) env('PATIENT_HISTORY_RECENT_DAYS', 30),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | LGPD & Data Access
+    |--------------------------------------------------------------------------
+    |
+    | Parâmetros relacionados a relatórios de acesso a dados pessoais (LGPD).
+    |
+    */
+
+    'lgpd' => [
+        // Janela padrão em dias para geração de relatórios de acesso.
+        // Usado em: DataAccessReportController.
+        'report_window_days' => (int) env('LGPD_REPORT_WINDOW_DAYS', 30),
     ],
 ];

@@ -135,7 +135,7 @@ class Patient extends Model
 
     public function scopeRecentlyConsulted(Builder $query, ?int $days = null): void
     {
-        $days = $days ?? config('telemedicine.maintenance.timeline_window_days', 30);
+        $days = $days ?? config('telemedicine.patient_history.recent_consultations_days', 30);
         $query->where('last_consultation_at', '>=', Carbon::now()->subDays($days));
     }
 
