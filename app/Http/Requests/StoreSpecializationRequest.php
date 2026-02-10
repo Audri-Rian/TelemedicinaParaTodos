@@ -15,16 +15,22 @@ class StoreSpecializationRequest extends FormRequest
     }
 
     /**
+     * Comprimento máximo do nome da especialização (configurado em telemedicine.validation.specialization_name_max_length).
+     */
+    private function maxNameLength(): int
+    {
+        return (int) config('telemedicine.validation.specialization_name_max_length', 100);
+    }
+
+    /**
      * Get the validation rules that apply to the request.
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
-        $maxNameLength = (int) config('telemedicine.validation.specialization_name_max_length', 100);
-
         return [
-            'name' => 'required|string|max:' . $maxNameLength . '|unique:specializations,name',
+            'name' => 'required|string|max:' . $this->maxNameLength() . '|unique:specializations,name',
         ];
     }
 
@@ -35,12 +41,10 @@ class StoreSpecializationRequest extends FormRequest
      */
     public function messages(): array
     {
-        $maxNameLength = (int) config('telemedicine.validation.specialization_name_max_length', 100);
-
         return [
             'name.required' => 'O nome da especialização é obrigatório.',
             'name.unique' => 'Uma especialização com este nome já existe.',
-            'name.max' => 'O nome não pode ter mais de ' . $maxNameLength . ' caracteres.',
+            'name.max' => 'O nome não pode ter mais de ' . $this->maxNameLength() . ' caracteres.',
         ];
     }
 }

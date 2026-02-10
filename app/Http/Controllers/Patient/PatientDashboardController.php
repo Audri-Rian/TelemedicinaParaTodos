@@ -55,12 +55,12 @@ class PatientDashboardController extends Controller
                 ];
             });
 
-        // Histórico de consultas (últimas 5)
+        // Histórico de consultas (limite configurável)
         $recentAppointments = Appointments::with(['patient.user', 'doctor.user'])
             ->byPatient($patient->id)
             ->where('status', 'completed')
             ->orderBy('scheduled_at', 'desc')
-            ->limit(5)
+            ->limit((int) config('telemedicine.dashboard.recent_appointments_limit', 5))
             ->get()
             ->map(function ($appointment) {
                 return [

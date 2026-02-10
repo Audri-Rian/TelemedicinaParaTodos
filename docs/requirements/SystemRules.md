@@ -1,5 +1,9 @@
 # 📜 Regras do Sistema
 
+> **Implementação técnica das regras**  
+> Os parâmetros técnicos destas regras (janelas de agendamento, durações padrão, limites de histórico, lembretes, etc.) são configuráveis no backend via `config/telemedicine.php`.  
+> A rastreabilidade entre regras de negócio e configurações está documentada em `docs/Tasks/TASK_11_MIGRACAO_CONFIG_TELEMEDICINE.md`.
+
 ## 🎯 Objetivo
 Esse projeto tem como objetivo de criar uma platarforma de Telemedicina Moderna, segura e acessível desenvolvida com Laravel(PHP). Ele conecta médicos e pacientes de forma remota, oferecendo consultas online, agendamento inteligente, prontuários digitais e comunicação segura tudo em um único sistema integrado.
 

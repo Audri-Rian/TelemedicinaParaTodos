@@ -80,7 +80,6 @@ class StoreAvailabilitySlotRequest extends FormRequest
             'end_time.required' => 'O horário de fim é obrigatório.',
             'end_time.date_format' => 'O horário de fim deve estar no formato HH:MM.',
             'end_time.after' => 'O horário de fim deve ser posterior ao horário de início.',
-            'end_time.*' => 'O horário de fim deve ser pelo menos ' . $minMinutes . ' minutos após o horário de início.',
             'location_id.exists' => 'O local de atendimento selecionado não existe.',
         ];
     }

@@ -16,7 +16,7 @@ class ScheduleConsultationController extends Controller
         protected ScheduleService $scheduleService
     ) {}
 
-    public function index(Request $request): Response
+    public function index(Request $request): Response|\Illuminate\Http\RedirectResponse
     {
         $doctorId = $request->get('doctor_id');
         
@@ -34,7 +34,7 @@ class ScheduleConsultationController extends Controller
                 ->with('error', 'Médico não está disponível para agendamento.');
         }
         
-        $patient = auth()->user()->patient;
+        $patient = auth()->user()->patient?->load('user');
         
         if (!$patient) {
             return redirect()

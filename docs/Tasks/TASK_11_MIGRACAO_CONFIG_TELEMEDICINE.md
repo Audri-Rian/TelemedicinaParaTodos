@@ -4,6 +4,10 @@ Este documento lista todos os arquivos onde foram identificadas regras de negóc
 
 **Referência:** [TASK_11_GOVERNANCA_BACKEND.md](./TASK_11_GOVERNANCA_BACKEND.md) — T 11.1
 
+> **Status atual (fev/2025):**  
+> - O arquivo `config/telemedicine.php` foi **completado** com seções para `appointment`, `doctor_defaults`, `availability`, `video_call`, `reminders`, `maintenance`, `medical_records`, `validation`, `notifications`, `auth`, `dashboard`, `messages`, `uploads`, `pagination`, `display`, `consultation_detail`, `patient_history` e `lgpd`.  
+> - Todos os pontos mapeados abaixo já foram migrados para `config('telemedicine.*')`, incluindo ajustes adicionais de revisão (CodeRabbit): novos keys específicos (`availability.timeline_window_days`, `consultation_detail.recent_history_limit`, `patient_history.recent_consultations_days`, `lgpd.report_window_days`, `notifications.max_per_page`, `dashboard.recent_appointments_limit`), mensagens de erro dinâmicas e validações extraídas para FormRequests.
+
 ---
 
 ## Índice por Arquivo
@@ -228,7 +232,7 @@ $code = strtoupper(substr(md5(uniqid()), 0, $length));
 
 | Linha (aprox.) | Valor Atual | Config a Usar | Motivo |
 |----------------|-------------|---------------|--------|
-| 19-20 | `subDays(30)`, `addDays(30)` | `config('telemedicine.maintenance.timeline_window_days', 30)` | Janela de dias para timeline |
+| 19-21 | `subDays($windowDays)`, `addDays($windowDays)` | `config('telemedicine.availability.timeline_window_days', 30)` | Janela de dias para timeline de disponibilidade específica do médico |
 | 202 | `addDays(7)` | `addDays(config('telemedicine.dashboard.next_week_days', 7))` | "Próximos 7 dias" |
 | 223 | `->limit(4)` | `->limit(config('telemedicine.dashboard.last_sessions_limit', 4))` | Últimas sessões na timeline |
 
@@ -240,7 +244,7 @@ $code = strtoupper(substr(md5(uniqid()), 0, $length));
 
 | Linha (aprox.) | Valor Atual | Config a Usar | Motivo |
 |----------------|-------------|---------------|--------|
-| 136 | `int $days = 30` | `config('telemedicine.maintenance.timeline_window_days', 30)` | Scope "recentemente consultado" |
+| 136 | `?int $days = null` | `config('telemedicine.patient_history.recent_consultations_days', 30)` | Scope "recentemente consultado" usa janela padrão configurável para histórico do paciente |
 
 ---
 
@@ -322,8 +326,8 @@ $code = strtoupper(substr(md5(uniqid()), 0, $length));
 
 | Linha (aprox.) | Valor Atual | Config a Usar | Motivo |
 |----------------|-------------|---------------|--------|
-| 33 | `$perPage = 15` | `config('telemedicine.notifications.per_page', 15)` | Paginação de notificações |
-| 104 | `->limit(10)` | `config('telemedicine.notifications.list_limit', 10)` | Limite em listagem rápida |
+| 33 | `$perPage = $request->get('per_page', 15)` | `config('telemedicine.notifications.per_page', 15)` + `config('telemedicine.notifications.max_per_page', 100)` | Paginação de notificações (default + limite máximo para proteção de performance) |
+| 104 | `->limit(10)` | `config('telemedicine.notifications.list_limit', 10)` | Limite em listagem rápida (dropdown, contagem de não lidas) |
 
 ---
 
@@ -385,10 +389,10 @@ $code = strtoupper(substr(md5(uniqid()), 0, $length));
 
 | Linha (aprox.) | Valor Atual | Config a Usar | Motivo |
 |----------------|-------------|---------------|--------|
-| 32 | `->limit(3)` | `config('telemedicine.dashboard.next_appointments_limit', 3)` | Próximas consultas |
-| 51 | `'duration' => '45 min'` | `config('telemedicine.display.appointment_duration_fallback_minutes', 45) . ' min'` | Placeholder de duração |
-| 62 | `->limit(5)` | Avaliar: criar `dashboard.patient_cards_limit` ou similar | Cards no dashboard |
-| 83 | `->limit(10)` | `config('telemedicine.dashboard.patient_next_consultations_limit', 10)` | Próximas consultas do paciente |
+| 32-33 | `->limit($nextAppointmentsLimit)` | `config('telemedicine.dashboard.next_appointments_limit', 3)` | Próximas consultas no card do paciente |
+| 52 | `'duration' => $appointment->formatted_duration` | `config('telemedicine.display.appointment_duration_fallback_minutes', 45)` é usado internamente em `Appointments::formatted_duration` como fallback de duração | Duração exibida usa accessor do model em vez de string fixa |
+| 62-63 | `->limit(...)` | `config('telemedicine.dashboard.recent_appointments_limit', 5)` | Limite de cards de histórico de consultas recentes no dashboard |
+| 81-85 | `->limit($patientNextLimit)` | `config('telemedicine.dashboard.patient_next_consultations_limit', 10)` | Próximos médicos/consultas sugeridos ao paciente |
 
 ---
 
@@ -409,7 +413,7 @@ $code = strtoupper(substr(md5(uniqid()), 0, $length));
 
 | Linha (aprox.) | Valor Atual | Config a Usar | Motivo |
 |----------------|-------------|---------------|--------|
-| 88 | `addDays(30)` | `config('telemedicine.maintenance.timeline_window_days', 30)` | Janela de datas disponíveis para agendamento |
+| 88 | `addDays($windowDays)` | `config('telemedicine.availability.timeline_window_days', 30)` | Janela de datas disponíveis para agendamento do paciente |
 
 ---
 
@@ -419,7 +423,7 @@ $code = strtoupper(substr(md5(uniqid()), 0, $length));
 
 | Linha (aprox.) | Valor Atual | Config a Usar | Motivo |
 |----------------|-------------|---------------|--------|
-| 139 | `addDays(30)` | `config('telemedicine.maintenance.timeline_window_days', 30)` | Idem |
+| 139 | `addDays($windowDays)` | `config('telemedicine.availability.timeline_window_days', 30)` | Janela de datas disponíveis para agendamento no perfil do médico |
 
 ---
 
@@ -429,7 +433,7 @@ $code = strtoupper(substr(md5(uniqid()), 0, $length));
 
 | Linha (aprox.) | Valor Atual | Config a Usar | Motivo |
 |----------------|-------------|---------------|--------|
-| 29, 50 | `subDays(30)` | `config('telemedicine.maintenance.timeline_window_days', 30)` | Janela padrão do relatório de acesso (LGPD) |
+| 26, 50 | `$reportDays = (int) config(..., 30)` | `config('telemedicine.lgpd.report_window_days', 30)` | Janela padrão do relatório de acesso (LGPD), configurável independentemente de outras janelas de timeline |
 
 ---
 
@@ -449,7 +453,7 @@ $code = strtoupper(substr(md5(uniqid()), 0, $length));
 
 | Linha (aprox.) | Valor Atual | Config a Usar | Motivo |
 |----------------|-------------|---------------|--------|
-| 77 | `->limit(3)` | `config('telemedicine.dashboard.next_appointments_limit', 3)` | Limite de consultas recentes |
+| 72-78 | `->limit($recentLimit)` | `config('telemedicine.consultation_detail.recent_history_limit', 3)` | Limite de consultas recentes exibidas na tela de detalhe da consulta do médico |
 
 ---
 

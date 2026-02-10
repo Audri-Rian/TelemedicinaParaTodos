@@ -313,6 +313,9 @@ return [
 
         // Paciente: próximos dias para "próxima semana" na timeline.
         'next_week_days' => (int) env('DASHBOARD_NEXT_WEEK_DAYS', 7),
+
+        // Paciente: quantidade de consultas recentes no histórico do dashboard.
+        'recent_appointments_limit' => (int) env('DASHBOARD_RECENT_APPOINTMENTS_LIMIT', 5),
     ],
 
     /*

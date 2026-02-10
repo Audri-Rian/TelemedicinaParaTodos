@@ -132,10 +132,17 @@ class AppointmentsObserver
     private static function generateUniqueAccessCode(): string
     {
         $length = (int) config('telemedicine.appointment.access_code_length', 8);
-        $code = Str::upper(Str::random($length));
-        while (Appointments::where('access_code', $code)->exists()) {
+        $maxAttempts = 10;
+        $attempts = 0;
+
+        do {
+            if ($attempts++ >= $maxAttempts) {
+                throw new \RuntimeException('Não foi possível gerar um código de acesso único após ' . $maxAttempts . ' tentativas.');
+            }
+
             $code = Str::upper(Str::random($length));
-        }
+        } while (Appointments::where('access_code', $code)->exists());
+
         return $code;
     }
 }
