@@ -87,7 +87,7 @@ class NotificationService
     private function scheduleDebounce(string $userId, NotificationType $type, array $metadata, array $channels): void
     {
         $key = $this->getDebounceKey($userId, $type, $metadata);
-        $ttl = 10; // 10 segundos
+        $ttl = (int) config('telemedicine.notifications.debounce_ttl_seconds', 10);
 
         // Armazenar dados para consolidar depois
         Redis::setex($key, $ttl, json_encode([
@@ -207,10 +207,11 @@ class NotificationService
     /**
      * Obter notificações não lidas do usuário
      */
-    public function getUnread(User|string $user, int $limit = 10)
+    public function getUnread(User|string $user, ?int $limit = null)
     {
+        $limit = $limit ?? (int) config('telemedicine.notifications.list_limit', 10);
         $userId = $user instanceof User ? $user->id : $user;
-        
+
         return Notification::where('user_id', $userId)
             ->whereNull('read_at')
             ->orderBy('created_at', 'desc')

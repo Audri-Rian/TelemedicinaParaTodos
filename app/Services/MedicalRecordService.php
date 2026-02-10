@@ -303,7 +303,7 @@ class MedicalRecordService
 
         return $query
             ->orderByDesc('recorded_at')
-            ->limit($filters['vitals_limit'] ?? 50)
+            ->limit($filters['vitals_limit'] ?? config('telemedicine.medical_records.vitals_limit', 50))
             ->get()
             ->map(fn (VitalSign $vital) => $this->formatVitalSign($vital));
     }
@@ -421,7 +421,7 @@ class MedicalRecordService
             ->whereIn('status', [Appointments::STATUS_SCHEDULED, Appointments::STATUS_RESCHEDULED])
             ->where('scheduled_at', '>=', now())
             ->orderBy('scheduled_at')
-            ->take(10)
+            ->take(config('telemedicine.medical_records.search_limit', 10))
             ->get()
             ->map(fn (Appointments $appointment) => $this->formatAppointment($appointment));
     }
@@ -787,7 +787,7 @@ class MedicalRecordService
             'instructions' => $payload['instructions'] ?? null,
             'valid_until' => !empty($payload['valid_until'])
                 ? Carbon::parse($payload['valid_until'])
-                : now()->addDays(30),
+                : now()->addDays(config('telemedicine.medical_records.prescription_default_validity_days', 30)),
             'status' => Prescription::STATUS_ACTIVE,
             'metadata' => $payload['metadata'] ?? null,
             'issued_at' => now(),
@@ -1100,8 +1100,9 @@ class MedicalRecordService
 
     protected function generateVerificationCode(): string
     {
+        $length = (int) config('telemedicine.medical_records.verification_code_length', 10);
         do {
-            $code = Str::upper(Str::random(10));
+            $code = Str::upper(Str::random($length));
         } while (MedicalCertificate::where('verification_code', $code)->exists());
 
         return $code;

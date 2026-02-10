@@ -37,7 +37,7 @@ class MedicalRecordDocumentController extends Controller
         $this->authorize('uploadDocument', $patient);
 
         $validated = $request->validate([
-            'file' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:10240'],
+            'file' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:' . config('telemedicine.uploads.medical_document_max_kb', 10240)],
             'category' => ['required', Rule::in([
                 MedicalDocument::CATEGORY_EXAM,
                 MedicalDocument::CATEGORY_PRESCRIPTION,

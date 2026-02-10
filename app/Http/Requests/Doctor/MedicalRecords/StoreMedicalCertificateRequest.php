@@ -19,7 +19,7 @@ class StoreMedicalCertificateRequest extends FormRequest
             'type' => ['required', Rule::in(['absence', 'attendance', 'disability', 'other'])],
             'start_date' => ['required', 'date'],
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
-            'days' => ['nullable', 'integer', 'min:1', 'max:60'],
+            'days' => ['nullable', 'integer', 'min:1', 'max:' . config('telemedicine.medical_records.certificate_max_days', 60)],
             'reason' => ['required', 'string'],
             'restrictions' => ['nullable', 'string'],
         ];

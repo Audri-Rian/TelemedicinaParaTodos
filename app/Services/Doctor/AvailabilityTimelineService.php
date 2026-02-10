@@ -16,8 +16,9 @@ class AvailabilityTimelineService
      */
     public function getOverview(Doctor $doctor, ?Carbon $start = null, ?Carbon $end = null): array
     {
-        $windowStart = ($start ?? Carbon::now()->subDays(30))->startOfDay();
-        $windowEnd = ($end ?? Carbon::now()->addDays(30))->endOfDay();
+        $windowDays = (int) config('telemedicine.maintenance.timeline_window_days', 30);
+        $windowStart = ($start ?? Carbon::now()->subDays($windowDays))->startOfDay();
+        $windowEnd = ($end ?? Carbon::now()->addDays($windowDays))->endOfDay();
 
         $slots = $doctor->availabilitySlots()
             ->where('type', AvailabilitySlot::TYPE_SPECIFIC)
@@ -199,7 +200,8 @@ class AvailabilityTimelineService
             return $slotDate->greaterThanOrEqualTo($currentWeekStart) && $slotDate->lessThanOrEqualTo($currentWeekEnd);
         });
 
-        $sevenDaysAhead = $now->copy()->addDays(7);
+        $nextWeekDays = (int) config('telemedicine.dashboard.next_week_days', 7);
+        $sevenDaysAhead = $now->copy()->addDays($nextWeekDays);
         $nextSevenDays = $futureSlots->filter(function ($slot) use ($now, $sevenDaysAhead) {
             $slotDate = Carbon::parse($slot['date']);
             return $slotDate->greaterThanOrEqualTo($now) && $slotDate->lessThanOrEqualTo($sevenDaysAhead);
@@ -215,12 +217,13 @@ class AvailabilityTimelineService
             ->sortBy('scheduled_at')
             ->first();
 
+        $lastSessionsLimit = (int) config('telemedicine.dashboard.last_sessions_limit', 4);
         $lastSessions = Appointments::query()
             ->where('doctor_id', $doctor->id)
             ->where('scheduled_at', '<', $now)
             ->orderByDesc('scheduled_at')
             ->with(['patient.user'])
-            ->limit(4)
+            ->limit($lastSessionsLimit)
             ->get()
             ->map(function ($appointment) {
                 return [

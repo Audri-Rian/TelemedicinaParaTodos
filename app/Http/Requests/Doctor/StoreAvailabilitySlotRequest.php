@@ -46,9 +46,8 @@ class StoreAvailabilitySlotRequest extends FormRequest
                         $start = \Carbon\Carbon::createFromFormat('H:i', $startTime);
                         $end = \Carbon\Carbon::createFromFormat('H:i', $value);
                         $diffInMinutes = $start->diffInMinutes($end);
-                        
-                        // A duração mínima deve ser de 1 hora (60 minutos)
-                        if ($diffInMinutes < 60) {
+                        $minMinutes = (int) config('telemedicine.availability.slot_min_duration_minutes', 60);
+                        if ($diffInMinutes < $minMinutes) {
                             $fail('O horário de fim deve ser pelo menos 1 hora após o horário de início.');
                         }
                     }

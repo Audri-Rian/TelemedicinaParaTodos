@@ -126,13 +126,14 @@ class AppointmentsObserver
     }
 
     /**
-     * Generate unique access code
+     * Generate unique access code (tamanho em config/telemedicine.php)
      */
     private static function generateUniqueAccessCode(): string
     {
-        $code = strtoupper(substr(md5(uniqid()), 0, 8));
+        $length = (int) config('telemedicine.appointment.access_code_length', 8);
+        $code = strtoupper(substr(md5(uniqid()), 0, $length));
         while (Appointments::where('access_code', $code)->exists()) {
-            $code = strtoupper(substr(md5(uniqid()), 0, 8));
+            $code = strtoupper(substr(md5(uniqid()), 0, $length));
         }
         return $code;
     }
