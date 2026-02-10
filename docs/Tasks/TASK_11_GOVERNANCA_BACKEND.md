@@ -30,8 +30,8 @@ Esta task é o **fechamento de governança** para evitar que o backend vire um c
 ## Checklist
 
 ### T 11.1 — Config centralizada
-- [ ] Completar `config/telemedicine.php` (timeouts, expiração, regras operacionais)
-- [ ] Substituir valores hardcoded por `config('telemedicine.*')` no código
+- [x] Completar `config/telemedicine.php` (timeouts, expiração, regras operacionais)
+- [x] Substituir valores hardcoded por `config('telemedicine.*')` no código
 
 ### T 11.2 — Onboarding e deploy
 - [ ] Atualizar `.env.example` (Reverb, Redis, Queue, Storage, Mail)
@@ -83,7 +83,9 @@ Regras de telemedicina mudam e precisam ser ajustáveis. Centralizar evita "núm
 
 ### Status
 
-> **Nota:** O arquivo `config/telemedicine.php` já existe com `appointment` e `doctor_defaults`. Completar com timeouts, expiração e demais regras operacionais ausentes.
+> **Status (fev/2025):**  
+> - `config/telemedicine.php` foi **completado** com seções para `appointment`, `doctor_defaults`, `availability`, `video_call`, `reminders`, `maintenance`, `medical_records`, `validation`, `notifications`, `auth`, `dashboard`, `messages`, `uploads`, `pagination`, `display`, `consultation_detail`, `patient_history` e `lgpd`.  
+> - Todos os pontos mapeados em [TASK_11_MIGRACAO_CONFIG_TELEMEDICINE.md](./TASK_11_MIGRACAO_CONFIG_TELEMEDICINE.md) foram migrados para `config('telemedicine.*')`, incluindo ajustes de revisão (CodeRabbit): chaves mais específicas para janelas de timeline, histórico de paciente, relatórios LGPD, limites de dashboard e paginação de notificações.
 
 ---
 

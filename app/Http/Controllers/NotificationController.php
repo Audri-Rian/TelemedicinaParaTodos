@@ -30,7 +30,14 @@ class NotificationController extends Controller
     public function index(Request $request): JsonResponse
     {
         $user = Auth::user();
-        $perPage = $request->get('per_page', config('telemedicine.notifications.per_page', 15));
+        $defaultPerPage = (int) config('telemedicine.notifications.per_page', 15);
+        $maxPerPage = (int) config('telemedicine.notifications.max_per_page', 100);
+
+        $perPage = (int) $request->get('per_page', $defaultPerPage);
+        if ($perPage <= 0) {
+            $perPage = $defaultPerPage;
+        }
+        $perPage = min($perPage, $maxPerPage);
         $type = $request->get('type');
         $unreadOnly = $request->boolean('unread_only', false);
 

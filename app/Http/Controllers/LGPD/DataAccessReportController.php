@@ -23,7 +23,7 @@ class DataAccessReportController extends Controller
     {
         $user = auth()->user();
         
-        $reportDays = (int) config('telemedicine.maintenance.timeline_window_days', 30);
+        $reportDays = (int) config('telemedicine.lgpd.report_window_days', 30);
         $report = $this->lgpdService->generateAccessReport(
             $user,
             Carbon::now()->subDays($reportDays),
@@ -47,7 +47,7 @@ class DataAccessReportController extends Controller
 
         $user = auth()->user();
         
-        $reportDays = (int) config('telemedicine.maintenance.timeline_window_days', 30);
+        $reportDays = (int) config('telemedicine.lgpd.report_window_days', 30);
         $startDate = $request->start_date ? Carbon::parse($request->start_date) : Carbon::now()->subDays($reportDays);
         $endDate = $request->end_date ? Carbon::parse($request->end_date) : Carbon::now();
 

@@ -16,7 +16,7 @@ class AvailabilityTimelineService
      */
     public function getOverview(Doctor $doctor, ?Carbon $start = null, ?Carbon $end = null): array
     {
-        $windowDays = (int) config('telemedicine.maintenance.timeline_window_days', 30);
+        $windowDays = (int) config('telemedicine.availability.timeline_window_days', 30);
         $windowStart = ($start ?? Carbon::now()->subDays($windowDays))->startOfDay();
         $windowEnd = ($end ?? Carbon::now()->addDays($windowDays))->endOfDay();
 

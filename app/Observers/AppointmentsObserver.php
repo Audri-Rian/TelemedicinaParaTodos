@@ -8,6 +8,7 @@ use App\Events\AppointmentRescheduled;
 use App\Events\AppointmentStatusChanged;
 use App\Models\AppointmentLog;
 use App\Models\Appointments;
+use Illuminate\Support\Str;
 
 class AppointmentsObserver
 {
@@ -131,10 +132,17 @@ class AppointmentsObserver
     private static function generateUniqueAccessCode(): string
     {
         $length = (int) config('telemedicine.appointment.access_code_length', 8);
-        $code = strtoupper(substr(md5(uniqid()), 0, $length));
-        while (Appointments::where('access_code', $code)->exists()) {
-            $code = strtoupper(substr(md5(uniqid()), 0, $length));
-        }
+        $maxAttempts = 10;
+        $attempts = 0;
+
+        do {
+            if ($attempts++ >= $maxAttempts) {
+                throw new \RuntimeException('Não foi possível gerar um código de acesso único após ' . $maxAttempts . ' tentativas.');
+            }
+
+            $code = Str::upper(Str::random($length));
+        } while (Appointments::where('access_code', $code)->exists());
+
         return $code;
     }
 }
