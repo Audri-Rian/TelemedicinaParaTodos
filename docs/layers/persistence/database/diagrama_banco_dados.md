@@ -1,5 +1,7 @@
 # Diagrama do Banco de Dados - Telemedicina Para Todos
 
+*Documento em: `docs/layers/persistence/database/` (Camada de Persistência)*
+
 ## Diagrama Entidade-Relacionamento (ERD)
 
 ```mermaid

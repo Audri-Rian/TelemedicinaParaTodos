@@ -57,26 +57,30 @@ O **Telemedicina para Todos** é uma plataforma moderna de telemedicina que cone
 
 ## 🗂️ Estrutura da Documentação
 
+### 0. 📚 Documentação por Camadas (novo)
+- **[Visão das camadas](../layers/README.md)** - Arquitetura em camadas (Domínio, Sinalização, Mídia, Persistência, Infraestrutura, Arquitetura & Governança)
+- **[Camada de Domínio & Aplicação](../layers/domain/README.md)** - Módulos de negócio (Auth, Consultas, Mensagens, Videochamada, Prontuários) e dependências entre camadas
+
 ### 1. 📜 Requisitos e Regras de Negócio
-- **[Regras do Sistema](../requirements/SystemRules.md)** - Regras de negócio, compliance e segurança
-- **[Guia de Funcionalidades](../requirements/FuncionalitsGuide.md)** - Requisitos funcionais e casos de uso
+- **[Regras do Sistema](../layers/architecture-governance/requirements/SystemRules.md)** - Regras de negócio, compliance e segurança
+- **[Guia de Funcionalidades](../layers/architecture-governance/requirements/FuncionalitsGuide.md)** - Requisitos funcionais e casos de uso
 - **[Matriz de Rastreabilidade](MatrizRequisitos.md)** - Mapeamento completo requisito → implementação
 
 ### 2. 🏗️ Arquitetura e Padrões
-- **[Arquitetura do Sistema](../architecture/Arquitetura.md)** - Estrutura geral, camadas e padrões
-- **[Guia do Frontend](../architecture/VueGuide.md)** - Convenções Vue.js e estrutura do frontend
-- **[Guia de Desenvolvimento](../architecture/DevGuide.md)** - Padrões de código e boas práticas
+- **[Arquitetura do Sistema](../layers/architecture-governance/Architecture/Arquitetura.md)** - Estrutura geral, camadas e padrões
+- **[Guia do Frontend](../layers/architecture-governance/Architecture/VueGuide.md)** - Convenções Vue.js e estrutura do frontend
+- **[Guia de Desenvolvimento](../layers/architecture-governance/Architecture/DevGuide.md)** - Padrões de código e boas práticas
 
 ### 3. 💾 Modelo de Dados
-- **[Diagrama do Banco de Dados](../database/diagrama_banco_dados.md)** - Estrutura das tabelas e relacionamentos
+- **[Diagrama do Banco de Dados](../layers/persistence/database/diagrama_banco_dados.md)** - Estrutura das tabelas e relacionamentos
 - **[Migrações](../../database/migrations/)** - Implementação das estruturas no banco
 
 ### 4. ⚙️ Lógica de Domínio
 - **[Lógica de Consultas](../modules/appointments/AppointmentsLogica.md)** - Regras de agendamento e fluxos
 - **[Implementação de Consultas](../modules/appointments/AppointmentsImplementationStudy.md)** - Detalhes técnicos
 - **[Lógica de Autenticação](../modules/auth/RegistrationLogic.md)** - Fluxos de registro e login
-- **[Implementação de Videochamadas](../modules/videocall/VideoCallImplementation.md)** - Sistema de vídeo
-- **[Tarefas de Videochamadas](../modules/videocall/VideoCallTasks.md)** - Checklist de implementação
+- **[Implementação de Videochamadas](../layers/signaling/videocall/VideoCallImplementation.md)** - Sistema de vídeo
+- **[Tarefas de Videochamadas](../layers/signaling/videocall/VideoCallTasks.md)** - Checklist de implementação
 - **[Prontuários Médicos - Médico](../modules/MedicalRecords/MedicalRecordsDoctor.md)** - Gestão completa de prontuários
 - **[Prontuários Médicos - Paciente](../modules/MedicalRecords/MedicalRecordsPatient.md)** - Visualização de prontuários
 

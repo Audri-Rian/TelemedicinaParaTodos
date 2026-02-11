@@ -236,3 +236,4 @@ console.log('Selected user:', selectedUser);
 ---
 
 **Desenvolvido para Telemedicina Para Todos** 🏥✨
+*Documento em: `docs/layers/signaling/videocall/` (Camada de Sinalização)*

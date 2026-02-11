@@ -141,7 +141,7 @@ Este índice organiza todos os diagramas do projeto por categoria e funcionalida
 ## 📚 Diagramas Relacionados
 
 ### Banco de Dados
-- **[Diagrama ERD](../database/diagrama_banco_dados.md)** - Modelo entidade-relacionamento completo
+- **[Diagrama ERD](../../persistence/database/diagrama_banco_dados.md)** - Modelo entidade-relacionamento completo
 
 ### Documentação
 - **[Arquitetura](../Architecture/Arquitetura.md)** - Documentação detalhada da arquitetura

@@ -1,5 +1,7 @@
 # Configuração de Armazenamento de Avatares para Produção (AWS S3)
 
+*Documento em: `docs/layers/infrastructure/aws/` (Camada de Infraestrutura)*
+
 Este documento explica como configurar o sistema de upload de avatares para usar Amazon S3 em produção, mantendo o armazenamento local para desenvolvimento.
 
 ## 📋 Índice

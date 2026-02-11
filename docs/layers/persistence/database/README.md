@@ -1,5 +1,7 @@
 # 💾 Modelo de Dados
 
+*Documento em: `docs/layers/persistence/database/` (Camada de Persistência)*
+
 Esta pasta contém a documentação sobre a estrutura do banco de dados, relacionamentos e migrações.
 
 ## 📁 Arquivos
@@ -63,12 +65,11 @@ Esta documentação define **como** os dados são estruturados e relacionados:
 
 ## 📊 Implementação
 
-- **Migrações**: [database/migrations/](../../database/migrations/)
-- **Models**: [app/Models/](../../app/Models/)
-- **Seeders**: [database/seeders/](../../database/seeders/)
+- **Migrações**: [database/migrations/](../../../../database/migrations/)
+- **Models**: [app/Models/](../../../../app/Models/)
+- **Seeders**: [database/seeders/](../../../../database/seeders/)
 
 ---
 
 *Última atualização: Janeiro 2025*
 *Versão: 2.0*
-

@@ -419,12 +419,12 @@ Implementar testes unitários e de integração
 ## 🔗 Referências Cruzadas
 
 ### Documentação Relacionada
-- **[📋 Visão Geral](../index/VisaoGeral.md)** - Índice central da documentação
-- **[📊 Matriz de Rastreabilidade](../index/MatrizRequisitos.md)** - Mapeamento requisito → implementação
-- **[📚 Glossário](../index/Glossario.md)** - Definições de termos técnicos
+- **[📋 Visão Geral](../../../index/VisaoGeral.md)** - Índice central da documentação
+- **[📊 Matriz de Rastreabilidade](../../../index/MatrizRequisitos.md)** - Mapeamento requisito → implementação
+- **[📚 Glossário](../../../index/Glossario.md)** - Definições de termos técnicos
 - **[📜 Regras do Sistema](../requirements/SystemRules.md)** - Regras de negócio e compliance
-- **[⚙️ Lógica de Consultas](../modules/appointments/AppointmentsLogica.md)** - Regras de agendamento
-- **[🔐 Autenticação](../modules/auth/RegistrationLogic.md)** - Fluxos de registro e login
+- **[⚙️ Lógica de Consultas](../../../modules/appointments/AppointmentsLogica.md)** - Regras de agendamento
+- **[🔐 Autenticação](../../../modules/auth/RegistrationLogic.md)** - Fluxos de registro e login
 
 ### Implementações Relacionadas
 - **[Controllers](../../app/Http/Controllers/)** - Camada de apresentação
@@ -432,16 +432,16 @@ Implementar testes unitários e de integração
 - **[Models](../../app/Models/)** - Entidades de domínio
 - **[Events](../../app/Events/)** - Eventos para comunicação em tempo real
 - **[Observers](../../app/Observers/)** - Hooks de modelo
-- **[Database Migrations](../../database/migrations/)** - Estrutura do banco
+- **[Database Migrations](../../../../database/migrations/)** - Estrutura do banco
 - **[Frontend Components](../../resources/js/components/)** - Componentes Vue.js
 - **[Frontend Pages](../../resources/js/pages/)** - Páginas da aplicação
 - **[Composables](../../resources/js/composables/)** - Lógica reutilizável Vue
 
 ### Termos do Glossário
-- **[DTO](../index/Glossario.md#d)** - Data Transfer Object
-- **[Service](../index/Glossario.md#s)** - Camada de lógica de negócio
-- **[Eloquent](../index/Glossario.md#e)** - ORM do Laravel
-- **[Inertia.js](../index/Glossario.md#i)** - Integração Laravel + Vue.js
+- **[DTO](../../../index/Glossario.md#d)** - Data Transfer Object
+- **[Service](../../../index/Glossario.md#s)** - Camada de lógica de negócio
+- **[Eloquent](../../../index/Glossario.md#e)** - ORM do Laravel
+- **[Inertia.js](../../../index/Glossario.md#i)** - Integração Laravel + Vue.js
 
 ---
 

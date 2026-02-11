@@ -85,7 +85,7 @@ Garante que apenas o usuário alvo possa escutar eventos da sua chamada.
 
 Toda chamada pertence a um appointment: nenhum fluxo de sinalização ou mídia ocorre sem appointment_id.
 
-Gerar callId (UUID) no “request” inicial e manter em todo o ciclo (request/accept/started/end).
+Gerar callId (UUID) no "request" inicial e manter em todo o ciclo (request/accept/started/end).
 Critério de aceite: logs/eventos e front sempre carregam {appointmentId, callId}; eventos sem correspondência são ignorados.
 
 1.2 Campos de Lifecycle no appointments
@@ -155,7 +155,7 @@ Critério de aceite: chamadas fora de contexto/horário/status são 403.
 
 Aplicar Throttle (ex.: ->middleware('throttle:video-call')) nas rotas request/accept.
 
-Tratar “ocupado” (busy) se já houver sala ativa (ver item Lock/Concorrência).
+Tratar "ocupado" (busy) se já houver sala ativa (ver item Lock/Concorrência).
 Critério de aceite: spam de request não causa flood no outro usuário.
 
 2.3 Locks/Concorrência
@@ -228,7 +228,7 @@ Respostas HTTP,
 Eventos Echo (Requested/Accepted/Started/Ended),
 
 Eventos Peer (call, stream, close, error).
-Critério de aceite: nenhum estado “fantasma”; UI sempre coerente.
+Critério de aceite: nenhum estado "fantasma"; UI sempre coerente.
 
 4.2 Listeners Únicos & Contexto
 
@@ -237,16 +237,16 @@ Um peer.on('call') por tela; usar off() no onUnmounted.
 Filtrar todos os eventos por {appointmentId, callId}; ignorar o resto.
 
 Guardar peerCall atual; impedir iniciar outra enquanto existir ativa.
-Critério de aceite: sem listener leak e sem “sobreposição” de ligações.
+Critério de aceite: sem listener leak e sem "sobreposição" de ligações.
 
 4.3 Timeouts & Cancel
 
-Timeout de ringing_out (25–30s) → mostra “sem resposta” + emite cancel.
+Timeout de ringing_out (25–30s) → mostra "sem resposta" + emite cancel.
 
 Botão Cancelar enquanto ringing_out.
 
 Se receptor está in_call, recebedor emite busy.
-Critério de aceite: usuário nunca fica “preso” no ringing.
+Critério de aceite: usuário nunca fica "preso" no ringing.
 
 4.4 Integração com Echo
 
@@ -260,7 +260,7 @@ Requested (se você for o destinatário) → mostrar ringing_in.
 
 Accepted (se você for o chamador) → fazer peer.call.
 
-Started → exibir “conectado”.
+Started → exibir "conectado".
 
 Ended → acionar endCall() local.
 Critério de aceite: sincronismo imediato entre os dois lados.
@@ -288,7 +288,7 @@ Configurar PeerJS com iceServers (STUN + TURN confiável).
 
 Tratar peer.on('disconnected') com peer.reconnect() se apropriado.
 
-Exibir indicador de “reconectando” na UI.
+Exibir indicador de "reconectando" na UI.
 Critério de aceite: chamadas funcionam em CGNAT/rede corporativa.
 
 5.4 Eventos de Chamada
@@ -306,11 +306,11 @@ Critério de aceite: falhas não travam a UI e deixam rastro.
 Todas as rotas de chamada com authorize() (ver seção 2).
 
 403 com mensagens utilitárias (fora da janela, não é participante, etc.).
-Critério de aceite: pentest simples não “vaza” chamadas.
+Critério de aceite: pentest simples não "vaza" chamadas.
 
 6.2 Privacidade & Gravação
 
-Consentimento antes de gravar; exibir badge “gravando”.
+Consentimento antes de gravar; exibir badge "gravando".
 
 video_recording_url salvo via webhook; controle de acesso para download.
 
@@ -321,7 +321,7 @@ Critério de aceite: aderência mínima a boas práticas de privacidade.
 
 Produção sempre HTTPS (getUserMedia exige).
 
-Cookies de sessão “secure”/“httponly”.
+Cookies de sessão "secure"/"httponly".
 Critério de aceite: sem problemas de permissão/miçangas em produção.
 
 7. Observabilidade, Logs & Qualidade
@@ -362,18 +362,18 @@ Critério de aceite: banco não fica com pendências inconsistentes.
 
 8.2 Degradação Elegante
 
-Se TURN indisponível, avisar “rede pode impedir a conexão”.
+Se TURN indisponível, avisar "rede pode impedir a conexão".
 
 Permitir fallback (reagendar/telefone).
 Critério de aceite: o usuário sempre sabe o que fazer.
 
 8.3 Playbooks
 
-“TURN down”: como verificar e restaurar.
+"TURN down": como verificar e restaurar.
 
-“Ninguém conecta”: checklist (STUN/TURN, firewall, DNS).
+"Ninguém conecta": checklist (STUN/TURN, firewall, DNS).
 
-“Echo sem eventos”: checar auth do canal, chaves Reverb, SSL WS.
+"Echo sem eventos": checar auth do canal, chaves Reverb, SSL WS.
 Critério de aceite: tempo médio de recuperação minimizado.
 
 9. DevEx (DX) & Organização
@@ -386,9 +386,9 @@ Critério de aceite: zero any/mixed em paths críticos.
 
 9.2 Feature Flags & Config
 
-lead/duration/grace configuráveis (“sem deploy”).
+lead/duration/grace configuráveis ("sem deploy").
 
-Flag para “aceite automático” (dev) vs “Atender/Recusar” (prod).
+Flag para "aceite automático" (dev) vs "Atender/Recusar" (prod).
 Critério de aceite: ajustes finos sem reimplantar.
 
 9.3 Código Limpo & Reuso
@@ -422,7 +422,7 @@ Payloads inseguros: os eventos de broadcast transmitiam o modelo inteiro do usu�
 
 Sem controle de concorrência: era possível abrir múltiplas salas paralelas para a mesma consulta.
 
-UX limitada: não havia Atender/Recusar, nem timeout/cancelamento, nem indicadores de estado (“ocupado”, “aguardando paciente/médico”).
+UX limitada: não havia Atender/Recusar, nem timeout/cancelamento, nem indicadores de estado ("ocupado", "aguardando paciente/médico").
 
 Ausência de logs/auditoria: nenhuma trilha sobre quem entrou/saiu, nem métricas de sucesso/falha.
 
@@ -430,7 +430,7 @@ Sem suporte robusto de rede: dependência apenas de STUN padrão do PeerJS, sem 
 
 2. Situação Após a Checklist
 
-Com a aplicação da Checklist, o sistema de videochamadas deixa de ser um recurso “solto” e passa a ser um módulo integrado ao domínio de consultas médicas, com regras de negócio e governança.
+Com a aplicação da Checklist, o sistema de videochamadas deixa de ser um recurso "solto" e passa a ser um módulo integrado ao domínio de consultas médicas, com regras de negócio e governança.
 
 Novas capacidades:
 
@@ -466,13 +466,13 @@ Eventos padronizados: AppointmentCallRequested, Accepted, Started, Ended, Cancel
 
 Todos os eventos carregam appointmentId e callId.
 
-Timeouts e cancelamentos tratados, evitando chamadas “penduradas”.
+Timeouts e cancelamentos tratados, evitando chamadas "penduradas".
 
 🎥 Experiência de uso
 
 Tela de toque com Atender/Recusar e som de ring.
 
-Cancelamento durante ringing e retorno de status “ocupado” se outra chamada estiver em andamento.
+Cancelamento durante ringing e retorno de status "ocupado" se outra chamada estiver em andamento.
 
 Indicadores: aguardando médico/paciente, reconectando, gravando.
 
@@ -492,5 +492,7 @@ Métricas de sucesso/falha, tempo médio até conectar, duração média de cons
 
 Jobs automáticos para marcar no_show ou encerrar chamadas zumbis.
 
-📌 **Conclusão:**  
+📌 **Conclusão:**
 O sistema já cumpre a função principal de estabelecer chamadas P2P, mas pode ser refinado em **fluxo, UX, segurança e robustez** para lidar com casos de erro, redes adversas e múltiplas chamadas simultâneas.
+
+*Documento em: `docs/layers/signaling/videocall/` (Camada de Sinalização)*
