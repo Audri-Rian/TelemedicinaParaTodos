@@ -875,8 +875,7 @@ export function useVideoCall(options: UseVideoCallOptions = {}) {
         try {
             const reverbConfig = (page.props as any)?.reverb;
 
-            if (!reverbConfig) {
-                console.warn('Reverb não configurado. Adicione os dados no middleware HandleInertiaRequests.');
+            if (!reverbConfig?.key) {
                 return;
             }
 

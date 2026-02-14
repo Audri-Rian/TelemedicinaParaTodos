@@ -142,8 +142,8 @@ export function useNotifications() {
             // Usar configuração do Reverb do Inertia (mesmo padrão do useMessages)
             const reverbConfig = (page.props as any)?.reverb;
 
-            if (!reverbConfig) {
-                console.warn('Reverb não configurado. Adicione os dados no middleware HandleInertiaRequests.');
+            if (!reverbConfig?.key) {
+                // Reverb/Pusher não configurado ou REVERB_APP_KEY ausente no .env — notificações em tempo real desativadas
                 return;
             }
 
