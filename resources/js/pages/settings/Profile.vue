@@ -334,13 +334,13 @@ const cancelPreview = () => {
         <SettingsLayout>
             <div class="flex flex-col space-y-6">
                 <!-- Seção de Avatar -->
-                <div class="space-y-4 rounded-lg border border-gray-200 bg-white p-6">
+                <div class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
                     <HeadingSmall title="Foto de Perfil" description="Adicione uma foto para personalizar seu perfil" />
-                    
+                    <div class="mt-4 space-y-4">
                     <div class="flex items-start gap-6">
                         <!-- Preview do Avatar -->
                         <div class="relative">
-                            <div class="relative h-32 w-32 overflow-hidden rounded-full border-2 border-gray-200 bg-gray-100">
+                            <div class="relative h-32 w-32 overflow-hidden rounded-full border-2 border-primary/20 bg-gray-50">
                                 <img
                                     v-if="previewUrl || avatarThumbnailUrl || avatarUrl"
                                     :src="previewUrl || avatarThumbnailUrl || avatarUrl || ''"
@@ -379,8 +379,8 @@ const cancelPreview = () => {
                                 <!-- Botão de selecionar/upload -->
                                 <Button
                                     type="button"
-                                    variant="default"
                                     :disabled="isUploading"
+                                    class="bg-primary text-white hover:bg-primary/90"
                                     @click="previewUrl ? uploadAvatar() : selectFile()"
                                 >
                                     <Upload class="mr-2 h-4 w-4" />
@@ -403,8 +403,8 @@ const cancelPreview = () => {
                                 <Button
                                     v-if="avatarUrl && !previewUrl"
                                     type="button"
-                                    variant="destructive"
                                     :disabled="isUploading"
+                                    class="bg-red-50 text-red-700 hover:bg-red-100 border-0"
                                     @click="deleteAvatar"
                                 >
                                     <X class="mr-2 h-4 w-4" />
@@ -426,18 +426,20 @@ const cancelPreview = () => {
                             </p>
                         </div>
                     </div>
+                    </div>
                 </div>
                 
-                <HeadingSmall title="Informações do Perfil" description="Atualize seu nome e endereço de e-mail" />
-
-                <form @submit.prevent="submit" class="space-y-6">
+                <!-- Card Informações do Perfil -->
+                <div class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+                    <HeadingSmall title="Informações do Perfil" description="Atualize seu nome e endereço de e-mail" />
+                <form @submit.prevent="submit" class="mt-4 space-y-6">
                     <!-- Primeira Etapa: Informações Básicas -->
                     <div class="space-y-6">
                         <div class="grid gap-2">
-                            <Label for="name">Nome</Label>
+                            <Label for="name" class="text-gray-800">Nome</Label>
                                 <Input
                                     id="name"
-                                    class="mt-1 block w-full"
+                                    class="mt-1 block w-full rounded-xl border-primary/30 focus-visible:ring-primary/30"
                                     name="name"
                                     v-model="form.name"
                                     required
@@ -448,11 +450,11 @@ const cancelPreview = () => {
                         </div>
 
                         <div class="grid gap-2">
-                            <Label for="email">Endereço de e-mail</Label>
+                            <Label for="email" class="text-gray-800">Endereço de e-mail</Label>
                                 <Input
                                     id="email"
                                     type="email"
-                                    class="mt-1 block w-full"
+                                    class="mt-1 block w-full rounded-xl border-primary/30 focus-visible:ring-primary/30"
                                     name="email"
                                     v-model="form.email"
                                     required
@@ -676,7 +678,9 @@ const cancelPreview = () => {
                     </div>
 
                     <div class="flex items-center gap-4">
-                        <Button type="submit" :disabled="form.processing">Salvar</Button>
+                        <Button type="submit" :disabled="form.processing" class="rounded-xl bg-primary text-white hover:bg-primary/90">
+                            Salvar Alterações
+                        </Button>
 
                         <Transition
                             enter-active-class="transition ease-in-out"
@@ -721,6 +725,7 @@ const cancelPreview = () => {
                         </div>
                     </Transition>
                 </form>
+                </div>
 
                 <!-- Segunda Etapa: Timeline (Apenas para Doutores) -->
                 <div v-if="auth?.isDoctor || auth?.role === 'doctor'" class="space-y-6 border-t pt-6">

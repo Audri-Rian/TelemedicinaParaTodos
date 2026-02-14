@@ -175,33 +175,35 @@ const closeModal = () => {
     <AppLayout :breadcrumbs="breadcrumbItems">
         <Head title="Painel de Notificação de Bugs" />
 
-        <SettingsLayout :full-width="true" :hide-heading="true">
+        <SettingsLayout :full-width="true">
             <div class="space-y-6 w-full">
+                <!-- Card principal -->
+                <div class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
                 <!-- Header -->
-                <div class="flex items-start justify-between">
+                <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div class="flex items-center gap-3">
-                        <div class="flex h-10 w-10 items-center justify-center rounded-full bg-yellow-100">
-                            <Bug class="h-5 w-5 text-yellow-600" />
+                        <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+                            <Bug class="h-5 w-5 text-primary" />
                         </div>
                         <div>
-                            <h1 class="text-2xl font-bold text-gray-900">Painel de Notificação de Bugs</h1>
-                            <p class="text-sm text-gray-600 mt-1">Acompanhe e reporte problemas encontrados no sistema.</p>
+                            <h2 class="text-lg font-semibold text-gray-800">Notificar Bug</h2>
+                            <p class="text-sm text-gray-500 mt-0.5">Acompanhe e reporte problemas encontrados no sistema.</p>
                         </div>
                     </div>
-                    <Button @click="openModal" class="bg-teal-600 hover:bg-teal-700 text-white">
+                    <Button @click="openModal" class="shrink-0 rounded-xl bg-primary text-white hover:bg-primary/90">
                         <Bug class="mr-2 h-4 w-4" />
                         Reportar Novo Bug
                     </Button>
                 </div>
 
                 <!-- Busca e Filtros -->
-                <div class="flex flex-col sm:flex-row gap-4">
+                <div class="mt-6 flex flex-col sm:flex-row gap-4">
                     <div class="relative flex-1">
                         <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                         <Input
                             v-model="searchQuery"
                             placeholder="Buscar por título do bug..."
-                            class="pl-9"
+                            class="rounded-xl border-primary/20 pl-9 focus-visible:ring-primary/30"
                         />
                     </div>
                     <div class="flex gap-2 flex-wrap">
@@ -238,8 +240,8 @@ const closeModal = () => {
                 </div>
 
                 <!-- Lista de Bugs -->
-                <div v-if="filteredBugs.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <Card v-for="bug in filteredBugs" :key="bug.id" class="hover:shadow-md transition-shadow">
+                <div v-if="filteredBugs.length > 0" class="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    <Card v-for="bug in filteredBugs" :key="bug.id" class="rounded-2xl border-gray-100 shadow-sm transition-shadow hover:shadow-md">
                         <CardHeader>
                             <div class="flex items-start justify-between gap-2 mb-2">
                                 <CardTitle class="text-base font-semibold line-clamp-2">{{ bug.title }}</CardTitle>
@@ -272,7 +274,7 @@ const closeModal = () => {
                             </div>
                             <Button
                                 variant="link"
-                                class="mt-3 p-0 h-auto text-teal-600 hover:text-teal-700"
+                                class="mt-3 p-0 h-auto text-primary hover:text-primary/80"
                             >
                                 Ver detalhes
                             </Button>
@@ -281,9 +283,10 @@ const closeModal = () => {
                 </div>
 
                 <!-- Estado vazio -->
-                <div v-else class="text-center py-12">
-                    <Bug class="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                <div v-else class="py-12 text-center">
+                    <Bug class="mx-auto mb-4 h-12 w-12 text-gray-400" />
                     <p class="text-gray-600">Nenhum bug encontrado com os filtros aplicados.</p>
+                </div>
                 </div>
             </div>
         </SettingsLayout>
