@@ -20,17 +20,9 @@ class DoctorConsultationDetailController extends Controller
 
     public function show(Request $request, Appointments $appointment)
     {
+        $this->authorize('view', $appointment);
+
         $user = $request->user();
-
-        if (!$user?->doctor) {
-            abort(403, 'Apenas médicos podem acessar consultas.');
-        }
-
-        // Verificar se o médico é responsável pela consulta
-        if ($appointment->doctor_id !== $user->doctor->id) {
-            abort(403, 'Você não tem permissão para acessar esta consulta.');
-        }
-
         $appointment->load([
             'patient.user',
             'doctor.user',
@@ -169,12 +161,9 @@ class DoctorConsultationDetailController extends Controller
 
     public function start(Request $request, Appointments $appointment)
     {
+        $this->authorize('start', $appointment);
+
         $user = $request->user();
-
-        if ($appointment->doctor_id !== $user->doctor->id) {
-            abort(403);
-        }
-
         if ($appointment->status !== Appointments::STATUS_SCHEDULED && 
             $appointment->status !== Appointments::STATUS_RESCHEDULED) {
             return back()->withErrors(['status' => 'Apenas consultas agendadas podem ser iniciadas.']);
@@ -195,12 +184,9 @@ class DoctorConsultationDetailController extends Controller
 
     public function saveDraft(Request $request, Appointments $appointment)
     {
+        $this->authorize('saveDraft', $appointment);
+
         $user = $request->user();
-
-        if ($appointment->doctor_id !== $user->doctor->id) {
-            abort(403);
-        }
-
         // Permitir edição mesmo quando consulta está finalizada
 
         $validated = $request->validate([
@@ -239,12 +225,9 @@ class DoctorConsultationDetailController extends Controller
 
     public function finalize(Request $request, Appointments $appointment)
     {
+        $this->authorize('end', $appointment);
+
         $user = $request->user();
-
-        if ($appointment->doctor_id !== $user->doctor->id) {
-            abort(403);
-        }
-
         if ($appointment->status !== Appointments::STATUS_IN_PROGRESS) {
             return back()->withErrors(['status' => 'Apenas consultas em andamento podem ser finalizadas.']);
         }
@@ -293,12 +276,9 @@ class DoctorConsultationDetailController extends Controller
 
     public function complement(Request $request, Appointments $appointment)
     {
+        $this->authorize('complement', $appointment);
+
         $user = $request->user();
-
-        if ($appointment->doctor_id !== $user->doctor->id) {
-            abort(403);
-        }
-
         if ($appointment->status !== Appointments::STATUS_COMPLETED) {
             return back()->withErrors(['status' => 'Apenas consultas finalizadas podem ser complementadas.']);
         }
@@ -331,12 +311,9 @@ class DoctorConsultationDetailController extends Controller
 
     public function generatePdf(Request $request, Appointments $appointment)
     {
+        $this->authorize('generateConsultationPdf', $appointment);
+
         $user = $request->user();
-
-        if ($appointment->doctor_id !== $user->doctor->id) {
-            abort(403);
-        }
-
         $result = $this->medicalRecordService->generateConsultationPdf($appointment, $user);
 
         return response()->download(

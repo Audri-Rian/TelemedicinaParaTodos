@@ -8,6 +8,7 @@ use App\Models\Doctor;
 use App\Models\Doctor\BlockedDate;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Gate;
 
 class DoctorBlockedDateController extends Controller
 {
@@ -17,10 +18,8 @@ class DoctorBlockedDateController extends Controller
      */
     public function store(StoreBlockedDateRequest $request, Doctor $doctor): JsonResponse
     {
-        // Autorização
-        if (auth()->user()->doctor->id !== $doctor->id) {
-            abort(403, 'Você não tem permissão para criar datas bloqueadas para este médico.');
-        }
+        Gate::authorize('manageDoctorSchedule', $doctor);
+        $this->authorize('create', BlockedDate::class);
 
         $validated = $request->validated();
 
@@ -60,10 +59,7 @@ class DoctorBlockedDateController extends Controller
      */
     public function destroy(Doctor $doctor, BlockedDate $blockedDate): JsonResponse
     {
-        // Autorização: médico só pode deletar suas próprias datas bloqueadas
-        if (auth()->user()->doctor->id !== $doctor->id || $blockedDate->doctor_id !== $doctor->id) {
-            abort(403, 'Você não tem permissão para deletar este bloqueio.');
-        }
+        $this->authorize('delete', $blockedDate);
 
         $blockedDate->delete();
 

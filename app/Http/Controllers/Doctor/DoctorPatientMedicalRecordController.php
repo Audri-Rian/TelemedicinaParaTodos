@@ -92,6 +92,7 @@ class DoctorPatientMedicalRecordController extends Controller
 
         $doctor = $request->user()->doctor;
         $appointment = $this->resolveAppointment($request->validated('appointment_id'), $patient, $doctor->id);
+        $this->authorize('registerDiagnosis', $appointment);
 
         $this->medicalRecordService->registerDiagnosis($appointment, $doctor, $request->validated());
 
@@ -104,6 +105,7 @@ class DoctorPatientMedicalRecordController extends Controller
 
         $doctor = $request->user()->doctor;
         $appointment = $this->resolveAppointment($request->validated('appointment_id'), $patient, $doctor->id);
+        $this->authorize('createPrescription', $appointment);
 
         $this->medicalRecordService->issuePrescription($doctor, $patient, $appointment, $request->validated());
 
@@ -116,6 +118,7 @@ class DoctorPatientMedicalRecordController extends Controller
 
         $doctor = $request->user()->doctor;
         $appointment = $this->resolveAppointment($request->validated('appointment_id'), $patient, $doctor->id);
+        $this->authorize('requestExamination', $appointment);
 
         $this->medicalRecordService->requestExamination($doctor, $patient, $appointment, $request->validated());
 
@@ -128,6 +131,7 @@ class DoctorPatientMedicalRecordController extends Controller
 
         $doctor = $request->user()->doctor;
         $appointment = $this->resolveAppointment($request->validated('appointment_id'), $patient, $doctor->id);
+        $this->authorize('createNote', $appointment);
 
         $this->medicalRecordService->createClinicalNote($doctor, $patient, $appointment, $request->validated());
 
@@ -140,6 +144,7 @@ class DoctorPatientMedicalRecordController extends Controller
 
         $doctor = $request->user()->doctor;
         $appointment = $this->resolveAppointment($request->validated('appointment_id'), $patient, $doctor->id);
+        $this->authorize('issueCertificate', $appointment);
 
         $this->medicalRecordService->issueCertificate($doctor, $patient, $appointment, $request->validated());
 
@@ -152,6 +157,7 @@ class DoctorPatientMedicalRecordController extends Controller
 
         $doctor = $request->user()->doctor;
         $appointment = $this->resolveAppointment($request->validated('appointment_id'), $patient, $doctor->id);
+        $this->authorize('registerVitalSigns', $appointment);
 
         $this->medicalRecordService->registerVitalSigns($appointment, $doctor, $request->validated());
 
@@ -165,6 +171,7 @@ class DoctorPatientMedicalRecordController extends Controller
         $doctor = $request->user()->doctor;
         $appointmentId = $request->string('appointment_id');
         $appointment = $this->resolveAppointment($appointmentId, $patient, $doctor->id);
+        $this->authorize('generateConsultationPdf', $appointment);
 
         $document = $this->medicalRecordService->generateConsultationPdf($appointment, $request->user());
 

@@ -7,6 +7,7 @@ use App\Http\Requests\StoreMessageRequest;
 use App\Services\MessageService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 class MessageController extends Controller
 {
@@ -39,6 +40,8 @@ class MessageController extends Controller
      */
     public function messages(Request $request, string $userId): JsonResponse
     {
+        Gate::authorize('viewConversation', $userId);
+
         try {
             $limit = $request->input('limit', 50);
             $beforeMessageId = $request->input('before');
@@ -87,6 +90,8 @@ class MessageController extends Controller
      */
     public function markAsRead(string $userId): JsonResponse
     {
+        Gate::authorize('viewConversation', $userId);
+
         try {
             $count = $this->messageService->markMessagesAsRead($userId);
 
@@ -110,14 +115,7 @@ class MessageController extends Controller
     {
         try {
             $message = \App\Models\Message::findOrFail($messageId);
-            
-            // Verificar se o usuário atual é o destinatário
-            if ($message->receiver_id !== auth()->id()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Você não tem permissão para marcar esta mensagem como entregue',
-                ], 403);
-            }
+            $this->authorize('markAsDelivered', $message);
 
             $message->markAsDelivered();
 

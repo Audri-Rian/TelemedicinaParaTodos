@@ -196,4 +196,90 @@ class AppointmentPolicy
         
         return Carbon::now() <= $canRescheduleUntil;
     }
+
+    /**
+     * Determine whether the user (doctor) can add clinical data to this appointment.
+     * Only the doctor of the appointment can do so, and typically only when in_progress or completed.
+     */
+    protected function doctorCanActOnAppointment(User $user, Appointments $appointment, array $allowedStatuses): bool
+    {
+        if (!$user->isDoctor() || !$user->doctor) {
+            return false;
+        }
+
+        if ($appointment->doctor_id !== $user->doctor->id) {
+            return false;
+        }
+
+        return in_array($appointment->status, $allowedStatuses, true);
+    }
+
+    /**
+     * Statuses in which the doctor can add prescriptions, diagnoses, notes, etc.
+     */
+    protected function clinicalActionStatuses(): array
+    {
+        return [
+            Appointments::STATUS_IN_PROGRESS,
+            Appointments::STATUS_COMPLETED,
+        ];
+    }
+
+    public function createPrescription(User $user, Appointments $appointment): bool
+    {
+        return $this->doctorCanActOnAppointment($user, $appointment, $this->clinicalActionStatuses());
+    }
+
+    public function requestExamination(User $user, Appointments $appointment): bool
+    {
+        return $this->doctorCanActOnAppointment($user, $appointment, $this->clinicalActionStatuses());
+    }
+
+    public function registerDiagnosis(User $user, Appointments $appointment): bool
+    {
+        return $this->doctorCanActOnAppointment($user, $appointment, $this->clinicalActionStatuses());
+    }
+
+    public function createNote(User $user, Appointments $appointment): bool
+    {
+        return $this->doctorCanActOnAppointment($user, $appointment, $this->clinicalActionStatuses());
+    }
+
+    public function issueCertificate(User $user, Appointments $appointment): bool
+    {
+        return $this->doctorCanActOnAppointment($user, $appointment, $this->clinicalActionStatuses());
+    }
+
+    public function registerVitalSigns(User $user, Appointments $appointment): bool
+    {
+        return $this->doctorCanActOnAppointment($user, $appointment, $this->clinicalActionStatuses());
+    }
+
+    public function generateConsultationPdf(User $user, Appointments $appointment): bool
+    {
+        return $this->doctorCanActOnAppointment($user, $appointment, $this->clinicalActionStatuses());
+    }
+
+    /**
+     * Doctor can save draft (metadata/notes) when appointment is in progress or completed.
+     */
+    public function saveDraft(User $user, Appointments $appointment): bool
+    {
+        return $this->doctorCanActOnAppointment($user, $appointment, $this->clinicalActionStatuses());
+    }
+
+    /**
+     * Doctor can complement (notes) only when appointment is completed.
+     */
+    public function complement(User $user, Appointments $appointment): bool
+    {
+        if (!$user->isDoctor() || !$user->doctor) {
+            return false;
+        }
+        if ($appointment->doctor_id !== $user->doctor->id) {
+            return false;
+        }
+
+        return $appointment->status === Appointments::STATUS_COMPLETED;
+    }
 }

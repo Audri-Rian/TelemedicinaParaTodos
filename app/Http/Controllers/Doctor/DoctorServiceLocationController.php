@@ -9,6 +9,7 @@ use App\Models\Doctor;
 use App\Models\ServiceLocation;
 use App\Services\AvailabilityService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Gate;
 
 class DoctorServiceLocationController extends Controller
 {
@@ -22,10 +23,8 @@ class DoctorServiceLocationController extends Controller
      */
     public function store(StoreServiceLocationRequest $request, Doctor $doctor): JsonResponse
     {
-        // Autorização
-        if (auth()->user()->doctor->id !== $doctor->id) {
-            abort(403, 'Você não tem permissão para criar locais para este médico.');
-        }
+        Gate::authorize('manageDoctorSchedule', $doctor);
+        $this->authorize('create', ServiceLocation::class);
 
         $validated = $request->validated();
 
@@ -60,10 +59,7 @@ class DoctorServiceLocationController extends Controller
      */
     public function update(UpdateServiceLocationRequest $request, Doctor $doctor, ServiceLocation $location): JsonResponse
     {
-        // Autorização: médico só pode atualizar seus próprios locais
-        if (auth()->user()->doctor->id !== $doctor->id || $location->doctor_id !== $doctor->id) {
-            abort(403, 'Você não tem permissão para atualizar este local.');
-        }
+        $this->authorize('update', $location);
 
         $location->update($request->validated());
 
@@ -89,10 +85,7 @@ class DoctorServiceLocationController extends Controller
      */
     public function destroy(Doctor $doctor, ServiceLocation $location): JsonResponse
     {
-        // Autorização: médico só pode deletar seus próprios locais
-        if (auth()->user()->doctor->id !== $doctor->id || $location->doctor_id !== $doctor->id) {
-            abort(403, 'Você não tem permissão para deletar este local.');
-        }
+        $this->authorize('delete', $location);
 
         // Verificar se há slots associados
         $hasSlots = $location->availabilitySlots()->exists();
