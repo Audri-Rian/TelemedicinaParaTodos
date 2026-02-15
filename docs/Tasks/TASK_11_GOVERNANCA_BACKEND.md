@@ -34,9 +34,9 @@ Esta task é o **fechamento de governança** para evitar que o backend vire um c
 - [x] Substituir valores hardcoded por `config('telemedicine.*')` no código
 
 ### T 11.2 — Onboarding e deploy
-- [ ] Atualizar `.env.example` (Reverb, Redis, Queue, Storage, Mail)
-- [ ] Documentar no README: serviços necessários e comandos de setup
-- [ ] Incluir checklist "subiu local e está ok" no README
+- [x] Atualizar `.env.example` (Reverb, Redis, Queue, Storage, Mail)
+- [x] Documentar no README: serviços necessários e comandos de setup
+- [x] Incluir checklist "subiu local e está ok" no README
 
 ### T 11.3 — Policies + Broadcast (ALTA)
 - [ ] Criar e registrar `AppointmentPolicy`
