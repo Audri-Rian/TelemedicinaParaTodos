@@ -179,6 +179,43 @@ A API é documentada com **OpenAPI 3.x** e pode ser vista em **Swagger UI** ou *
 
 A spec gerada fica em `storage/api-docs/api-docs.json`. Endpoints que exigem autenticação usam sessão web (cookie); o "Try it out" no Swagger pode não enviar cookies automaticamente — para testar, use os endpoints públicos (ex.: especializações, disponibilidade por data) ou faça login no app no mesmo domínio antes.
 
+### Serviços necessários (backend)
+
+| Serviço | Quando é necessário | Comando / observação |
+|--------|----------------------|------------------------|
+| **Redis** | Opcional: só se `CACHE_STORE=redis` ou `QUEUE_CONNECTION=redis` | Instalar e rodar Redis localmente |
+| **Queue worker** | Necessário para jobs em background (lembretes, notificações, etc.) | `php artisan queue:work` (em terminal separado ou Supervisor em produção) |
+| **Reverb** | Necessário para notificações e atualizações em tempo real (WebSocket) | `php artisan reverb:start` (em terminal separado) |
+| **Scheduler** | Necessário para lembretes de consulta e rotinas agendadas | Em dev: `php artisan schedule:work`; em produção: cron com `php artisan schedule:run` |
+
+### Comandos de setup
+
+```bash
+# Configuração inicial
+cp .env.example .env
+php artisan key:generate
+
+# Banco de dados
+php artisan migrate
+php artisan db:seed
+
+# Processos em background (cada um em um terminal, se for usar)
+php artisan queue:work
+php artisan schedule:work
+php artisan reverb:start
+```
+
+### Checklist — Subiu local e está ok
+
+- [ ] `cp .env.example .env` e variáveis mínimas preenchidas (APP_KEY com `php artisan key:generate`, DB_*, etc.)
+- [ ] `composer install` e `npm install` executados sem erro
+- [ ] `php artisan migrate` executou sem falha
+- [ ] (Opcional) `php artisan db:seed` rodou
+- [ ] `php artisan serve` sobe e a aplicação abre no navegador (ex.: http://localhost:8000)
+- [ ] (Se usar Reverb) `php artisan reverb:start` está rodando e não há erro de WebSocket no console do front
+- [ ] (Se usar filas) `php artisan queue:work` está rodando e jobs são processados
+- [ ] (Opcional) Login/registro e uma consulta de teste funcionando
+
 ## Licença 📄
 
 Este projeto está licenciado sob a Licença Apache 2.0 - veja o arquivo [LICENSE](LICENSE) para detalhes.
