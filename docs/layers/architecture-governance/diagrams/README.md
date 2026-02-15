@@ -46,9 +46,9 @@ Diagramas específicos organizados por módulo:
 ## 🔗 Relacionamentos
 
 ### Documentação
-- **[Arquitetura](../architecture/Arquitetura.md)** - Referências a diagramas arquiteturais
-- **[Módulos](../modules/)** - Diagramas específicos por módulo
-- **[Banco de Dados](../database/diagrama_banco_dados.md)** - Diagrama ERD principal
+- **[Arquitetura](../Architecture/Arquitetura.md)** - Referências a diagramas arquiteturais
+- **[Módulos](../../../modules/)** - Diagramas específicos por módulo
+- **[Banco de Dados](../../persistence/database/diagrama_banco_dados.md)** - Diagrama ERD principal
 
 ## 🛠️ Ferramentas
 
