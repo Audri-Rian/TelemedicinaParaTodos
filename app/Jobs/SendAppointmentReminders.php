@@ -27,33 +27,22 @@ class SendAppointmentReminders implements ShouldQueue
     public function handle(NotificationService $notificationService): void
     {
         $now = Carbon::now();
+        $sendBeforeHours = config('telemedicine.reminders.send_before_hours', [24, 1]);
 
-        // Lembretes 24 horas antes
-        $reminder24h = $now->copy()->addHours(24);
-        $appointments24h = Appointments::where('status', Appointments::STATUS_SCHEDULED)
-            ->whereBetween('scheduled_at', [
-                $reminder24h->copy()->startOfHour(),
-                $reminder24h->copy()->endOfHour(),
-            ])
-            ->with(['doctor.user', 'patient.user'])
-            ->get();
+        foreach ($sendBeforeHours as $hours) {
+            $reminderTime = $now->copy()->addHours($hours);
+            $appointments = Appointments::where('status', Appointments::STATUS_SCHEDULED)
+                ->whereBetween('scheduled_at', [
+                    $reminderTime->copy()->startOfHour(),
+                    $reminderTime->copy()->endOfHour(),
+                ])
+                ->with(['doctor.user', 'patient.user'])
+                ->get();
 
-        foreach ($appointments24h as $appointment) {
-            $this->sendReminder($appointment, $notificationService, '24 horas');
-        }
-
-        // Lembretes 1 hora antes
-        $reminder1h = $now->copy()->addHour();
-        $appointments1h = Appointments::where('status', Appointments::STATUS_SCHEDULED)
-            ->whereBetween('scheduled_at', [
-                $reminder1h->copy()->startOfHour(),
-                $reminder1h->copy()->endOfHour(),
-            ])
-            ->with(['doctor.user', 'patient.user'])
-            ->get();
-
-        foreach ($appointments1h as $appointment) {
-            $this->sendReminder($appointment, $notificationService, '1 hora');
+            $timeUntilLabel = $hours === 1 ? '1 hora' : $hours . ' horas';
+            foreach ($appointments as $appointment) {
+                $this->sendReminder($appointment, $notificationService, $timeUntilLabel);
+            }
         }
     }
 

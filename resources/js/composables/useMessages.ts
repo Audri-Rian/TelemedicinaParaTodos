@@ -321,8 +321,7 @@ export function useMessages() {
             // Usar configuração do Reverb do Inertia (mesmo padrão do useVideoCall)
             const reverbConfig = (page.props as any)?.reverb;
 
-            if (!reverbConfig) {
-                console.warn('Reverb não configurado. Adicione os dados no middleware HandleInertiaRequests.');
+            if (!reverbConfig?.key) {
                 return;
             }
 

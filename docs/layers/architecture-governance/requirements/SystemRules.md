@@ -1,5 +1,9 @@
 # 📜 Regras do Sistema
 
+> **Implementação técnica das regras**  
+> Os parâmetros técnicos destas regras (janelas de agendamento, durações padrão, limites de histórico, lembretes, etc.) são configuráveis no backend via `config/telemedicine.php`.  
+> A rastreabilidade entre regras de negócio e configurações está documentada em `docs/Tasks/TASK_11_MIGRACAO_CONFIG_TELEMEDICINE.md`.
+
 ## 🎯 Objetivo
 Esse projeto tem como objetivo de criar uma platarforma de Telemedicina Moderna, segura e acessível desenvolvida com Laravel(PHP). Ele conecta médicos e pacientes de forma remota, oferecendo consultas online, agendamento inteligente, prontuários digitais e comunicação segura tudo em um único sistema integrado.
 
@@ -206,40 +210,40 @@ Esse projeto tem como objetivo de criar uma platarforma de Telemedicina Moderna,
 ## 🔗 Referências Cruzadas
 
 ### Documentação Relacionada
-- **[📋 Visão Geral](../index/VisaoGeral.md)** - Índice central da documentação
-- **[📊 Matriz de Rastreabilidade](../index/MatrizRequisitos.md)** - Mapeamento requisito → implementação
-- **[📚 Glossário](../index/Glossario.md)** - Definições de termos técnicos
-- **[🏗️ Arquitetura](../architecture/Arquitetura.md)** - Estrutura e padrões do sistema
-- **[⚙️ Lógica de Consultas](../modules/appointments/AppointmentsLogica.md)** - Regras de agendamento
-- **[🔐 Autenticação](../modules/auth/RegistrationLogic.md)** - Fluxos de registro e login
+- **[📋 Visão Geral](../../../index/VisaoGeral.md)** - Índice central da documentação
+- **[📊 Matriz de Rastreabilidade](../../../index/MatrizRequisitos.md)** - Mapeamento requisito → implementação
+- **[📚 Glossário](../../../index/Glossario.md)** - Definições de termos técnicos
+- **[🏗️ Arquitetura](../Architecture/Arquitetura.md)** - Estrutura e padrões do sistema
+- **[⚙️ Lógica de Consultas](../../../modules/appointments/AppointmentsLogica.md)** - Regras de agendamento
+- **[🔐 Autenticação](../../../modules/auth/RegistrationLogic.md)** - Fluxos de registro e login
 
 ### Implementações Relacionadas
 - **[User Model](../../app/Models/User.php)** - Entidade base de usuários
 - **[Doctor Model](../../app/Models/Doctor.php)** - Entidade de médicos
 - **[Patient Model](../../app/Models/Patient.php)** - Entidade de pacientes
 - **[Auth Middleware](../../app/Http/Middleware/)** - Controle de acesso
-- **[Database Migrations](../../database/migrations/)** - Estrutura do banco
+- **[Database Migrations](../../../../database/migrations/)** - Estrutura do banco
 
 ### Termos do Glossário
-- **[User](../index/Glossario.md#u)** - Entidade base do sistema
-- **[Doctor](../index/Glossario.md#d)** - Entidade que representa um médico
-- **[Patient](../index/Glossario.md#p)** - Entidade que representa um paciente
-- **[ServiceLocation](../index/Glossario.md#s)** - Local de atendimento
-- **[AvailabilitySlot](../index/Glossario.md#a)** - Slot de disponibilidade
-- **[BlockedDate](../index/Glossario.md#b)** - Data bloqueada
-- **[Prescription](../index/Glossario.md#p)** - Prescrição médica
-- **[Diagnosis](../index/Glossario.md#d)** - Diagnóstico
-- **[Examination](../index/Glossario.md#e)** - Exame médico
-- **[ClinicalNote](../index/Glossario.md#c)** - Anotação clínica
-- **[MedicalCertificate](../index/Glossario.md#m)** - Atestado médico
-- **[VitalSign](../index/Glossario.md#v)** - Sinal vital
-- **[MedicalDocument](../index/Glossario.md#m)** - Documento médico
-- **[MedicalRecordAuditLog](../index/Glossario.md#m)** - Log de auditoria
-- **[VideoCallRoom](../index/Glossario.md#v)** - Sala de videoconferência
-- **[VideoCallEvent](../index/Glossario.md#v)** - Evento de videoconferência
-- **[TimelineEvent](../index/Glossario.md#t)** - Evento de timeline
-- **[LGPD](../index/Glossario.md#l)** - Lei Geral de Proteção de Dados
-- **[Soft Delete](../index/Glossario.md#s)** - Exclusão lógica para auditoria
+- **[User](../../../index/Glossario.md#u)** - Entidade base do sistema
+- **[Doctor](../../../index/Glossario.md#d)** - Entidade que representa um médico
+- **[Patient](../../../index/Glossario.md#p)** - Entidade que representa um paciente
+- **[ServiceLocation](../../../index/Glossario.md#s)** - Local de atendimento
+- **[AvailabilitySlot](../../../index/Glossario.md#a)** - Slot de disponibilidade
+- **[BlockedDate](../../../index/Glossario.md#b)** - Data bloqueada
+- **[Prescription](../../../index/Glossario.md#p)** - Prescrição médica
+- **[Diagnosis](../../../index/Glossario.md#d)** - Diagnóstico
+- **[Examination](../../../index/Glossario.md#e)** - Exame médico
+- **[ClinicalNote](../../../index/Glossario.md#c)** - Anotação clínica
+- **[MedicalCertificate](../../../index/Glossario.md#m)** - Atestado médico
+- **[VitalSign](../../../index/Glossario.md#v)** - Sinal vital
+- **[MedicalDocument](../../../index/Glossario.md#m)** - Documento médico
+- **[MedicalRecordAuditLog](../../../index/Glossario.md#m)** - Log de auditoria
+- **[VideoCallRoom](../../../index/Glossario.md#v)** - Sala de videoconferência
+- **[VideoCallEvent](../../../index/Glossario.md#v)** - Evento de videoconferência
+- **[TimelineEvent](../../../index/Glossario.md#t)** - Evento de timeline
+- **[LGPD](../../../index/Glossario.md#l)** - Lei Geral de Proteção de Dados
+- **[Soft Delete](../../../index/Glossario.md#s)** - Exclusão lógica para auditoria
 
 ---
 

@@ -36,13 +36,16 @@ class PatientVideoCallController extends Controller
             ->pluck('doctor_id');
 
         // Buscar médicos relacionados com informações de agendamento
+        $leadMinutes = (int) config('telemedicine.appointment.lead_minutes', 10);
+        $trailingMinutes = (int) config('telemedicine.appointment.trailing_minutes', 10);
+
         $doctors = Doctor::with('user')
             ->whereIn('id', $doctorIds)
             ->active()
             ->get()
-            ->map(function ($doctor) use ($patient) {
+            ->map(function ($doctor) use ($patient, $leadMinutes, $trailingMinutes) {
                 $now = Carbon::now();
-                
+
                 // Buscar todos os agendamentos com este médico
                 $allAppointments = Appointments::where('doctor_id', $doctor->id)
                     ->where('patient_id', $patient->id)
@@ -59,18 +62,18 @@ class PatientVideoCallController extends Controller
                     return $appointment->status === Appointments::STATUS_IN_PROGRESS;
                 });
 
-                // Se não há consulta em andamento, buscar próxima na janela de 10 minutos
+                // Se não há consulta em andamento, buscar próxima na janela configurada (antes/depois do horário)
                 if (!$primaryAppointment) {
-                    $primaryAppointment = $allAppointments->first(function ($appointment) use ($now) {
+                    $primaryAppointment = $allAppointments->first(function ($appointment) use ($now, $trailingMinutes, $leadMinutes) {
                         if (!in_array($appointment->status, [
                             Appointments::STATUS_SCHEDULED,
                             Appointments::STATUS_RESCHEDULED
                         ])) {
                             return false;
                         }
-                        
+
                         $minutesDifference = (int) round(($appointment->scheduled_at->timestamp - $now->timestamp) / 60);
-                        return $minutesDifference >= -10 && $minutesDifference <= 10;
+                        return $minutesDifference >= -$trailingMinutes && $minutesDifference <= $leadMinutes;
                     });
                 }
 
@@ -105,8 +108,8 @@ class PatientVideoCallController extends Controller
                         $canStartCall = true;
                         $timeWindowMessage = 'Consulta em andamento';
                     } 
-                    // Verificar se está na janela de tempo permitida (10 minutos antes ou depois)
-                    elseif ($minutesDifference >= -10 && $minutesDifference <= 10 && 
+                    // Verificar se está na janela de tempo permitida (config: lead_minutes / trailing_minutes)
+                    elseif ($minutesDifference >= -$trailingMinutes && $minutesDifference <= $leadMinutes &&
                             in_array($primaryAppointment->status, [
                                 Appointments::STATUS_SCHEDULED,
                                 Appointments::STATUS_RESCHEDULED
@@ -125,7 +128,7 @@ class PatientVideoCallController extends Controller
                             $timeWindowMessage = 'Consulta finalizada';
                         } elseif ($primaryAppointment->status === Appointments::STATUS_NO_SHOW) {
                             $timeWindowMessage = 'Consulta não comparecida';
-                        } elseif ($minutesDifference < -10) {
+                        } elseif ($minutesDifference < -$trailingMinutes) {
                             $timeWindowMessage = 'Janela de tempo expirada';
                         } else {
                             $daysUntil = (int) $now->diffInDays($scheduledAt, false);

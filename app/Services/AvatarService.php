@@ -157,7 +157,10 @@ class AvatarService
             } elseif (extension_loaded('imagick')) {
                 $manager = ImageManager::imagick();
             } else {
-                throw new \RuntimeException('Nenhum driver de imagem disponível (GD ou Imagick).');
+                throw new \RuntimeException(
+                    'Nenhum driver de imagem disponível (GD ou Imagick). '
+                    . 'Para upload de avatar, habilite a extensão GD no PHP: em php.ini descomente "extension=gd" e reinicie o servidor.'
+                );
             }
             
             // Carregar e processar imagem

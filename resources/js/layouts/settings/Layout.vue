@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import Heading from '@/components/Heading.vue';
-import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
 import { edit as editPassword } from '@/routes/password';
 import { edit } from '@/routes/profile';
 import { type NavItem } from '@/types';
-import { Link } from '@inertiajs/vue3';
+import { Link, usePage } from '@inertiajs/vue3';
+import { computed } from 'vue';
 
 interface Props {
     fullWidth?: boolean;
@@ -32,40 +31,48 @@ const sidebarNavItems: NavItem[] = [
     },
 ];
 
-const currentPath = typeof window !== undefined ? window.location.pathname : '';
+const page = usePage();
+const currentPath = computed(() => (typeof page.url === 'string' ? page.url : '').replace(/\?.*$/, ''));
+
+function isActive(href: string | { url?: string }) {
+    const path = typeof href === 'string' ? href : href?.url ?? '';
+    return currentPath.value === path || (path && currentPath.value.startsWith(path));
+}
 </script>
 
 <template>
-    <div class="px-4 py-6">
-        <Heading v-if="!props.hideHeading" title="Configurações" description="Gerencie seu perfil e configurações da conta" />
-
-        <div class="flex flex-col lg:flex-row lg:space-x-12" :class="props.hideHeading ? 'mt-0' : ''">
-            <aside class="w-full max-w-xl lg:w-48">
-                <nav class="flex flex-col space-y-1 space-x-0">
-                    <Button
+    <div class="min-h-[60vh] bg-gray-50/80 py-6 pl-4 pr-4 md:pl-6 md:pr-6">
+        <div class="flex flex-col gap-8 lg:flex-row lg:gap-12">
+            <!-- Barra lateral: fundo cinza claro, itens com destaque branco e indicador primary no ativo -->
+            <aside class="w-full shrink-0 lg:w-52">
+                <nav class="flex flex-col gap-1">
+                    <Link
                         v-for="item in sidebarNavItems"
                         :key="typeof item.href === 'string' ? item.href : item.href?.url"
-                        variant="ghost"
+                        :href="typeof item.href === 'string' ? item.href : item.href?.url"
                         :class="[
-                            'w-full justify-start',
-                            { 'bg-muted': currentPath === (typeof item.href === 'string' ? item.href : item.href?.url) },
+                            'relative rounded-xl px-4 py-3 text-left text-sm font-medium transition-all',
+                            isActive(typeof item.href === 'string' ? item.href : item.href?.url ?? '')
+                                ? 'bg-white text-gray-800 shadow-sm border-l-4 border-primary'
+                                : 'text-gray-500 hover:bg-white/60 hover:text-gray-700',
                         ]"
-                        as-child
                     >
-                        <Link :href="item.href">
-                            {{ item.title }}
-                        </Link>
-                    </Button>
+                        {{ item.title }}
+                    </Link>
                 </nav>
             </aside>
 
-            <Separator class="my-6 lg:hidden" />
-
-            <div :class="props.fullWidth ? 'flex-1 w-full' : 'flex-1 md:max-w-2xl'">
-                <section :class="props.fullWidth ? 'w-full space-y-6' : 'max-w-xl space-y-12'">
+            <!-- Conteúdo principal -->
+            <main :class="[props.fullWidth ? 'min-w-0 flex-1' : 'min-w-0 flex-1 md:max-w-2xl']">
+                <Heading
+                    v-if="!props.hideHeading"
+                    title="Configurações"
+                    description="Gerencie seu perfil e configurações da conta"
+                />
+                <section :class="[props.hideHeading ? 'mt-0' : 'mt-0', props.fullWidth ? 'w-full space-y-6' : 'max-w-xl space-y-6']">
                     <slot />
                 </section>
-            </div>
+            </main>
         </div>
     </div>
 </template>

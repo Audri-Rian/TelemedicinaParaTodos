@@ -46,10 +46,9 @@ class StoreAvailabilitySlotRequest extends FormRequest
                         $start = \Carbon\Carbon::createFromFormat('H:i', $startTime);
                         $end = \Carbon\Carbon::createFromFormat('H:i', $value);
                         $diffInMinutes = $start->diffInMinutes($end);
-                        
-                        // A duração mínima deve ser de 1 hora (60 minutos)
-                        if ($diffInMinutes < 60) {
-                            $fail('O horário de fim deve ser pelo menos 1 hora após o horário de início.');
+                        $minMinutes = (int) config('telemedicine.availability.slot_min_duration_minutes', 60);
+                        if ($diffInMinutes < $minMinutes) {
+                            $fail("O horário de fim deve ser pelo menos {$minMinutes} minutos após o horário de início.");
                         }
                     }
                 },
@@ -66,6 +65,8 @@ class StoreAvailabilitySlotRequest extends FormRequest
      */
     public function messages(): array
     {
+        $minMinutes = (int) config('telemedicine.availability.slot_min_duration_minutes', 60);
+
         return [
             'type.required' => 'O tipo de slot é obrigatório.',
             'type.in' => 'O tipo de slot deve ser: recorrente ou específico.',
@@ -79,7 +80,6 @@ class StoreAvailabilitySlotRequest extends FormRequest
             'end_time.required' => 'O horário de fim é obrigatório.',
             'end_time.date_format' => 'O horário de fim deve estar no formato HH:MM.',
             'end_time.after' => 'O horário de fim deve ser posterior ao horário de início.',
-            'end_time.*' => 'O horário de fim deve ser pelo menos 1 hora após o horário de início.',
             'location_id.exists' => 'O local de atendimento selecionado não existe.',
         ];
     }

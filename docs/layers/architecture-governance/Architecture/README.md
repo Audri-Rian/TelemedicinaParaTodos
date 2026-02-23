@@ -34,8 +34,8 @@ O sistema segue os princípios:
 ## 📊 Relacionamentos
 
 - **Require**: [Regras do Sistema](../requirements/SystemRules.md)
-- **Implementa**: [Módulos Específicos](../modules/)
-- **Usa**: [Modelo de Dados](../database/)
+- **Implementa**: [Módulos Específicos](../../../modules/)
+- **Usa**: [Modelo de Dados](../../persistence/database/README.md)
 
 ---
 

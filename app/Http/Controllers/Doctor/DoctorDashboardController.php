@@ -23,12 +23,13 @@ class DoctorDashboardController extends Controller
             abort(403, 'Perfil de médico não encontrado.');
         }
 
-        // Consultas próximas (próximas 3)
+        $nextAppointmentsLimit = (int) config('telemedicine.dashboard.next_appointments_limit', 3);
+        // Consultas próximas
         $upcomingAppointments = Appointments::with(['patient.user', 'doctor.user'])
             ->byDoctor($doctor->id)
             ->upcoming()
             ->orderBy('scheduled_at')
-            ->limit(3)
+            ->limit($nextAppointmentsLimit)
             ->get()
             ->map(function ($appointment) {
                 return [

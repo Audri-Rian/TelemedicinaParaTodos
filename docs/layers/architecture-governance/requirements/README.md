@@ -24,7 +24,7 @@ Estes documentos definem **o que** o sistema deve fazer e **como** deve se compo
 
 ## 📊 Rastreabilidade
 
-Cada requisito está mapeado na [Matriz de Rastreabilidade](../index/MatrizRequisitos.md) que conecta:
+Cada requisito está mapeado na [Matriz de Rastreabilidade](../../../index/MatrizRequisitos.md) que conecta:
 - Requisitos → Implementações
 - Regras → Código
 - Casos de uso → Testes

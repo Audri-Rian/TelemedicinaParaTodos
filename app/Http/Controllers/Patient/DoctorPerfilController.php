@@ -136,7 +136,8 @@ class DoctorPerfilController extends Controller
     {
         $now = Carbon::now();
         $startDate = $now->copy()->startOfDay();
-        $endDate = $now->copy()->addDays(30)->endOfDay();
+        $windowDays = (int) config('telemedicine.availability.timeline_window_days', 30);
+        $endDate = $now->copy()->addDays($windowDays)->endOfDay();
         
         $availableDates = [];
         $currentDate = $startDate->copy();

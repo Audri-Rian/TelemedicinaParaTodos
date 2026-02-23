@@ -133,8 +133,9 @@ class Patient extends Model
         $query->where('blood_type', $bloodType);
     }
 
-    public function scopeRecentlyConsulted(Builder $query, int $days = 30): void
+    public function scopeRecentlyConsulted(Builder $query, ?int $days = null): void
     {
+        $days = $days ?? config('telemedicine.patient_history.recent_consultations_days', 30);
         $query->where('last_consultation_at', '>=', Carbon::now()->subDays($days));
     }
 

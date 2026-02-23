@@ -108,14 +108,14 @@ class TimelineEvent extends Model
             // end_date já é castado como Carbon date
             $end = $this->end_date;
             $diffInDays = $start->diffInDays($end);
-            
-            if ($diffInDays < 30) {
+            $daysThreshold = (int) config('telemedicine.display.timeline_days_threshold', 30);
+            if ($diffInDays < $daysThreshold) {
                 return $diffInDays . ' ' . ($diffInDays === 1 ? 'dia' : 'dias');
             }
-            
+
             $diffInMonths = $start->diffInMonths($end);
-            
-            if ($diffInMonths < 12) {
+            $monthsThreshold = (int) config('telemedicine.display.timeline_months_threshold', 12);
+            if ($diffInMonths < $monthsThreshold) {
                 return $diffInMonths . ' ' . ($diffInMonths === 1 ? 'mês' : 'meses');
             }
             

@@ -169,7 +169,7 @@ const megaMenuItems: Record<string, MegaMenuContent> = {
         featuredCard: {
             title: 'Inovação em Saúde',
             description: 'Descubra como nossa IA está salvando vidas diariamente.',
-            image: '/images/feature-bg.png',
+            image: '/images/solutions_dropdown_bg.png',
             linkText: 'Saiba mais',
             linkHref: '#inovacao'
         }
@@ -302,7 +302,7 @@ const megaMenuItems: Record<string, MegaMenuContent> = {
         featuredCard: {
             title: 'O Futuro é Agora',
             description: 'Veja como a telemedicina está encurtando distâncias geográficas.',
-            image: '/images/feature-bg.png',
+            image: '/images/telemedicine_dropdown_bg.png',
             linkText: 'Ver detalhes',
             linkHref: '#futuro'
         }
@@ -512,7 +512,7 @@ const testimonials = [
 
                                     <!-- Featured Card -->
                                     <div v-if="megaMenuItems[activeMenu as keyof typeof megaMenuItems].featuredCard"
-                                        class="relative overflow-hidden rounded-2xl group/card">
+                                        class="relative overflow-hidden rounded-2xl group/card h-80">
                                         <div class="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover/card:scale-110"
                                             :style="{ backgroundImage: `url(${megaMenuItems[activeMenu as keyof typeof megaMenuItems].featuredCard!.image})` }">
                                         </div>

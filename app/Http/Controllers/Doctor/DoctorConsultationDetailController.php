@@ -68,13 +68,14 @@ class DoctorConsultationDetailController extends Controller
             'bmi' => $patient->bmi,
         ];
 
-        // Últimas 3 consultas para histórico
+        // Últimas consultas para histórico (limite configurável)
+        $recentLimit = (int) config('telemedicine.consultation_detail.recent_history_limit', 3);
         $recentConsultations = Appointments::where('patient_id', $patient->id)
             ->where('doctor_id', $user->doctor->id)
             ->where('id', '!=', $appointment->id)
             ->where('status', Appointments::STATUS_COMPLETED)
             ->orderByDesc('scheduled_at')
-            ->limit(3)
+            ->limit($recentLimit)
             ->get()
             ->map(fn (Appointments $apt) => [
                 'id' => $apt->id,

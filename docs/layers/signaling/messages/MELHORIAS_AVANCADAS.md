@@ -1,7 +1,8 @@
 # 🚀 Melhorias Avançadas - Sistema de Mensagens
 
 **Data:** Novembro 2025  
-**Versão:** 2.0
+**Versão:** 2.0  
+*Documento em: `docs/layers/signaling/messages/` (Camada de Sinalização)*
 
 ---
 
@@ -621,4 +622,3 @@ ORDER BY created_at DESC LIMIT 50;
 **Última Atualização**: Novembro 2025  
 **Versão**: 2.0  
 **Status**: ✅ Implementado (Delivery Semantics, Indexação, Paginação) | ⏳ Pendente (Push Notifications)
-

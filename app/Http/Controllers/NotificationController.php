@@ -30,7 +30,14 @@ class NotificationController extends Controller
     public function index(Request $request): JsonResponse
     {
         $user = Auth::user();
-        $perPage = $request->get('per_page', 15);
+        $defaultPerPage = (int) config('telemedicine.notifications.per_page', 15);
+        $maxPerPage = (int) config('telemedicine.notifications.max_per_page', 100);
+
+        $perPage = (int) $request->get('per_page', $defaultPerPage);
+        if ($perPage <= 0) {
+            $perPage = $defaultPerPage;
+        }
+        $perPage = min($perPage, $maxPerPage);
         $type = $request->get('type');
         $unreadOnly = $request->boolean('unread_only', false);
 
@@ -97,11 +104,12 @@ class NotificationController extends Controller
             // Carregar notificações não lidas com tratamento de erro
             try {
                 // Usar query builder direto para evitar problemas com relacionamento
+                $listLimit = (int) config('telemedicine.notifications.list_limit', 10);
                 $notificationIds = \Illuminate\Support\Facades\DB::table('notifications')
                     ->where('user_id', $user->id)
                     ->whereNull('read_at')
                     ->orderBy('created_at', 'desc')
-                    ->limit(10)
+                    ->limit($listLimit)
                     ->pluck('id');
                 
                 if ($notificationIds->isEmpty()) {

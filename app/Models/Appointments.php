@@ -179,8 +179,10 @@ class Appointments extends Model
     public function getFormattedDurationAttribute(): string
     {
         $duration = $this->duration;
-        // Duração padrão de 45 minutos quando não houver dados de início/fim
-        if (!$duration) return '45min';
+        $fallbackMinutes = (int) config('telemedicine.display.appointment_duration_fallback_minutes', 45);
+        if (!$duration) {
+            return $fallbackMinutes . 'min';
+        }
         
         $hours = floor($duration / 60);
         $minutes = $duration % 60;
