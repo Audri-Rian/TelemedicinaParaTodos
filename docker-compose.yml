@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # ===================================
   # Banco de Dados MySQL
@@ -63,6 +61,28 @@ services:
       retries: 5
 
   # ===================================
+  # RabbitMQ (filas críticas / mensageria; padrão do dia a dia: Redis)
+  # ===================================
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: telemedicina_rabbitmq
+    restart: always
+    environment:
+      RABBITMQ_DEFAULT_USER: telemedicina
+      RABBITMQ_DEFAULT_PASS: secret
+      RABBITMQ_DEFAULT_VHOST: /
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_running"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ===================================
   # Aplicação Laravel (PHP-FPM)
   # ===================================
   app:
@@ -72,36 +92,34 @@ services:
     container_name: telemedicina_app
     restart: always
     depends_on:
-      mysql:
-        condition: service_healthy
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-    ports:
-      - "8000:8000"
+      rabbitmq:
+        condition: service_healthy
     volumes:
       - .:/var/www/html
     environment:
       APP_ENV: local
       APP_DEBUG: "true"
       APP_KEY: base64:Vr23j63EFvgERAmlx3eUK4dwSNdCrvmyeYMerRPUD5s=
-      APP_URL: http://localhost:8000
+      APP_URL: http://localhost
 
-      # Configuração MySQL
-      DB_CONNECTION: mysql
-      DB_HOST: mysql
-      DB_PORT: 3306
+      # Configuração PostgreSQL (padrão)
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
       DB_DATABASE: telemedicina
-      DB_USERNAME: telemedicina_user
+      DB_USERNAME: postgres
       DB_PASSWORD: secret
-      
-      # Configuração PostgreSQL (alternativa)
-      # DB_CONNECTION: pgsql
-      # DB_HOST: postgres
-      # DB_PORT: 5432
+
+      # Configuração MySQL (alternativa; descomente e altere depends_on para usar mysql)
+      # DB_CONNECTION: mysql
+      # DB_HOST: mysql
+      # DB_PORT: 3306
       # DB_DATABASE: telemedicina
-      # DB_USERNAME: postgres
+      # DB_USERNAME: telemedicina_user
       # DB_PASSWORD: secret
 
       REDIS_HOST: redis
@@ -109,13 +127,78 @@ services:
       REDIS_PASSWORD: null
       QUEUE_CONNECTION: redis
 
+      # RabbitMQ (opcional: use QUEUE_CONNECTION=rabbitmq para filas críticas)
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: telemedicina
+      RABBITMQ_PASSWORD: secret
+      RABBITMQ_VHOST: /
+
       CACHE_DRIVER: redis
-      SESSION_DRIVER: database
+      SESSION_DRIVER: redis
       SESSION_LIFETIME: 120
 
+      # Reverb (WebSocket) — cliente conecta em REVERB_HOST:REVERB_PORT (ex. localhost:8080)
+      BROADCAST_CONNECTION: reverb
+      REVERB_APP_ID: telemedicina-app
+      REVERB_APP_KEY: telemedicina-key
+      REVERB_APP_SECRET: telemedicina-secret
+      REVERB_HOST: localhost
+      REVERB_PORT: 8080
+      REVERB_SCHEME: http
+      REVERB_SERVER_HOST: 0.0.0.0
+      REVERB_SERVER_PORT: 8080
+
     command: >
-      sh -c "php artisan migrate --force &&
-             php artisan serve --host=0.0.0.0 --port=8000"
+      sh -c "php artisan migrate --force && exec php-fpm"
+
+  # ===================================
+  # Reverb (WebSocket — notificações em tempo real)
+  # ===================================
+  reverb:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: telemedicina_reverb
+    restart: always
+    depends_on:
+      app:
+        condition: service_started
+      redis:
+        condition: service_healthy
+    volumes:
+      - .:/var/www/html
+    environment:
+      APP_ENV: local
+      APP_KEY: base64:Vr23j63EFvgERAmlx3eUK4dwSNdCrvmyeYMerRPUD5s=
+      REVERB_SERVER_HOST: 0.0.0.0
+      REVERB_SERVER_PORT: 8080
+      REVERB_APP_ID: telemedicina-app
+      REVERB_APP_KEY: telemedicina-key
+      REVERB_APP_SECRET: telemedicina-secret
+      REVERB_HOST: localhost
+      REVERB_PORT: 8080
+      REVERB_SCHEME: http
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    command: php artisan reverb:start
+    ports:
+      - "8080:8080"
+
+  # ===================================
+  # Nginx (porta 80 → proxy para PHP-FPM)
+  # ===================================
+  nginx:
+    image: nginx:alpine
+    container_name: telemedicina_nginx
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      - .:/var/www/html:ro
+      - ./docker/nginx/conf.d:/etc/nginx/conf.d:ro
+    depends_on:
+      - app
 
 volumes:
   mysql_data:
@@ -123,4 +206,6 @@ volumes:
   postgres_data:
     driver: local
   redis_data:
+    driver: local
+  rabbitmq_data:
     driver: local
