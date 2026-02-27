@@ -94,7 +94,6 @@ class SpecializationSeeder extends Seeder
             'Farmácia',
             'Enfermagem',
             'Biomedicina',
-            'Fonoaudiologia',
             'Fisioterapia Cardiorrespiratória',
             'Fisioterapia Neurológica',
             'Fisioterapia Ortopédica',
@@ -117,33 +116,19 @@ class SpecializationSeeder extends Seeder
             'Fisioterapia Estética',
             'Fisioterapia Funcional',
             'Fisioterapia Manual',
-            'Fisioterapia Aquática',
-            'Fisioterapia Respiratória',
             'Fisioterapia Cardiovascular',
-            'Fisioterapia Neurológica',
-            'Fisioterapia Pediátrica',
-            'Fisioterapia Geriátrica',
-            'Fisioterapia Esportiva',
-            'Fisioterapia Uroginecológica',
-            'Fisioterapia Dermatofuncional',
-            'Fisioterapia Traumato-Ortopédica',
-            'Fisioterapia Reumatológica',
-            'Fisioterapia Oncológica',
-            'Fisioterapia Intensiva',
-            'Fisioterapia Ambulatorial',
-            'Fisioterapia Hospitalar',
-            'Fisioterapia Domiciliar',
-            'Fisioterapia Laboral',
-            'Fisioterapia Preventiva',
-            'Fisioterapia Estética',
-            'Fisioterapia Funcional',
-            'Fisioterapia Manual'
         ];
 
-        foreach ($specializations as $specialization) {
+        // Normaliza e remove duplicatas (mesmo nome com capitalização diferente)
+        $normalized = array_unique(array_map(
+            fn (string $name) => ucwords(strtolower(trim($name))),
+            $specializations
+        ));
+
+        foreach ($normalized as $name) {
             Specialization::firstOrCreate(
-                ['name' => $specialization],
-                ['name' => $specialization]
+                ['name' => $name],
+                ['name' => $name]
             );
         }
     }
