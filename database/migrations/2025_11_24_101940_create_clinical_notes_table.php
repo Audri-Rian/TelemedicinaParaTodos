@@ -30,6 +30,7 @@ return new class extends Migration {
 
         // FK auto-referente adicionada após criar a tabela (PostgreSQL exige que a PK já exista)
         Schema::table('clinical_notes', function (Blueprint $table) {
+            $table->index('parent_id');
             $table->foreign('parent_id')->references('id')->on('clinical_notes')->nullOnDelete();
         });
     }

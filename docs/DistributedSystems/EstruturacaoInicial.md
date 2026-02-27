@@ -18,7 +18,7 @@ Este documento descreve a arquitetura completa para simular serviços da AWS loc
 
 | # | CPU | RAM | Disco | Papel sugerido |
 |---|-----|-----|--------|----------------|
-| **1** | Intel Celeron 4ª geração | 4 GB | 500 GB | Storage Node (MinIO) |
+| **1** | Intel Celeron 4ª geração | 4 GB | 250 GB | Storage Node (MinIO) |
 | **2** | Intel i5 8400 (6 núcleos) | 16 GB DDR4 | 500 GB HD | Application Node (Laravel, DB, Redis, RabbitMQ, Nginx) |
 | **3** | Intel i3 6000 (2C/4T) | 4 GB | 250 GB | Edge / Gateway (Cloudflare Tunnel + Nginx + Certbot) |
 
@@ -91,7 +91,7 @@ Este documento descreve a arquitetura completa para simular serviços da AWS loc
 
 # 📊 Resumo da Arquitetura nos 3 PCs
 
-```
+```text
                     [ Internet ]
                          │
                          ▼
@@ -147,7 +147,7 @@ Resumo: **Tunnel no PC3 = uma única “porta da frente”.** O servidor pesado 
 
 ### 1. Usuário na internet acessa seu sistema (ex.: site ou API)
 
-```
+```text
 Usuário (navegador)
     │
     ▼
