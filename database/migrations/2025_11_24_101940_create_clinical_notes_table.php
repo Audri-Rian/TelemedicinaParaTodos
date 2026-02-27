@@ -26,6 +26,10 @@ return new class extends Migration {
             $table->foreign('appointment_id')->references('id')->on('appointments')->nullOnDelete();
             $table->foreign('doctor_id')->references('id')->on('doctors')->cascadeOnDelete();
             $table->foreign('patient_id')->references('id')->on('patients')->cascadeOnDelete();
+        });
+
+        // FK auto-referente adicionada após criar a tabela (PostgreSQL exige que a PK já exista)
+        Schema::table('clinical_notes', function (Blueprint $table) {
             $table->foreign('parent_id')->references('id')->on('clinical_notes')->nullOnDelete();
         });
     }
