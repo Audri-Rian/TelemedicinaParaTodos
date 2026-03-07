@@ -2,14 +2,15 @@
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, usePage, router } from '@inertiajs/vue3';
 import axios from 'axios';
-import { ref, onMounted, onUnmounted, computed } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import { useVideoCall } from '@/composables/useVideoCall';
 import * as appointmentsRoutes from '@/routes/appointments';
 import * as doctorRoutes from '@/routes/doctor';
 import { type BreadcrumbItem } from '@/types';
 import { useRouteGuard } from '@/composables/auth';
 import ConsultationSidebar from '@/components/Doctor/ConsultationSidebar.vue';
-// @ts-ignore - route helper from Ziggy
+// @ts-expect-error - route helper from Ziggy (used in template)
+/* eslint-disable-next-line @typescript-eslint/no-unused-vars */
 declare const route: (name: string, params?: any) => string;
 
 const { canAccessDoctorRoute } = useRouteGuard();
@@ -126,33 +127,20 @@ const {
     callUser: initiateCall,
     endCall: endVideoCall,
     acceptCall,
-    rejectCall,
     reconnectCall,
     initialize,
     cleanup,
     // Estados de conexão avançados
-    isConnected,
-    isReceivingCall,
     connectionLost,
     isReconnecting,
     showIncomingCallModal,
-    incomingCallPeerId,
-    connectionState,
-    mediaConfig,
     // Novos estados para rejeições acidentais
     canCallBack,
     showRejectionConfirmModal,
-    lastRejectedPeerId,
     showRejectConfirmation,
     confirmRejectCall,
     cancelRejectCall,
     callBack,
-    // Novos estados detalhados
-    callState,
-    callDuration,
-    networkQuality,
-    formatCallDuration,
-    resendCallRequest,
 } = useVideoCall({
     routePrefix: '/doctor',
     onCallReceived: (user) => {
@@ -227,7 +215,7 @@ const finalizeBackendAppointment = async () => {
             canStartCall: false,
             timeWindowMessage: 'Consulta finalizada',
         };
-    } catch (error) {
+    } catch {
         // silencioso
     }
 };

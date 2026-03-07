@@ -6,7 +6,6 @@ import * as patientRoutes from '@/routes/patient';
 import { onMounted, computed, onUnmounted, ref, watch } from 'vue';
 import { router, usePage } from '@inertiajs/vue3';
 import { useRouteGuard } from '@/composables/auth';
-import { Button } from '@/components/ui/button';
 import axios from 'axios';
 import * as appointmentsRoutes from '@/routes/appointments';
 import Echo from 'laravel-echo';
@@ -65,26 +64,6 @@ const props = defineProps<Props>();
 
 const appointment = computed(() => props.appointment);
 
-const permissions = computed(() => appointment.value.can ?? {
-    start: false,
-    cancel: false,
-    is_active: false,
-    is_upcoming: false,
-});
-
-// Mapear status para badge
-const statusBadge = computed(() => {
-    const statusMap: Record<string, { label: string; class: string }> = {
-        scheduled: { label: 'Agendada', class: 'bg-yellow-100 text-yellow-700' },
-        in_progress: { label: 'Em Andamento', class: 'bg-blue-100 text-blue-700' },
-        completed: { label: 'Concluída', class: 'bg-green-100 text-green-700' },
-        cancelled: { label: 'Cancelada', class: 'bg-red-100 text-red-700' },
-        rescheduled: { label: 'Reagendada', class: 'bg-purple-100 text-purple-700' },
-        no_show: { label: 'Não Compareceu', class: 'bg-gray-100 text-gray-700' },
-    };
-    return statusMap[appointment.value.status] || statusMap.scheduled;
-});
-
 // Formatar data e hora
 const formattedDate = computed(() => {
     const date = new Date(appointment.value.scheduled_at);
@@ -105,7 +84,7 @@ const formattedTime = computed(() => {
 
 // Construir timeline a partir dos logs
 const timeline = computed(() => {
-    return appointment.value.logs
+    return [...appointment.value.logs]
         .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
         .map(log => {
             const eventNames: Record<string, string> = {

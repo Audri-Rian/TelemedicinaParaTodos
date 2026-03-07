@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
 import { usePatientRegistration } from '@/composables/Patient/usePatientRegistration';
 import BackgroundDecorativo from '@/components/BackgroundDecorativo.vue';
 import InputError from '@/components/InputError.vue';
@@ -9,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AuthBase from '@/layouts/AuthLayout.vue';
 import { login } from '@/routes';
-import { Form, Head } from '@inertiajs/vue3';
+import { Head } from '@inertiajs/vue3';
 import { LoaderCircle } from 'lucide-vue-next';
 import patientDoodleImage from '@images/PatientDoodle.png';
 
@@ -17,7 +16,6 @@ import patientDoodleImage from '@images/PatientDoodle.png';
 const {
     formData,
     isSubmitting,
-    hasErrors,
     canSubmit,
     submitError,
     rateLimit,

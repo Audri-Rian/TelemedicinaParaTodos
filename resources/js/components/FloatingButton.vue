@@ -6,7 +6,7 @@ import { useRoleRoutes, useAuth } from '@/composables/auth';
 import ChatModal from '@/components/modals/ChatModal.vue';
 
 const page = usePage();
-const { routes } = useRoleRoutes();
+useRoleRoutes();
 const { isAuthenticated } = useAuth();
 
 const isModalOpen = ref(false);

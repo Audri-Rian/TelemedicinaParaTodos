@@ -19,8 +19,7 @@ import {
     CalendarX, 
     FileText, 
     ClipboardList,
-    Pill,
-    CheckCircle
+    Pill
 } from 'lucide-vue-next';
 import { computed, onMounted } from 'vue';
 import { usePage, router } from '@inertiajs/vue3';

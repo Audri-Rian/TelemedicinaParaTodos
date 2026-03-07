@@ -123,7 +123,7 @@ const handleDelete = (eventId: string) => {
             <!-- Lista de eventos -->
             <div class="space-y-8">
                 <div
-                    v-for="(event, index) in sortedEvents"
+                    v-for="event in sortedEvents"
                     :key="event.id"
                     class="relative flex gap-4"
                 >

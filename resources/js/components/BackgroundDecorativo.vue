@@ -35,22 +35,6 @@ const intensityConfig = {
   }
 };
 
-// Configurações específicas por variante
-const variantConfig = {
-  patient: {
-    colors: ['from-primary/20', 'from-primary/15', 'from-primary/12'],
-    positions: ['top-left', 'top-right', 'bottom-left', 'bottom-right', 'center']
-  },
-  doctor: {
-    colors: ['from-primary/25', 'from-primary/20', 'from-primary/18'],
-    positions: ['top-left', 'top-right', 'bottom-left', 'bottom-right', 'center']
-  },
-  default: {
-    colors: ['from-primary/20', 'from-primary/15', 'from-primary/12'],
-    positions: ['top-left', 'top-right', 'bottom-left', 'bottom-right', 'center']
-  }
-};
-
 // Lazy loading para animações
 const startAnimations = () => {
   if (!props.enableAnimations) return;

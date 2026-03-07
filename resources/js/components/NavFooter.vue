@@ -8,7 +8,7 @@ interface Props {
     class?: string;
 }
 
-const props = defineProps<Props>();
+defineProps<Props>();
 
 const isExternalLink = (href: NavItem['href']): boolean => {
     if (typeof href === 'string') {

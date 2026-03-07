@@ -1,4 +1,4 @@
-import { ref, onMounted, onUnmounted, watch } from 'vue';
+import { ref } from 'vue';
 import { usePage } from '@inertiajs/vue3';
 import axios from 'axios';
 import Peer from 'peerjs';
@@ -221,7 +221,6 @@ export function useVideoCall(options: UseVideoCallOptions = {}) {
         try {
             const stats = await peerConnection.getStats();
             let totalBytesReceived = 0;
-            let totalBytesSent = 0;
             let totalPacketsReceived = 0;
             let totalPacketsLost = 0;
             let rtt = 0;
@@ -234,7 +233,8 @@ export function useVideoCall(options: UseVideoCallOptions = {}) {
                     rtt = report.roundTripTime ? report.roundTripTime * 1000 : rtt;
                 }
                 if (report.type === 'outbound-rtp' && report.mediaType === 'video') {
-                    totalBytesSent += report.bytesSent || 0;
+                    // bytesSent disponível para métricas futuras
+                    void report.bytesSent;
                 }
             });
 
@@ -390,7 +390,7 @@ export function useVideoCall(options: UseVideoCallOptions = {}) {
             }
 
             localStreamRef.value = stream;
-        } catch (error: any) {
+        } catch {
             // Fallback para configurações mais básicas
             try {
                 const fallbackStream = await navigator.mediaDevices.getUserMedia({
@@ -934,7 +934,7 @@ export function useVideoCall(options: UseVideoCallOptions = {}) {
 
         peer.value = new Peer(peerOptions);
 
-        peer.value.on('open', (id) => {
+        peer.value.on('open', () => {
             connectionState.value = 'connected';
             isConnected.value = true;
             connectWebSocket();

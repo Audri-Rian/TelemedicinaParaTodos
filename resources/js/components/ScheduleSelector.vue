@@ -35,7 +35,7 @@ const formattedDates = computed(() => {
                 day: '2-digit',
                 month: 'long',
             }).format(new Date(`${item.date}T00:00:00`));
-        } catch (error) {
+        } catch {
             // manter label padrão
         }
 

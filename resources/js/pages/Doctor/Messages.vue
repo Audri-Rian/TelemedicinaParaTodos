@@ -7,7 +7,7 @@ import { Search, MessageCircle, Send } from 'lucide-vue-next';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useInitials } from '@/composables/useInitials';
 import { useMessages, type Message } from '@/composables/useMessages';
-import { ref, onMounted, computed, nextTick } from 'vue';
+import { ref, computed, nextTick } from 'vue';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -34,7 +34,6 @@ const conversationsData = (page.props.conversations as Array<{
 // Usar composable de mensagens para funcionalidades de mensagens
 const {
     messages,
-    selectedConversationId,
     isLoading,
     isSending,
     error,

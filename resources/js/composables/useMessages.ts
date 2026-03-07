@@ -1,6 +1,6 @@
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import axios from 'axios';
-import { router, usePage } from '@inertiajs/vue3';
+import { usePage } from '@inertiajs/vue3';
 import Echo from 'laravel-echo';
 
 export type MessageStatus = 'sending' | 'sent' | 'delivered' | 'failed';

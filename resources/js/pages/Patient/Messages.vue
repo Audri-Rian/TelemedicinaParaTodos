@@ -42,7 +42,6 @@ const conversationsData = (page.props.conversations as Array<{
 // Usar composable de mensagens para funcionalidades de mensagens
 const {
     messages,
-    selectedConversationId,
     isLoading,
     isSending,
     error,

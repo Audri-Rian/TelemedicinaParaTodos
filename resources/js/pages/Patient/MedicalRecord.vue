@@ -20,12 +20,9 @@ import {
     Filter,
     AlertCircle,
     FileText,
-    Calendar,
     Stethoscope,
     Pill,
     TestTube,
-    FileCheck,
-    TrendingUp,
     Clock,
     FilePlus2,
 } from 'lucide-vue-next';

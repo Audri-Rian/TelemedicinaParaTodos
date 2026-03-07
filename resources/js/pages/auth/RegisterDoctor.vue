@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import AuthBase from '@/layouts/AuthLayout.vue';
 import { login } from '@/routes';
-import { Form, Head } from '@inertiajs/vue3';
+import { Head } from '@inertiajs/vue3';
 import { LoaderCircle, ChevronDown, X } from 'lucide-vue-next';
 import doctorDoodleImage from '@images/DoctorDoodle.png';
 
@@ -23,7 +23,6 @@ const props = defineProps<{
 const {
   formData,
   isSubmitting,
-  hasErrors,
   canSubmit,
   submitError,
   rateLimit,

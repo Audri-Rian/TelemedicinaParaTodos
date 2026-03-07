@@ -49,7 +49,7 @@ const formattedDate = computed(() => {
             hour: '2-digit',
             minute: '2-digit',
         }).format(new Date(scheduled_at));
-    } catch (error) {
+    } catch {
         return scheduled_at;
     }
 });

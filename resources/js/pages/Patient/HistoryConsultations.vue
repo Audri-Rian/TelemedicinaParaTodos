@@ -98,36 +98,6 @@ const applyFilter = (filter: 'upcoming' | 'completed' | 'cancelled' | 'all') => 
     });
 };
 
-// Formatar data para exibição
-const formatDate = (dateString: string): string => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('pt-BR', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric'
-    }).toUpperCase();
-};
-
-const formatTime = (dateString: string): string => {
-    const date = new Date(dateString);
-    return date.toLocaleTimeString('pt-BR', {
-        hour: '2-digit',
-        minute: '2-digit'
-    });
-};
-
-// Mapear status para badge
-const getStatusBadge = (status: string) => {
-    const statusMap: Record<string, { label: string; class: string }> = {
-        scheduled: { label: 'Agendada', class: 'bg-yellow-100 text-yellow-700' },
-        in_progress: { label: 'Em Andamento', class: 'bg-blue-100 text-blue-700' },
-        completed: { label: 'Concluída', class: 'bg-green-100 text-green-700' },
-        cancelled: { label: 'Cancelada', class: 'bg-red-100 text-red-700' },
-        rescheduled: { label: 'Reagendada', class: 'bg-purple-100 text-purple-700' },
-        no_show: { label: 'Não Compareceu', class: 'bg-gray-100 text-gray-700' },
-    };
-    return statusMap[status] || statusMap.scheduled;
-};
 
 // Navegar para página
 const goToPage = (page: number) => {

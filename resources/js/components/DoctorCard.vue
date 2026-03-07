@@ -61,7 +61,7 @@ const formattedSelectedDate = computed(() => {
             month: 'long',
             year: 'numeric',
         }).format(new Date(`${props.selectedDate}T00:00:00`));
-    } catch (error) {
+    } catch {
         return props.selectedDate;
     }
 });
