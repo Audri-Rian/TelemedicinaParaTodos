@@ -23,15 +23,38 @@
                 ],
                 "summary": "Listar conversas",
                 "description": "Listar conversas do usuário atual",
-                "operationId": "94f34a5dbb58ee0bcc1a7908ed356c2a",
+                "operationId": "listConversations",
                 "responses": {
                     "200": {
-                        "description": "Lista de conversas"
+                        "description": "Lista de conversas",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "description": "Não autenticado"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "cookieAuth": []
+                    }
+                ]
             }
         },
         "/api/messages/{userId}": {
@@ -41,33 +64,67 @@
                 ],
                 "summary": "Mensagens com um usuário",
                 "description": "Buscar mensagens entre o usuário atual e outro usuário",
-                "operationId": "9cb6e378b77d6b632dc1b89c5d24dc50",
+                "operationId": "getMessages",
                 "parameters": [
                     {
                         "name": "userId",
                         "in": "path",
                         "description": "ID do outro usuário",
-                        "required": true
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
                     },
                     {
                         "name": "limit",
                         "in": "query",
-                        "required": false
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 50
+                        }
                     },
                     {
                         "name": "before",
                         "in": "query",
-                        "required": false
+                        "required": false,
+                        "schema": {
+                            "description": "ID da mensagem para paginação",
+                            "type": "string"
+                        }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Lista de mensagens"
+                        "description": "Lista de mensagens",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "description": "Não autenticado"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "cookieAuth": []
+                    }
+                ]
             }
         },
         "/api/messages": {
@@ -77,18 +134,73 @@
                 ],
                 "summary": "Enviar mensagem",
                 "description": "Enviar uma mensagem",
-                "operationId": "c85a9171473a13f151a8672235e01559",
+                "operationId": "sendMessage",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "receiver_id",
+                                    "content"
+                                ],
+                                "properties": {
+                                    "receiver_id": {
+                                        "description": "ID do destinatário",
+                                        "type": "integer"
+                                    },
+                                    "content": {
+                                        "description": "Conteúdo da mensagem",
+                                        "type": "string"
+                                    },
+                                    "appointment_id": {
+                                        "description": "ID da consulta (opcional)",
+                                        "type": "integer"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
                 "responses": {
                     "201": {
-                        "description": "Mensagem enviada"
+                        "description": "Mensagem enviada",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "description": "Não autenticado"
                     },
                     "422": {
-                        "description": "Dados inválidos"
+                        "description": "Dados inválidos",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
                     }
-                }
+                },
+                "security": [
+                    {
+                        "cookieAuth": []
+                    }
+                ]
             }
         },
         "/api/messages/{userId}/read": {
@@ -98,23 +210,38 @@
                 ],
                 "summary": "Marcar mensagens como lidas",
                 "description": "Marcar mensagens como lidas",
-                "operationId": "83ffd2c44909298da45e30c019f9fa32",
+                "operationId": "markMessagesAsRead",
                 "parameters": [
                     {
                         "name": "userId",
                         "in": "path",
                         "description": "ID do usuário remetente",
-                        "required": true
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Mensagens marcadas como lidas"
+                        "description": "Mensagens marcadas como lidas",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "description": "Não autenticado"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "cookieAuth": []
+                    }
+                ]
             }
         },
         "/api/messages/{messageId}/delivered": {
@@ -124,18 +251,28 @@
                 ],
                 "summary": "Marcar mensagem como entregue",
                 "description": "Marcar mensagem como entregue (delivered)",
-                "operationId": "c2666ad660c7c8e150717da29f97e4ee",
+                "operationId": "markMessageAsDelivered",
                 "parameters": [
                     {
                         "name": "messageId",
                         "in": "path",
                         "description": "ID da mensagem",
-                        "required": true
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Mensagem marcada como entregue"
+                        "description": "Mensagem marcada como entregue",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "description": "Não autenticado"
@@ -143,7 +280,12 @@
                     "403": {
                         "description": "Sem permissão"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "cookieAuth": []
+                    }
+                ]
             }
         },
         "/api/messages/unread/count": {
@@ -153,15 +295,35 @@
                 ],
                 "summary": "Contagem de mensagens não lidas",
                 "description": "Contar mensagens não lidas",
-                "operationId": "beb150d58e2cec57073098e7fa85e3d2",
+                "operationId": "getUnreadMessagesCount",
                 "responses": {
                     "200": {
-                        "description": "Contagem"
+                        "description": "Contagem",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "count": {
+                                            "type": "integer"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "description": "Não autenticado"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "cookieAuth": []
+                    }
+                ]
             }
         },
         "/api/appointments/availability": {
@@ -171,24 +333,38 @@
                 ],
                 "summary": "Disponibilidade para agendamento",
                 "description": "Retorna horários disponíveis do médico na data. Requer autenticação (sessão).",
-                "operationId": "8429ea764d98d0a9b098d603a8586bac",
+                "operationId": "getAppointmentsAvailability",
                 "parameters": [
                     {
                         "name": "doctor_id",
                         "in": "query",
                         "description": "ID do médico",
-                        "required": true
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
                     },
                     {
                         "name": "date",
                         "in": "query",
                         "description": "Data (Y-m-d)",
-                        "required": true
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Slots disponíveis e agenda do dia"
+                        "description": "Slots disponíveis e agenda do dia",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "description": "Não autenticado"
@@ -196,7 +372,12 @@
                     "422": {
                         "description": "Médico inativo ou dados inválidos"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "cookieAuth": []
+                    }
+                ]
             }
         },
         "/api/avatar/upload": {
@@ -206,10 +387,38 @@
                 ],
                 "summary": "Upload de avatar",
                 "description": "Upload de avatar do usuário autenticado",
-                "operationId": "dfdf9526337b3953d39e90ec6cde9e3c",
+                "operationId": "uploadAvatar",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "description": "Envie como multipart/form-data com campo \"avatar\" (arquivo de imagem)"
+                            }
+                        }
+                    }
+                },
                 "responses": {
                     "200": {
-                        "description": "Avatar atualizado"
+                        "description": "Avatar atualizado",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "avatar_url": {
+                                            "type": "string"
+                                        },
+                                        "avatar_thumbnail_url": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "description": "Não autenticado"
@@ -217,7 +426,12 @@
                     "422": {
                         "description": "Arquivo inválido"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "cookieAuth": []
+                    }
+                ]
             }
         },
         "/api/avatar/delete": {
@@ -227,10 +441,17 @@
                 ],
                 "summary": "Remover avatar",
                 "description": "Deletar avatar do usuário autenticado",
-                "operationId": "68ac57864cc92f227d5ce340865bcd40",
+                "operationId": "deleteAvatar",
                 "responses": {
                     "200": {
-                        "description": "Avatar removido"
+                        "description": "Avatar removido",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "description": "Não autenticado"
@@ -238,7 +459,12 @@
                     "404": {
                         "description": "Usuário sem avatar"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "cookieAuth": []
+                    }
+                ]
             }
         },
         "/api/avatar/show": {
@@ -248,22 +474,42 @@
                 ],
                 "summary": "URL do avatar",
                 "description": "Obter URL do avatar do usuário autenticado",
-                "operationId": "eb0bdfb6e2ec32984b36c97436eefdd2",
+                "operationId": "getAvatarUrl",
                 "parameters": [
                     {
                         "name": "thumbnail",
                         "in": "query",
-                        "required": false
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "avatar_url"
+                        "description": "URL do avatar",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "avatar_url": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "description": "Não autenticado"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "cookieAuth": []
+                    }
+                ]
             }
         },
         "/api/doctors/{doctor}/availability/{date}": {
@@ -273,24 +519,46 @@
                 ],
                 "summary": "Disponibilidade do médico por data",
                 "description": "Retorna slots disponíveis do médico para a data informada. Rota pública.",
-                "operationId": "b0a503d0ecf77010bdf479d574b57ebc",
+                "operationId": "getDoctorAvailabilityByDate",
                 "parameters": [
                     {
                         "name": "doctor",
                         "in": "path",
                         "description": "ID do médico",
-                        "required": true
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
                     },
                     {
                         "name": "date",
                         "in": "path",
                         "description": "Data (Y-m-d)",
-                        "required": true
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Slots disponíveis"
+                        "description": "Slots disponíveis",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     },
                     "422": {
                         "description": "Data inválida"
@@ -305,32 +573,64 @@
                 ],
                 "summary": "Listar notificações",
                 "description": "Listar notificações do usuário",
-                "operationId": "911565ad9aff9ba7eded3f189509e578",
+                "operationId": "listNotifications",
                 "parameters": [
                     {
                         "name": "per_page",
                         "in": "query",
-                        "required": false
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
                     },
                     {
                         "name": "type",
                         "in": "query",
-                        "required": false
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
                     },
                     {
                         "name": "unread_only",
                         "in": "query",
-                        "required": false
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Lista paginada"
+                        "description": "Lista paginada (data + meta: current_page, last_page, per_page, total)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        },
+                                        "meta": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "description": "Não autenticado"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "cookieAuth": []
+                    }
+                ]
             }
         },
         "/api/notifications/unread": {
@@ -340,15 +640,38 @@
                 ],
                 "summary": "Notificações não lidas",
                 "description": "Obter notificações não lidas",
-                "operationId": "bbdf4779601a9c7758ebf68b0aedeb83",
+                "operationId": "getUnreadNotifications",
                 "responses": {
                     "200": {
-                        "description": "Lista e contagem"
+                        "description": "Lista e contagem",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        },
+                                        "count": {
+                                            "type": "integer"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "description": "Não autenticado"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "cookieAuth": []
+                    }
+                ]
             }
         },
         "/api/notifications/unread-count": {
@@ -358,15 +681,32 @@
                 ],
                 "summary": "Contagem de não lidas",
                 "description": "Obter contador de notificações não lidas",
-                "operationId": "0272623bed30dd4d72141741fb3f25da",
+                "operationId": "getUnreadNotificationsCount",
                 "responses": {
                     "200": {
-                        "description": "count"
+                        "description": "Contagem",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "count": {
+                                            "type": "integer"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "description": "Não autenticado"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "cookieAuth": []
+                    }
+                ]
             }
         },
         "/api/notifications/{id}/read": {
@@ -376,18 +716,28 @@
                 ],
                 "summary": "Marcar como lida",
                 "description": "Marcar notificação como lida",
-                "operationId": "ccc13a8ee59dfc08e9b1f80e075ebfc1",
+                "operationId": "markNotificationAsRead",
                 "parameters": [
                     {
                         "name": "id",
                         "in": "path",
                         "description": "ID da notificação",
-                        "required": true
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Notificação marcada como lida"
+                        "description": "Notificação marcada como lida",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "description": "Não autenticado"
@@ -395,7 +745,12 @@
                     "404": {
                         "description": "Não encontrada"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "cookieAuth": []
+                    }
+                ]
             }
         },
         "/api/notifications/read-all": {
@@ -405,15 +760,35 @@
                 ],
                 "summary": "Marcar todas como lidas",
                 "description": "Marcar todas as notificações como lidas",
-                "operationId": "80760dfd47d7dd101c507f26ca9f0de9",
+                "operationId": "markAllNotificationsAsRead",
                 "responses": {
                     "200": {
-                        "description": "Quantidade marcada"
+                        "description": "Quantidade marcada",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "count": {
+                                            "type": "integer"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "description": "Não autenticado"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "cookieAuth": []
+                    }
+                ]
             }
         },
         "/api/notifications/{id}": {
@@ -423,18 +798,33 @@
                 ],
                 "summary": "Exibir notificação",
                 "description": "Obter uma notificação específica",
-                "operationId": "f2edf725f41dd6c9a9338a6a7b39d779",
+                "operationId": "getNotification",
                 "parameters": [
                     {
                         "name": "id",
                         "in": "path",
                         "description": "ID da notificação",
-                        "required": true
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Notificação"
+                        "description": "Notificação",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "description": "Não autenticado"
@@ -442,7 +832,12 @@
                     "404": {
                         "description": "Não encontrada"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "cookieAuth": []
+                    }
+                ]
             }
         },
         "/api/specializations/list": {
@@ -452,30 +847,54 @@
                 ],
                 "summary": "Lista especializações",
                 "description": "Retorna especializações com filtros opcionais (busca, apenas ativos, contagem de médicos).",
-                "operationId": "b3494632b4b1eeb87acf921ec972b9e7",
+                "operationId": "listSpecializations",
                 "parameters": [
                     {
                         "name": "search",
                         "in": "query",
                         "description": "Filtro por nome",
-                        "required": false
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
                     },
                     {
                         "name": "active_only",
                         "in": "query",
                         "description": "Apenas com médicos ativos",
-                        "required": false
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        }
                     },
                     {
                         "name": "with_count",
                         "in": "query",
                         "description": "Incluir contagem de médicos",
-                        "required": false
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Lista de especializações"
+                        "description": "Lista de especializações",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -487,10 +906,25 @@
                 ],
                 "summary": "Opções de especializações",
                 "description": "Retorna id e nome para uso em selects/dropdowns.",
-                "operationId": "7788a6f4e90b111bb5c96caffa408a44",
+                "operationId": "getSpecializationOptions",
                 "responses": {
                     "200": {
-                        "description": "Lista { value, label } por especialização"
+                        "description": "Lista { value, label } por especialização",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -502,22 +936,48 @@
                 ],
                 "summary": "Listar eventos de timeline",
                 "description": "Display a listing of the resource.\nGET /api/timeline-events",
-                "operationId": "34006a9bb3bfd9a6e1218f67cf8324b8",
+                "operationId": "listTimelineEvents",
                 "parameters": [
                     {
                         "name": "type",
                         "in": "query",
-                        "required": false
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Lista de eventos"
+                        "description": "Lista de eventos",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "description": "Não autenticado"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "cookieAuth": []
+                    }
+                ]
             },
             "post": {
                 "tags": [
@@ -525,10 +985,28 @@
                 ],
                 "summary": "Criar evento de timeline",
                 "description": "Store a newly created resource in storage.\nPOST /api/timeline-events",
-                "operationId": "056ec664794b816d1f71069cdd166d58",
+                "operationId": "createTimelineEvent",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "description": "Dados do evento (tipo, título, descrição, datas, etc.)",
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
                 "responses": {
                     "201": {
-                        "description": "Evento criado"
+                        "description": "Evento criado",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "description": "Não autenticado"
@@ -536,7 +1014,12 @@
                     "422": {
                         "description": "Dados inválidos"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "cookieAuth": []
+                    }
+                ]
             }
         },
         "/api/timeline-events/{timelineEvent}": {
@@ -546,18 +1029,28 @@
                 ],
                 "summary": "Exibir evento",
                 "description": "Display the specified resource.\nGET /api/timeline-events/{id}",
-                "operationId": "f19ae8bc78cacc61862eb76a347192f8",
+                "operationId": "getTimelineEvent",
                 "parameters": [
                     {
                         "name": "timelineEvent",
                         "in": "path",
                         "description": "ID do evento",
-                        "required": true
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Evento"
+                        "description": "Evento",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "description": "Não autenticado"
@@ -565,7 +1058,12 @@
                     "404": {
                         "description": "Não encontrado"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "cookieAuth": []
+                    }
+                ]
             },
             "put": {
                 "tags": [
@@ -573,18 +1071,38 @@
                 ],
                 "summary": "Atualizar evento",
                 "description": "Update the specified resource in storage.\nPUT /api/timeline-events/{id}",
-                "operationId": "f36c2c1f509bbc481c9edef9c8e4c549",
+                "operationId": "updateTimelineEvent",
                 "parameters": [
                     {
                         "name": "timelineEvent",
                         "in": "path",
                         "description": "ID do evento",
-                        "required": true
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
                     }
                 ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
                 "responses": {
                     "200": {
-                        "description": "Evento atualizado"
+                        "description": "Evento atualizado",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "description": "Não autenticado"
@@ -592,7 +1110,12 @@
                     "422": {
                         "description": "Dados inválidos"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "cookieAuth": []
+                    }
+                ]
             },
             "delete": {
                 "tags": [
@@ -600,23 +1123,90 @@
                 ],
                 "summary": "Excluir evento",
                 "description": "Remove the specified resource from storage.\nDELETE /api/timeline-events/{id}",
-                "operationId": "64f96e741befe2e40ca7056ef93c1fc6",
+                "operationId": "deleteTimelineEvent",
                 "parameters": [
                     {
                         "name": "timelineEvent",
                         "in": "path",
                         "description": "ID do evento",
-                        "required": true
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Evento excluído"
+                        "description": "Evento excluído",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "description": "Não autenticado"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "cookieAuth": []
+                    }
+                ]
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "ErrorResponse": {
+                "title": "ErrorResponse",
+                "description": "Resposta padrão de erro da API",
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": false
+                    },
+                    "message": {
+                        "description": "Mensagem de erro",
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "PaginatedMeta": {
+                "title": "PaginatedMeta",
+                "description": "Metadados de resposta paginada",
+                "properties": {
+                    "current_page": {
+                        "type": "integer"
+                    },
+                    "last_page": {
+                        "type": "integer"
+                    },
+                    "per_page": {
+                        "type": "integer"
+                    },
+                    "total": {
+                        "type": "integer"
+                    }
+                },
+                "type": "object"
+            }
+        },
+        "securitySchemes": {
+            "cookieAuth": {
+                "type": "apiKey",
+                "description": "Autenticação por sessão Laravel (cookie). Usado pelos endpoints internos.",
+                "name": "laravel_session",
+                "in": "cookie"
+            },
+            "bearerAuth": {
+                "type": "http",
+                "description": "Token Bearer para API pública (interoperabilidade).",
+                "bearerFormat": "JWT",
+                "scheme": "bearer"
             }
         }
     },

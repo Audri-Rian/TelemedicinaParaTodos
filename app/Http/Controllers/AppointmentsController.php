@@ -245,15 +245,17 @@ class AppointmentsController extends Controller
     #[OA\PathItem(path: '/api/appointments/availability')]
     #[OA\Get(
         path: '/api/appointments/availability',
+        operationId: 'getAppointmentsAvailability',
         summary: 'Disponibilidade para agendamento',
         description: 'Retorna horários disponíveis do médico na data. Requer autenticação (sessão).',
         tags: ['Agendamentos'],
+        security: [['cookieAuth' => []]],
         parameters: [
-            new OA\Parameter(name: 'doctor_id', in: 'query', required: true, description: 'ID do médico'),
-            new OA\Parameter(name: 'date', in: 'query', required: true, description: 'Data (Y-m-d)'),
+            new OA\Parameter(name: 'doctor_id', in: 'query', required: true, description: 'ID do médico', schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'date', in: 'query', required: true, description: 'Data (Y-m-d)', schema: new OA\Schema(type: 'string', format: 'date')),
         ],
         responses: [
-            new OA\Response(response: 200, description: 'Slots disponíveis e agenda do dia'),
+            new OA\Response(response: 200, description: 'Slots disponíveis e agenda do dia', content: new OA\JsonContent(type: 'object')),
             new OA\Response(response: 401, description: 'Não autenticado'),
             new OA\Response(response: 422, description: 'Médico inativo ou dados inválidos'),
         ]

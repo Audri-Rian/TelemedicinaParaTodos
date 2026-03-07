@@ -23,7 +23,18 @@ class TimelineEventController extends Controller
      * GET /api/timeline-events
      */
     #[OA\PathItem(path: '/api/timeline-events')]
-    #[OA\Get(path: '/api/timeline-events', summary: 'Listar eventos de timeline', tags: ['Timeline'], parameters: [new OA\Parameter(name: 'type', in: 'query', required: false)], responses: [new OA\Response(response: 200, description: 'Lista de eventos'), new OA\Response(response: 401, description: 'Não autenticado')])]
+    #[OA\Get(
+        path: '/api/timeline-events',
+        operationId: 'listTimelineEvents',
+        summary: 'Listar eventos de timeline',
+        tags: ['Timeline'],
+        security: [['cookieAuth' => []]],
+        parameters: [new OA\Parameter(name: 'type', in: 'query', required: false, schema: new OA\Schema(type: 'string'))],
+        responses: [
+            new OA\Response(response: 200, description: 'Lista de eventos', content: new OA\JsonContent(type: 'object', properties: [new OA\Property(property: 'success', type: 'boolean'), new OA\Property(property: 'data', type: 'array', items: new OA\Items(type: 'object'))])),
+            new OA\Response(response: 401, description: 'Não autenticado'),
+        ]
+    )]
     public function index(Request $request): JsonResponse
     {
         $user = Auth::user();
@@ -45,7 +56,19 @@ class TimelineEventController extends Controller
      * POST /api/timeline-events
      */
     #[OA\PathItem(path: '/api/timeline-events')]
-    #[OA\Post(path: '/api/timeline-events', summary: 'Criar evento de timeline', tags: ['Timeline'], responses: [new OA\Response(response: 201, description: 'Evento criado'), new OA\Response(response: 401, description: 'Não autenticado'), new OA\Response(response: 422, description: 'Dados inválidos')])]
+    #[OA\Post(
+        path: '/api/timeline-events',
+        operationId: 'createTimelineEvent',
+        summary: 'Criar evento de timeline',
+        tags: ['Timeline'],
+        security: [['cookieAuth' => []]],
+        requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(type: 'object', description: 'Dados do evento (tipo, título, descrição, datas, etc.)')),
+        responses: [
+            new OA\Response(response: 201, description: 'Evento criado', content: new OA\JsonContent(type: 'object')),
+            new OA\Response(response: 401, description: 'Não autenticado'),
+            new OA\Response(response: 422, description: 'Dados inválidos'),
+        ]
+    )]
     public function store(StoreTimelineEventRequest $request): JsonResponse
     {
         $user = Auth::user();
@@ -74,7 +97,19 @@ class TimelineEventController extends Controller
      * GET /api/timeline-events/{id}
      */
     #[OA\PathItem(path: '/api/timeline-events/{timelineEvent}')]
-    #[OA\Get(path: '/api/timeline-events/{timelineEvent}', summary: 'Exibir evento', tags: ['Timeline'], parameters: [new OA\PathParameter(name: 'timelineEvent', description: 'ID do evento')], responses: [new OA\Response(response: 200, description: 'Evento'), new OA\Response(response: 401, description: 'Não autenticado'), new OA\Response(response: 404, description: 'Não encontrado')])]
+    #[OA\Get(
+        path: '/api/timeline-events/{timelineEvent}',
+        operationId: 'getTimelineEvent',
+        summary: 'Exibir evento',
+        tags: ['Timeline'],
+        security: [['cookieAuth' => []]],
+        parameters: [new OA\PathParameter(name: 'timelineEvent', description: 'ID do evento', schema: new OA\Schema(type: 'integer'))],
+        responses: [
+            new OA\Response(response: 200, description: 'Evento', content: new OA\JsonContent(type: 'object')),
+            new OA\Response(response: 401, description: 'Não autenticado'),
+            new OA\Response(response: 404, description: 'Não encontrado'),
+        ]
+    )]
     public function show(TimelineEvent $timelineEvent): JsonResponse
     {
         Gate::authorize('view', $timelineEvent);
@@ -92,7 +127,20 @@ class TimelineEventController extends Controller
      * PUT /api/timeline-events/{id}
      */
     #[OA\PathItem(path: '/api/timeline-events/{timelineEvent}')]
-    #[OA\Put(path: '/api/timeline-events/{timelineEvent}', summary: 'Atualizar evento', tags: ['Timeline'], parameters: [new OA\PathParameter(name: 'timelineEvent', description: 'ID do evento')], responses: [new OA\Response(response: 200, description: 'Evento atualizado'), new OA\Response(response: 401, description: 'Não autenticado'), new OA\Response(response: 422, description: 'Dados inválidos')])]
+    #[OA\Put(
+        path: '/api/timeline-events/{timelineEvent}',
+        operationId: 'updateTimelineEvent',
+        summary: 'Atualizar evento',
+        tags: ['Timeline'],
+        security: [['cookieAuth' => []]],
+        parameters: [new OA\PathParameter(name: 'timelineEvent', description: 'ID do evento', schema: new OA\Schema(type: 'integer'))],
+        requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(type: 'object')),
+        responses: [
+            new OA\Response(response: 200, description: 'Evento atualizado', content: new OA\JsonContent(type: 'object')),
+            new OA\Response(response: 401, description: 'Não autenticado'),
+            new OA\Response(response: 422, description: 'Dados inválidos'),
+        ]
+    )]
     public function update(UpdateTimelineEventRequest $request, TimelineEvent $timelineEvent): JsonResponse
     {
         Gate::authorize('update', $timelineEvent);
@@ -119,7 +167,18 @@ class TimelineEventController extends Controller
      * DELETE /api/timeline-events/{id}
      */
     #[OA\PathItem(path: '/api/timeline-events/{timelineEvent}')]
-    #[OA\Delete(path: '/api/timeline-events/{timelineEvent}', summary: 'Excluir evento', tags: ['Timeline'], parameters: [new OA\PathParameter(name: 'timelineEvent', description: 'ID do evento')], responses: [new OA\Response(response: 200, description: 'Evento excluído'), new OA\Response(response: 401, description: 'Não autenticado')])]
+    #[OA\Delete(
+        path: '/api/timeline-events/{timelineEvent}',
+        operationId: 'deleteTimelineEvent',
+        summary: 'Excluir evento',
+        tags: ['Timeline'],
+        security: [['cookieAuth' => []]],
+        parameters: [new OA\PathParameter(name: 'timelineEvent', description: 'ID do evento', schema: new OA\Schema(type: 'integer'))],
+        responses: [
+            new OA\Response(response: 200, description: 'Evento excluído', content: new OA\JsonContent(type: 'object')),
+            new OA\Response(response: 401, description: 'Não autenticado'),
+        ]
+    )]
     public function destroy(TimelineEvent $timelineEvent): JsonResponse
     {
         Gate::authorize('delete', $timelineEvent);

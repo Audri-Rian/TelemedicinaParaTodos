@@ -199,15 +199,16 @@ class DoctorAvailabilitySlotController extends Controller
     #[OA\PathItem(path: '/api/doctors/{doctor}/availability/{date}')]
     #[OA\Get(
         path: '/api/doctors/{doctor}/availability/{date}',
+        operationId: 'getDoctorAvailabilityByDate',
         summary: 'Disponibilidade do médico por data',
         description: 'Retorna slots disponíveis do médico para a data informada. Rota pública.',
         tags: ['Disponibilidade'],
         parameters: [
-            new OA\PathParameter(name: 'doctor', description: 'ID do médico', required: true),
-            new OA\PathParameter(name: 'date', description: 'Data (Y-m-d)', required: true),
+            new OA\PathParameter(name: 'doctor', description: 'ID do médico', schema: new OA\Schema(type: 'integer')),
+            new OA\PathParameter(name: 'date', description: 'Data (Y-m-d)', schema: new OA\Schema(type: 'string', format: 'date')),
         ],
         responses: [
-            new OA\Response(response: 200, description: 'Slots disponíveis'),
+            new OA\Response(response: 200, description: 'Slots disponíveis', content: new OA\JsonContent(type: 'object', properties: [new OA\Property(property: 'success', type: 'boolean'), new OA\Property(property: 'data', type: 'object')])),
             new OA\Response(response: 422, description: 'Data inválida'),
         ]
     )]
