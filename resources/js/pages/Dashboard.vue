@@ -334,7 +334,7 @@ const doctorTourSteps = [
                         </div>
 
                         <div class="flex flex-col gap-2">
-                            <Link :href="doctorRoutes.videoCall?.() ?? doctorRoutes.appointments()"
+                            <Link :href="doctorRoutes.consultations()"
                                 class="flex items-center justify-center rounded-xl bg-primary px-4 py-2 font-semibold text-gray-900 transition hover:bg-primary/90">
                                 <Video class="mr-2 h-4 w-4" />
                                 Iniciar videochamada
@@ -386,7 +386,7 @@ const doctorTourSteps = [
                     <p class="mt-1 text-sm text-gray-600">Revise notas clínicas e prescrições</p>
                 </Link>
 
-                <Link :href="doctorRoutes.videoCall?.() ?? doctorRoutes.appointments()"
+                <Link :href="doctorRoutes.consultations()"
                     class="rounded-2xl border border-gray-200 bg-white p-6 text-center shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md">
                     <div
                         class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/15 text-primary">
@@ -468,7 +468,7 @@ const doctorTourSteps = [
                                     </td>
                                     <td class="px-6 py-4">
                                         <div class="flex gap-2">
-                                            <Link :href="doctorRoutes.videoCall?.() ?? doctorRoutes.appointments()"
+                                            <Link :href="doctorRoutes.consultations()"
                                                 class="rounded-lg bg-primary/20 px-3 py-1 text-xs font-semibold text-primary transition hover:bg-primary/30">
                                                 Entrar
                                             </Link>

@@ -41,10 +41,12 @@ jobs:
       - name: Copy Environment File
         run: cp .env.example .env
 
-      - name: Configure SQLite for CI
+      - name: Configure SQLite and disable Redis for CI
         run: |
           echo "DB_CONNECTION=sqlite" >> .env
           echo "DB_DATABASE=$(pwd)/database/database.sqlite" >> .env
+          echo "CACHE_STORE=array" >> .env
+          echo "QUEUE_CONNECTION=sync" >> .env
           mkdir -p database
           touch database/database.sqlite
 

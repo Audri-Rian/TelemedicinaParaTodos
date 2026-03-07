@@ -26,6 +26,7 @@ class RegistrationTest extends TestCase
         ]);
 
         $this->assertAuthenticated();
-        $response->assertRedirect(route('dashboard', absolute: false));
+        // User created via POST /register has no Doctor/Patient profile yet, so redirects to home
+        $response->assertRedirect(route('home', absolute: false));
     }
 }
