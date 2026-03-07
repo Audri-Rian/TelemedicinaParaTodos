@@ -7,6 +7,7 @@ use App\Http\Requests\StoreMessageRequest;
 use App\Services\MessageService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use OpenApi\Attributes as OA;
 
 class MessageController extends Controller
 {
@@ -17,6 +18,8 @@ class MessageController extends Controller
     /**
      * Listar conversas do usuário atual
      */
+    #[OA\PathItem(path: '/api/messages/conversations')]
+    #[OA\Get(path: '/api/messages/conversations', summary: 'Listar conversas', tags: ['Mensagens'], responses: [new OA\Response(response: 200, description: 'Lista de conversas'), new OA\Response(response: 401, description: 'Não autenticado')])]
     public function conversations(): JsonResponse
     {
         try {
@@ -37,6 +40,8 @@ class MessageController extends Controller
     /**
      * Buscar mensagens entre o usuário atual e outro usuário
      */
+    #[OA\PathItem(path: '/api/messages/{userId}')]
+    #[OA\Get(path: '/api/messages/{userId}', summary: 'Mensagens com um usuário', tags: ['Mensagens'], parameters: [new OA\PathParameter(name: 'userId', description: 'ID do outro usuário'), new OA\Parameter(name: 'limit', in: 'query', required: false), new OA\Parameter(name: 'before', in: 'query', required: false)], responses: [new OA\Response(response: 200, description: 'Lista de mensagens'), new OA\Response(response: 401, description: 'Não autenticado')])]
     public function messages(Request $request, string $userId): JsonResponse
     {
         try {
@@ -60,6 +65,8 @@ class MessageController extends Controller
     /**
      * Enviar uma mensagem
      */
+    #[OA\PathItem(path: '/api/messages')]
+    #[OA\Post(path: '/api/messages', summary: 'Enviar mensagem', tags: ['Mensagens'], responses: [new OA\Response(response: 201, description: 'Mensagem enviada'), new OA\Response(response: 401, description: 'Não autenticado'), new OA\Response(response: 422, description: 'Dados inválidos')])]
     public function store(StoreMessageRequest $request): JsonResponse
     {
         try {
@@ -85,6 +92,8 @@ class MessageController extends Controller
     /**
      * Marcar mensagens como lidas
      */
+    #[OA\PathItem(path: '/api/messages/{userId}/read')]
+    #[OA\Post(path: '/api/messages/{userId}/read', summary: 'Marcar mensagens como lidas', tags: ['Mensagens'], parameters: [new OA\PathParameter(name: 'userId', description: 'ID do usuário remetente')], responses: [new OA\Response(response: 200, description: 'Mensagens marcadas como lidas'), new OA\Response(response: 401, description: 'Não autenticado')])]
     public function markAsRead(string $userId): JsonResponse
     {
         try {
@@ -106,6 +115,8 @@ class MessageController extends Controller
     /**
      * Marcar mensagem como entregue (delivered)
      */
+    #[OA\PathItem(path: '/api/messages/{messageId}/delivered')]
+    #[OA\Post(path: '/api/messages/{messageId}/delivered', summary: 'Marcar mensagem como entregue', tags: ['Mensagens'], parameters: [new OA\PathParameter(name: 'messageId', description: 'ID da mensagem')], responses: [new OA\Response(response: 200, description: 'Mensagem marcada como entregue'), new OA\Response(response: 401, description: 'Não autenticado'), new OA\Response(response: 403, description: 'Sem permissão')])]
     public function markAsDelivered(string $messageId): JsonResponse
     {
         try {
@@ -136,6 +147,8 @@ class MessageController extends Controller
     /**
      * Contar mensagens não lidas
      */
+    #[OA\PathItem(path: '/api/messages/unread/count')]
+    #[OA\Get(path: '/api/messages/unread/count', summary: 'Contagem de mensagens não lidas', tags: ['Mensagens'], responses: [new OA\Response(response: 200, description: 'Contagem'), new OA\Response(response: 401, description: 'Não autenticado')])]
     public function unreadCount(): JsonResponse
     {
         try {

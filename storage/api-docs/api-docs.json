@@ -1,0 +1,653 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "Telemedicina para Todos API",
+        "description": "Documentação da API do projeto Telemedicina para Todos. Endpoints internos (sessão) e preparação para API pública de interoperabilidade.",
+        "version": "1.0.0"
+    },
+    "servers": [
+        {
+            "url": "/",
+            "description": "Servidor da aplicação (base atual)"
+        },
+        {
+            "url": "/api/v1",
+            "description": "API pública versionada (futuro – interoperabilidade)"
+        }
+    ],
+    "paths": {
+        "/api/messages/conversations": {
+            "get": {
+                "tags": [
+                    "Mensagens"
+                ],
+                "summary": "Listar conversas",
+                "description": "Listar conversas do usuário atual",
+                "operationId": "94f34a5dbb58ee0bcc1a7908ed356c2a",
+                "responses": {
+                    "200": {
+                        "description": "Lista de conversas"
+                    },
+                    "401": {
+                        "description": "Não autenticado"
+                    }
+                }
+            }
+        },
+        "/api/messages/{userId}": {
+            "get": {
+                "tags": [
+                    "Mensagens"
+                ],
+                "summary": "Mensagens com um usuário",
+                "description": "Buscar mensagens entre o usuário atual e outro usuário",
+                "operationId": "9cb6e378b77d6b632dc1b89c5d24dc50",
+                "parameters": [
+                    {
+                        "name": "userId",
+                        "in": "path",
+                        "description": "ID do outro usuário",
+                        "required": true
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "required": false
+                    },
+                    {
+                        "name": "before",
+                        "in": "query",
+                        "required": false
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Lista de mensagens"
+                    },
+                    "401": {
+                        "description": "Não autenticado"
+                    }
+                }
+            }
+        },
+        "/api/messages": {
+            "post": {
+                "tags": [
+                    "Mensagens"
+                ],
+                "summary": "Enviar mensagem",
+                "description": "Enviar uma mensagem",
+                "operationId": "c85a9171473a13f151a8672235e01559",
+                "responses": {
+                    "201": {
+                        "description": "Mensagem enviada"
+                    },
+                    "401": {
+                        "description": "Não autenticado"
+                    },
+                    "422": {
+                        "description": "Dados inválidos"
+                    }
+                }
+            }
+        },
+        "/api/messages/{userId}/read": {
+            "post": {
+                "tags": [
+                    "Mensagens"
+                ],
+                "summary": "Marcar mensagens como lidas",
+                "description": "Marcar mensagens como lidas",
+                "operationId": "83ffd2c44909298da45e30c019f9fa32",
+                "parameters": [
+                    {
+                        "name": "userId",
+                        "in": "path",
+                        "description": "ID do usuário remetente",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Mensagens marcadas como lidas"
+                    },
+                    "401": {
+                        "description": "Não autenticado"
+                    }
+                }
+            }
+        },
+        "/api/messages/{messageId}/delivered": {
+            "post": {
+                "tags": [
+                    "Mensagens"
+                ],
+                "summary": "Marcar mensagem como entregue",
+                "description": "Marcar mensagem como entregue (delivered)",
+                "operationId": "c2666ad660c7c8e150717da29f97e4ee",
+                "parameters": [
+                    {
+                        "name": "messageId",
+                        "in": "path",
+                        "description": "ID da mensagem",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Mensagem marcada como entregue"
+                    },
+                    "401": {
+                        "description": "Não autenticado"
+                    },
+                    "403": {
+                        "description": "Sem permissão"
+                    }
+                }
+            }
+        },
+        "/api/messages/unread/count": {
+            "get": {
+                "tags": [
+                    "Mensagens"
+                ],
+                "summary": "Contagem de mensagens não lidas",
+                "description": "Contar mensagens não lidas",
+                "operationId": "beb150d58e2cec57073098e7fa85e3d2",
+                "responses": {
+                    "200": {
+                        "description": "Contagem"
+                    },
+                    "401": {
+                        "description": "Não autenticado"
+                    }
+                }
+            }
+        },
+        "/api/appointments/availability": {
+            "get": {
+                "tags": [
+                    "Agendamentos"
+                ],
+                "summary": "Disponibilidade para agendamento",
+                "description": "Retorna horários disponíveis do médico na data. Requer autenticação (sessão).",
+                "operationId": "8429ea764d98d0a9b098d603a8586bac",
+                "parameters": [
+                    {
+                        "name": "doctor_id",
+                        "in": "query",
+                        "description": "ID do médico",
+                        "required": true
+                    },
+                    {
+                        "name": "date",
+                        "in": "query",
+                        "description": "Data (Y-m-d)",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Slots disponíveis e agenda do dia"
+                    },
+                    "401": {
+                        "description": "Não autenticado"
+                    },
+                    "422": {
+                        "description": "Médico inativo ou dados inválidos"
+                    }
+                }
+            }
+        },
+        "/api/avatar/upload": {
+            "post": {
+                "tags": [
+                    "Avatar"
+                ],
+                "summary": "Upload de avatar",
+                "description": "Upload de avatar do usuário autenticado",
+                "operationId": "dfdf9526337b3953d39e90ec6cde9e3c",
+                "responses": {
+                    "200": {
+                        "description": "Avatar atualizado"
+                    },
+                    "401": {
+                        "description": "Não autenticado"
+                    },
+                    "422": {
+                        "description": "Arquivo inválido"
+                    }
+                }
+            }
+        },
+        "/api/avatar/delete": {
+            "delete": {
+                "tags": [
+                    "Avatar"
+                ],
+                "summary": "Remover avatar",
+                "description": "Deletar avatar do usuário autenticado",
+                "operationId": "68ac57864cc92f227d5ce340865bcd40",
+                "responses": {
+                    "200": {
+                        "description": "Avatar removido"
+                    },
+                    "401": {
+                        "description": "Não autenticado"
+                    },
+                    "404": {
+                        "description": "Usuário sem avatar"
+                    }
+                }
+            }
+        },
+        "/api/avatar/show": {
+            "get": {
+                "tags": [
+                    "Avatar"
+                ],
+                "summary": "URL do avatar",
+                "description": "Obter URL do avatar do usuário autenticado",
+                "operationId": "eb0bdfb6e2ec32984b36c97436eefdd2",
+                "parameters": [
+                    {
+                        "name": "thumbnail",
+                        "in": "query",
+                        "required": false
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "avatar_url"
+                    },
+                    "401": {
+                        "description": "Não autenticado"
+                    }
+                }
+            }
+        },
+        "/api/doctors/{doctor}/availability/{date}": {
+            "get": {
+                "tags": [
+                    "Disponibilidade"
+                ],
+                "summary": "Disponibilidade do médico por data",
+                "description": "Retorna slots disponíveis do médico para a data informada. Rota pública.",
+                "operationId": "b0a503d0ecf77010bdf479d574b57ebc",
+                "parameters": [
+                    {
+                        "name": "doctor",
+                        "in": "path",
+                        "description": "ID do médico",
+                        "required": true
+                    },
+                    {
+                        "name": "date",
+                        "in": "path",
+                        "description": "Data (Y-m-d)",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Slots disponíveis"
+                    },
+                    "422": {
+                        "description": "Data inválida"
+                    }
+                }
+            }
+        },
+        "/api/notifications": {
+            "get": {
+                "tags": [
+                    "Notificações"
+                ],
+                "summary": "Listar notificações",
+                "description": "Listar notificações do usuário",
+                "operationId": "911565ad9aff9ba7eded3f189509e578",
+                "parameters": [
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false
+                    },
+                    {
+                        "name": "type",
+                        "in": "query",
+                        "required": false
+                    },
+                    {
+                        "name": "unread_only",
+                        "in": "query",
+                        "required": false
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Lista paginada"
+                    },
+                    "401": {
+                        "description": "Não autenticado"
+                    }
+                }
+            }
+        },
+        "/api/notifications/unread": {
+            "get": {
+                "tags": [
+                    "Notificações"
+                ],
+                "summary": "Notificações não lidas",
+                "description": "Obter notificações não lidas",
+                "operationId": "bbdf4779601a9c7758ebf68b0aedeb83",
+                "responses": {
+                    "200": {
+                        "description": "Lista e contagem"
+                    },
+                    "401": {
+                        "description": "Não autenticado"
+                    }
+                }
+            }
+        },
+        "/api/notifications/unread-count": {
+            "get": {
+                "tags": [
+                    "Notificações"
+                ],
+                "summary": "Contagem de não lidas",
+                "description": "Obter contador de notificações não lidas",
+                "operationId": "0272623bed30dd4d72141741fb3f25da",
+                "responses": {
+                    "200": {
+                        "description": "count"
+                    },
+                    "401": {
+                        "description": "Não autenticado"
+                    }
+                }
+            }
+        },
+        "/api/notifications/{id}/read": {
+            "post": {
+                "tags": [
+                    "Notificações"
+                ],
+                "summary": "Marcar como lida",
+                "description": "Marcar notificação como lida",
+                "operationId": "ccc13a8ee59dfc08e9b1f80e075ebfc1",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID da notificação",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Notificação marcada como lida"
+                    },
+                    "401": {
+                        "description": "Não autenticado"
+                    },
+                    "404": {
+                        "description": "Não encontrada"
+                    }
+                }
+            }
+        },
+        "/api/notifications/read-all": {
+            "post": {
+                "tags": [
+                    "Notificações"
+                ],
+                "summary": "Marcar todas como lidas",
+                "description": "Marcar todas as notificações como lidas",
+                "operationId": "80760dfd47d7dd101c507f26ca9f0de9",
+                "responses": {
+                    "200": {
+                        "description": "Quantidade marcada"
+                    },
+                    "401": {
+                        "description": "Não autenticado"
+                    }
+                }
+            }
+        },
+        "/api/notifications/{id}": {
+            "get": {
+                "tags": [
+                    "Notificações"
+                ],
+                "summary": "Exibir notificação",
+                "description": "Obter uma notificação específica",
+                "operationId": "f2edf725f41dd6c9a9338a6a7b39d779",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID da notificação",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Notificação"
+                    },
+                    "401": {
+                        "description": "Não autenticado"
+                    },
+                    "404": {
+                        "description": "Não encontrada"
+                    }
+                }
+            }
+        },
+        "/api/specializations/list": {
+            "get": {
+                "tags": [
+                    "Especializações"
+                ],
+                "summary": "Lista especializações",
+                "description": "Retorna especializações com filtros opcionais (busca, apenas ativos, contagem de médicos).",
+                "operationId": "b3494632b4b1eeb87acf921ec972b9e7",
+                "parameters": [
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Filtro por nome",
+                        "required": false
+                    },
+                    {
+                        "name": "active_only",
+                        "in": "query",
+                        "description": "Apenas com médicos ativos",
+                        "required": false
+                    },
+                    {
+                        "name": "with_count",
+                        "in": "query",
+                        "description": "Incluir contagem de médicos",
+                        "required": false
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Lista de especializações"
+                    }
+                }
+            }
+        },
+        "/api/specializations/options": {
+            "get": {
+                "tags": [
+                    "Especializações"
+                ],
+                "summary": "Opções de especializações",
+                "description": "Retorna id e nome para uso em selects/dropdowns.",
+                "operationId": "7788a6f4e90b111bb5c96caffa408a44",
+                "responses": {
+                    "200": {
+                        "description": "Lista { value, label } por especialização"
+                    }
+                }
+            }
+        },
+        "/api/timeline-events": {
+            "get": {
+                "tags": [
+                    "Timeline"
+                ],
+                "summary": "Listar eventos de timeline",
+                "description": "Display a listing of the resource.\nGET /api/timeline-events",
+                "operationId": "34006a9bb3bfd9a6e1218f67cf8324b8",
+                "parameters": [
+                    {
+                        "name": "type",
+                        "in": "query",
+                        "required": false
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Lista de eventos"
+                    },
+                    "401": {
+                        "description": "Não autenticado"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Timeline"
+                ],
+                "summary": "Criar evento de timeline",
+                "description": "Store a newly created resource in storage.\nPOST /api/timeline-events",
+                "operationId": "056ec664794b816d1f71069cdd166d58",
+                "responses": {
+                    "201": {
+                        "description": "Evento criado"
+                    },
+                    "401": {
+                        "description": "Não autenticado"
+                    },
+                    "422": {
+                        "description": "Dados inválidos"
+                    }
+                }
+            }
+        },
+        "/api/timeline-events/{timelineEvent}": {
+            "get": {
+                "tags": [
+                    "Timeline"
+                ],
+                "summary": "Exibir evento",
+                "description": "Display the specified resource.\nGET /api/timeline-events/{id}",
+                "operationId": "f19ae8bc78cacc61862eb76a347192f8",
+                "parameters": [
+                    {
+                        "name": "timelineEvent",
+                        "in": "path",
+                        "description": "ID do evento",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Evento"
+                    },
+                    "401": {
+                        "description": "Não autenticado"
+                    },
+                    "404": {
+                        "description": "Não encontrado"
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Timeline"
+                ],
+                "summary": "Atualizar evento",
+                "description": "Update the specified resource in storage.\nPUT /api/timeline-events/{id}",
+                "operationId": "f36c2c1f509bbc481c9edef9c8e4c549",
+                "parameters": [
+                    {
+                        "name": "timelineEvent",
+                        "in": "path",
+                        "description": "ID do evento",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Evento atualizado"
+                    },
+                    "401": {
+                        "description": "Não autenticado"
+                    },
+                    "422": {
+                        "description": "Dados inválidos"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Timeline"
+                ],
+                "summary": "Excluir evento",
+                "description": "Remove the specified resource from storage.\nDELETE /api/timeline-events/{id}",
+                "operationId": "64f96e741befe2e40ca7056ef93c1fc6",
+                "parameters": [
+                    {
+                        "name": "timelineEvent",
+                        "in": "path",
+                        "description": "ID do evento",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Evento excluído"
+                    },
+                    "401": {
+                        "description": "Não autenticado"
+                    }
+                }
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "Especializações",
+            "description": "Listagem e opções de especializações médicas"
+        },
+        {
+            "name": "Disponibilidade",
+            "description": "Disponibilidade de médicos por data"
+        },
+        {
+            "name": "Agendamentos",
+            "description": "Disponibilidade para agendamento"
+        },
+        {
+            "name": "Timeline",
+            "description": "Eventos de timeline (educação, cursos, certificados)"
+        },
+        {
+            "name": "Mensagens",
+            "description": "Conversas e mensagens entre usuários"
+        },
+        {
+            "name": "Notificações",
+            "description": "Notificações do usuário"
+        },
+        {
+            "name": "Avatar",
+            "description": "Upload e gestão de avatar"
+        }
+    ]
+}

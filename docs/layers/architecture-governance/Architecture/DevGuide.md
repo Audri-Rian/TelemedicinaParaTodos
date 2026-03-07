@@ -51,5 +51,16 @@ Lógicas complexas de negócio (como operações que envolvem vários modelos ou
 
 DTOs devem servir ao transporte de dados entre camadas, mas a conversão de Model para DTO — ou vice-versa — é mais apropriada na Service Layer, não no Repository, para respeitar a Single Responsibility Principle
 
+---
+
+## Documentação da API (Swagger e ReDoc)
+
+A API é documentada em **OpenAPI 3.x**. O projeto expõe duas interfaces para a mesma spec:
+
+- **Swagger UI:** `/api/documentation` — para consultar e testar endpoints (Try it out).
+- **ReDoc:** `/api/redoc` — para leitura em formato de manual.
+
+Regerar a spec após alterar controllers/Attributes: `php artisan l5-swagger:generate`.  
+Guia completo (básico para devs + Swagger/ReDoc): [Guia para Desenvolvedores](../../../guides/GuiaDesenvolvedor.md).
 
 

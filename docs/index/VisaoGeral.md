@@ -70,6 +70,7 @@ O **Telemedicina para Todos** é uma plataforma moderna de telemedicina que cone
 - **[Arquitetura do Sistema](../layers/architecture-governance/Architecture/Arquitetura.md)** - Estrutura geral, camadas e padrões
 - **[Guia do Frontend](../layers/architecture-governance/Architecture/VueGuide.md)** - Convenções Vue.js e estrutura do frontend
 - **[Guia de Desenvolvimento](../layers/architecture-governance/Architecture/DevGuide.md)** - Padrões de código e boas práticas
+- **[Guia para Desenvolvedores](../guides/GuiaDesenvolvedor.md)** - Básico do ambiente, onde achar cada doc, Swagger e ReDoc
 
 ### 3. 💾 Modelo de Dados
 - **[Diagrama do Banco de Dados](../layers/persistence/database/diagrama_banco_dados.md)** - Estrutura das tabelas e relacionamentos
@@ -86,6 +87,7 @@ O **Telemedicina para Todos** é uma plataforma moderna de telemedicina que cone
 
 ### 5. 🔧 Configuração e Instalação
 - **[Guia de Instalação](../setup/Start.md)** - Como configurar o ambiente de desenvolvimento
+- **[Guia para Desenvolvedores](../guides/GuiaDesenvolvedor.md)** - Básico para devs, documentação da API (Swagger/ReDoc)
 - **[Regras do Cursor](../setup/CursorRulesGuide.md)** - Configurações do ambiente de desenvolvimento
 
 ### 6. ☁️ Cloud e Escalabilidade
@@ -102,7 +104,7 @@ O **Telemedicina para Todos** é uma plataforma moderna de telemedicina que cone
 ### Por Papel do Usuário
 - **👨‍⚕️ Médicos**: [Regras de Negócio](../requirements/SystemRules.md) → [Funcionalidades](../requirements/FuncionalitsGuide.md) → [Arquitetura](../architecture/Arquitetura.md)
 - **👤 Pacientes**: [Visão Geral do Projeto](../../README.md) → [Funcionalidades](../requirements/FuncionalitsGuide.md) → [Regras](../requirements/SystemRules.md)
-- **💻 Desenvolvedores**: [Arquitetura](../architecture/Arquitetura.md) → [Guia de Dev](../architecture/DevGuide.md) → [Implementações](../modules/appointments/AppointmentsImplementationStudy.md)
+- **💻 Desenvolvedores**: [Guia para Desenvolvedores](../guides/GuiaDesenvolvedor.md) → [Arquitetura](../layers/architecture-governance/Architecture/Arquitetura.md) → [Guia de Dev](../layers/architecture-governance/Architecture/DevGuide.md) → [Implementações](../modules/appointments/AppointmentsImplementationStudy.md)
 - **☁️ DevOps/Cloud**: [Estratégia AWS](../aws/CloudScalabilityStrategy.md) → [Arquitetura](../architecture/Arquitetura.md) → [Configuração](../setup/Start.md)
 
 ### Por Tipo de Documentação
@@ -121,10 +123,11 @@ O **Telemedicina para Todos** é uma plataforma moderna de telemedicina que cone
 
 ### Para Novos Desenvolvedores
 1. Leia o [README Principal](../../README.md) para entender o projeto
-2. Configure o ambiente com o [Guia de Instalação](../setup/Start.md)
-3. Estude a [Arquitetura](../architecture/Arquitetura.md) do sistema
-4. Consulte o [Glossário](Glossario.md) para termos técnicos
-5. Explore as implementações específicas conforme necessário
+2. Siga o [Guia para Desenvolvedores](../guides/GuiaDesenvolvedor.md) (básico, ambiente, Swagger/ReDoc)
+3. Configure o ambiente com o [Guia de Instalação](../setup/Start.md)
+4. Estude a [Arquitetura](../layers/architecture-governance/Architecture/Arquitetura.md) do sistema
+5. Consulte o [Glossário](Glossario.md) para termos técnicos
+6. Explore as implementações específicas conforme necessário
 
 ### Para DevOps/Cloud Engineers
 1. Comece com a [Estratégia AWS Cloud](../aws/CloudScalabilityStrategy.md)

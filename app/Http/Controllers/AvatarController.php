@@ -7,6 +7,7 @@ use App\Services\AvatarService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use OpenApi\Attributes as OA;
 
 class AvatarController extends Controller
 {
@@ -18,6 +19,8 @@ class AvatarController extends Controller
     /**
      * Upload de avatar do usuário autenticado
      */
+    #[OA\PathItem(path: '/api/avatar/upload')]
+    #[OA\Post(path: '/api/avatar/upload', summary: 'Upload de avatar', tags: ['Avatar'], responses: [new OA\Response(response: 200, description: 'Avatar atualizado'), new OA\Response(response: 401, description: 'Não autenticado'), new OA\Response(response: 422, description: 'Arquivo inválido')])]
     public function upload(AvatarUploadRequest $request): JsonResponse
     {
         try {
@@ -63,6 +66,8 @@ class AvatarController extends Controller
     /**
      * Deletar avatar do usuário autenticado
      */
+    #[OA\PathItem(path: '/api/avatar/delete')]
+    #[OA\Delete(path: '/api/avatar/delete', summary: 'Remover avatar', tags: ['Avatar'], responses: [new OA\Response(response: 200, description: 'Avatar removido'), new OA\Response(response: 401, description: 'Não autenticado'), new OA\Response(response: 404, description: 'Usuário sem avatar')])]
     public function delete(Request $request): JsonResponse
     {
         try {
@@ -102,6 +107,8 @@ class AvatarController extends Controller
     /**
      * Obter URL do avatar do usuário autenticado
      */
+    #[OA\PathItem(path: '/api/avatar/show')]
+    #[OA\Get(path: '/api/avatar/show', summary: 'URL do avatar', tags: ['Avatar'], parameters: [new OA\Parameter(name: 'thumbnail', in: 'query', required: false)], responses: [new OA\Response(response: 200, description: 'avatar_url'), new OA\Response(response: 401, description: 'Não autenticado')])]
     public function show(Request $request): JsonResponse
     {
         $user = $request->user();

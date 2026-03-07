@@ -8,6 +8,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
+use OpenApi\Attributes as OA;
 
 class NotificationController extends Controller
 {
@@ -27,6 +28,8 @@ class NotificationController extends Controller
     /**
      * Listar notificações do usuário
      */
+    #[OA\PathItem(path: '/api/notifications')]
+    #[OA\Get(path: '/api/notifications', summary: 'Listar notificações', tags: ['Notificações'], parameters: [new OA\Parameter(name: 'per_page', in: 'query', required: false), new OA\Parameter(name: 'type', in: 'query', required: false), new OA\Parameter(name: 'unread_only', in: 'query', required: false)], responses: [new OA\Response(response: 200, description: 'Lista paginada'), new OA\Response(response: 401, description: 'Não autenticado')])]
     public function index(Request $request): JsonResponse
     {
         $user = Auth::user();
@@ -67,6 +70,8 @@ class NotificationController extends Controller
     /**
      * Obter notificações não lidas
      */
+    #[OA\PathItem(path: '/api/notifications/unread')]
+    #[OA\Get(path: '/api/notifications/unread', summary: 'Notificações não lidas', tags: ['Notificações'], responses: [new OA\Response(response: 200, description: 'Lista e contagem'), new OA\Response(response: 401, description: 'Não autenticado')])]
     public function unread(): JsonResponse
     {
         try {
@@ -174,6 +179,8 @@ class NotificationController extends Controller
     /**
      * Obter contador de notificações não lidas
      */
+    #[OA\PathItem(path: '/api/notifications/unread-count')]
+    #[OA\Get(path: '/api/notifications/unread-count', summary: 'Contagem de não lidas', tags: ['Notificações'], responses: [new OA\Response(response: 200, description: 'count'), new OA\Response(response: 401, description: 'Não autenticado')])]
     public function unreadCount(): JsonResponse
     {
         try {
@@ -223,6 +230,8 @@ class NotificationController extends Controller
     /**
      * Marcar notificação como lida
      */
+    #[OA\PathItem(path: '/api/notifications/{id}/read')]
+    #[OA\Post(path: '/api/notifications/{id}/read', summary: 'Marcar como lida', tags: ['Notificações'], parameters: [new OA\PathParameter(name: 'id', description: 'ID da notificação')], responses: [new OA\Response(response: 200, description: 'Notificação marcada como lida'), new OA\Response(response: 401, description: 'Não autenticado'), new OA\Response(response: 404, description: 'Não encontrada')])]
     public function markAsRead(string $id): JsonResponse
     {
         $user = Auth::user();
@@ -239,6 +248,8 @@ class NotificationController extends Controller
     /**
      * Marcar todas as notificações como lidas
      */
+    #[OA\PathItem(path: '/api/notifications/read-all')]
+    #[OA\Post(path: '/api/notifications/read-all', summary: 'Marcar todas como lidas', tags: ['Notificações'], responses: [new OA\Response(response: 200, description: 'Quantidade marcada'), new OA\Response(response: 401, description: 'Não autenticado')])]
     public function markAllAsRead(): JsonResponse
     {
         $user = Auth::user();
@@ -253,6 +264,8 @@ class NotificationController extends Controller
     /**
      * Obter uma notificação específica
      */
+    #[OA\PathItem(path: '/api/notifications/{id}')]
+    #[OA\Get(path: '/api/notifications/{id}', summary: 'Exibir notificação', tags: ['Notificações'], parameters: [new OA\PathParameter(name: 'id', description: 'ID da notificação')], responses: [new OA\Response(response: 200, description: 'Notificação'), new OA\Response(response: 401, description: 'Não autenticado'), new OA\Response(response: 404, description: 'Não encontrada')])]
     public function show(string $id): JsonResponse
     {
         $user = Auth::user();

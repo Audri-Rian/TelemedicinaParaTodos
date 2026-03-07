@@ -9,6 +9,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use OpenApi\Attributes as OA;
 
 class SpecializationController extends Controller
 {
@@ -29,6 +30,21 @@ class SpecializationController extends Controller
     /**
      * Get specializations for API/AJAX requests.
      */
+    #[OA\PathItem(path: '/api/specializations/list')]
+    #[OA\Get(
+        path: '/api/specializations/list',
+        summary: 'Lista especializações',
+        description: 'Retorna especializações com filtros opcionais (busca, apenas ativos, contagem de médicos).',
+        tags: ['Especializações'],
+        parameters: [
+            new OA\Parameter(name: 'search', in: 'query', required: false, description: 'Filtro por nome'),
+            new OA\Parameter(name: 'active_only', in: 'query', required: false, description: 'Apenas com médicos ativos'),
+            new OA\Parameter(name: 'with_count', in: 'query', required: false, description: 'Incluir contagem de médicos'),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Lista de especializações'),
+        ]
+    )]
     public function list(Request $request): JsonResponse
     {
         $query = Specialization::query();
@@ -62,6 +78,16 @@ class SpecializationController extends Controller
     /**
      * Get specializations for select/dropdown components.
      */
+    #[OA\PathItem(path: '/api/specializations/options')]
+    #[OA\Get(
+        path: '/api/specializations/options',
+        summary: 'Opções de especializações',
+        description: 'Retorna id e nome para uso em selects/dropdowns.',
+        tags: ['Especializações'],
+        responses: [
+            new OA\Response(response: 200, description: 'Lista { value, label } por especialização'),
+        ]
+    )]
     public function options(): JsonResponse
     {
         $specializations = Specialization::orderBy('name')

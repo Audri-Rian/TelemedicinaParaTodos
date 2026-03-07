@@ -206,6 +206,14 @@ Route::middleware([\App\Http\Middleware\EnsureDevelopmentEnvironment::class])->p
     Route::get('video-test', [App\Http\Controllers\Dev\VideoTestController::class, 'index'])->name('dev.video-test');
 });
 
+// ReDoc — documentação da API (mesma spec OpenAPI do Swagger; apenas local/staging)
+Route::middleware([\App\Http\Middleware\EnsureDevelopmentEnvironment::class])->get('api/redoc', function () {
+    return view('redoc', [
+        'title' => 'Telemedicina para Todos API',
+        'specUrl' => url(route('l5-swagger.default.docs')),
+    ]);
+})->name('api.redoc');
+
 // Rotas de Notificações
 Route::middleware(['auth'])->prefix('api/notifications')->name('notifications.')->group(function () {
     Route::get('test', function () {

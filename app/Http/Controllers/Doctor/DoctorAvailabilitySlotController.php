@@ -12,6 +12,7 @@ use App\Services\Doctor\ScheduleService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use OpenApi\Attributes as OA;
 
 class DoctorAvailabilitySlotController extends Controller
 {
@@ -195,6 +196,21 @@ class DoctorAvailabilitySlotController extends Controller
      * Obter disponibilidade por data específica
      * GET /api/doctors/{doctor}/availability/{date}
      */
+    #[OA\PathItem(path: '/api/doctors/{doctor}/availability/{date}')]
+    #[OA\Get(
+        path: '/api/doctors/{doctor}/availability/{date}',
+        summary: 'Disponibilidade do médico por data',
+        description: 'Retorna slots disponíveis do médico para a data informada. Rota pública.',
+        tags: ['Disponibilidade'],
+        parameters: [
+            new OA\PathParameter(name: 'doctor', description: 'ID do médico', required: true),
+            new OA\PathParameter(name: 'date', description: 'Data (Y-m-d)', required: true),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Slots disponíveis'),
+            new OA\Response(response: 422, description: 'Data inválida'),
+        ]
+    )]
     public function getByDate(Request $request, Doctor $doctor, string $date): JsonResponse
     {
         try {

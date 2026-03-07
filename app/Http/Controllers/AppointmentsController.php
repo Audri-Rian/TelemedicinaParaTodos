@@ -14,6 +14,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use OpenApi\Attributes as OA;
 
 class AppointmentsController extends Controller
 {
@@ -241,6 +242,22 @@ class AppointmentsController extends Controller
     /**
      * Verificar disponibilidade de horários para um médico em uma data específica
      */
+    #[OA\PathItem(path: '/api/appointments/availability')]
+    #[OA\Get(
+        path: '/api/appointments/availability',
+        summary: 'Disponibilidade para agendamento',
+        description: 'Retorna horários disponíveis do médico na data. Requer autenticação (sessão).',
+        tags: ['Agendamentos'],
+        parameters: [
+            new OA\Parameter(name: 'doctor_id', in: 'query', required: true, description: 'ID do médico'),
+            new OA\Parameter(name: 'date', in: 'query', required: true, description: 'Data (Y-m-d)'),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Slots disponíveis e agenda do dia'),
+            new OA\Response(response: 401, description: 'Não autenticado'),
+            new OA\Response(response: 422, description: 'Médico inativo ou dados inválidos'),
+        ]
+    )]
     public function availability(Request $request): JsonResponse
     {
         $validated = $request->validate([

@@ -51,6 +51,7 @@ Guia completo: [docs/setup/Start.md](docs/setup/Start.md).
 | Instalação e ambiente | [docs/setup/Start.md](docs/setup/Start.md) |
 | Arquitetura geral     | [docs/Architecture/Arquitetura.md](docs/Architecture/Arquitetura.md) |
 | Padrões de código     | [docs/Architecture/DevGuide.md](docs/Architecture/DevGuide.md) |
+| Guia completo (básico + Swagger/ReDoc) | [docs/guides/GuiaDesenvolvedor.md](docs/guides/GuiaDesenvolvedor.md) |
 | Frontend (Vue)        | [docs/Architecture/VueGuide.md](docs/Architecture/VueGuide.md) |
 | Regras de negócio     | [docs/requirements/SystemRules.md](docs/requirements/SystemRules.md) |
 | Funcionalidades       | [docs/requirements/FuncionalitsGuide.md](docs/requirements/FuncionalitsGuide.md) |
@@ -83,6 +84,18 @@ npm run format:check # checagem Prettier
 ```
 
 Backend: `php artisan test` para rodar os testes.
+
+---
+
+## Documentação da API (Swagger e ReDoc)
+
+A API é documentada em OpenAPI 3.x. Duas interfaces (mesma spec):
+
+- **Swagger UI:** `http://localhost:8000/api/documentation` — consultar e testar endpoints (Try it out).
+- **ReDoc:** `http://localhost:8000/api/redoc` — leitura em formato de manual.
+
+Regerar a spec após alterar endpoints: `php artisan l5-swagger:generate`.  
+Detalhes: [Guia para Desenvolvedores](docs/guides/GuiaDesenvolvedor.md#documentação-da-api-swagger-e-redoc).
 
 ---
 

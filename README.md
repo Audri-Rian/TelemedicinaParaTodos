@@ -64,6 +64,7 @@ Esta seção reúne os documentos essenciais organizados em uma **estrutura hier
 - **[🏗️ Arquitetura do Sistema](docs/architecture/Arquitetura.md)** — Estrutura geral, camadas e padrões arquiteturais
 - **[🎨 Guia do Frontend](docs/architecture/VueGuide.md)** — Convenções Vue.js e estrutura do frontend
 - **[💻 Guia de Desenvolvimento](docs/architecture/DevGuide.md)** — Padrões de código e boas práticas
+- **[📘 Guia para Desenvolvedores](docs/guides/GuiaDesenvolvedor.md)** — Básico do ambiente, onde achar cada doc, Swagger e ReDoc
 
 ### 💾 Modelo de Dados
 - **[🗄️ Diagrama do Banco de Dados](docs/database/diagrama_banco_dados.md)** — Estrutura das tabelas e relacionamentos
@@ -85,7 +86,7 @@ Esta seção reúne os documentos essenciais organizados em uma **estrutura hier
 #### Por Papel do Usuário
 - **👨‍⚕️ Médicos**: [Regras de Negócio](docs/requirements/SystemRules.md) → [Funcionalidades](docs/requirements/FuncionalitsGuide.md) → [Arquitetura](docs/architecture/Arquitetura.md)
 - **👤 Pacientes**: [Visão Geral do Projeto](#idealização-) → [Funcionalidades](docs/requirements/FuncionalitsGuide.md) → [Regras](docs/requirements/SystemRules.md)
-- **💻 Desenvolvedores**: [Arquitetura](docs/architecture/Arquitetura.md) → [Guia de Dev](docs/architecture/DevGuide.md) → [Implementações](docs/modules/appointments/AppointmentsImplementationStudy.md)
+- **💻 Desenvolvedores**: [Guia para Desenvolvedores](docs/guides/GuiaDesenvolvedor.md) → [Arquitetura](docs/architecture/Arquitetura.md) → [Guia de Dev](docs/architecture/DevGuide.md) → [Implementações](docs/modules/appointments/AppointmentsImplementationStudy.md)
 
 #### Por Tipo de Documentação
 - **📋 Requisitos**: [SystemRules.md](docs/requirements/SystemRules.md) + [FuncionalitsGuide.md](docs/requirements/FuncionalitsGuide.md)
@@ -141,10 +142,11 @@ Apenas EU.
 
 ### Para Novos Desenvolvedores
 1. **Leia** o [README Principal](#telemedicina-para-todos-) para entender o projeto
-2. **Configure** o ambiente com o [Guia de Instalação](docs/setup/Start.md)
-3. **Estude** a [Arquitetura](docs/architecture/Arquitetura.md) do sistema
-4. **Consulte** o [Glossário](docs/index/Glossario.md) para termos técnicos
-5. **Explore** as implementações específicas conforme necessário
+2. **Siga** o [Guia para Desenvolvedores](docs/guides/GuiaDesenvolvedor.md) (básico, ambiente, Swagger/ReDoc)
+3. **Configure** o ambiente com o [Guia de Instalação](docs/setup/Start.md)
+4. **Estude** a [Arquitetura](docs/architecture/Arquitetura.md) do sistema
+5. **Consulte** o [Glossário](docs/index/Glossario.md) para termos técnicos
+6. **Explore** as implementações específicas conforme necessário
 
 ### Para Stakeholders
 1. **Comece** com a [Visão Geral do Projeto](#idealização-)
@@ -161,6 +163,21 @@ Apenas EU.
 ## 🛠️ Como Rodar o Projeto
 
 Siga os passos detalhados no [Guia de Instalação](docs/setup/Start.md) para configurar o ambiente de desenvolvimento.
+
+### Documentação da API (Swagger / OpenAPI)
+
+A API é documentada com **OpenAPI 3.x** e pode ser vista em **Swagger UI** ou **ReDoc** (ambos usam a mesma spec).
+
+- **Gerar/atualizar a documentação** (após alterar controllers ou anotações OpenAPI):
+  ```bash
+  php artisan l5-swagger:generate
+  ```
+- **Acessar a documentação** (apenas em ambiente local/staging; em produção as rotas são bloqueadas por middleware):
+  - **Swagger UI:** `http://localhost:8000/api/documentation` (ou a URL base do seu ambiente)
+  - **ReDoc:** `http://localhost:8000/api/redoc` (mesma spec, visual alternativo)
+  - Staging: troque o host (ex.: `https://<host>/api/documentation` ou `https://<host>/api/redoc`)
+
+A spec gerada fica em `storage/api-docs/api-docs.json`. Endpoints que exigem autenticação usam sessão web (cookie); o "Try it out" no Swagger pode não enviar cookies automaticamente — para testar, use os endpoints públicos (ex.: especializações, disponibilidade por data) ou faça login no app no mesmo domínio antes.
 
 ## Licença 📄
 
