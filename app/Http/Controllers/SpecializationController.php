@@ -33,16 +33,17 @@ class SpecializationController extends Controller
     #[OA\PathItem(path: '/api/specializations/list')]
     #[OA\Get(
         path: '/api/specializations/list',
+        operationId: 'listSpecializations',
         summary: 'Lista especializações',
         description: 'Retorna especializações com filtros opcionais (busca, apenas ativos, contagem de médicos).',
         tags: ['Especializações'],
         parameters: [
-            new OA\Parameter(name: 'search', in: 'query', required: false, description: 'Filtro por nome'),
-            new OA\Parameter(name: 'active_only', in: 'query', required: false, description: 'Apenas com médicos ativos'),
-            new OA\Parameter(name: 'with_count', in: 'query', required: false, description: 'Incluir contagem de médicos'),
+            new OA\Parameter(name: 'search', in: 'query', required: false, description: 'Filtro por nome', schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'active_only', in: 'query', required: false, description: 'Apenas com médicos ativos', schema: new OA\Schema(type: 'boolean')),
+            new OA\Parameter(name: 'with_count', in: 'query', required: false, description: 'Incluir contagem de médicos', schema: new OA\Schema(type: 'boolean')),
         ],
         responses: [
-            new OA\Response(response: 200, description: 'Lista de especializações'),
+            new OA\Response(response: 200, description: 'Lista de especializações', content: new OA\JsonContent(type: 'object', properties: [new OA\Property(property: 'data', type: 'array', items: new OA\Items(type: 'object'))])),
         ]
     )]
     public function list(Request $request): JsonResponse
@@ -81,11 +82,12 @@ class SpecializationController extends Controller
     #[OA\PathItem(path: '/api/specializations/options')]
     #[OA\Get(
         path: '/api/specializations/options',
+        operationId: 'getSpecializationOptions',
         summary: 'Opções de especializações',
         description: 'Retorna id e nome para uso em selects/dropdowns.',
         tags: ['Especializações'],
         responses: [
-            new OA\Response(response: 200, description: 'Lista { value, label } por especialização'),
+            new OA\Response(response: 200, description: 'Lista { value, label } por especialização', content: new OA\JsonContent(type: 'object', properties: [new OA\Property(property: 'data', type: 'array', items: new OA\Items(type: 'object'))])),
         ]
     )]
     public function options(): JsonResponse

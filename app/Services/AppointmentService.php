@@ -9,6 +9,7 @@ use App\Models\Patient;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\DB;
 
 class AppointmentService
 {
@@ -334,11 +335,18 @@ class AppointmentService
                 $q->whereBetween('scheduled_at', [$startTime, $endTime])
                   // Conflito: appointment existente termina durante o novo período
                   ->orWhere(function ($q2) use ($startTime, $duration) {
-                      $q2->where('scheduled_at', '<=', $startTime)
-                         ->whereRaw('DATE_ADD(scheduled_at, INTERVAL ? MINUTE) > ?', [
-                             $duration,
-                             $startTime->toDateTimeString()
-                         ]);
+                      $q2->where('scheduled_at', '<=', $startTime);
+                      if (DB::getDriverName() === 'sqlite') {
+                          $q2->whereRaw("datetime(scheduled_at, '+' || ? || ' minutes') > ?", [
+                              $duration,
+                              $startTime->toDateTimeString(),
+                          ]);
+                      } else {
+                          $q2->whereRaw('DATE_ADD(scheduled_at, INTERVAL ? MINUTE) > ?', [
+                              $duration,
+                              $startTime->toDateTimeString(),
+                          ]);
+                      }
                   });
             });
 

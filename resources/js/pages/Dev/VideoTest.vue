@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
+import { ref, onMounted, onUnmounted, watch } from 'vue';
 import { Head } from '@inertiajs/vue3';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -13,7 +13,6 @@ import {
 } from '@/components/ui/dialog';
 import Peer from 'peerjs';
 import Echo from 'laravel-echo';
-import { usePage } from '@inertiajs/vue3';
 import {
     Video,
     VideoOff,
@@ -22,13 +21,11 @@ import {
     Phone,
     PhoneOff,
     RefreshCw,
-    Settings,
     Wifi,
     WifiOff,
     AlertCircle,
     CheckCircle,
     XCircle,
-    Loader2,
 } from 'lucide-vue-next';
 
 interface Props {
@@ -41,7 +38,6 @@ interface Props {
 }
 
 const props = defineProps<Props>();
-const page = usePage();
 
 // Estados principais
 const peer = ref<Peer | null>(null);
@@ -686,7 +682,7 @@ const updateStats = async () => {
                 stats.value.iceTime = report.currentRoundTripTime * 1000 || 0;
             }
         });
-    } catch (error) {
+    } catch {
         // Ignorar erros de stats
     }
 };

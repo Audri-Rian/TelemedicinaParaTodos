@@ -31,13 +31,12 @@ class VerificationNotificationTest extends TestCase
     {
         Notification::fake();
 
-        $user = User::factory()->create([
-            'email_verified_at' => now(),
-        ]);
+        $doctor = \App\Models\Doctor::factory()->create();
+        $user = $doctor->user;
 
         $this->actingAs($user)
             ->post('email/verification-notification')
-            ->assertRedirect(route('dashboard', absolute: false));
+            ->assertRedirect(route('doctor.dashboard', absolute: false));
 
         Notification::assertNothingSent();
     }

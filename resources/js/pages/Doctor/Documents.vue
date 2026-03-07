@@ -3,7 +3,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import * as doctorRoutes from '@/routes/doctor';
 import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/vue3';
-import { ChevronDown, Search, Plus, Trash2 } from 'lucide-vue-next';
+import { ChevronDown, Search, Plus } from 'lucide-vue-next';
 import { ref } from 'vue';
 
 const breadcrumbs: BreadcrumbItem[] = [

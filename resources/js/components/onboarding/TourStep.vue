@@ -24,7 +24,7 @@ interface Props {
 
 const props = defineProps<Props>();
 
-const emit = defineEmits<{
+defineEmits<{
     'next': [];
     'previous': [];
     'close': [];

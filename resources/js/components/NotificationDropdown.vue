@@ -70,7 +70,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue';
+import { onMounted } from 'vue';
 import { useNotifications } from '@/composables/useNotifications';
 
 const emit = defineEmits(['close']);

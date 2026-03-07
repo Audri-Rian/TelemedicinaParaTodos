@@ -81,7 +81,6 @@ const { getInitials } = useInitials();
 
 const searchQuery = ref('');
 const totalConsultations = 25;
-const currentPage = 1;
 const itemsPerPage = 6;
 </script>
 

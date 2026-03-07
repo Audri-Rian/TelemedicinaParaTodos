@@ -1,5 +1,5 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue';
-import { router, usePage } from '@inertiajs/vue3';
+import { usePage } from '@inertiajs/vue3';
 import Echo from 'laravel-echo';
 
 interface Notification {

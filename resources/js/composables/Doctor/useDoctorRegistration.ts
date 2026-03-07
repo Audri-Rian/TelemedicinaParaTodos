@@ -57,11 +57,6 @@ export function useDoctorRegistration() {
     specializationsValidation
   } = useDoctorFormValidation();
 
-  // Validação mockada para termos (não obrigatória)
-  const termsValidation: ValidationRule = {
-    required: false
-  };
-
   // Regras de validação para campos obrigatórios
   const validationRules: Record<keyof RequiredDoctorFields, ValidationRule> = {
     name: nameValidation,

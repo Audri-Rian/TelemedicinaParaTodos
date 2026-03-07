@@ -19,7 +19,17 @@ class MessageController extends Controller
      * Listar conversas do usuário atual
      */
     #[OA\PathItem(path: '/api/messages/conversations')]
-    #[OA\Get(path: '/api/messages/conversations', summary: 'Listar conversas', tags: ['Mensagens'], responses: [new OA\Response(response: 200, description: 'Lista de conversas'), new OA\Response(response: 401, description: 'Não autenticado')])]
+    #[OA\Get(
+        path: '/api/messages/conversations',
+        operationId: 'listConversations',
+        summary: 'Listar conversas',
+        tags: ['Mensagens'],
+        security: [['cookieAuth' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'Lista de conversas', content: new OA\JsonContent(type: 'object', properties: [new OA\Property(property: 'success', type: 'boolean'), new OA\Property(property: 'data', type: 'array', items: new OA\Items(type: 'object'))])),
+            new OA\Response(response: 401, description: 'Não autenticado'),
+        ]
+    )]
     public function conversations(): JsonResponse
     {
         try {
@@ -41,7 +51,22 @@ class MessageController extends Controller
      * Buscar mensagens entre o usuário atual e outro usuário
      */
     #[OA\PathItem(path: '/api/messages/{userId}')]
-    #[OA\Get(path: '/api/messages/{userId}', summary: 'Mensagens com um usuário', tags: ['Mensagens'], parameters: [new OA\PathParameter(name: 'userId', description: 'ID do outro usuário'), new OA\Parameter(name: 'limit', in: 'query', required: false), new OA\Parameter(name: 'before', in: 'query', required: false)], responses: [new OA\Response(response: 200, description: 'Lista de mensagens'), new OA\Response(response: 401, description: 'Não autenticado')])]
+    #[OA\Get(
+        path: '/api/messages/{userId}',
+        operationId: 'getMessages',
+        summary: 'Mensagens com um usuário',
+        tags: ['Mensagens'],
+        security: [['cookieAuth' => []]],
+        parameters: [
+            new OA\PathParameter(name: 'userId', description: 'ID do outro usuário', schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'limit', in: 'query', required: false, schema: new OA\Schema(type: 'integer', default: 50)),
+            new OA\Parameter(name: 'before', in: 'query', required: false, schema: new OA\Schema(type: 'string', description: 'ID da mensagem para paginação')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Lista de mensagens', content: new OA\JsonContent(type: 'object', properties: [new OA\Property(property: 'success', type: 'boolean'), new OA\Property(property: 'data', type: 'array', items: new OA\Items(type: 'object'))])),
+            new OA\Response(response: 401, description: 'Não autenticado'),
+        ]
+    )]
     public function messages(Request $request, string $userId): JsonResponse
     {
         try {
@@ -66,7 +91,29 @@ class MessageController extends Controller
      * Enviar uma mensagem
      */
     #[OA\PathItem(path: '/api/messages')]
-    #[OA\Post(path: '/api/messages', summary: 'Enviar mensagem', tags: ['Mensagens'], responses: [new OA\Response(response: 201, description: 'Mensagem enviada'), new OA\Response(response: 401, description: 'Não autenticado'), new OA\Response(response: 422, description: 'Dados inválidos')])]
+    #[OA\Post(
+        path: '/api/messages',
+        operationId: 'sendMessage',
+        summary: 'Enviar mensagem',
+        tags: ['Mensagens'],
+        security: [['cookieAuth' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['receiver_id', 'content'],
+                properties: [
+                    new OA\Property(property: 'receiver_id', type: 'integer', description: 'ID do destinatário'),
+                    new OA\Property(property: 'content', type: 'string', description: 'Conteúdo da mensagem'),
+                    new OA\Property(property: 'appointment_id', type: 'integer', description: 'ID da consulta (opcional)'),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 201, description: 'Mensagem enviada', content: new OA\JsonContent(type: 'object', properties: [new OA\Property(property: 'success', type: 'boolean'), new OA\Property(property: 'data', type: 'object')])),
+            new OA\Response(response: 401, description: 'Não autenticado'),
+            new OA\Response(response: 422, description: 'Dados inválidos', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     public function store(StoreMessageRequest $request): JsonResponse
     {
         try {
@@ -93,7 +140,18 @@ class MessageController extends Controller
      * Marcar mensagens como lidas
      */
     #[OA\PathItem(path: '/api/messages/{userId}/read')]
-    #[OA\Post(path: '/api/messages/{userId}/read', summary: 'Marcar mensagens como lidas', tags: ['Mensagens'], parameters: [new OA\PathParameter(name: 'userId', description: 'ID do usuário remetente')], responses: [new OA\Response(response: 200, description: 'Mensagens marcadas como lidas'), new OA\Response(response: 401, description: 'Não autenticado')])]
+    #[OA\Post(
+        path: '/api/messages/{userId}/read',
+        operationId: 'markMessagesAsRead',
+        summary: 'Marcar mensagens como lidas',
+        tags: ['Mensagens'],
+        security: [['cookieAuth' => []]],
+        parameters: [new OA\PathParameter(name: 'userId', description: 'ID do usuário remetente', schema: new OA\Schema(type: 'integer'))],
+        responses: [
+            new OA\Response(response: 200, description: 'Mensagens marcadas como lidas', content: new OA\JsonContent(type: 'object')),
+            new OA\Response(response: 401, description: 'Não autenticado'),
+        ]
+    )]
     public function markAsRead(string $userId): JsonResponse
     {
         try {
@@ -116,7 +174,19 @@ class MessageController extends Controller
      * Marcar mensagem como entregue (delivered)
      */
     #[OA\PathItem(path: '/api/messages/{messageId}/delivered')]
-    #[OA\Post(path: '/api/messages/{messageId}/delivered', summary: 'Marcar mensagem como entregue', tags: ['Mensagens'], parameters: [new OA\PathParameter(name: 'messageId', description: 'ID da mensagem')], responses: [new OA\Response(response: 200, description: 'Mensagem marcada como entregue'), new OA\Response(response: 401, description: 'Não autenticado'), new OA\Response(response: 403, description: 'Sem permissão')])]
+    #[OA\Post(
+        path: '/api/messages/{messageId}/delivered',
+        operationId: 'markMessageAsDelivered',
+        summary: 'Marcar mensagem como entregue',
+        tags: ['Mensagens'],
+        security: [['cookieAuth' => []]],
+        parameters: [new OA\PathParameter(name: 'messageId', description: 'ID da mensagem', schema: new OA\Schema(type: 'integer'))],
+        responses: [
+            new OA\Response(response: 200, description: 'Mensagem marcada como entregue', content: new OA\JsonContent(type: 'object')),
+            new OA\Response(response: 401, description: 'Não autenticado'),
+            new OA\Response(response: 403, description: 'Sem permissão'),
+        ]
+    )]
     public function markAsDelivered(string $messageId): JsonResponse
     {
         try {
@@ -148,7 +218,17 @@ class MessageController extends Controller
      * Contar mensagens não lidas
      */
     #[OA\PathItem(path: '/api/messages/unread/count')]
-    #[OA\Get(path: '/api/messages/unread/count', summary: 'Contagem de mensagens não lidas', tags: ['Mensagens'], responses: [new OA\Response(response: 200, description: 'Contagem'), new OA\Response(response: 401, description: 'Não autenticado')])]
+    #[OA\Get(
+        path: '/api/messages/unread/count',
+        operationId: 'getUnreadMessagesCount',
+        summary: 'Contagem de mensagens não lidas',
+        tags: ['Mensagens'],
+        security: [['cookieAuth' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'Contagem', content: new OA\JsonContent(type: 'object', properties: [new OA\Property(property: 'success', type: 'boolean'), new OA\Property(property: 'count', type: 'integer')])),
+            new OA\Response(response: 401, description: 'Não autenticado'),
+        ]
+    )]
     public function unreadCount(): JsonResponse
     {
         try {

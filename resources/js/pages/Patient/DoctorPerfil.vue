@@ -4,7 +4,7 @@ import Timeline from '@/components/Timeline.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/vue3';
 import { 
-    Star, Bookmark, Heart, ChevronLeft, ChevronRight, 
+    Bookmark, Heart, ChevronLeft, ChevronRight, 
     CheckCircle2, MessageCircle, Video
 } from 'lucide-vue-next';
 import * as patientRoutes from '@/routes/patient';
@@ -81,7 +81,6 @@ const selectedTime = ref<string | null>(null);
 const currentMonthStart = ref(new Date());
 
 // Computed properties
-const consultationPrice = computed(() => props.doctor.consultation_fee || 0);
 const consultationTime = computed(() => '45 minutos'); // Padrão do sistema
 const about = computed(() => props.doctor.biography || 'Informações não disponíveis.');
 const modalities = computed(() => props.doctor.modalities || []);

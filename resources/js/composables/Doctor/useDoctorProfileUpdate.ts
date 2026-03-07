@@ -2,7 +2,7 @@ import { ref, computed } from 'vue';
 import { router } from '@inertiajs/vue3';
 import { useRealTimeValidation, type ValidationRule } from '../useRealTimeValidation';
 import { useDoctorFormValidation } from './useDoctorFormValidation';
-// @ts-ignore - route helper from Ziggy
+// @ts-expect-error - route helper from Ziggy
 declare const route: (name: string, params?: any) => string;
 
 /**
@@ -40,9 +40,7 @@ export function useDoctorProfileUpdate() {
     licenseNumberValidation,
     licenseExpiryDateValidation,
     consultationFeeValidation,
-    statusValidation,
-    optionalStringValidation,
-    optionalTextValidation
+    statusValidation
   } = useDoctorFormValidation();
 
   // Regras de validação para campos opcionais

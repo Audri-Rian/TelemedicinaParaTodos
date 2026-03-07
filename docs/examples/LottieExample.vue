@@ -36,11 +36,6 @@ const stopAnimation = () => {
 
 // Exemplo 3: Uso direto com DotLottieVue
 const directPlayerRef = ref<InstanceType<typeof DotLottieVue> | null>(null);
-
-const handleAnimationComplete = () => {
-    console.log('Animação concluída!');
-    // Execute ações após a animação terminar
-};
 </script>
 
 <template>

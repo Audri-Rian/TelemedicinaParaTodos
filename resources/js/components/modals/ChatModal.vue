@@ -32,7 +32,7 @@ const emit = defineEmits<{
     'close': [];
 }>();
 
-const { isDoctor, isPatient } = useAuth();
+const { isDoctor } = useAuth();
 const { getInitials } = useInitials();
 
 // Dados mock das conversas - adaptar baseado no role

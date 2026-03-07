@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { type BreadcrumbItem } from '@/types';
-import { Bug, Search, ChevronDown, AlertCircle, X, CheckCircle, AlertTriangle, Info } from 'lucide-vue-next';
+import { Bug, Search, AlertCircle, X, CheckCircle, AlertTriangle } from 'lucide-vue-next';
 import BugReportModal from '@/components/modals/BugReportModal.vue';
 import { usePage } from '@inertiajs/vue3';
 
@@ -24,8 +24,7 @@ interface BugReport {
     actual_behavior?: string;
 }
 
-const page = usePage();
-const user = (page.props.auth as any).user;
+usePage();
 
 const breadcrumbItems: BreadcrumbItem[] = [
     {

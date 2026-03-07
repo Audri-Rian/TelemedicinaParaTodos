@@ -65,33 +65,20 @@ const {
     callUser: initiateCall,
     endCall: endVideoCall,
     acceptCall,
-    rejectCall,
     reconnectCall,
     initialize,
     cleanup,
     // Estados de conexão avançados
-    isConnected,
-    isReceivingCall,
     connectionLost,
     isReconnecting,
     showIncomingCallModal,
-    incomingCallPeerId,
-    connectionState,
-    mediaConfig,
     // Novos estados para rejeições acidentais
     canCallBack,
     showRejectionConfirmModal,
-    lastRejectedPeerId,
     showRejectConfirmation,
     confirmRejectCall,
     cancelRejectCall,
     callBack,
-    // Novos estados detalhados
-    callState,
-    callDuration,
-    networkQuality,
-    formatCallDuration,
-    resendCallRequest,
 } = useVideoCall({
     routePrefix: '/patient',
     onCallReceived: (user) => {
@@ -158,7 +145,7 @@ const finalizeBackendAppointment = async () => {
             canStartCall: false,
             timeWindowMessage: 'Consulta finalizada',
         };
-    } catch (error) {
+    } catch {
         // silencioso
     }
 };

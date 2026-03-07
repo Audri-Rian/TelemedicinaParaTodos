@@ -14,7 +14,6 @@ import {
     Clock,
     CheckCircle2,
     MoreVertical,
-    X,
     Users
 } from 'lucide-vue-next';
 import * as patientRoutes from '@/routes/patient';
@@ -23,7 +22,6 @@ import { useRouteGuard } from '@/composables/auth';
 import { usePage } from '@inertiajs/vue3';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 import { useInitials } from '@/composables/useInitials';
 import EmptyState from '@/components/EmptyState.vue';
 import WelcomeScreen from '@/components/onboarding/WelcomeScreen.vue';

@@ -2,15 +2,13 @@
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router } from '@inertiajs/vue3';
-import { Search, Video, Circle, Heart, Brain, Eye, Bone, Apple, Calendar, Clock, Baby, Stethoscope, Pill, Activity, Microscope, Syringe } from 'lucide-vue-next';
+import { Search, Heart, Brain, Eye, Bone, Apple, Baby, Stethoscope, Pill, Activity, Microscope, Syringe } from 'lucide-vue-next';
 import * as patientRoutes from '@/routes/patient';
 import { onMounted, ref, computed, watch } from 'vue';
 import { useRouteGuard } from '@/composables/auth';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { useInitials } from '@/composables/useInitials';
 import { Link } from '@inertiajs/vue3';
 import DoctorCard from '@/components/DoctorCard.vue';
 
@@ -83,7 +81,6 @@ interface Props {
 const props = defineProps<Props>();
 
 const { canAccessPatientRoute } = useRouteGuard();
-const { getInitials } = useInitials();
 
 const searchQuery = ref(props.filters?.search ?? '');
 const selectedSpecialty = ref<string | null>(props.filters?.specialization_id ?? null);
@@ -134,7 +131,7 @@ const filteredDoctors = computed(() => {
 
 // Médicos exibidos na seção "Precisa de atendimento agora?" - limitado a 6 por página
 const displayedDoctors = computed(() => {
-    let list = filteredDoctors.value;
+    const list = filteredDoctors.value;
     
     // Limita a exibição a 6 médicos por página (a paginação do backend já retorna 6)
     // Mas aplicamos os filtros locais primeiro
@@ -207,22 +204,6 @@ const resetFilters = () => {
 
 const selectSpecialization = (specializationId: string) => {
     selectedSpecialty.value = specializationId;
-};
-
-const formatDateLabel = (dateString: string | null) => {
-    if (!dateString) {
-        return '';
-    }
-
-    try {
-        return new Intl.DateTimeFormat('pt-BR', {
-            day: '2-digit',
-            month: 'long',
-            year: 'numeric',
-        }).format(new Date(`${dateString}T00:00:00`));
-    } catch (error) {
-        return dateString;
-    }
 };
 
 const breadcrumbs: BreadcrumbItem[] = [

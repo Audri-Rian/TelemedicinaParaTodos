@@ -20,7 +20,19 @@ class AvatarController extends Controller
      * Upload de avatar do usuário autenticado
      */
     #[OA\PathItem(path: '/api/avatar/upload')]
-    #[OA\Post(path: '/api/avatar/upload', summary: 'Upload de avatar', tags: ['Avatar'], responses: [new OA\Response(response: 200, description: 'Avatar atualizado'), new OA\Response(response: 401, description: 'Não autenticado'), new OA\Response(response: 422, description: 'Arquivo inválido')])]
+    #[OA\Post(
+        path: '/api/avatar/upload',
+        operationId: 'uploadAvatar',
+        summary: 'Upload de avatar',
+        tags: ['Avatar'],
+        security: [['cookieAuth' => []]],
+        requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(description: 'Envie como multipart/form-data com campo "avatar" (arquivo de imagem)')),
+        responses: [
+            new OA\Response(response: 200, description: 'Avatar atualizado', content: new OA\JsonContent(type: 'object', properties: [new OA\Property(property: 'success', type: 'boolean'), new OA\Property(property: 'avatar_url', type: 'string'), new OA\Property(property: 'avatar_thumbnail_url', type: 'string')])),
+            new OA\Response(response: 401, description: 'Não autenticado'),
+            new OA\Response(response: 422, description: 'Arquivo inválido'),
+        ]
+    )]
     public function upload(AvatarUploadRequest $request): JsonResponse
     {
         try {
@@ -67,7 +79,18 @@ class AvatarController extends Controller
      * Deletar avatar do usuário autenticado
      */
     #[OA\PathItem(path: '/api/avatar/delete')]
-    #[OA\Delete(path: '/api/avatar/delete', summary: 'Remover avatar', tags: ['Avatar'], responses: [new OA\Response(response: 200, description: 'Avatar removido'), new OA\Response(response: 401, description: 'Não autenticado'), new OA\Response(response: 404, description: 'Usuário sem avatar')])]
+    #[OA\Delete(
+        path: '/api/avatar/delete',
+        operationId: 'deleteAvatar',
+        summary: 'Remover avatar',
+        tags: ['Avatar'],
+        security: [['cookieAuth' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'Avatar removido', content: new OA\JsonContent(type: 'object')),
+            new OA\Response(response: 401, description: 'Não autenticado'),
+            new OA\Response(response: 404, description: 'Usuário sem avatar'),
+        ]
+    )]
     public function delete(Request $request): JsonResponse
     {
         try {
@@ -108,7 +131,18 @@ class AvatarController extends Controller
      * Obter URL do avatar do usuário autenticado
      */
     #[OA\PathItem(path: '/api/avatar/show')]
-    #[OA\Get(path: '/api/avatar/show', summary: 'URL do avatar', tags: ['Avatar'], parameters: [new OA\Parameter(name: 'thumbnail', in: 'query', required: false)], responses: [new OA\Response(response: 200, description: 'avatar_url'), new OA\Response(response: 401, description: 'Não autenticado')])]
+    #[OA\Get(
+        path: '/api/avatar/show',
+        operationId: 'getAvatarUrl',
+        summary: 'URL do avatar',
+        tags: ['Avatar'],
+        security: [['cookieAuth' => []]],
+        parameters: [new OA\Parameter(name: 'thumbnail', in: 'query', required: false, schema: new OA\Schema(type: 'boolean'))],
+        responses: [
+            new OA\Response(response: 200, description: 'URL do avatar', content: new OA\JsonContent(type: 'object', properties: [new OA\Property(property: 'avatar_url', type: 'string')])),
+            new OA\Response(response: 401, description: 'Não autenticado'),
+        ]
+    )]
     public function show(Request $request): JsonResponse
     {
         $user = $request->user();

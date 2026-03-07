@@ -12,7 +12,7 @@ import { AlertCircle, User } from 'lucide-vue-next';
 import { router } from '@inertiajs/vue3';
 import * as profileRoutes from '@/routes/profile';
 
-const props = defineProps<{
+defineProps<{
     isOpen: boolean;
 }>();
 

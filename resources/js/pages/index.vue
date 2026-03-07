@@ -3,11 +3,10 @@ import { login, register, home } from '@/routes';
 import { Head, Link } from '@inertiajs/vue3';
 import { useAuth, useRoleRoutes } from '@/composables/auth';
 import AppLogoIcon from '@/components/AppLogoIcon.vue';
-import LottieAnimation from '@/components/LottieAnimation.vue';
 import { Button } from '@/components/ui/button';
 import {
-    Menu, X, ShieldCheck, Lock, Rocket, Stethoscope, Baby, Brain, Heart, Hand, UserCircle, Search,
-    ChevronDown, Video, ClipboardList, Users, Building2, BookOpen, Newspaper, Info, Phone, Activity,
+    Menu, X, ShieldCheck, Search,
+    ChevronDown, Video,
     Twitter, Instagram, Facebook, Youtube, ArrowRight, Play, Pause, Calendar, ChevronLeft, ChevronRight, Quote
 } from 'lucide-vue-next';
 import { ref, onMounted, onUnmounted } from 'vue';

@@ -9,7 +9,6 @@ use App\Models\Notification;
 use App\Models\NotificationPreference;
 use App\Models\User;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Redis;
 
 class NotificationService
 {
@@ -77,8 +76,8 @@ class NotificationService
 
         // Verificar se já existe uma chave de debounce ativa
         $key = $this->getDebounceKey($userId, $type, $metadata);
-        
-        return Redis::exists($key);
+
+        return Cache::has($key);
     }
 
     /**
@@ -89,14 +88,17 @@ class NotificationService
         $key = $this->getDebounceKey($userId, $type, $metadata);
         $ttl = (int) config('telemedicine.notifications.debounce_ttl_seconds', 10);
 
+        $existing = Cache::get($key);
+        $count = $existing ? (int) json_decode($existing)->count + 1 : 1;
+
         // Armazenar dados para consolidar depois
-        Redis::setex($key, $ttl, json_encode([
+        Cache::put($key, json_encode([
             'user_id' => $userId,
             'type' => $type->value,
             'metadata' => $metadata,
             'channels' => $channels,
-            'count' => Redis::get($key) ? (int)json_decode(Redis::get($key))->count + 1 : 1,
-        ]));
+            'count' => $count,
+        ]), $ttl);
 
         // Agendar job para processar após TTL
         \App\Jobs\DebounceNotifications::dispatch($userId, $type, $metadata, $channels)

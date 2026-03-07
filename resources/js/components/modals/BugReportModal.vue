@@ -19,15 +19,14 @@ interface Props {
     isOpen: boolean;
 }
 
-const props = defineProps<Props>();
+defineProps<Props>();
 
 const emit = defineEmits<{
     close: [];
     saved: [];
 }>();
 
-const page = usePage();
-const user = (page.props.auth as any).user;
+usePage();
 
 const form = ref({
     title: '',

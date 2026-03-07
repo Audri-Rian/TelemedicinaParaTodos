@@ -16,7 +16,7 @@ async function generateFavicons() {
 
         // Ler a imagem original
         const imageBuffer = readFileSync(logoPath);
-        const metadata = await sharp(imageBuffer).metadata();
+        await sharp(imageBuffer).metadata();
 
         // Converter PNG para base64 para usar no SVG
         const pngBuffer = await sharp(imageBuffer)
@@ -28,7 +28,7 @@ async function generateFavicons() {
 
         // Gerar favicon.ico (32x32) - múltiplos tamanhos para melhor compatibilidade
         const icoSizes = [16, 32, 48];
-        const icoImages = await Promise.all(
+        await Promise.all(
             icoSizes.map(size =>
                 sharp(imageBuffer)
                     .resize(size, size, { fit: 'contain', background: { r: 255, g: 255, b: 255, alpha: 0 } })

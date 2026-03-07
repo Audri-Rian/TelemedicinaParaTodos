@@ -2,14 +2,13 @@
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
 import { computed, ref, onMounted, onUnmounted, watch } from 'vue';
-// @ts-ignore - route helper from Ziggy
+// @ts-expect-error - route helper from Ziggy
 declare const route: (name: string, params?: any) => string;
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import {
     Dialog,
     DialogContent,
@@ -32,11 +31,7 @@ import {
     TestTube,
     ClipboardList,
     Heart,
-    Thermometer,
-    Activity,
-    FilePlus2,
     Download,
-    Video,
     X,
     MessageSquare,
     Loader2,
