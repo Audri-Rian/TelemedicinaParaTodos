@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
-import * as doctorRoutes from '@/routes/doctor';
+import doctorRoutes from '@/routes/doctor';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, usePage } from '@inertiajs/vue3';
 import {
@@ -277,7 +277,7 @@ const doctorTourSteps = [
                             <Calendar class="mr-2 h-5 w-5" />
                             Gerenciar agenda
                         </Link>
-                        <Link :href="doctorRoutes.medicalRecords?.() ?? doctorRoutes.appointments()"
+                        <Link :href="doctorRoutes.patients?.() ?? doctorRoutes.appointments()"
                             class="inline-flex items-center justify-center rounded-xl border border-primary/40 px-6 py-3 font-semibold text-primary transition hover:bg-primary/10">
                             <FileText class="mr-2 h-5 w-5" />
                             Revisar prontuários
@@ -376,7 +376,7 @@ const doctorTourSteps = [
                     <p class="mt-1 text-sm text-gray-600">Visualize e ajuste todos os compromissos</p>
                 </Link>
 
-                <Link :href="doctorRoutes.medicalRecords?.() ?? doctorRoutes.appointments()"
+                <Link :href="doctorRoutes.patients?.() ?? doctorRoutes.appointments()"
                     class="rounded-2xl border border-gray-200 bg-white p-6 text-center shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md">
                     <div
                         class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/15 text-primary">

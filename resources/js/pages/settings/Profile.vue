@@ -292,7 +292,7 @@ const deleteAvatar = async () => {
     uploadError.value = null;
     
     try {
-        const response = await axios.delete((avatarRoutes as any).delete.url());
+        const response = await axios.delete(avatarRoutes.deleteMethod.url());
         
         if (response.data.success) {
             avatarUrl.value = null;
