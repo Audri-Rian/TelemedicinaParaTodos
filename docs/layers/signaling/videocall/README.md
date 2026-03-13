@@ -80,6 +80,7 @@ Este módulo implementa o sistema de videoconferência em tempo real para consul
 - Dashboard de métricas de videoconferência
 
 ### 📋 Planejado
+- **Migração para MediaSoup (SFU):** Remoção do P2P (PeerJS), WebSocket próprio para sinalização de mídia, recriação do backend e frontend. Ver **[Migração P2P → MediaSoup](../../../videocall/MIGRACAO_P2P_PARA_MEDIASOUP.md)**.
 - Gravação de consultas
 - Compartilhamento de tela
 - Testes de integração completos

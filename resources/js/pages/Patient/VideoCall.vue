@@ -2,12 +2,11 @@
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, usePage } from '@inertiajs/vue3';
 import { type BreadcrumbItem } from '@/types';
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted } from 'vue';
 import axios from 'axios';
 import * as patientRoutes from '@/routes/patient';
 import * as appointmentsRoutes from '@/routes/appointments';
 import { useRouteGuard } from '@/composables/auth';
-import { useVideoCall } from '@/composables/useVideoCall';
 
 const { canAccessPatientRoute } = useRouteGuard();
 
@@ -50,55 +49,8 @@ const page = usePage();
 const auth = page.props.auth as AuthUser;
 const users = page.props.users as User[] || [];
 
-// Estados locais para UI
+// Estados locais para UI (videoconferência P2P removida; SFU em desenvolvimento — ver docs/videocall/)
 const selectedUser = ref<User | null>(null);
-const isMuted = ref(false);
-const isVideoEnabled = ref(true);
-
-    // Usar o composable de videochamadas com funcionalidades avançadas
-const {
-    isCalling,
-    hasRemoteStream,
-    remoteVideoRef,
-    localVideoRef,
-    localStreamRef,
-    callUser: initiateCall,
-    endCall: endVideoCall,
-    acceptCall,
-    reconnectCall,
-    initialize,
-    cleanup,
-    // Estados de conexão avançados
-    connectionLost,
-    isReconnecting,
-    showIncomingCallModal,
-    // Novos estados para rejeições acidentais
-    canCallBack,
-    showRejectionConfirmModal,
-    showRejectConfirmation,
-    confirmRejectCall,
-    cancelRejectCall,
-    callBack,
-} = useVideoCall({
-    routePrefix: '/patient',
-    onCallReceived: (user) => {
-        // Sincronizar selectedUser quando uma chamada é recebida
-        selectedUser.value = user as User;
-    },
-    onCallEnd: async () => {
-        await finalizeBackendAppointment();
-        isMuted.value = false;
-        isVideoEnabled.value = true;
-    },
-    onConnectionLost: () => {
-        // Callback quando a conexão é perdida
-        console.log('Conexão perdida - tentando reconectar automaticamente...');
-    },
-    onConnectionRestored: () => {
-        // Callback quando a conexão é restaurada
-        console.log('Conexão restaurada com sucesso!');
-    },
-});
 
 const startBackendAppointment = async (): Promise<boolean> => {
     if (!selectedUser.value?.appointment?.id) {
@@ -147,68 +99,6 @@ const finalizeBackendAppointment = async () => {
         };
     } catch {
         // silencioso
-    }
-};
-
-// Função para iniciar uma chamada com validações de agendamento
-const callUser = async () => {
-    if (!selectedUser.value) {
-        return;
-    }
-    
-    // Verificar se tem agendamento e se pode iniciar chamada
-    if (!selectedUser.value.hasAppointment || !selectedUser.value.appointment) {
-        alert('Você precisa ter um agendamento com este médico para iniciar a chamada.');
-        return;
-    }
-    
-    // Se a consulta já está em andamento, reconectar diretamente
-    if (selectedUser.value.appointment.status === 'in_progress') {
-        console.log('Reconectando à consulta em andamento...');
-        await initiateCall(selectedUser.value);
-        return;
-    }
-    
-    if (!selectedUser.value.canStartCall) {
-        alert(selectedUser.value.timeWindowMessage || 'Você só pode iniciar a chamada dentro da janela de tempo permitida (10 minutos antes ou depois do agendamento).');
-        return;
-    }
-    
-    const started = await startBackendAppointment();
-
-    if (!started) {
-        alert('Não foi possível iniciar a consulta. Verifique o agendamento.');
-        return;
-    }
-    
-    // Usar a função do composable para iniciar a chamada
-    await initiateCall(selectedUser.value);
-};
-
-// Função para encerrar a chamada
-const endCall = async () => {
-    await endVideoCall();
-};
-
-// Função para alternar mute/desmute
-const toggleMute = () => {
-    if (localStreamRef.value) {
-        const audioTracks = localStreamRef.value.getAudioTracks();
-        audioTracks.forEach(track => {
-            track.enabled = !track.enabled;
-        });
-        isMuted.value = !isMuted.value;
-    }
-};
-
-// Função para alternar vídeo
-const toggleVideo = () => {
-    if (localStreamRef.value) {
-        const videoTracks = localStreamRef.value.getVideoTracks();
-        videoTracks.forEach(track => {
-            track.enabled = !track.enabled;
-        });
-        isVideoEnabled.value = !isVideoEnabled.value;
     }
 };
 
@@ -283,71 +173,8 @@ const getStatusLabel = (status: string): string => {
     return statusLabels[status] || status;
 };
 
-// Função para obter texto do estado da conexão
-const getConnectionStatusText = (): string => {
-    if (connectionLost) return 'Reconectando...';
-    if (networkQuality.level === 'excellent') return 'Excelente';
-    if (networkQuality.level === 'good') return 'Boa';
-    if (networkQuality.level === 'fair') return 'Regular';
-    if (networkQuality.level === 'poor') return 'Ruim';
-    if (hasRemoteStream) return 'Conectado';
-    if (callState === 'connecting') return 'Conectando...';
-    if (callState === 'ringing_out') return 'Chamando...';
-    return 'Aguardando...';
-};
-
-// Função para obter texto do estado da chamada
-const getCallStateText = (): string => {
-    if (callState === 'ringing_out') return 'Chamando...';
-    if (callState === 'ringing_in') return 'Chamada recebida';
-    if (callState === 'connecting') return 'Conectando...';
-    if (callState === 'in_call') return 'Em chamada';
-    if (connectionLost) return 'Conexão perdida - Reconectando...';
-    if (callState === 'error') return 'Erro na conexão';
-    return 'Aguardando conexão...';
-};
-
-// Função para verificar e reconectar automaticamente a consultas em andamento
-const checkAndAutoReconnect = async () => {
-    // Procurar por usuários com consultas em andamento
-    const usersWithActiveConsultations = users.filter(user => 
-        user.hasAppointment && 
-        user.appointment?.status === 'in_progress'
-    );
-    
-    if (usersWithActiveConsultations.length > 0) {
-        const activeUser = usersWithActiveConsultations[0];
-        console.log('Consulta em andamento detectada, tentando reconectar automaticamente...', activeUser);
-        
-        // Selecionar o usuário e tentar reconectar
-        selectedUser.value = activeUser;
-        
-        // Aguardar um pouco para garantir que o peer está inicializado
-        setTimeout(async () => {
-            try {
-                await initiateCall(activeUser);
-            } catch (error) {
-                console.log('Reconexão automática falhou, usuário pode reconectar manualmente:', error);
-            }
-        }, 2000);
-    }
-};
-
-// Lifecycle hooks
-onMounted(async () => {
-    // Verificar acesso ao montar componente
+onMounted(() => {
     canAccessPatientRoute();
-    
-    // Inicializar videochamadas
-    initialize();
-    
-    // Verificar se há consultas em andamento para reconexão automática
-    checkAndAutoReconnect();
-});
-
-onUnmounted(() => {
-    // Limpar recursos usando o composable
-    cleanup();
 });
 </script>
 
@@ -356,188 +183,8 @@ onUnmounted(() => {
     
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex h-full flex-1 flex-col overflow-hidden" style="height: 90vh;">
-            <!-- Área Principal de Vídeo -->
-            <div v-if="isCalling && selectedUser" class="flex-1 flex flex-col bg-white">
-                <!-- Barra Superior com Informações -->
-                <div class="bg-white/95 backdrop-blur-sm px-6 py-3 flex items-center justify-between border-b border-gray-200 shadow-sm">
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
-                            <span class="text-gray-900 font-bold text-sm">
-                                {{ selectedUser.name?.charAt(0)?.toUpperCase() || 'M' }}
-                            </span>
-                        </div>
-                        <div>
-                            <div class="text-gray-900 font-semibold">{{ selectedUser.name }}</div>
-                            <div class="text-gray-600 text-sm">Consultando</div>
-                        </div>
-                    </div>
-                    <div class="flex items-center gap-3">
-                        <!-- Indicador de Qualidade da Conexão -->
-                        <div class="flex items-center gap-2">
-                            <div :class="[
-                                'w-2 h-2 rounded-full',
-                                networkQuality.level === 'excellent' ? 'bg-green-500' :
-                                networkQuality.level === 'good' ? 'bg-green-400' :
-                                networkQuality.level === 'fair' ? 'bg-yellow-500' :
-                                networkQuality.level === 'poor' ? 'bg-orange-500' :
-                                connectionLost ? 'bg-red-500' : 
-                                hasRemoteStream ? 'bg-green-500' : 'bg-yellow-500'
-                            ]"></div>
-                            <span class="text-xs text-gray-400">
-                                {{ getConnectionStatusText() }}
-                            </span>
-                            <!-- Tooltip com detalhes da qualidade -->
-                            <div v-if="networkQuality.level !== 'none' && isCalling" class="group relative">
-                                <svg class="w-4 h-4 text-gray-400 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block bg-gray-900 text-white text-xs rounded-lg px-3 py-2 whitespace-nowrap z-50">
-                                    <div class="mb-1">Latência: {{ networkQuality.latency }}ms</div>
-                                    <div class="mb-1">Largura de banda: {{ networkQuality.bandwidth }} kbps</div>
-                                    <div>Perda de pacotes: {{ networkQuality.packetLoss }}%</div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="text-primary text-sm font-medium">{{ formatCallDuration(callDuration) }}</div>
-                    </div>
-                </div>
-
-                <!-- Container Principal de Vídeo -->
-                <div class="flex-1 flex gap-4 p-4 relative max-h-[calc(100vh-200px)]">
-                    <!-- Vídeo Remoto (Médico) -->
-                    <div class="flex-1 relative bg-white rounded-lg overflow-hidden border border-gray-200 max-h-full">
-                        <video 
-                            ref="remoteVideoRef" 
-                            autoplay 
-                            playsinline 
-                            class="w-full h-full object-cover max-h-full"
-                        ></video>
-                        <div v-if="!hasRemoteStream" class="absolute inset-0 w-full h-full flex items-center justify-center bg-white z-10">
-                            <div class="text-center">
-                                <div class="w-20 h-20 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <svg v-if="callState === 'connecting'" class="w-10 h-10 text-primary animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                                    </svg>
-                                    <svg v-else-if="callState === 'ringing_out'" class="w-10 h-10 text-primary animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                                    </svg>
-                                    <svg v-else-if="connectionLost" class="w-10 h-10 text-red-400 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                    </svg>
-                                    <svg v-else class="w-10 h-10 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                    </svg>
-                                </div>
-                                <p class="text-gray-600 font-medium">
-                                    {{ getCallStateText() }}
-                                </p>
-                                <div v-if="connectionLost || callState === 'error'" class="mt-3">
-                                    <button
-                                        @click="reconnectCall"
-                                        :disabled="isReconnecting"
-                                        class="px-4 py-2 bg-primary text-gray-900 rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-50"
-                                    >
-                                        {{ isReconnecting ? 'Reconectando...' : 'Tentar Novamente' }}
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Vídeo Local (Paciente) -->
-                    <div class="w-56 h-64 relative bg-white rounded-lg overflow-hidden border-2 border-primary/30">
-                        <video 
-                            ref="localVideoRef" 
-                            autoplay 
-                            playsinline 
-                            muted
-                            class="w-full h-full object-cover"
-                            v-if="isVideoEnabled"
-                        ></video>
-                        <div v-else class="w-full h-full flex items-center justify-center bg-white">
-                            <div class="text-center">
-                                <div class="w-16 h-16 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-3">
-                                    <svg class="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                    </svg>
-                                </div>
-                                <p class="text-gray-600 text-sm">{{ auth.user.name }}</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Controles Inferiores -->
-                <div class="bg-white/95 backdrop-blur-sm px-6 py-4 border-t border-gray-200 shadow-sm">
-                    <div class="flex items-center justify-center gap-4">
-                        <!-- Mute/Desmute -->
-                        <button
-                            @click="toggleMute"
-                            :class="[
-                                'w-12 h-12 rounded-full flex items-center justify-center transition-all',
-                                isMuted 
-                                    ? 'bg-red-500 hover:bg-red-600' 
-                                    : 'bg-gray-200 hover:bg-gray-300'
-                            ]"
-                            title="Microfone"
-                        >
-                            <svg v-if="isMuted" class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
-                            </svg>
-                            <svg v-else class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                            </svg>
-                        </button>
-
-                        <!-- Liga/Desliga Vídeo -->
-                        <button
-                            @click="toggleVideo"
-                            :class="[
-                                'w-12 h-12 rounded-full flex items-center justify-center transition-all',
-                                isVideoEnabled 
-                                    ? 'bg-gray-200 hover:bg-gray-300' 
-                                    : 'bg-red-500 hover:bg-red-600'
-                            ]"
-                            title="Câmera"
-                        >
-                            <svg v-if="isVideoEnabled" class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                            </svg>
-                            <svg v-else class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-                            </svg>
-                        </button>
-
-                        <!-- Ligar -->
-                        <button
-                            v-if="!isCalling"
-                            @click="callUser"
-                            class="w-14 h-14 rounded-full bg-primary hover:bg-primary/90 flex items-center justify-center transition-all shadow-lg"
-                            title="Iniciar Chamada"
-                        >
-                            <svg class="w-7 h-7 text-gray-900" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
-                            </svg>
-                        </button>
-
-                        <!-- Desligar -->
-                        <button
-                            v-if="isCalling"
-                            @click="endCall"
-                            class="w-14 h-14 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center transition-all shadow-lg"
-                            title="Encerrar Chamada"
-                        >
-                            <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-            </div>
-
             <!-- Tela Inicial - Seleção de Médico -->
-            <div v-else class="flex-1 flex bg-gray-50">
+            <div class="flex-1 flex bg-gray-50">
                 <!-- Sidebar com Médicos -->
                 <div class="w-80 bg-white border-r border-gray-200 flex flex-col">
                     <div class="p-6 border-b border-gray-200">
@@ -686,46 +333,14 @@ onUnmounted(() => {
                         
                         <div class="flex flex-col gap-3 items-center">
                             <button
-                                @click="callUser"
-                                :disabled="!selectedUser.canStartCall"
-                                :class="[
-                                    'px-8 py-3 rounded-lg transition-all font-semibold shadow-lg flex items-center gap-2',
-                                    selectedUser.canStartCall
-                                        ? 'bg-primary text-gray-900 hover:bg-primary/90'
-                                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                ]"
+                                disabled
+                                class="px-8 py-3 rounded-lg font-semibold shadow-lg flex items-center gap-2 bg-gray-300 text-gray-500 cursor-not-allowed"
+                                title="Videoconferência em migração para nova tecnologia (SFU). Em breve."
                             >
-                                <svg v-if="selectedUser.appointment?.status === 'in_progress'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                                 </svg>
-                                <svg v-else class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                                    <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
-                                </svg>
-                                {{ selectedUser.appointment?.status === 'in_progress' ? 'Reconectar' : 'Iniciar Consulta' }}
-                            </button>
-                            
-                            <!-- Botão "Chamar Novamente" para rejeições acidentais -->
-                            <button
-                                v-if="canCallBack"
-                                @click="callBack"
-                                class="px-6 py-2 rounded-lg bg-orange-500 text-white hover:bg-orange-600 transition-all font-medium shadow-md flex items-center gap-2 text-sm"
-                            >
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                                </svg>
-                                Chamar Novamente
-                            </button>
-                            
-                            <!-- Botão "Reenviar Solicitação" quando a chamada não foi atendida -->
-                            <button
-                                v-if="callState === 'error' || (callState === 'ringing_out' && !hasRemoteStream)"
-                                @click="resendCallRequest"
-                                class="px-6 py-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition-all font-medium shadow-md flex items-center gap-2 text-sm"
-                            >
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                </svg>
-                                Reenviar Solicitação
+                                Videoconferência em atualização
                             </button>
                         </div>
                         
@@ -741,145 +356,6 @@ onUnmounted(() => {
             </div>
         </div>
 
-        <!-- Modal de Chamada Recebida -->
-        <div v-if="showIncomingCallModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-            <div class="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 overflow-hidden">
-                <!-- Header -->
-                <div class="bg-primary px-6 py-4">
-                    <div class="flex items-center gap-3">
-                        <div class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
-                            <svg class="w-6 h-6 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                            </svg>
-                        </div>
-                        <div>
-                            <h3 class="text-lg font-bold text-gray-900">Chamada Recebida</h3>
-                            <p class="text-sm text-gray-800">Consulta médica</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Body -->
-                <div class="p-6">
-                    <div class="text-center mb-6">
-                        <div class="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <span class="text-2xl font-bold text-primary">
-                                {{ selectedUser?.name?.charAt(0)?.toUpperCase() || 'M' }}
-                            </span>
-                        </div>
-                        <h4 class="text-xl font-semibold text-gray-900 mb-1">
-                            {{ selectedUser?.name || 'Médico' }}
-                        </h4>
-                        <p class="text-gray-600">está iniciando a consulta</p>
-                    </div>
-
-                    <!-- Informações do agendamento se disponível -->
-                    <div v-if="selectedUser?.appointment" class="bg-gray-50 rounded-lg p-4 mb-6">
-                        <div class="flex items-center gap-2 mb-2">
-                            <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
-                            <span class="text-sm font-medium text-gray-900">Agendamento</span>
-                        </div>
-                        <p class="text-sm text-gray-700">
-                            {{ selectedUser.appointment.formatted_date }} às {{ selectedUser.appointment.formatted_time }}
-                        </p>
-                    </div>
-
-                    <!-- Botões de ação -->
-                    <div class="flex gap-3">
-                        <button
-                            @click="showRejectConfirmation"
-                            class="flex-1 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors"
-                        >
-                            Recusar
-                        </button>
-                        <button
-                            @click="acceptCall"
-                            class="flex-1 px-4 py-3 bg-primary hover:bg-primary/90 text-gray-900 rounded-lg font-medium transition-colors"
-                        >
-                            Aceitar
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Modal de Confirmação de Rejeição -->
-        <div v-if="showRejectionConfirmModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50" @click.self="cancelRejectCall">
-            <div class="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 overflow-hidden animate-in fade-in zoom-in duration-200">
-                <!-- Header -->
-                <div class="p-6 border-b border-gray-100 bg-gradient-to-r from-orange-50 to-amber-50">
-                    <div class="flex items-center gap-3">
-                        <div class="flex items-center justify-center w-14 h-14 rounded-full bg-orange-100 ring-4 ring-orange-50">
-                            <svg class="w-7 h-7 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                            </svg>
-                        </div>
-                        <div class="flex-1">
-                            <h3 class="text-xl font-bold text-gray-900">Confirmar Rejeição</h3>
-                            <p class="text-sm text-gray-600 mt-1">Tem certeza que deseja recusar esta chamada?</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Content -->
-                <div class="p-6">
-                    <!-- Informações do chamador -->
-                    <div v-if="selectedUser" class="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                        <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center">
-                                <span class="text-primary font-bold text-sm">
-                                    {{ selectedUser.name?.charAt(0)?.toUpperCase() || 'M' }}
-                                </span>
-                            </div>
-                            <div>
-                                <p class="font-semibold text-gray-900">{{ selectedUser.name }}</p>
-                                <p class="text-xs text-gray-500">está tentando iniciar a consulta</p>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Aviso sobre rejeição acidental -->
-                    <div class="bg-amber-50 border-l-4 border-amber-400 rounded-lg p-4 mb-4">
-                        <div class="flex items-start gap-3">
-                            <svg class="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            <div class="text-sm flex-1">
-                                <p class="font-semibold text-amber-900 mb-1">Rejeição acidental?</p>
-                                <p class="text-amber-800 leading-relaxed">
-                                    Se você recusar por engano, poderá usar o botão <strong>"Chamar Novamente"</strong> que aparecerá por <strong>2 minutos</strong> após a rejeição.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Informações adicionais -->
-                    <div class="text-xs text-gray-500 space-y-1">
-                        <p>• A chamada será encerrada imediatamente</p>
-                        <p>• Você poderá iniciar uma nova chamada a qualquer momento</p>
-                        <p>• O botão "Chamar Novamente" estará disponível por 2 minutos</p>
-                    </div>
-                </div>
-
-                <!-- Footer -->
-                <div class="px-6 py-4 bg-gray-50 border-t border-gray-100 flex gap-3">
-                    <button
-                        @click="cancelRejectCall"
-                        class="flex-1 px-4 py-3 text-gray-700 bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 font-semibold transition-all duration-200"
-                    >
-                        Voltar
-                    </button>
-                    <button
-                        @click="confirmRejectCall"
-                        class="flex-1 px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 font-semibold transition-all duration-200 shadow-md hover:shadow-lg"
-                    >
-                        Sim, Recusar
-                    </button>
-                </div>
-            </div>
-        </div>
     </AppLayout>
 </template>
 
