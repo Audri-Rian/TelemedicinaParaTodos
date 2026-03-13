@@ -84,14 +84,24 @@ O **Telemedicina para Todos** é uma plataforma moderna de telemedicina que cone
 - **[Prontuários Médicos - Médico](../modules/MedicalRecords/MedicalRecordsDoctor.md)** - Gestão completa de prontuários
 - **[Prontuários Médicos - Paciente](../modules/MedicalRecords/MedicalRecordsPatient.md)** - Visualização de prontuários
 
-### 5. 🔧 Configuração e Instalação
+### 5. 🔌 Interoperabilidade
+- **[Interoperabilidade — Ecossistema (README)](../interoperabilidade/README.md)** - Índice da documentação: propósito, navegação por objetivo e por tipo
+- **[Task — Intenção da feature](../interoperabilidade/TASK_INTEROPERABILIDADE_FEATURE.md)** - Objetivo, escopo e status da API para parceiros
+- **[Análise de propósito, UX e personas](../interoperabilidade/TASK_INTEROPERABILIDADE_ANALISE_UX_PERSONAS.md)** - Propósito real, problemas que resolve, casos de uso, riscos e evolução estratégica
+- **[Níveis de maturidade](../interoperabilidade/NiveisMaturidade.md)** - Integração técnica → operacional → plataforma → ecossistema; referências Stripe, Slack, Epic
+- **[UX da feature de integrações](../interoperabilidade/UX-Integracoes.md)** - Hub de integrações, fluxo de conexão, logs, modelo mental do usuário
+- **[Produto, MVP e roadmap](../interoperabilidade/Produto-MVP-Roadmap.md)** - Qual fluxo primeiro; MVP laboratório, farmácia, exportação; impacto estratégico
+- **[Arquitetura da interoperabilidade](../interoperabilidade/Arquitetura.md)** - Camada, adapters, eventos; estrutura Laravel sugerida
+- **[Métricas e KPIs](../interoperabilidade/Metricas.md)** - Integrações ativas, fluxos automatizados, redução de uploads, tempo em consulta
+
+### 6. 🔧 Configuração e Instalação
 - **[Guia de Instalação](../setup/Start.md)** - Como configurar o ambiente de desenvolvimento
 - **[Regras do Cursor](../setup/CursorRulesGuide.md)** - Configurações do ambiente de desenvolvimento
 
-### 6. ☁️ Cloud e Escalabilidade
+### 7. ☁️ Cloud e Escalabilidade
 - **[Estratégia AWS Cloud](../aws/CloudScalabilityStrategy.md)** - Roadmap completo para migração e escalabilidade na nuvem
 
-### 7. 📚 Referências
+### 8. 📚 Referências
 - **[Glossário](Glossario.md)** - Definições de termos técnicos e de negócio
 - **[README Principal](../../README.md)** - Visão geral do projeto no GitHub
 
@@ -159,6 +169,7 @@ O **Telemedicina para Todos** é uma plataforma moderna de telemedicina que cone
 | ✅ Timeline Profissional | Completo | [Arquitetura.md](../Architecture/Arquitetura.md) |
 | ✅ Arquitetura | Completo | [Arquitetura.md](../Architecture/Arquitetura.md) |
 | ✅ Cloud/AWS | Completo | [CloudScalabilityStrategy.md](../aws/CloudScalabilityStrategy.md) |
+| 📋 Interoperabilidade | Em estudo | [Interoperabilidade](../interoperabilidade/README.md) |
 
 ---
 

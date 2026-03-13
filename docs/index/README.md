@@ -8,6 +8,10 @@ Esta pasta contém os documentos centrais da documentação do projeto Telemedic
 - **[📊 Matriz de Rastreabilidade](MatrizRequisitos.md)** - Mapeamento completo requisito → implementação  
 - **[📚 Glossário](Glossario.md)** - Definições unificadas de termos técnicos e de negócio
 
+## 🔌 Áreas e features
+
+- **[Interoperabilidade](../interoperabilidade/README.md)** - API para parceiros, integrações externas, propósito, UX e personas
+
 ## 🎯 Propósito
 
 Estes documentos servem como **pontos de entrada** para a documentação, permitindo:
