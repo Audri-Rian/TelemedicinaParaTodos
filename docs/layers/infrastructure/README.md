@@ -20,23 +20,36 @@ Responsável por **onde e como** o sistema roda em produção:
 
 ### 🧩 Tecnologias Envolvidas
 
-- **AWS EC2** – instância Ubuntu que hospeda o app.
+- **AWS EC2** – instância Ubuntu que hospeda o app (produção atual).
 - **Nginx + PHP-FPM** – servidor HTTP + runtime PHP.
 - **Cloudflare** – DNS, CDN e proteção.
-- **Docker** (planejado/possível) – padronização de ambiente.
+- **Docker** – padronização de ambiente (stack em `deploy/`; arquitetura em `docs/DistributedSystems`).
 - **CI/CD (GitHub Actions)** – pipeline de build/deploy (recomendado).
 
-### 📂 Documentos Relacionados
+### 📂 Arquitetura de referência: docs/DistributedSystems
 
-- Infraestrutura atual:
-  - `../../../Infraestrutra.md` – descrição detalhada da infra atual (EC2, Nginx, DNS).
-  - `../../aws/AvatarStorageProduction.md` – armazenamento de avatares em produção.
-  - `../../aws/CloudScalabilityStrategy.md` e `CloudScalabilityStrategy2.md` – estratégias de escalabilidade.
+A **estrutura oficial** de infraestrutura (homelab em 3 PCs + notebook) está documentada em:
+
+| Documento | Conteúdo |
+|-----------|----------|
+| [Contexto.md](../../DistributedSystems/Contexto.md) | Motivação, simulação AWS local, Docker, custos. |
+| [EstruturaInicial.md](../../DistributedSystems/EstruturaInicial.md) | Distribuição nos 3 PCs (PC1 Storage, PC2 Edge, PC3 Application) + Notebook LGTM; rede, portas, fluxo do túnel. |
+| [Arquitetura-LGTM-Observabilidade.md](../../DistributedSystems/Arquitetura-LGTM-Observabilidade.md) | Stack LGTM (Loki, Grafana, Tempo, Mimir), Prometheus, exporters; onde cada componente roda. |
+| [Documentacao-Projeto-Laravel-Telemedicina.md](../../DistributedSystems/Documentacao-Projeto-Laravel-Telemedicina.md) | Como o projeto Laravel se encaixa na infraestrutura distribuída. |
+
+Use esses documentos como referência para deploy no homelab e para alinhar a stack Docker ao **node de aplicação (PC3)**.
+
+### 📂 Documentos Relacionados (camada de infraestrutura)
+
+- Infraestrutura atual (produção EC2):
+  - [Infraestrutura.md](./Infraestrutura.md) – descrição detalhada da infra atual (EC2, Nginx, DNS).
+  - [aws/AvatarStorageProduction.md](./aws/AvatarStorageProduction.md) – armazenamento de avatares em produção.
+  - [aws/CloudScalabilityStrategy.md](./aws/CloudScalabilityStrategy.md) e [CloudScalabilityStrategy2.md](./aws/CloudScalabilityStrategy2.md) – estratégias de escalabilidade.
 - Pendências e migrações:
-  - `../../Pending Issues/TransitionPostgreeSQL.md`
-  - `../../Pending Issues/TransitionRedis.md`
-  - `../../Tasks/TASK_11_MIGRACAO_CONFIG_TELEMEDICINE.md`
-  - `../../Tasks/TASK_11_GOVERNANCA_BACKEND.md`
+  - [Pending Issues/TransitionPostgreeSQL.md](../../Pending%20Issues/TransitionPostgreeSQL.md)
+  - [Pending Issues/TransitionRedis.md](../../Pending%20Issues/TransitionRedis.md)
+  - [Tasks/TASK_11_MIGRACAO_CONFIG_TELEMEDICINE.md](../../Tasks/TASK_11_MIGRACAO_CONFIG_TELEMEDICINE.md)
+  - [Tasks/TASK_11_GOVERNANCA_BACKEND.md](../../Tasks/TASK_11_GOVERNANCA_BACKEND.md)
 
 > Importante: `domainconfig.md` contém informações sensíveis (chave SSH e IPs). Trate esse arquivo como **secreto** e planeje removê-lo do repositório público, rotacionando as chaves na AWS.
 

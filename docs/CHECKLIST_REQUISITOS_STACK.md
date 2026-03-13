@@ -1,6 +1,6 @@
-# Checklist: ajustes e configurações para a stack (STATUS + EstruturacaoInicial)
+# Checklist: ajustes e configurações para a stack (STATUS + EstruturaInicial)
 
-Este documento cruza **docs/STATUS_STACK_DOCKER.md** e **docs/DistributedSystems/EstruturacaoInicial.md** e lista o que falta no projeto para atender aos requisitos da documentação.  
+Este documento cruza **docs/STATUS_STACK_DOCKER.md** e **docs/DistributedSystems/EstruturaInicial.md** e lista o que falta no projeto para atender aos requisitos da documentação. Na estrutura atual: **PC1** Storage (MinIO), **PC2** Edge (Tunnel + Nginx), **PC3** Application (Laravel, PostgreSQL, Redis, RabbitMQ, Nginx).  
 Use como guia para implementar as etapas na ordem desejada.
 
 ---
@@ -12,7 +12,7 @@ Use como guia para implementar as etapas na ordem desejada.
 | Sessão Redis | Falta configurar | Alta (rápido) |
 | MinIO no .env | Falta documentar `AWS_ENDPOINT` | Alta (rápido) |
 | Reverb no Docker | Falta incluir no compose | Alta |
-| Nginx + PHP-FPM | Falta serviço e config | Alta (PC2) |
+| Nginx + PHP-FPM | Falta serviço e config | Alta (PC3) |
 | RabbitMQ | Falta serviço e driver Laravel | Média |
 | Estrutura portável (deploy/pc2/) | Falta criar pasta e compose | Média |
 | .env.example completo | Falta variáveis (RabbitMQ, SFU, etc.) | Média |
@@ -22,7 +22,7 @@ Use como guia para implementar as etapas na ordem desejada.
 
 ## 1. Sessão e cache em Redis (PC2)
 
-**Requisito (EstruturacaoInicial):** PC2 — Redis para cache e **sessões**.  
+**Requisito (EstruturaInicial):** PC3 — Redis para cache e **sessões**.  
 **Requisito (STATUS):** Laravel com cache e sessão em Redis.
 
 | Onde | Atual | Ajuste necessário |
@@ -37,7 +37,7 @@ Use como guia para implementar as etapas na ordem desejada.
 
 ## 2. MinIO (S3) — documentação e uso só via .env
 
-**Requisito (EstruturacaoInicial):** PC1 — MinIO; Laravel (PC2) acessa via rede interna (ex.: `http://IP_PC1:9000`).  
+**Requisito (EstruturaInicial):** PC1 — MinIO; Laravel (PC3) acessa via rede interna (ex.: `http://IP_PC1:9000`).  
 **Requisito (STATUS):** MinIO via variáveis de ambiente; **sem IP fixo no código**; documentar `AWS_ENDPOINT`.
 
 | Onde | Atual | Ajuste necessário |
@@ -52,7 +52,7 @@ Use como guia para implementar as etapas na ordem desejada.
 
 ## 3. Reverb no Docker (PC2)
 
-**Requisito (EstruturacaoInicial):** PC2 — Laravel + Reverb (WebSockets).  
+**Requisito (EstruturaInicial):** PC3 — Laravel + Reverb (WebSockets).  
 **Requisito (STATUS):** Reverb no Docker Compose (serviço ou processo no app).
 
 | Onde | Atual | Ajuste necessário |
@@ -64,24 +64,24 @@ Use como guia para implementar as etapas na ordem desejada.
 
 ---
 
-## 4. Nginx + PHP-FPM (PC2)
+## 4. Nginx + PHP-FPM (PC3 — node de aplicação)
 
-**Requisito (EstruturacaoInicial):** PC2 — Nginx como servidor web da aplicação (porta 80/443 local).  
+**Requisito (EstruturaInicial):** PC3 — Nginx como servidor web da aplicação (porta 80/443 local).  
 **Requisito (STATUS):** Nginx na frente do PHP-FPM, porta 80.
 
 | Onde | Atual | Ajuste necessário |
 |------|--------|-------------------|
-| `docker-compose.yml` | App usa `php artisan serve` na porta 8000 | Adicionar serviço **nginx**; alterar app para **PHP-FPM** (sem `artisan serve`); Nginx faz proxy para PHP-FPM (ex.: `fastcgi_pass app:9000`) |
-| `Dockerfile` | CMD com `artisan serve` | Ajustar para PHP-FPM (ex.: `php-fpm`) quando usar com Nginx |
-| Config Nginx | Não existe | Criar config (ex.: `nginx/default.conf` ou em `deploy/pc2/nginx/`) com server porta 80 e `location ~ \.php$` para FPM |
+| `docker-compose.yml` | App usa PHP-FPM; Nginx na porta 80 | Já implementado (serviço nginx; app com PHP-FPM; proxy para app:9000). |
+| `Dockerfile` | PHP-FPM | Ok quando usado com Nginx. |
+| Config Nginx | `docker/nginx/conf.d/` ou `deploy/pc2/nginx/` | Config com server porta 80 e `location ~ \.php$` para FPM (já existente). |
 
-**Arquivos a criar/alterar:** `docker-compose.yml`, `Dockerfile` (ou Dockerfile específico para FPM), config Nginx (novo arquivo).
+**Arquivos:** `docker-compose.yml`, `Dockerfile`, config Nginx em `docker/nginx/conf.d/` ou `deploy/pc2/nginx/`. Ver **docs/DistributedSystems/EstruturaInicial.md**.
 
 ---
 
-## 5. RabbitMQ (PC2)
+## 5. RabbitMQ (PC3 — node de aplicação)
 
-**Requisito (EstruturacaoInicial):** PC2 — RabbitMQ para filas (jobs, mensageria).  
+**Requisito (EstruturaInicial):** PC3 — RabbitMQ para filas (jobs, mensageria).  
 **Requisito (STATUS):** Serviço RabbitMQ no Docker e, se for usar para filas, driver no Laravel.
 
 | Onde | Atual | Ajuste necessário |
@@ -96,17 +96,17 @@ Use como guia para implementar as etapas na ordem desejada.
 
 ---
 
-## 6. Estrutura portável (deploy no PC2)
+## 6. Estrutura portável (deploy no PC3 — node de aplicação)
 
-**Requisito (EstruturacaoInicial):** No PC2, stack sobe com Docker (Laravel, PostgreSQL, Redis, RabbitMQ, Nginx).  
-**Requisito (STATUS):** Pasta de deploy (ex.: `deploy/pc2/` ou `docker/`) com compose e configs; “no PC2 só clonar, copiar .env e rodar `docker compose up -d`”.
+**Requisito (EstruturaInicial):** No PC3 (node de aplicação), stack sobe com Docker (Laravel, PostgreSQL, Redis, RabbitMQ, Nginx).  
+**Requisito (STATUS):** Pasta de deploy (ex.: `deploy/pc2/` ou `docker/`) com compose e configs; “no PC3: clonar repo, copiar .env e rodar `docker compose up -d`. Ver **docs/DistributedSystems/EstruturaInicial.md**.”.
 
 | Onde | Atual | Ajuste necessário |
 |------|--------|-------------------|
-| Raiz do projeto | Apenas `docker-compose.yml` na raiz | Criar pasta **deploy/pc2/** (ou `docker/`) com: `docker-compose.yml` (ou referência ao da raiz), Dockerfile ou referência, configs Nginx/PHP, **.env.example** completo para o PC2 |
+| Raiz do projeto | Apenas `docker-compose.yml` na raiz | Criar pasta **deploy/pc2/** (ou `docker/`) com: `docker-compose.yml` (ou referência ao da raiz), Dockerfile ou referência, configs Nginx/PHP, **.env.example** completo para o PC3 (node de aplicação). Ver docs/DistributedSystems. |
 | `.env.example` do deploy | — | Incluir todas as variáveis: DB_*, REDIS_*, RABBITMQ_* ou QUEUE_*, AWS_* (MinIO), APP_URL, Reverb, SFU reservadas; sem localhost fixo para serviços externos (MinIO = IP/hostname do PC1 via .env) |
 
-**Arquivos a criar:** `deploy/pc2/docker-compose.yml` (ou symlink/cópia), `deploy/pc2/.env.example`, `deploy/pc2/nginx/` (configs), eventualmente `deploy/pc2/README.md` com instruções.
+**Arquivos:** `deploy/pc2/docker-compose.yml`, `deploy/pc2/.env.example`, `deploy/pc2/nginx/`, `deploy/pc2/README.md`. Referência: **docs/DistributedSystems/EstruturaInicial.md**.
 
 ---
 
@@ -130,7 +130,7 @@ Use como guia para implementar as etapas na ordem desejada.
 
 ## 8. SFU (WebRTC) — documentação e variáveis reservadas
 
-**Requisito (EstruturacaoInicial):** SFU (Janus/Mediasoup) opcional no PC2 ou servidor dedicado; não incluir no compose agora.  
+**Requisito (EstruturaInicial):** SFU (Janus/Mediasoup) opcional no PC3 ou servidor dedicado; não incluir no compose agora.  
 **Requisito (STATUS):** Documentar no README que o SFU será adicionado depois; variáveis reservadas no `.env.example`.
 
 | Onde | Atual | Ajuste necessário |
@@ -148,7 +148,7 @@ Use como guia para implementar as etapas na ordem desejada.
 |------|------------|
 | Filas | Compose já usa `QUEUE_CONNECTION=redis`; `.env.example` ainda tem `QUEUE_CONNECTION=database`. Alinhar .env.example para redis quando for deploy Docker (ou documentar as duas opções). |
 | STATUS_STACK_DOCKER.md | Atualizar conforme cada item acima for concluído (marcar checkboxes e tabela de resumo). |
-| EstruturacaoInicial | Não exige alteração; este checklist garante que o projeto atenda ao que a doc descreve para PC1, PC2 e PC3. |
+| EstruturaInicial | Não exige alteração; este checklist garante que o projeto atenda ao que a doc descreve para PC1, PC2 e PC3 (ver docs/DistributedSystems). |
 
 ---
 
@@ -157,9 +157,9 @@ Use como guia para implementar as etapas na ordem desejada.
 1. **Sessão Redis** — docker-compose + .env.example (rápido).  
 2. **MinIO no .env** — adicionar `AWS_ENDPOINT` e comentário no .env.example.  
 3. **Reverb no Docker** — incluir no compose (e variáveis no .env do deploy).  
-4. **Nginx + PHP-FPM** — serviço Nginx, app como FPM, config Nginx.  
-5. **RabbitMQ** — serviço no compose + variáveis no .env; driver Laravel opcional.  
-6. **Estrutura deploy/pc2/** — pasta, compose e .env.example do PC2.  
+4. **Nginx + PHP-FPM** — serviço Nginx, app como FPM, config Nginx (PC3).  
+5. **RabbitMQ** — serviço no compose + variáveis no .env; driver Laravel opcional (PC3).  
+6. **Estrutura deploy/pc2/** — pasta, compose e .env.example para o node de aplicação (PC3). Ver **docs/DistributedSystems/EstruturaInicial.md**.  
 7. **.env.example completo** — RabbitMQ, SFU, Reverb e demais variáveis.  
 8. **SFU** — README + variáveis reservadas.
 

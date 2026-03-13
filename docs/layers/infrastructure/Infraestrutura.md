@@ -141,3 +141,17 @@ ssh -i telemedicine-key.pem ubuntu@35.175.200.28
 - Zero-downtime deploy (Envoy/Deployer)
 - Backup automático
 - Monitoring (CloudWatch + UptimeRobot)
+
+---
+
+## 🏠 Arquitetura distribuída (homelab) — docs/DistributedSystems
+
+A **estrutura de referência** para infraestrutura em 3 PCs + notebook (simulação AWS em servidor caseiro) está centralizada em **docs/DistributedSystems**:
+
+| Documento | Conteúdo |
+|-----------|----------|
+| [Contexto.md](../../DistributedSystems/Contexto.md) | Motivação, custos, por que simular AWS localmente, uso de Docker. |
+| [EstruturaInicial.md](../../DistributedSystems/EstruturaInicial.md) | Distribuição: **PC1** Storage (MinIO), **PC2** Edge (Cloudflare Tunnel + Nginx), **PC3** Application (Laravel, PostgreSQL, Redis, RabbitMQ, Nginx); **Notebook** para LGTM (Prometheus, Grafana, Loki, Tempo, Mimir). Rede, portas, fluxo do túnel. |
+| [Arquitetura-LGTM-Observabilidade.md](../../DistributedSystems/Arquitetura-LGTM-Observabilidade.md) | Stack LGTM e onde cada componente de observabilidade roda (notebook vs PC1/PC2/PC3). |
+
+O deploy da aplicação Laravel no homelab segue o **node de aplicação (PC3)**; a pasta `deploy/pc2/` (ou equivalente) do repositório contém o Docker Compose dessa stack. Para visão completa de rede, IPs e quem fala com quem, consulte **EstruturaInicial.md**.

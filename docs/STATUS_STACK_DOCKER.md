@@ -3,6 +3,8 @@
 Este documento compara o **estado atual** do projeto com o **prompt de requisitos** da stack completa (Docker, Laravel, PostgreSQL, Redis, RabbitMQ, Nginx, MinIO, Reverb, estrutura portável).  
 Serve para saber **o que já foi feito** e **o que ainda falta fazer** antes de qualquer alteração.
 
+**Arquitetura de referência:** a distribuição em 3 PCs + notebook (PC1 Storage, PC2 Edge, PC3 Application) está em **docs/DistributedSystems** — em especial [EstruturaInicial.md](DistributedSystems/EstruturaInicial.md), [Contexto.md](DistributedSystems/Contexto.md) e [Arquitetura-LGTM-Observabilidade.md](DistributedSystems/Arquitetura-LGTM-Observabilidade.md). A stack Docker deste repositório (raiz e `deploy/pc2/`) corresponde ao **node de aplicação (PC3)**.
+
 ---
 
 ## 1. O que já foi feito
@@ -111,6 +113,6 @@ Serve para saber **o que já foi feito** e **o que ainda falta fazer** antes de 
 - **MySQL x PostgreSQL:** O projeto está configurado para **PostgreSQL** como padrão. MySQL permanece no compose como serviço opcional; para usar MySQL, altere `DB_CONNECTION` e variáveis no `.env` e adicione `mysql` em `depends_on` do serviço `app`. Migração de dados existentes de MySQL para PostgreSQL deve ser feita com ferramentas específicas (ex.: pgloader) se necessário.
 - **Reverb:** Já está integrado na aplicação (Echo, canais); falta apenas colocá-lo no fluxo Docker e no `.env.example` do deploy.
 - **RabbitMQ:** O prompt pede RabbitMQ para “filas/jobs e mensageria”. Serviço e driver implementados (Opção B: Redis padrão; RabbitMQ para filas críticas). Use `QUEUE_CONNECTION=rabbitmq` no `.env` quando quiser ; worker: `php artisan queue:work rabbitmq`.
-- **Portabilidade:** O objetivo é “no PC2 só clonar, criar/copiar o .env e rodar `docker compose up -d`”. Isso exige que o compose e as configs estejam em uma pasta dedicada (ex.: `deploy/pc2/`) com `.env.example` completo e sem localhost fixo para serviços externos (ex.: MinIO em `192.168.1.18`).
+- **Portabilidade:** O objetivo é “no PC3 (node de aplicação) clonar, criar/copiar o .env e rodar `docker compose up -d`”. A pasta `deploy/pc2/` contém o compose e configs para esse node; `.env.example` deve estar completo e sem localhost fixo para serviços externos (ex.: MinIO no PC1 via variável de ambiente). Ver **docs/DistributedSystems/EstruturaInicial.md** para rede e papéis de PC1, PC2 e PC3.
 
 Este arquivo pode ser atualizado conforme os itens forem implementados.
