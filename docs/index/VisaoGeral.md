@@ -80,8 +80,9 @@ O **Telemedicina para Todos** é uma plataforma moderna de telemedicina que cone
 - **[Lógica de Consultas](../modules/appointments/AppointmentsLogica.md)** - Regras de agendamento e fluxos
 - **[Implementação de Consultas](../modules/appointments/AppointmentsImplementationStudy.md)** - Detalhes técnicos
 - **[Lógica de Autenticação](../modules/auth/RegistrationLogic.md)** - Fluxos de registro e login
-- **[Implementação de Videochamadas](../layers/signaling/videocall/VideoCallImplementation.md)** - Sistema de vídeo
+- **[Implementação de Videochamadas](../layers/signaling/videocall/VideoCallImplementation.md)** - Sistema de vídeo (P2P atual)
 - **[Tarefas de Videochamadas](../layers/signaling/videocall/VideoCallTasks.md)** - Checklist de implementação
+- **[Migração P2P → MediaSoup](../videocall/MIGRACAO_P2P_PARA_MEDIASOUP.md)** - Remoção do P2P, adoção MediaSoup (SFU), recriação do backend e frontend de videochamada
 - **[Prontuários Médicos - Médico](../modules/MedicalRecords/MedicalRecordsDoctor.md)** - Gestão completa de prontuários
 - **[Prontuários Médicos - Paciente](../modules/MedicalRecords/MedicalRecordsPatient.md)** - Visualização de prontuários
 
