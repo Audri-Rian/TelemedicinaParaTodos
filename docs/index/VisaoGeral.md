@@ -98,8 +98,10 @@ O **Telemedicina para Todos** é uma plataforma moderna de telemedicina que cone
 - **[Guia de Instalação](../setup/Start.md)** - Como configurar o ambiente de desenvolvimento
 - **[Regras do Cursor](../setup/CursorRulesGuide.md)** - Configurações do ambiente de desenvolvimento
 
-### 7. ☁️ Cloud e Escalabilidade
-- **[Estratégia AWS Cloud](../aws/CloudScalabilityStrategy.md)** - Roadmap completo para migração e escalabilidade na nuvem
+### 7. ☁️ Infraestrutura, Cloud e Escalabilidade
+- **[Camada de Infraestrutura](../layers/infrastructure/README.md)** - Responsabilidades, tecnologias e documentos da camada (EC2, Nginx, Docker, CI/CD)
+- **[Infraestrutura distribuída (homelab)](../DistributedSystems/EstruturaInicial.md)** - Estrutura em 3 PCs + notebook: PC1 Storage (MinIO), PC2 Edge (Tunnel + Nginx), PC3 Application (Laravel, PostgreSQL, Redis, RabbitMQ); [Contexto](../DistributedSystems/Contexto.md), [LGTM Observabilidade](../DistributedSystems/Arquitetura-LGTM-Observabilidade.md)
+- **[Estratégia AWS Cloud](../layers/infrastructure/aws/CloudScalabilityStrategy.md)** - Roadmap para migração e escalabilidade na nuvem
 
 ### 8. 📚 Referências
 - **[Glossário](Glossario.md)** - Definições de termos técnicos e de negócio
@@ -113,7 +115,7 @@ O **Telemedicina para Todos** é uma plataforma moderna de telemedicina que cone
 - **👨‍⚕️ Médicos**: [Regras de Negócio](../requirements/SystemRules.md) → [Funcionalidades](../requirements/FuncionalitsGuide.md) → [Arquitetura](../architecture/Arquitetura.md)
 - **👤 Pacientes**: [Visão Geral do Projeto](../../README.md) → [Funcionalidades](../requirements/FuncionalitsGuide.md) → [Regras](../requirements/SystemRules.md)
 - **💻 Desenvolvedores**: [Arquitetura](../architecture/Arquitetura.md) → [Guia de Dev](../architecture/DevGuide.md) → [Implementações](../modules/appointments/AppointmentsImplementationStudy.md)
-- **☁️ DevOps/Cloud**: [Estratégia AWS](../aws/CloudScalabilityStrategy.md) → [Arquitetura](../architecture/Arquitetura.md) → [Configuração](../setup/Start.md)
+- **☁️ DevOps/Cloud**: [Infraestrutura](../layers/infrastructure/README.md) → [Estrutura distribuída (3 PCs)](../DistributedSystems/EstruturaInicial.md) → [Configuração](../setup/Start.md)
 
 ### Por Tipo de Documentação
 - **📋 Requisitos**: [SystemRules.md](../requirements/SystemRules.md) + [FuncionalitsGuide.md](../requirements/FuncionalitsGuide.md)
@@ -123,7 +125,7 @@ O **Telemedicina para Todos** é uma plataforma moderna de telemedicina que cone
   - [AppointmentsLogica.md](../modules/appointments/AppointmentsLogica.md) - Consultas
   - [VideoCallImplementation.md](../modules/videocall/VideoCallImplementation.md) - Videoconferência
   - [MedicalRecordsDoctor.md](../modules/MedicalRecords/MedicalRecordsDoctor.md) - Prontuários
-- **☁️ Cloud**: [CloudScalabilityStrategy.md](../aws/CloudScalabilityStrategy.md)
+- **☁️ Infraestrutura**: [README Infraestrutura](../layers/infrastructure/README.md) + [DistributedSystems](../DistributedSystems/EstruturaInicial.md)
 
 ---
 
