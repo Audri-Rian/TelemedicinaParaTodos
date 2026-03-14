@@ -18,6 +18,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$PROJECT_ROOT"
 
+# Usar compose de dev para não conflitar com outros projetos (ex.: outro repo telemedicina)
+export COMPOSE_FILE="${PROJECT_ROOT}/docker-compose.dev.yml"
+
 log_ok()  { echo -e "${OK} $*"; }
 log_err() { echo -e "${FAIL} $*" >&2; }
 log_info() { echo -e "${YELLOW}→${NC} $*"; }
