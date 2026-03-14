@@ -22,7 +22,7 @@ return [
     |
     | Parâmetros do módulo de agendamentos (appointments). Regras RN004, RN005,
     | RN006, RN009, RN022. Usado em: AppointmentService, DoctorConsultationsController,
-    | PatientVideoCallController, VideoCallController, AppointmentPolicy.
+    | PatientVideoCallController, AppointmentPolicy. Videochamada SFU: docs/videocall/IMPLEMENTACAO_SFU_MEDIASOUP.md
     |
     */
 
@@ -127,24 +127,23 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Video Call (Videoconferência)
+    | Video Call (Videoconferência — SFU/MediaSoup)
     |--------------------------------------------------------------------------
     |
-    | Parâmetros de videoconferência. SystemRules: "Salas expiram automaticamente
-    | após período configurado". VideoCallTasks.md: lifecycle, timeout.
-    | Job ExpireVideoCallRooms (hoje vazio) usará estes valores.
+    | Parâmetros de videoconferência. Modelo: Call + Room (SFU).
+    | docs/videocall/IMPLEMENTACAO_SFU_MEDIASOUP.md
     |
     */
 
     'video_call' => [
-        // Minutos de inatividade para encerrar sala "zumbi". T 11.5: "encerrar chamadas zumbis".
+        // Minutos de inatividade para encerrar sala "zumbi".
         'room_inactive_minutes' => env('VIDEO_ROOM_INACTIVE_MINUTES', 60),
 
         // Duração máxima de uma sala ativa (minutos). Evita salas eternas.
         'room_max_duration_minutes' => env('VIDEO_ROOM_MAX_DURATION_MINUTES', 120),
 
         // Janela para iniciar videoconferência: usa appointment.lead_minutes e trailing_minutes.
-        // DoctorConsultationsController, PatientVideoCallController, VideoCallController.
+        // DoctorConsultationsController, PatientVideoCallController.
     ],
 
     /*
@@ -178,7 +177,7 @@ return [
     |--------------------------------------------------------------------------
     |
     | Parâmetros das tasks de manutenção (T 11.5). Usado em: jobs de no_show,
-    | ExpireVideoCallRooms, limpeza de locks, etc.
+    | limpeza de locks, etc. Videochamada: modelo Call/Room (SFU).
     |
     */
 
