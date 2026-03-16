@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Contracts\MediaGatewayInterface;
+use App\Services\MediaGatewayStub;
 use Illuminate\Support\ServiceProvider;
 use App\Models\Appointments;
 use App\Observers\AppointmentsObserver;
@@ -13,7 +15,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->bind(MediaGatewayInterface::class, MediaGatewayStub::class);
     }
 
     /**

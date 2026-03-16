@@ -35,4 +35,10 @@ return [
         ],
     ],
 
+    'media_gateway' => [
+        'sfu_ws_url' => env('SFU_WS_URL', ''),
+        'sfu_node' => env('SFU_NODE', 'local'),
+        'jwt_secret' => env('SFU_JWT_SECRET'),
+    ],
+
 ];

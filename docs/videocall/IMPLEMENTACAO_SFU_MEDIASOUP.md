@@ -260,15 +260,15 @@ Com crescimento (múltiplos SFUs, gravação), o CallManager pode delegar toda a
 
 ### Backend (Laravel)
 
-- [ ] CallManagerService: createCall(), acceptCall(), rejectCall(), endCall(), createRoom(), destroyRoom() (integração com Media Gateway ou SFU).
-- [ ] Definir novos endpoints: request, accept, reject, end (contratos conforme acima); timeout de chamada (ex.: 30s) → VideoCallMissed.
-- [ ] Implementar novos eventos Reverb: VideoCallRequested, VideoCallAccepted, VideoCallRejected, VideoCallEnded, VideoCallMissed.
-- [ ] Token JWT: gerar após accept (payload: callId, roomId, userId, role, exp; 1–5 min); nunca confiar em roomId vindo do frontend.
-- [ ] Integração Laravel ↔ Media Gateway (ou MediaSoup): criar sala, obter roomId; Laravel gera JWT; encerrar sala.
-- [ ] Modelos Call e Room separados (Call: appointment_id, doctor_id, patient_id, status; Room: room_id, call_id, sfu_node).
-- [ ] Logs estruturados: CALL_CREATED, CALL_ACCEPTED, ROOM_CREATED, ROOM_JOINED, ROOM_LEFT, CALL_ENDED (call_id, room_id, user_id, appointment_id).
-- [ ] Manter políticas e regras de appointment na nova API.
-- [ ] Manter canal Reverb para videochamada com autorização por usuário.
+- [x] CallManagerService: createCall(), acceptCall(), rejectCall(), endCall(), createRoom(), destroyRoom() (integração com Media Gateway ou SFU).
+- [x] Definir novos endpoints: request, accept, reject, end (contratos conforme acima); timeout de chamada (ex.: 30s) → VideoCallMissed.
+- [x] Implementar novos eventos Reverb: VideoCallRequested, VideoCallAccepted, VideoCallRejected, VideoCallEnded, VideoCallMissed.
+- [x] Token JWT: gerar após accept (payload: callId, roomId, userId, role, exp; 1–5 min); nunca confiar em roomId vindo do frontend.
+- [x] Integração Laravel ↔ Media Gateway (ou MediaSoup): criar sala, obter roomId; Laravel gera JWT; encerrar sala.
+- [x] Modelos Call e Room separados (Call: appointment_id, doctor_id, patient_id, status; Room: room_id, call_id, sfu_node).
+- [x] Logs estruturados: CALL_CREATED, CALL_ACCEPTED, ROOM_CREATED, ROOM_JOINED, ROOM_LEFT, CALL_ENDED (call_id, room_id, user_id, appointment_id).
+- [x] Manter políticas e regras de appointment na nova API.
+- [x] Manter canal Reverb para videochamada com autorização por usuário.
 
 ### Media Gateway (opcional mas recomendado)
 
