@@ -2,6 +2,9 @@
 
 namespace App\Providers;
 
+use App\Contracts\MediaGatewayInterface;
+use App\Services\MediaGatewayHttp;
+use App\Services\MediaGatewayStub;
 use Illuminate\Support\ServiceProvider;
 use App\Models\Appointments;
 use App\Observers\AppointmentsObserver;
@@ -13,7 +16,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $httpUrl = (string) config('services.media_gateway.sfu_http_url');
+        $apiSecret = (string) config('services.media_gateway.api_secret');
+
+        if ($httpUrl !== '' && $apiSecret !== '') {
+            $this->app->bind(MediaGatewayInterface::class, MediaGatewayHttp::class);
+        } else {
+            $this->app->bind(MediaGatewayInterface::class, MediaGatewayStub::class);
+        }
     }
 
     /**

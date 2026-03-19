@@ -7,7 +7,6 @@ use App\Http\Controllers\ConsultationsController;
 use App\Http\Controllers\HealthController;
 use App\Http\Controllers\SpecializationController;
 use App\Http\Controllers\Settings\ProfileController;
-use App\Http\Controllers\VideoCall\VideoCallController;
 use App\Http\Controllers\TermsOfServiceController;
 use App\Http\Controllers\PrivacyPolicyController;
 use App\Models\User;
@@ -61,10 +60,6 @@ Route::middleware(['auth', 'verified', 'doctor'])->prefix('doctor')->name('docto
     Route::post('patients/{patient}/medical-record/vital-signs', [App\Http\Controllers\Doctor\DoctorPatientMedicalRecordController::class, 'storeVitalSigns'])->name('patients.medical-record.vital-signs.store');
     Route::post('patients/{patient}/medical-record/consultations/pdf', [App\Http\Controllers\Doctor\DoctorPatientMedicalRecordController::class, 'generateConsultationPdf'])->name('patients.medical-record.consultations.pdf');
     
-    // Rotas para videoconferência (médicos)
-    Route::post('video-call/request/{user}', [VideoCallController::class, 'requestVideoCall'])->middleware('throttle:20,1')->name('video-call.request');
-    Route::post('video-call/request/status/{user}', [VideoCallController::class, 'requestVideoCallStatus'])->middleware('throttle:30,1')->name('video-call.request-status');
-    
     // Rotas para configuração de agenda (médicos)
     Route::get('schedule', function () {
         return redirect()->route('doctor.schedule.show', ['doctor' => auth()->user()->doctor->id]);
@@ -105,10 +100,6 @@ Route::middleware(['auth', 'verified', 'patient'])->prefix('patient')->name('pat
     Route::get('medical-records', [App\Http\Controllers\Patient\PatientMedicalRecordController::class, 'index'])->name('medical-records');
     Route::post('medical-records/export', [App\Http\Controllers\Patient\PatientMedicalRecordController::class, 'export'])->middleware('throttle:5,1')->name('medical-records.export');
     Route::post('medical-records/documents', [App\Http\Controllers\MedicalRecordDocumentController::class, 'store'])->name('medical-records.documents.store');
-    
-    // Rotas para videoconferência (pacientes)
-    Route::post('video-call/request/{user}', [VideoCallController::class, 'requestVideoCall'])->middleware('throttle:20,1')->name('video-call.request');
-    Route::post('video-call/request/status/{user}', [VideoCallController::class, 'requestVideoCallStatus'])->middleware('throttle:30,1')->name('video-call.request-status');
     
     // Rotas de onboarding
     Route::post('tour/completed', [App\Http\Controllers\Patient\OnboardingController::class, 'completeTour'])->name('tour.completed');
@@ -183,6 +174,10 @@ Route::get('font-test', function () {
 // Rotas públicas para Termos de Serviço e Política de Privacidade
 Route::get('terms', [TermsOfServiceController::class, 'index'])->name('terms');
 Route::get('privacy', [PrivacyPolicyController::class, 'index'])->name('privacy');
+
+// Páginas de teste do SFU (sem autenticação; entrada via link/QR Code; logs no Laravel e no mediasoup-server)
+Route::get('sfu-test', [App\Http\Controllers\SfuTestController::class, 'index'])->name('sfu-test');
+Route::get('sfu-load-test', [App\Http\Controllers\SfuTestController::class, 'loadTest'])->name('sfu-load-test');
 
 // Rota para servir arquivos do storage (avatars)
 Route::get('storage/avatars/{userId}/{filename}', function ($userId, $filename) {
