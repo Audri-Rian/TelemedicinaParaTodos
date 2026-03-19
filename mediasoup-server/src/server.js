@@ -1,3 +1,7 @@
+// Carrega .env da raiz do projeto (mesmo .env do Laravel) para SFU_JWT_SECRET, SFU_API_SECRET, etc.
+const path = require('node:path');
+require('dotenv').config({ path: path.join(__dirname, '..', '..', '.env') });
+
 const { config } = require('./config');
 const { logger } = require('./logger');
 const { startWorkers, closeWorkers } = require('./mediasoup/workers');
@@ -26,6 +30,12 @@ async function main() {
 
   const httpServer = await startHttpServer();
   const wsServer = await startWsServer();
+
+  const host = config.mediasoup.listenIp === '0.0.0.0' ? '127.0.0.1' : config.mediasoup.listenIp;
+  const httpUrl = `http://${host}:${config.http.port}`;
+  const wsUrl = `ws://${host}:${config.ws.port}`;
+  logger.info({ httpUrl, wsUrl }, 'SFU pronto — HTTP e WebSocket');
+  console.log('\n  SFU rodando:\n  HTTP: %s\n  WebSocket: %s\n', httpUrl, wsUrl);
 
   const shutdown = async (signal) => {
     logger.info({ signal }, 'SFU encerrando');

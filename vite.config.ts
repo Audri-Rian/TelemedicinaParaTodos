@@ -8,7 +8,7 @@ import { fileURLToPath, URL } from 'node:url';
 export default defineConfig({
     plugins: [
         laravel({
-            input: ['resources/js/app.ts'],
+            input: ['resources/js/app.ts', 'resources/js/sfu-test-app.js', 'resources/js/sfu-load-test-app.js'],
             ssr: 'resources/js/ssr.ts',
             refresh: true,
         }),
