@@ -175,6 +175,10 @@ Route::get('font-test', function () {
 Route::get('terms', [TermsOfServiceController::class, 'index'])->name('terms');
 Route::get('privacy', [PrivacyPolicyController::class, 'index'])->name('privacy');
 
+// Páginas de teste do SFU (sem autenticação; entrada via link/QR Code; logs no Laravel e no mediasoup-server)
+Route::get('sfu-test', [App\Http\Controllers\SfuTestController::class, 'index'])->name('sfu-test');
+Route::get('sfu-load-test', [App\Http\Controllers\SfuTestController::class, 'loadTest'])->name('sfu-load-test');
+
 // Rota para servir arquivos do storage (avatars)
 Route::get('storage/avatars/{userId}/{filename}', function ($userId, $filename) {
     $path = "avatars/{$userId}/{$filename}";

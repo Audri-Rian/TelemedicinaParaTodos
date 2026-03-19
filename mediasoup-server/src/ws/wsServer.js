@@ -107,14 +107,57 @@ async function startWsServer() {
             'PEER_JOINED'
           );
 
-          return reply({
+          const participants = Array.from(room.peers.values()).map((p) => ({
+            peerId: p.id,
+            userId: p.userId
+          }));
+
+          reply({
             ok: true,
             data: {
               peerId,
               roomId: room.id,
-              rtpCapabilities: room.router.rtpCapabilities
+              rtpCapabilities: room.router.rtpCapabilities,
+              participantsCount: participants.length,
+              participants
             }
           });
+
+          // Notificar os peers já na sala que este usuário entrou.
+          for (const otherWs of wss.clients) {
+            if (otherWs.readyState !== otherWs.OPEN) continue;
+            if (!otherWs.__peer || !otherWs.__room || otherWs.__room.id !== room.id) continue;
+            if (otherWs === ws) continue;
+            safeSend(otherWs, {
+              action: 'peerJoined',
+              data: { peerId, userId: identity.userId, participantsCount: participants.length, participants }
+            });
+          }
+
+          // Enviar ao novo peer os producers já existentes na sala no próximo tick,
+          // para o cliente receber primeiro a resposta do join e criar os transports.
+          setImmediate(() => {
+            if (ws.readyState !== ws.OPEN) return;
+            let count = 0;
+            for (const otherPeer of room.peers.values()) {
+              if (otherPeer.id === peer.id) continue;
+              for (const [producerId, producer] of otherPeer.producers) {
+                safeSend(ws, {
+                  action: 'newProducer',
+                  data: { producerId, peerId: otherPeer.id, kind: producer.kind }
+                });
+                count++;
+              }
+            }
+            if (count > 0) {
+              logger.info(
+                { roomId: room.id, toPeerId: peer.id, existingProducersCount: count },
+                'EXISTING_PRODUCERS_SENT'
+              );
+            }
+          });
+
+          return;
         }
 
         // Exigir join para qualquer outra ação
@@ -209,6 +252,36 @@ async function startWsServer() {
           return reply({ ok: true, data: { id: producer.id } });
         }
 
+        // 4b) pauseProducer / resumeProducer
+        if (msg.action === 'pauseProducer') {
+          const producer = peer.producers.get(msg.producerId);
+          if (!producer) return reply({ ok: false, error: { message: 'Producer não encontrado.' } });
+          await producer.pause();
+          return reply({ ok: true, data: { paused: true } });
+        }
+
+        if (msg.action === 'resumeProducer') {
+          const producer = peer.producers.get(msg.producerId);
+          if (!producer) return reply({ ok: false, error: { message: 'Producer não encontrado.' } });
+          await producer.resume();
+          return reply({ ok: true, data: { resumed: true } });
+        }
+
+        // 4c) closeProducer (quando o cliente desliga câmera/mic sem sair da sala)
+        if (msg.action === 'closeProducer') {
+          const { producerId } = msg;
+          const producer = peer.producers.get(producerId);
+          if (!producer) return reply({ ok: false, error: { message: 'Producer não encontrado.' } });
+          try {
+            producer.close();
+          } catch {
+            // ignore
+          }
+          peer.producers.delete(producerId);
+          logger.info({ roomId: room.id, peerId: peer.id, producerId }, 'PRODUCER_CLOSED_BY_CLIENT');
+          return reply({ ok: true, data: { closed: true } });
+        }
+
         // 5) consume (apenas recvTransport)
         if (msg.action === 'consume') {
           const transport = peer.recvTransport;
@@ -248,6 +321,14 @@ async function startWsServer() {
           });
         }
 
+        if (msg.action === 'pauseConsumer') {
+          const { consumerId } = msg;
+          const consumer = peer.consumers.get(consumerId);
+          if (!consumer) return reply({ ok: false, error: { message: 'Consumer não encontrado.' } });
+          await consumer.pause();
+          return reply({ ok: true, data: { paused: true } });
+        }
+
         if (msg.action === 'resumeConsumer') {
           const { consumerId } = msg;
           const consumer = peer.consumers.get(consumerId);
@@ -256,14 +337,58 @@ async function startWsServer() {
           return reply({ ok: true, data: { resumed: true } });
         }
 
+        if (msg.action === 'requestKeyFrame') {
+          const { consumerId } = msg;
+          const consumer = peer.consumers.get(consumerId);
+          if (!consumer) return reply({ ok: false, error: { message: 'Consumer não encontrado.' } });
+          if (consumer.kind !== 'video') return reply({ ok: false, error: { message: 'Apenas consumers de vídeo.' } });
+          try {
+            await consumer.requestKeyFrame();
+            return reply({ ok: true, data: { requested: true } });
+          } catch (err) {
+            return reply({ ok: false, error: asError(err) });
+          }
+        }
+
+        if (msg.action === 'getConsumerStats') {
+          const { consumerId } = msg;
+          const consumer = peer.consumers.get(consumerId);
+          if (!consumer) return reply({ ok: false, error: { message: 'Consumer não encontrado.' } });
+          try {
+            const stats = await consumer.getStats();
+            return reply({ ok: true, data: { kind: consumer.kind, stats } });
+          } catch (err) {
+            return reply({ ok: false, error: asError(err) });
+          }
+        }
+
         if (msg.action === 'leave') {
           try {
             peer.close('leave');
           } catch (e) {
             logger.warn({ err: e }, 'Erro ao fechar peer no leave');
           }
+          room.peers.delete(peer.id);
           ws.__peer = null;
           ws.__room = null;
+
+          // Notificar os outros peers
+          const remaining = Array.from(room.peers.values()).map(p => ({ peerId: p.id, userId: p.userId }));
+          for (const otherWs of wss.clients) {
+            if (otherWs.readyState !== otherWs.OPEN) continue;
+            if (!otherWs.__peer || !otherWs.__room) continue;
+            if (otherWs.__room.id !== room.id) continue;
+            safeSend(otherWs, {
+              action: 'peerLeft',
+              data: {
+                peerId: peer.id,
+                userId: peer.userId,
+                participantsCount: remaining.length,
+                participants: remaining,
+              }
+            });
+          }
+
           return reply({ ok: true, data: { left: true } });
         }
 
@@ -276,11 +401,30 @@ async function startWsServer() {
 
     ws.on('close', () => {
       const peer = ws.__peer;
-      if (peer) {
+      const room = ws.__room;
+      if (peer && room) {
         try {
           peer.close('ws_close');
         } catch (e) {
           logger.warn({ err: e }, 'Erro ao fechar peer no close');
+        }
+        room.peers.delete(peer.id);
+
+        // Notificar os outros peers que este saiu
+        const remaining = Array.from(room.peers.values()).map(p => ({ peerId: p.id, userId: p.userId }));
+        for (const otherWs of wss.clients) {
+          if (otherWs.readyState !== otherWs.OPEN) continue;
+          if (!otherWs.__peer || !otherWs.__room) continue;
+          if (otherWs.__room.id !== room.id) continue;
+          safeSend(otherWs, {
+            action: 'peerLeft',
+            data: {
+              peerId: peer.id,
+              userId: peer.userId,
+              participantsCount: remaining.length,
+              participants: remaining,
+            }
+          });
         }
       }
     });
