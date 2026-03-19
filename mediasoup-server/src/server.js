@@ -1,6 +1,6 @@
-// Carrega .env da raiz do projeto (mesmo .env do Laravel) para SFU_JWT_SECRET, SFU_API_SECRET, etc.
+// Carrega .env do próprio diretório do servidor MediaSoup.
 const path = require('node:path');
-require('dotenv').config({ path: path.join(__dirname, '..', '..', '.env') });
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
 const { config } = require('./config');
 const { logger } = require('./logger');
