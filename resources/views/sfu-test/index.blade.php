@@ -1,619 +1,442 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html class="dark" lang="pt-BR">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="robots" content="noindex">
-    <title>Teste SFU — {{ config('app.name') }}</title>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta name="robots" content="noindex"/>
+    <title>SFU COMMAND | {{ config('app.name') }}</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "surface-container-low": "#131b2e",
+                        "primary-fixed": "#d8e2ff",
+                        "surface-container": "#171f33",
+                        "on-error": "#690005",
+                        "tertiary": "#ffb3ad",
+                        "secondary": "#4edea3",
+                        "on-tertiary": "#68000a",
+                        "primary-container": "#00102c",
+                        "surface-container-highest": "#2d3449",
+                        "secondary-fixed": "#6ffbbe",
+                        "outline-variant": "#45474b",
+                        "error-container": "#93000a",
+                        "error": "#ffb4ab",
+                        "on-surface-variant": "#c6c6cb",
+                        "surface-tint": "#adc7ff",
+                        "inverse-primary": "#005bc0",
+                        "outline": "#8f9095",
+                        "on-primary": "#002e68",
+                        "background": "#0b1326",
+                        "tertiary-fixed-dim": "#ffb3ad",
+                        "on-tertiary-container": "#e53d3e",
+                        "on-primary-fixed": "#001a41",
+                        "surface-variant": "#2d3449",
+                        "on-secondary-fixed": "#002113",
+                        "inverse-on-surface": "#283044",
+                        "on-background": "#dae2fd",
+                        "tertiary-fixed": "#ffdad7",
+                        "on-secondary": "#003824",
+                        "surface-bright": "#31394d",
+                        "on-surface": "#dae2fd",
+                        "secondary-fixed-dim": "#4edea3",
+                        "on-secondary-fixed-variant": "#005236",
+                        "on-tertiary-fixed-variant": "#930013",
+                        "on-error-container": "#ffdad6",
+                        "tertiary-container": "#2c0002",
+                        "surface-dim": "#0b1326",
+                        "primary": "#adc7ff",
+                        "on-secondary-container": "#00311f",
+                        "on-primary-container": "#0078f9",
+                        "secondary-container": "#00a572",
+                        "surface-container-lowest": "#060e20",
+                        "surface-container-high": "#222a3d",
+                        "on-primary-fixed-variant": "#004493",
+                        "surface": "#0b1326",
+                        "primary-fixed-dim": "#adc7ff",
+                        "inverse-surface": "#dae2fd",
+                        "on-tertiary-fixed": "#410004"
+                    },
+                    fontFamily: {
+                        "headline": ["Space Grotesk"],
+                        "body": ["Inter"],
+                        "label": ["Space Grotesk"]
+                    },
+                    borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+                },
+            },
+        }
+    </script>
     <style>
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-        html {
-            -webkit-text-size-adjust: 100%;
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
         }
-        html, body {
-            height: 100%;
-            font-family: system-ui, -apple-system, sans-serif;
-            background: #0a0a14;
-            color: #e0e0e0;
-            font-size: 12px;
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: #0b1326; }
+        ::-webkit-scrollbar-thumb { background: #2d3449; border-radius: 2px; }
+        .technical-grid {
+            background-size: 20px 20px;
+            background-image: linear-gradient(to right, #ffffff05 1px, transparent 1px), linear-gradient(to bottom, #ffffff05 1px, transparent 1px);
         }
-
-        /* ── Layout ──────────────────────────────────────────────────────── */
-        .admin-layout {
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            height: 100dvh;
-        }
-
-        /* ── Topbar ───────────────────────────────────────────────────────── */
-        .topbar {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            flex-wrap: wrap;
-            background: #12121f;
-            border-bottom: 1px solid #1e1e30;
-            padding: 7px 14px;
-            flex-shrink: 0;
-            font-size: 11px;
-        }
-        .topbar .app-name {
-            font-size: 13px;
-            font-weight: 700;
-            color: #fff;
-            margin-right: 4px;
-            white-space: nowrap;
-        }
-        .topbar .room-badge {
-            background: #1e1e30;
-            border-radius: 4px;
-            padding: 2px 8px;
-            color: #888;
-            font-family: monospace;
-            font-size: 10px;
-        }
-        .topbar .sep { color: #252530; }
-        .status-chip {
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            padding: 3px 8px;
-            border-radius: 12px;
-            font-size: 10px;
-            font-weight: 600;
-            background: #1a1a2a;
-            white-space: nowrap;
-        }
-        #statusConn { color: #f87171; }
-
-        /* ── Main 3-column area ──────────────────────────────────────────── */
-        .main-area {
-            display: flex;
-            flex: 1;
-            min-height: 0;
-            overflow: hidden;
-        }
-
-        /* ── Left sidebar ────────────────────────────────────────────────── */
-        .sidebar-left {
-            width: 216px;
-            flex-shrink: 0;
-            background: #111120;
-            border-right: 1px solid #1e1e30;
-            overflow-y: auto;
-            padding: 10px 8px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-        .sidebar-left::-webkit-scrollbar { width: 4px; }
-        .sidebar-left::-webkit-scrollbar-thumb { background: #2c2c3e; border-radius: 2px; }
-
-        .ctrl-section { display: flex; flex-direction: column; gap: 5px; }
-        .ctrl-section-title {
-            font-size: 9px;
-            text-transform: uppercase;
-            letter-spacing: 0.8px;
-            color: #444;
-            padding: 2px 0;
-            border-bottom: 1px solid #1a1a2e;
-            margin-bottom: 2px;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-        .ctrl-section-title .icon { font-size: 11px; }
-        .btn-row { display: flex; flex-wrap: wrap; gap: 4px; }
-        .device-row {
-            display: flex;
-            gap: 4px;
-            align-items: center;
-        }
-        select {
-            flex: 1;
-            padding: 5px 6px;
-            border: 1px solid #2c2c3e;
-            border-radius: 5px;
-            background: #0a0a14;
-            color: #bbb;
-            font-size: 10px;
-            cursor: pointer;
-        }
-
-        /* ── Video center ────────────────────────────────────────────────── */
-        .video-center {
-            flex: 1;
-            min-width: 0;
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            background: #08080f;
-        }
-        .video-stage {
-            flex: 1;
-            position: relative;
-            overflow: hidden;
-            display: flex;
-            align-items: flex-start;
-        }
-        .remote-grid {
-            width: 100%;
-            height: 100%;
-            overflow-y: auto;
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-            gap: 8px;
-            padding: 12px;
-            align-content: start;
-        }
-        .remote-grid::-webkit-scrollbar { width: 4px; }
-        .remote-grid::-webkit-scrollbar-thumb { background: #1e1e30; border-radius: 2px; }
-
-        .video-empty {
-            position: absolute;
-            inset: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            color: #333;
-            pointer-events: none;
-        }
-        .video-empty .empty-icon { font-size: 40px; opacity: 0.4; }
-        .video-empty p { font-size: 12px; color: #3a3a50; }
-
-        /* ── Local PiP ───────────────────────────────────────────────────── */
-        .local-pip {
-            position: absolute;
-            bottom: 12px;
-            right: 12px;
-            z-index: 20;
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.6);
-            border: 2px solid #2c2c3e;
-            background: #0f0f1a;
-        }
-        .local-pip-label {
-            position: absolute;
-            bottom: 4px;
-            left: 6px;
-            font-size: 9px;
-            color: rgba(255,255,255,0.55);
-            background: rgba(0,0,0,0.55);
-            padding: 1px 5px;
-            border-radius: 3px;
-            z-index: 2;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        #localVideo {
-            width: 160px;
-            height: 120px;
-            display: block;
-            object-fit: cover;
-            background: #111;
-        }
-
-        /* ── Remote peer card (created by JS) ────────────────────────────── */
-
-        /* ── Right sidebar ───────────────────────────────────────────────── */
-        .sidebar-right {
-            width: 280px;
-            flex-shrink: 0;
-            background: #0d0d1c;
-            border-left: 1px solid #1e1e30;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-        }
-        .sidebar-right::-webkit-scrollbar { width: 4px; }
-        .sidebar-right::-webkit-scrollbar-thumb { background: #2c2c3e; border-radius: 2px; }
-
-        .sidebar-right-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 10px 12px 8px;
-            border-bottom: 1px solid #1a1a2e;
-            flex-shrink: 0;
-        }
-        .sidebar-right-header h3 {
-            font-size: 10px;
-            text-transform: uppercase;
-            letter-spacing: 0.6px;
-            color: #4aa3df;
-        }
-
-        /* Stat cards */
-        .stats-cards { padding: 10px 10px 0; flex: 1; }
-        .stats-empty { color: #3a3a55; font-size: 11px; padding: 12px 0; text-align: center; }
-        .stat-card {
-            background: #111827;
-            border-radius: 8px;
-            padding: 9px 10px;
-            margin-bottom: 7px;
-            border-left: 3px solid #1e3a5f;
-        }
-        .stat-card-title {
-            font-size: 10px;
-            color: #778;
-            margin-bottom: 7px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .stat-card-title .stat-state {
-            font-size: 9px;
-            padding: 1px 5px;
-            border-radius: 3px;
-            background: #1a1a2e;
-            color: #888;
-        }
-        .stat-metrics {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 5px 8px;
-        }
-        .stat-metric { display: flex; flex-direction: column; gap: 1px; }
-        .stat-metric-label {
-            font-size: 8px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: #3a3a55;
-        }
-        .stat-metric-value {
-            font-size: 12px;
-            font-family: monospace;
-            font-weight: 700;
-            color: #778;
-        }
-
-        /* Perf grid */
-        .perf-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1px;
-            border-top: 1px solid #1a1a2e;
-            flex-shrink: 0;
-        }
-        .perf-item {
-            padding: 8px 12px;
-            background: #0a0a14;
-            display: flex;
-            flex-direction: column;
-            gap: 1px;
-            border-bottom: 1px solid #111;
-        }
-        .perf-item:nth-child(odd) { border-right: 1px solid #111; }
-        .perf-label { font-size: 8px; text-transform: uppercase; letter-spacing: 0.5px; color: #3a3a55; }
-        .perf-item strong { font-size: 12px; font-family: monospace; color: #aaa; }
-
-        /* ── Log panel ───────────────────────────────────────────────────── */
-        .log-panel {
-            height: 148px;
-            flex-shrink: 0;
-            display: flex;
-            flex-direction: column;
-            border-top: 1px solid #1e1e30;
-            background: #08080f;
-        }
-        .log-panel-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 4px 12px;
-            background: #10101e;
-            border-bottom: 1px solid #181828;
-            flex-shrink: 0;
-        }
-        .log-panel-header span {
-            font-size: 9px;
-            text-transform: uppercase;
-            letter-spacing: 0.6px;
-            color: #444;
-        }
-        #logContainer {
-            flex: 1;
-            overflow-y: auto;
-            padding: 6px 12px;
-            font-family: monospace;
-            font-size: 10px;
-            line-height: 1.6;
-            color: #666;
-        }
-        #logContainer::-webkit-scrollbar { width: 4px; }
-        #logContainer::-webkit-scrollbar-thumb { background: #1e1e30; border-radius: 2px; }
-
-        /* ── Buttons ─────────────────────────────────────────────────────── */
-        button {
-            padding: 5px 9px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 10px;
-            font-weight: 500;
-            transition: opacity 0.12s;
-            white-space: nowrap;
-            line-height: 1.3;
-        }
-        button:disabled { opacity: 0.3; cursor: not-allowed; }
-        button:not(:disabled):hover { opacity: 0.78; }
-        .btn-primary  { background: #3b5bdb; color: #fff; }
-        .btn-danger   { background: #c92a2a; color: #fff; }
-        .btn-warning  { background: #d9480f; color: #fff; }
-        .btn-success  { background: #2f9e44; color: #fff; }
-        .btn-neutral  { background: #22222e; color: #bbb; }
-        .btn-info     { background: #1864ab; color: #fff; }
-        .btn-purple   { background: #6741d9; color: #fff; }
-        .btn-teal     { background: #0b7285; color: #fff; }
-        .btn-audio    { background: #0d7377; color: #fff; display: none; }
-        .btn-active   { outline: 2px solid #4ade80 !important; }
-        .btn-swap     { padding: 5px 7px; font-size: 12px; flex-shrink: 0; }
-        .btn-small    { padding: 3px 7px; font-size: 9px; }
-
-        /* ── Quality colors ──────────────────────────────────────────────── */
+        /* Quality colors used by JS */
         .q-green  { color: #4ade80; }
         .q-yellow { color: #fbbf24; }
         .q-red    { color: #f87171; }
-        .q-na     { color: #444; }
+        .q-na     { color: #45474b; }
+        /* Button base */
+        button { cursor: pointer; transition: opacity 0.12s; }
+        button:disabled { opacity: 0.3; cursor: not-allowed; }
+        button:not(:disabled):hover { opacity: 0.85; }
 
-        /* ── Responsivo (tablets / mobile) ───────────────────────────────── */
-        @media (max-width: 1024px) {
-            .remote-grid {
-                grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-                gap: 6px;
-                padding: 8px;
-            }
-        }
-
+        /* ── Responsive ──────────────────────────────────────────── */
         @media (max-width: 900px) {
-            html, body {
-                overflow-x: hidden;
-                overflow-y: auto;
-                height: auto;
-                min-height: 100%;
-                min-height: 100dvh;
-            }
-            .admin-layout {
-                height: auto;
-                min-height: 100dvh;
-            }
-            .topbar {
-                padding-left: max(10px, env(safe-area-inset-left, 0px));
-                padding-right: max(10px, env(safe-area-inset-right, 0px));
-                padding-top: max(6px, env(safe-area-inset-top, 0px));
-            }
+            html, body { overflow-x: hidden; overflow-y: auto; height: auto; min-height: 100dvh; }
+            .admin-layout { height: auto !important; min-height: 100dvh; }
             .main-area {
-                flex-direction: column;
+                flex-direction: column !important;
                 flex: 1 1 auto;
                 min-height: 0;
-                overflow: visible;
+                overflow: visible !important;
             }
             .sidebar-left {
-                width: 100%;
+                width: 100% !important;
                 max-height: min(42vh, 320px);
-                border-right: none;
-                border-bottom: 1px solid #1e1e30;
+                border-right: none !important;
+                border-bottom: 1px solid rgba(69,71,75,0.15);
                 flex-shrink: 0;
             }
             .video-center {
                 flex: 1 1 auto;
                 min-height: min(50vh, 420px);
             }
-            .remote-grid {
-                grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-            }
             .sidebar-right {
-                width: 100%;
+                width: 100% !important;
                 max-height: none;
-                border-left: none;
-                border-top: 1px solid #1e1e30;
+                border-left: none !important;
+                border-top: 1px solid rgba(69,71,75,0.15);
                 flex-shrink: 0;
             }
-            .local-pip {
-                bottom: max(8px, env(safe-area-inset-bottom, 0px));
-                right: max(8px, env(safe-area-inset-right, 0px));
+            .perf-grid-center {
+                grid-template-columns: repeat(2, 1fr) !important;
             }
-            #localVideo {
-                width: min(140px, 32vw);
-                height: auto;
+            .local-pip video {
+                width: min(140px, 32vw) !important;
+                height: auto !important;
                 aspect-ratio: 4 / 3;
             }
             .log-panel {
-                height: min(28vh, 180px);
+                height: min(28vh, 180px) !important;
                 padding-bottom: env(safe-area-inset-bottom, 0px);
             }
         }
-
         @media (max-width: 480px) {
-            .topbar .app-name { font-size: 12px; }
-            .status-chip { font-size: 9px; padding: 2px 6px; }
-            #statusAutoReconn { margin-left: 0 !important; margin-top: 4px; flex-basis: 100%; justify-content: center; }
-            .remote-grid {
-                grid-template-columns: 1fr;
+            .remote-grid-inner {
+                grid-template-columns: 1fr !important;
+            }
+            .perf-grid-center {
+                grid-template-columns: 1fr !important;
             }
             .video-center { min-height: 40vh; }
         }
-
         @media (min-width: 901px) {
             html, body { overflow: hidden; }
         }
     </style>
 </head>
-<body>
+<body class="bg-background text-on-surface font-body selection:bg-primary/30 antialiased overflow-hidden">
 
-<div class="admin-layout">
+<div class="admin-layout flex flex-col h-screen" style="height: 100dvh;">
 
-    <!-- ── Topbar ──────────────────────────────────────────────────────────── -->
-    <header class="topbar">
-        <span class="app-name">SFU MediaSoup</span>
-        <span class="room-badge">sala: {{ $roomId }}</span>
-        <span class="sep">|</span>
-        <span id="statusConn" class="status-chip">🔴 Desconectado</span>
-        <span id="statusPeers" class="status-chip">0 participantes</span>
-        <span id="statusCam"   class="status-chip">📷 OFF</span>
-        <span id="statusMic"   class="status-chip">🎤 OFF</span>
-        <span id="statusVideo" class="status-chip">📹 —</span>
-        <span id="statusAutoReconn" class="status-chip" style="margin-left:auto; color:#444;">Auto-reconexão: OFF</span>
+    <!-- ── TopNavBar ──────────────────────────────────────────────────── -->
+    <header class="flex justify-between items-center w-full px-4 md:px-6 h-14 shrink-0 bg-background font-headline tracking-tight border-b border-outline-variant/15">
+        <!-- Left -->
+        <div class="flex items-center gap-3 md:gap-6 min-w-0">
+            <span class="text-lg md:text-xl font-bold tracking-tighter text-primary uppercase whitespace-nowrap">SFU COMMAND</span>
+            <div class="flex items-center gap-3">
+                <span class="hidden sm:inline bg-surface-container-highest px-2 py-0.5 rounded text-[10px] font-mono text-primary border border-outline-variant/20 tracking-widest">{{ $roomId }}</span>
+                <div class="flex items-center gap-1.5 text-xs font-medium whitespace-nowrap">
+                    <span id="statusConnDot" class="w-2 h-2 rounded-full bg-error shrink-0"></span>
+                    <span id="statusConn" class="text-error text-[10px] md:text-xs">DESCONECTADO</span>
+                </div>
+            </div>
+        </div>
+        <!-- Right -->
+        <div class="flex items-center gap-3 md:gap-6 shrink-0">
+            <!-- CAM / MIC / VIDEO indicators -->
+            <div class="hidden lg:flex items-center gap-4 border-r border-outline-variant/20 pr-6">
+                <div class="flex flex-col items-center">
+                    <span id="statusCamIcon" class="material-symbols-outlined text-sm text-error">videocam_off</span>
+                    <span id="statusCam" class="text-[10px] uppercase font-bold tracking-tighter text-error/70">CAM: OFF</span>
+                </div>
+                <div class="flex flex-col items-center">
+                    <span id="statusMicIcon" class="material-symbols-outlined text-sm text-error">mic_off</span>
+                    <span id="statusMic" class="text-[10px] uppercase font-bold tracking-tighter text-error/70">MIC: OFF</span>
+                </div>
+                <div class="flex flex-col items-center">
+                    <span id="statusVideoIcon" class="material-symbols-outlined text-sm text-on-surface-variant">sensors_off</span>
+                    <span id="statusVideo" class="text-[10px] uppercase font-bold tracking-tighter text-on-surface-variant/70">—</span>
+                </div>
+            </div>
+            <span id="statusAutoReconn" class="hidden md:inline text-[10px] px-2 py-0.5 bg-surface-container-highest rounded text-on-surface-variant/50 tracking-wider font-mono">AUTO-REC: OFF</span>
+            <div class="flex items-center gap-2 bg-surface-container-high px-2 md:px-3 py-1 rounded">
+                <span class="material-symbols-outlined text-sm text-on-surface-variant">group</span>
+                <span id="statusPeers" class="text-sm font-bold">0</span>
+            </div>
+            <button id="btnCleanup" class="bg-error/90 text-white text-[10px] font-black px-3 py-1.5 rounded hover:bg-error transition-colors tracking-widest whitespace-nowrap">KILL SWITCH</button>
+        </div>
     </header>
 
-    <!-- ── Main 3-column ───────────────────────────────────────────────────── -->
-    <div class="main-area">
+    <!-- ── Main 3-column area ─────────────────────────────────────────── -->
+    <div class="main-area flex flex-1 min-h-0 overflow-hidden">
 
-        <!-- Left sidebar — controls -->
-        <aside class="sidebar-left">
+        <!-- ── Left Sidebar — Controls ────────────────────────────────── -->
+        <aside class="sidebar-left w-64 shrink-0 bg-background border-r border-outline-variant/10 overflow-y-auto flex flex-col font-body text-sm font-medium">
+            <div class="p-4 space-y-6">
 
-            <!-- 1. Conexão -->
-            <div class="ctrl-section">
-                <div class="ctrl-section-title"><span class="icon">🔌</span>Conexão</div>
-                <div class="btn-row">
-                    <button id="btnJoin" class="btn-primary">Entrar na sala</button>
-                    <button id="btnLeave" class="btn-danger" disabled>Sair</button>
+                <!-- 1. Connection -->
+                <div>
+                    <h3 class="text-[10px] uppercase tracking-widest text-on-surface-variant/50 mb-3 flex items-center gap-2 font-headline">
+                        <span class="w-1 h-1 bg-primary rounded-full"></span> Conexão
+                    </h3>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button id="btnJoin" class="bg-surface-container-high p-2 text-[10px] font-bold text-secondary flex flex-col items-center gap-1 hover:bg-surface-bright transition-all rounded">
+                            <span class="material-symbols-outlined text-base">login</span> ENTRAR
+                        </button>
+                        <button id="btnLeave" class="bg-surface-container-high p-2 text-[10px] font-bold text-error flex flex-col items-center gap-1 hover:bg-surface-bright transition-all rounded" disabled>
+                            <span class="material-symbols-outlined text-base">logout</span> SAIR
+                        </button>
+                        <button id="btnStartCamera" class="bg-surface-container-high p-2 text-[10px] font-bold text-primary flex flex-col items-center gap-1 hover:bg-surface-bright transition-all rounded" disabled>
+                            <span class="material-symbols-outlined text-base">videocam</span> CÂMERA
+                        </button>
+                        <button id="btnStartNoCamera" class="bg-surface-container-high p-2 text-[10px] font-bold text-on-surface-variant flex flex-col items-center gap-1 hover:bg-surface-bright transition-all rounded" disabled>
+                            <span class="material-symbols-outlined text-base">videocam_off</span> SEM CAM
+                        </button>
+                    </div>
                 </div>
-                <div class="btn-row">
-                    <button id="btnStartCamera"   class="btn-success" disabled>Iniciar câmera</button>
-                    <button id="btnStartNoCamera" class="btn-neutral" disabled>Sem câmera</button>
+
+                <!-- 2. Media Control -->
+                <div>
+                    <h3 class="text-[10px] uppercase tracking-widest text-on-surface-variant/50 mb-3 flex items-center gap-2 font-headline">
+                        <span class="w-1 h-1 bg-primary rounded-full"></span> Mídia Local
+                    </h3>
+                    <div class="space-y-2">
+                        <button id="btnToggleCam" class="w-full text-left text-[10px] p-2 bg-surface-container-high border border-outline-variant/10 hover:border-primary/40 transition-colors rounded flex items-center gap-2 text-on-surface" disabled>
+                            Ligar câmera
+                        </button>
+                        <button id="btnToggleMic" class="w-full text-left text-[10px] p-2 bg-surface-container-high border border-outline-variant/10 hover:border-primary/40 transition-colors rounded flex items-center gap-2 text-on-surface" disabled>
+                            Mutar mic
+                        </button>
+                        <button id="btnPauseVideo" class="w-full text-left text-[10px] p-2 bg-surface-container-lowest/50 border-l-2 border-primary hover:bg-surface-container-high transition-colors rounded flex items-center justify-between text-on-surface" disabled>
+                            <span>Pausar vídeo</span>
+                            <span class="material-symbols-outlined text-xs">pause</span>
+                        </button>
+                        <button id="btnBlackVideo" class="w-full text-left text-[10px] p-2 bg-surface-container-lowest/50 border-l-2 border-on-surface-variant/20 hover:bg-surface-container-high transition-colors rounded flex items-center justify-between text-on-surface" disabled>
+                            <span>Vídeo preto</span>
+                            <span class="material-symbols-outlined text-xs">brightness_1</span>
+                        </button>
+                        <button id="btnActivateAudio" class="w-full text-left text-[10px] p-2 bg-secondary/10 border border-secondary/30 hover:bg-secondary/20 transition-colors rounded flex items-center gap-2 text-secondary" style="display:none">
+                            <span class="material-symbols-outlined text-sm">volume_up</span> Ativar áudio remoto
+                        </button>
+                    </div>
                 </div>
+
+                <!-- 3. Hardware -->
+                <div class="space-y-3">
+                    <h3 class="text-[10px] uppercase tracking-widest text-on-surface-variant/50 mb-1 flex items-center gap-2 font-headline">
+                        <span class="w-1 h-1 bg-primary rounded-full"></span> Hardware
+                    </h3>
+                    <div class="space-y-2">
+                        <div class="flex gap-2 items-center">
+                            <select id="selCamera" class="flex-1 bg-surface-container-lowest border-none text-[10px] py-1.5 pl-2 pr-8 focus:ring-1 focus:ring-primary rounded appearance-none text-on-surface-variant">
+                                <option value="">Câmera padrão</option>
+                            </select>
+                            <button id="btnSwitchCam" class="p-1.5 bg-surface-container-high text-on-surface-variant hover:bg-surface-bright rounded transition-colors shrink-0" disabled title="Trocar câmera">
+                                <span class="material-symbols-outlined text-xs">refresh</span>
+                            </button>
+                        </div>
+                        <div class="flex gap-2 items-center">
+                            <select id="selAudioIn" class="flex-1 bg-surface-container-lowest border-none text-[10px] py-1.5 pl-2 pr-8 focus:ring-1 focus:ring-primary rounded appearance-none text-on-surface-variant">
+                                <option value="">Microfone padrão</option>
+                            </select>
+                            <button id="btnSwitchAudioIn" class="p-1.5 bg-surface-container-high text-on-surface-variant hover:bg-surface-bright rounded transition-colors shrink-0" disabled title="Trocar microfone">
+                                <span class="material-symbols-outlined text-xs">refresh</span>
+                            </button>
+                        </div>
+                        <div class="flex gap-2 items-center">
+                            <select id="selAudioOut" class="flex-1 bg-surface-container-lowest border-none text-[10px] py-1.5 pl-2 pr-8 focus:ring-1 focus:ring-primary rounded appearance-none text-on-surface-variant">
+                                <option value="">Alto-falante padrão</option>
+                            </select>
+                            <button id="btnSwitchAudioOut" class="p-1.5 bg-surface-container-high text-on-surface-variant hover:bg-surface-bright rounded transition-colors shrink-0" title="Trocar saída">
+                                <span class="material-symbols-outlined text-xs">refresh</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. Reconnection & Failures -->
+                <div>
+                    <h3 class="text-[10px] uppercase tracking-widest text-on-surface-variant/50 mb-3 flex items-center gap-2 font-headline">
+                        <span class="w-1 h-1 bg-primary rounded-full"></span> Reconexão &amp; Falhas
+                    </h3>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button id="btnReconnect" class="bg-surface-container-high p-2 text-[10px] font-bold text-tertiary flex flex-col items-center gap-1 hover:bg-surface-bright transition-all rounded">
+                            <span class="material-symbols-outlined text-base">refresh</span> GRACEFUL
+                        </button>
+                        <button id="btnForceDisconnect" class="bg-surface-container-high p-2 text-[10px] font-bold text-error flex flex-col items-center gap-1 hover:bg-surface-bright transition-all rounded">
+                            <span class="material-symbols-outlined text-base">bolt</span> FORÇAR
+                        </button>
+                    </div>
+                    <button id="btnToggleAutoReconn" class="w-full mt-2 text-[10px] p-2 bg-surface-container-high border border-outline-variant/10 hover:border-primary/40 transition-colors rounded flex items-center justify-between text-on-surface">
+                        <span>Auto-reconexão: OFF</span>
+                        <span class="material-symbols-outlined text-xs">sync</span>
+                    </button>
+                </div>
+
+                <!-- 5. SFU Orchestration -->
+                <div>
+                    <h3 class="text-[10px] uppercase tracking-widest text-on-surface-variant/50 mb-3 flex items-center gap-2 font-headline">
+                        <span class="w-1 h-1 bg-primary rounded-full"></span> SFU Orchestration
+                    </h3>
+                    <div class="space-y-2">
+                        <div class="flex gap-2">
+                            <button id="btnPauseProducerSFU" class="flex-1 text-[10px] p-2 bg-surface-container-high border border-outline-variant/10 hover:border-primary/40 transition-colors rounded text-center text-on-surface" disabled>
+                                PAUSE PRODUCER
+                            </button>
+                            <button id="btnResumeProducerSFU" class="flex-1 text-[10px] p-2 bg-surface-container-high border border-outline-variant/10 hover:border-primary/40 transition-colors rounded text-center text-on-surface" disabled>
+                                RESUME
+                            </button>
+                        </div>
+                        <div class="flex gap-2">
+                            <button id="btnPauseAllConsumers" class="flex-1 text-[10px] p-2 bg-surface-container-high border border-outline-variant/10 hover:border-primary/40 transition-colors rounded text-center text-on-surface" disabled>
+                                PAUSE CONSUMERS
+                            </button>
+                            <button id="btnResumeAllConsumers" class="flex-1 text-[10px] p-2 bg-surface-container-high border border-outline-variant/10 hover:border-primary/40 transition-colors rounded text-center text-on-surface" disabled>
+                                RESUME
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 6. Remote & Tests -->
+                <div>
+                    <h3 class="text-[10px] uppercase tracking-widest text-on-surface-variant/50 mb-3 flex items-center gap-2 font-headline">
+                        <span class="w-1 h-1 bg-primary rounded-full"></span> Remoto &amp; Testes
+                    </h3>
+                    <div class="space-y-2">
+                        <button id="btnToggleRemoteMute" class="w-full text-left text-[10px] p-2 bg-surface-container-high border border-outline-variant/10 hover:border-primary/40 transition-colors rounded flex items-center gap-2 text-on-surface">
+                            <span class="material-symbols-outlined text-sm">volume_off</span> Mutar remoto
+                        </button>
+                        <button id="btnTestCleanup" class="w-full text-left text-[10px] p-2 bg-surface-container-high border border-outline-variant/10 hover:border-primary/40 transition-colors rounded flex items-center gap-2 text-on-surface">
+                            <span class="material-symbols-outlined text-sm">bug_report</span> Detectar vazamento
+                        </button>
+                    </div>
+                </div>
+
             </div>
 
-            <!-- 2. Mídia Local -->
-            <div class="ctrl-section">
-                <div class="ctrl-section-title"><span class="icon">🎬</span>Mídia Local</div>
-                <div class="btn-row">
-                    <button id="btnToggleCam" class="btn-neutral" disabled>📷 Ligar câmera</button>
-                    <button id="btnToggleMic" class="btn-neutral" disabled>🎤 Mutar mic</button>
-                </div>
-                <div class="btn-row">
-                    <button id="btnPauseVideo"    class="btn-neutral" disabled>⏸ Pausar vídeo</button>
-                    <button id="btnBlackVideo"    class="btn-neutral" disabled>⬛ Vídeo preto</button>
-                    <button id="btnActivateAudio" class="btn-audio">🔊 Ativar áudio</button>
-                </div>
+            <!-- Sidebar bottom -->
+            <div class="mt-auto border-t border-outline-variant/10 p-4">
+                <button onclick="document.getElementById('logPanel').style.display = document.getElementById('logPanel').style.display === 'none' ? 'flex' : 'none'" class="w-full flex items-center gap-3 text-xs text-on-surface-variant/60 p-2 hover:bg-surface-container-high transition-colors rounded">
+                    <span class="material-symbols-outlined text-sm">terminal</span> Logs
+                </button>
             </div>
-
-            <!-- 3. Dispositivos -->
-            <div class="ctrl-section">
-                <div class="ctrl-section-title"><span class="icon">🎛</span>Dispositivos</div>
-                <div class="device-row">
-                    <select id="selCamera"><option value="">Câmera padrão</option></select>
-                    <button id="btnSwitchCam" class="btn-neutral btn-swap" disabled title="Trocar câmera">↻</button>
-                </div>
-                <div class="device-row">
-                    <select id="selAudioIn"><option value="">Microfone padrão</option></select>
-                    <button id="btnSwitchAudioIn" class="btn-neutral btn-swap" disabled title="Trocar microfone">↻</button>
-                </div>
-                <div class="device-row">
-                    <select id="selAudioOut"><option value="">Alto-falante padrão</option></select>
-                    <button id="btnSwitchAudioOut" class="btn-neutral btn-swap" title="Trocar saída">↻</button>
-                </div>
-            </div>
-
-            <!-- 4. Reconexão & Falhas -->
-            <div class="ctrl-section">
-                <div class="ctrl-section-title"><span class="icon">🔁</span>Reconexão &amp; Falhas</div>
-                <div class="btn-row">
-                    <button id="btnReconnect"       class="btn-warning">↩ Graceful</button>
-                    <button id="btnForceDisconnect" class="btn-danger">⚡ Forçar queda</button>
-                </div>
-                <div class="btn-row">
-                    <button id="btnToggleAutoReconn" class="btn-neutral">Auto-reconexão: OFF</button>
-                    <button id="btnCleanup"          class="btn-danger">☠ Encerrar tudo</button>
-                </div>
-            </div>
-
-            <!-- 5. SFU Producer/Consumer -->
-            <div class="ctrl-section">
-                <div class="ctrl-section-title"><span class="icon">🧠</span>SFU Producer/Consumer</div>
-                <div class="btn-row">
-                    <button id="btnPauseProducerSFU"  class="btn-purple" disabled>⏸ Pausar producer</button>
-                    <button id="btnResumeProducerSFU" class="btn-purple" disabled>▶ Retomar</button>
-                </div>
-                <div class="btn-row">
-                    <button id="btnPauseAllConsumers"  class="btn-teal" disabled>⏸ Pausar consumers</button>
-                    <button id="btnResumeAllConsumers" class="btn-teal" disabled>▶ Retomar</button>
-                </div>
-            </div>
-
-            <!-- 6. Remoto & Testes -->
-            <div class="ctrl-section">
-                <div class="ctrl-section-title"><span class="icon">👥</span>Remoto &amp; Testes</div>
-                <div class="btn-row">
-                    <button id="btnToggleRemoteMute" class="btn-neutral">🔇 Mutar remoto</button>
-                    <button id="btnTestCleanup"      class="btn-neutral">🧹 Detectar vazamento</button>
-                </div>
-            </div>
-
         </aside>
 
-        <!-- Video center -->
-        <main class="video-center">
-            <div class="video-stage">
+        <!-- ── Video Center ───────────────────────────────────────────── -->
+        <main class="video-center flex-1 min-w-0 flex flex-col bg-surface-dim overflow-hidden">
+            <div class="flex-1 relative overflow-hidden">
                 <!-- Remote peers grid -->
-                <div id="remoteVideos" class="remote-grid"></div>
+                <div id="remoteVideos" class="remote-grid-inner w-full h-full overflow-y-auto p-6 technical-grid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; align-content: start;"></div>
 
                 <!-- Empty state -->
-                <div id="videoEmptyState" class="video-empty">
-                    <div class="empty-icon">🎥</div>
-                    <p>Conecte-se para iniciar a chamada</p>
+                <div id="videoEmptyState" class="absolute inset-0 flex flex-col items-center justify-center gap-4 pointer-events-none">
+                    <span class="material-symbols-outlined text-5xl text-on-surface-variant/20">videocam_off</span>
+                    <p class="text-xs text-on-surface-variant/30 uppercase tracking-widest font-bold font-headline">Conecte-se para iniciar a chamada</p>
                 </div>
 
                 <!-- Local PiP -->
-                <div class="local-pip">
-                    <span class="local-pip-label">Você</span>
-                    <video id="localVideo" autoplay muted playsinline></video>
+                <div class="local-pip absolute bottom-4 right-4 z-20 rounded-xl overflow-hidden border-2 border-primary/40 bg-surface-container-low" style="box-shadow: 0 4px 20px rgba(0,0,0,0.6);">
+                    <div class="absolute inset-0 bg-primary/5 pointer-events-none z-10"></div>
+                    <video id="localVideo" autoplay muted playsinline class="block object-cover bg-surface-container-lowest" style="width:180px; height:135px;"></video>
+                    <div class="absolute top-2 left-2 flex items-center gap-1.5 bg-primary/80 px-2 py-0.5 rounded z-20">
+                        <span class="text-[9px] font-mono font-black text-on-primary uppercase tracking-widest">VOCÊ (HOST)</span>
+                    </div>
+                    <div class="absolute bottom-2 right-2 bg-surface-container-highest/80 backdrop-blur-sm px-2 py-1 flex items-center gap-3 z-20">
+                        <div class="flex items-center gap-1">
+                            <span class="w-1 h-1 bg-secondary rounded-full animate-ping"></span>
+                            <span class="text-[8px] font-mono text-secondary">LIVE</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Performance grid -->
+            <div class="perf-grid-center grid grid-cols-5 gap-3 px-6 py-4 shrink-0 border-t border-outline-variant/10 bg-background/50">
+                <div class="bg-surface-container-low p-3 border-l-2 border-primary rounded">
+                    <span class="text-[9px] uppercase tracking-widest text-on-surface-variant mb-1 block">Heap JS</span>
+                    <div class="flex items-baseline gap-1">
+                        <span id="perfHeap" class="text-xl font-mono font-bold">—</span>
+                    </div>
+                </div>
+                <div class="bg-surface-container-low p-3 border-l-2 border-secondary rounded">
+                    <span class="text-[9px] uppercase tracking-widest text-on-surface-variant mb-1 block">Tracks Ativas</span>
+                    <div class="flex items-baseline gap-1">
+                        <span id="perfTracks" class="text-xl font-mono font-bold">0</span>
+                    </div>
+                </div>
+                <div class="bg-surface-container-low p-3 border-l-2 border-tertiary rounded">
+                    <span class="text-[9px] uppercase tracking-widest text-on-surface-variant mb-1 block">Reconexões</span>
+                    <div class="flex items-baseline gap-1">
+                        <span id="perfReconns" class="text-xl font-mono font-bold">0</span>
+                    </div>
+                </div>
+                <div class="bg-surface-container-low p-3 border-l-2 border-on-primary-container rounded">
+                    <span class="text-[9px] uppercase tracking-widest text-on-surface-variant mb-1 block">Uptime</span>
+                    <div class="flex items-baseline gap-1">
+                        <span id="perfUptime" class="text-xl font-mono font-bold">—</span>
+                    </div>
+                </div>
+                <div class="bg-surface-container-low p-3 border-l-2 border-secondary rounded">
+                    <span class="text-[9px] uppercase tracking-widest text-on-surface-variant mb-1 block">Auto-Recon</span>
+                    <div class="flex items-baseline gap-1">
+                        <span id="perfAutoReconn" class="text-xl font-mono font-bold text-on-surface-variant/50">OFF</span>
+                    </div>
                 </div>
             </div>
         </main>
 
-        <!-- Right sidebar — stats always visible -->
-        <aside class="sidebar-right">
-            <div class="sidebar-right-header">
-                <h3>📊 Qualidade de rede</h3>
-                <button id="btnToggleStats" class="btn-small btn-info">⏸ Pausar</button>
+        <!-- ── Right Sidebar — Network Quality ────────────────────────── -->
+        <aside class="sidebar-right w-72 shrink-0 bg-background border-l border-outline-variant/10 flex flex-col overflow-y-auto">
+            <div class="flex justify-between items-center p-4 border-b border-outline-variant/10 shrink-0">
+                <h3 class="text-[10px] uppercase tracking-widest font-black text-primary font-headline">Live Telemetry</h3>
+                <button id="btnToggleStats" class="text-[9px] bg-surface-container-highest px-2 py-0.5 rounded text-on-surface-variant hover:text-on-surface transition-colors">PAUSAR</button>
             </div>
-
-            <div id="statsCards" class="stats-cards">
-                <p class="stats-empty">Aguardando mídia…</p>
-            </div>
-
-            <!-- Performance metrics -->
-            <div class="perf-grid">
-                <div class="perf-item">
-                    <span class="perf-label">Heap JS</span>
-                    <strong id="perfHeap">—</strong>
-                </div>
-                <div class="perf-item">
-                    <span class="perf-label">Tracks ativas</span>
-                    <strong id="perfTracks">0</strong>
-                </div>
-                <div class="perf-item">
-                    <span class="perf-label">Reconexões</span>
-                    <strong id="perfReconns">0</strong>
-                </div>
-                <div class="perf-item">
-                    <span class="perf-label">Uptime</span>
-                    <strong id="perfUptime">—</strong>
-                </div>
-                <div class="perf-item" style="grid-column:span 2;">
-                    <span class="perf-label">Auto-reconexão</span>
-                    <strong id="perfAutoReconn" style="color:#555;">OFF</strong>
-                </div>
+            <div id="statsCards" class="p-4 flex-1 overflow-y-auto">
+                <p class="text-[11px] text-on-surface-variant/40 text-center py-4">Aguardando mídia…</p>
             </div>
         </aside>
 
     </div><!-- /.main-area -->
 
-    <!-- ── Log panel ────────────────────────────────────────────────────────── -->
-    <div class="log-panel">
-        <div class="log-panel-header">
-            <span>Logs de diagnóstico</span>
-            <button id="btnCopyLogs"  class="btn-small btn-neutral">📋 Copiar</button>
-            <button id="btnClearLogs" class="btn-small btn-neutral">🗑 Limpar</button>
+    <!-- ── Log Panel ──────────────────────────────────────────────────── -->
+    <div id="logPanel" class="log-panel shrink-0 flex flex-col border-t border-outline-variant/15 bg-surface-container-low" style="height: 148px;">
+        <div class="flex items-center justify-between px-4 h-8 shrink-0 font-['JetBrains_Mono'] text-[10px] uppercase tracking-widest border-b border-outline-variant/10">
+            <div class="flex items-center gap-6">
+                <span class="text-secondary font-bold">SYSTEM LOGS</span>
+            </div>
+            <div class="flex items-center gap-4">
+                <button id="btnCopyLogs" class="hover:text-white text-secondary transition-colors">COPY</button>
+                <button id="btnClearLogs" class="hover:text-white text-on-surface-variant/50 transition-colors">CLEAR</button>
+                <span class="text-on-surface-variant/40 border-l border-outline-variant/20 pl-4 hidden sm:inline">v4.2.0-STABLE</span>
+            </div>
         </div>
-        <div id="logContainer"></div>
+        <div id="logContainer" class="flex-1 overflow-y-auto px-4 py-2 font-['JetBrains_Mono'] text-[10px] leading-relaxed text-on-surface-variant/60"></div>
     </div>
 
 </div><!-- /.admin-layout -->

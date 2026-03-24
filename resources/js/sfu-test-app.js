@@ -129,8 +129,8 @@ function runSfuTest(config) {
     const line = document.createElement('div');
     line.textContent = `[${new Date().toISOString().slice(11, 23)}] ${text}`;
     if (level === 'warn')  line.style.color = '#fbbf24';
-    if (level === 'error') line.style.color = '#f87171';
-    if (level === 'stats') line.style.color = '#38bdf8';
+    if (level === 'error') line.style.color = '#ffb4ab';
+    if (level === 'stats') line.style.color = '#adc7ff';
     if (logEl) { logEl.appendChild(line); logEl.scrollTop = logEl.scrollHeight; }
     console.log('[SFU]', msg, data ?? '');
   }
@@ -162,60 +162,88 @@ function runSfuTest(config) {
 
   // ── UI update ─────────────────────────────────────────────────────────────
   function updateUI() {
+    // ── Status bar ────────────────────────────────────────────────────
     if (elStatusConn) {
-      elStatusConn.textContent = connected ? '🟢 Conectado' : '🔴 Desconectado';
-      elStatusConn.style.color = connected ? '#4ade80' : '#f87171';
+      elStatusConn.textContent = connected ? 'CONECTADO' : 'DESCONECTADO';
+      elStatusConn.style.color = connected ? '#4edea3' : '#ffb4ab';
     }
-    if (elStatusPeers) elStatusPeers.textContent = `${participantCount} participante${participantCount !== 1 ? 's' : ''}`;
-    if (elStatusCam)   elStatusCam.textContent   = cameraOn ? '📷 ON' : '📷 OFF';
-    if (elStatusMic)   elStatusMic.textContent   = micOn ? '🎤 ON' : '🎤 MUDO';
+    const elConnDot = document.getElementById('statusConnDot');
+    if (elConnDot) {
+      elConnDot.className = connected
+        ? 'w-2 h-2 rounded-full bg-secondary animate-pulse shrink-0'
+        : 'w-2 h-2 rounded-full bg-error shrink-0';
+    }
+    if (elStatusPeers) elStatusPeers.textContent = String(participantCount);
+    if (elStatusCam) {
+      elStatusCam.textContent = cameraOn ? 'CAM: ON' : 'CAM: OFF';
+      elStatusCam.style.color = cameraOn ? '#4edea3' : 'rgba(198,198,203,0.7)';
+    }
+    const elCamIcon = document.getElementById('statusCamIcon');
+    if (elCamIcon) {
+      elCamIcon.textContent = cameraOn ? 'videocam' : 'videocam_off';
+      elCamIcon.style.color = cameraOn ? '#4edea3' : '#ffb4ab';
+    }
+    if (elStatusMic) {
+      elStatusMic.textContent = micOn ? 'MIC: ON' : 'MIC: MUDO';
+      elStatusMic.style.color = micOn ? '#4edea3' : 'rgba(198,198,203,0.7)';
+    }
+    const elMicIcon = document.getElementById('statusMicIcon');
+    if (elMicIcon) {
+      elMicIcon.textContent = micOn ? 'mic' : 'mic_off';
+      elMicIcon.style.color = micOn ? '#4edea3' : '#ffb4ab';
+    }
     if (elStatusVideo) {
-      if (!videoProducer) elStatusVideo.textContent = '📹 —';
-      else if (producerSFUPaused) elStatusVideo.textContent = '📹 SFU PAUSADO';
-      else if (videoSendPaused) elStatusVideo.textContent = '📹 Pausado';
-      else elStatusVideo.textContent = '📹 Enviando';
+      if (!videoProducer)        { elStatusVideo.textContent = '—';          elStatusVideo.style.color = 'rgba(198,198,203,0.7)'; }
+      else if (producerSFUPaused) { elStatusVideo.textContent = 'SFU PAUSADO'; elStatusVideo.style.color = '#fbbf24'; }
+      else if (videoSendPaused)   { elStatusVideo.textContent = 'PAUSADO';     elStatusVideo.style.color = '#fbbf24'; }
+      else                        { elStatusVideo.textContent = 'ENVIANDO';    elStatusVideo.style.color = '#adc7ff'; }
     }
-    const arLabel = autoReconnect ? 'Auto-reconexão: ON' : 'Auto-reconexão: OFF';
+    const elVideoIcon = document.getElementById('statusVideoIcon');
+    if (elVideoIcon) {
+      elVideoIcon.textContent = videoProducer ? 'sensors' : 'sensors_off';
+      elVideoIcon.style.color = videoProducer ? '#adc7ff' : 'rgba(198,198,203,0.5)';
+    }
+    const arLabel = autoReconnect ? 'AUTO-REC: ON' : 'AUTO-REC: OFF';
     if (elStatusAutoReconn) {
       elStatusAutoReconn.textContent = arLabel;
-      elStatusAutoReconn.style.color = autoReconnect ? '#4ade80' : '#555';
+      elStatusAutoReconn.style.color = autoReconnect ? '#4edea3' : 'rgba(198,198,203,0.5)';
     }
 
-    // Buttons
+    // ── Buttons ───────────────────────────────────────────────────────
     if (btnJoin)          btnJoin.disabled          = connected;
     if (btnLeave)         btnLeave.disabled         = !connected;
     if (btnStartCamera)   btnStartCamera.disabled   = !connected || cameraOn;
     if (btnStartNoCamera) btnStartNoCamera.disabled = !connected || cameraOn;
     if (btnToggleCam) {
       btnToggleCam.disabled    = !connected;
-      btnToggleCam.textContent = cameraOn ? '📷 Desligar câmera' : '📷 Ligar câmera';
+      btnToggleCam.textContent = cameraOn ? 'Desligar câmera' : 'Ligar câmera';
     }
     if (btnToggleMic) {
       btnToggleMic.disabled    = !audioProducer;
-      btnToggleMic.textContent = micOn ? '🎤 Mutar mic' : '🎤 Desmutar mic';
+      btnToggleMic.textContent = micOn ? 'Mutar mic' : 'Desmutar mic';
     }
     if (btnPauseVideo) {
       btnPauseVideo.disabled    = !videoProducer;
-      btnPauseVideo.textContent = videoSendPaused ? '▶ Retomar vídeo' : '⏸ Pausar vídeo';
+      btnPauseVideo.textContent = videoSendPaused ? 'Retomar vídeo' : 'Pausar vídeo';
     }
     if (btnBlackVideo) btnBlackVideo.disabled = !cameraOn && !videoProducer;
     if (btnSwitchCam)     btnSwitchCam.disabled     = !cameraOn;
     if (btnSwitchAudioIn) btnSwitchAudioIn.disabled  = !audioProducer;
     if (btnToggleRemoteMute) {
-      btnToggleRemoteMute.textContent = remoteMuted ? '🔊 Desmutar remoto' : '🔇 Mutar remoto';
+      btnToggleRemoteMute.textContent = remoteMuted ? 'Desmutar remoto' : 'Mutar remoto';
     }
     if (btnToggleAutoReconn) {
-      btnToggleAutoReconn.textContent = arLabel;
-      btnToggleAutoReconn.classList.toggle('btn-active', autoReconnect);
+      btnToggleAutoReconn.textContent = autoReconnect ? 'Auto-reconexão: ON' : 'Auto-reconexão: OFF';
+      btnToggleAutoReconn.style.borderColor = autoReconnect ? 'rgba(78,222,163,0.4)' : '';
     }
     if (btnPauseProducerSFU) {
       btnPauseProducerSFU.disabled = !videoProducer;
-      btnPauseProducerSFU.textContent = producerSFUPaused ? '⏸ Producer (pausado)' : '⏸ Pausar Producer (SFU)';
+      btnPauseProducerSFU.textContent = producerSFUPaused ? 'PRODUCER (PAUSADO)' : 'PAUSE PRODUCER';
     }
     if (btnResumeProducerSFU) btnResumeProducerSFU.disabled = !videoProducer || !producerSFUPaused;
     if (btnPauseAllConsumers)  btnPauseAllConsumers.disabled  = consumers.size === 0;
     if (btnResumeAllConsumers) btnResumeAllConsumers.disabled  = consumers.size === 0;
-    if (btnToggleStats) btnToggleStats.textContent = statsLoopId ? '⏸ Pausar' : '▶ Retomar';
+    if (btnToggleStats) btnToggleStats.textContent = statsLoopId ? 'PAUSAR' : 'RETOMAR';
   }
 
   // ── Device enumeration ────────────────────────────────────────────────────
@@ -582,7 +610,10 @@ function runSfuTest(config) {
   function toggleAutoReconnect() {
     autoReconnect = !autoReconnect;
     log(autoReconnect ? 'Auto-reconexão ATIVADA' : 'Auto-reconexão desativada');
-    if (perfAutoReconn) perfAutoReconn.textContent = autoReconnect ? 'ON' : 'OFF';
+    if (perfAutoReconn) {
+      perfAutoReconn.textContent = autoReconnect ? 'ON' : 'OFF';
+      perfAutoReconn.style.color = autoReconnect ? '#4edea3' : '';
+    }
     updateUI();
   }
 
@@ -697,23 +728,35 @@ function runSfuTest(config) {
     let entry = remotePeerContainers.get(peerId);
     if (entry) return entry;
 
-    // Card container
+    // Card container — new design
     const div = document.createElement('div');
     div.setAttribute('data-peer-id', peerId);
-    div.style.cssText = 'position:relative; border-radius:8px; overflow:hidden; background:#0f0f1a; aspect-ratio:4/3;';
+    div.style.cssText = 'position:relative; overflow:hidden; background:#060e20; border:1px solid rgba(69,71,75,0.2); aspect-ratio:16/9;';
 
     // Video fills the card
     const videoEl = document.createElement('video');
     videoEl.autoplay = true; videoEl.playsInline = true; videoEl.muted = true;
     videoEl.setAttribute('playsinline', '');
-    videoEl.style.cssText = 'width:100%; height:100%; display:block; object-fit:cover; background:#111;';
+    videoEl.style.cssText = 'width:100%; height:100%; display:block; object-fit:cover; background:#060e20;';
     div.appendChild(videoEl);
 
-    // Label overlay
-    const label = document.createElement('span');
-    label.style.cssText = 'position:absolute; bottom:5px; left:7px; font-size:9px; color:rgba(255,255,255,0.55); background:rgba(0,0,0,0.5); padding:1px 5px; border-radius:3px; text-transform:uppercase; letter-spacing:0.4px;';
-    label.textContent = peerId.slice(0, 16) + '…';
+    // Label overlay — command style
+    const label = document.createElement('div');
+    label.style.cssText = 'position:absolute; top:8px; left:8px; display:flex; align-items:center; gap:6px; background:rgba(0,0,0,0.6); backdrop-filter:blur(8px); padding:2px 8px; border-radius:4px;';
+    const labelText = document.createElement('span');
+    labelText.style.cssText = "font-size:9px; font-family:'JetBrains Mono',monospace; font-weight:700; color:#dae2fd; text-transform:uppercase; letter-spacing:0.1em;";
+    labelText.textContent = peerId.slice(0, 12);
+    const dot = document.createElement('span');
+    dot.style.cssText = 'width:6px; height:6px; border-radius:50%; background:#4edea3; display:inline-block;';
+    label.appendChild(labelText);
+    label.appendChild(dot);
     div.appendChild(label);
+
+    // Bottom right indicators
+    const indicators = document.createElement('div');
+    indicators.style.cssText = 'position:absolute; bottom:8px; right:8px; display:flex; gap:4px; align-items:center;';
+    indicators.innerHTML = '<span class="material-symbols-outlined" style="font-size:14px; color:#4edea3;">signal_cellular_alt</span>';
+    div.appendChild(indicators);
 
     // Hidden audio
     const audioEl = document.createElement('audio');
@@ -881,32 +924,37 @@ function runSfuTest(config) {
   function renderStatsCards(rows, now) {
     if (statsCards) {
       if (rows.length === 0) {
-        statsCards.innerHTML = '<p class="stats-empty">Nenhuma mídia ativa…</p>';
+        statsCards.innerHTML = '<p style="font-size:11px; color:rgba(198,198,203,0.4); text-align:center; padding:16px 0;">Nenhuma mídia ativa…</p>';
       } else {
         statsCards.innerHTML = rows.map(r => {
-          const kbpsStr = r.kbps   != null ? `${r.kbps} kbps`   : '—';
+          const kbpsStr = r.kbps   != null ? `${r.kbps} Kbps`   : '—';
           const rttStr  = r.rtt    != null ? `${r.rtt}ms`        : '—';
           const lossStr = r.loss   != null ? `${r.loss}%`        : '—';
           const jitStr  = r.jitter != null ? `${r.jitter}ms`     : '—';
           const fpsStr  = r.fps    != null ? r.fps                : '—';
-          const resStr  = r.res    != null ? r.res                : null;
+          const resStr  = r.res    != null ? r.res                : '—';
           const kCls = r.kbps   != null ? qBitrate(r.kbps)           : 'q-na';
           const rCls = r.rtt    != null ? qClass(r.rtt, 100, 300)    : 'q-na';
           const lCls = r.loss   != null ? qClass(r.loss, 1, 5)       : 'q-na';
           const jCls = r.jitter != null ? qClass(r.jitter, 30, 100)  : 'q-na';
           const worst = [kCls, rCls, lCls, jCls];
-          const borderColor = worst.includes('q-red') ? '#f87171' : worst.includes('q-yellow') ? '#fbbf24' : '#4ade80';
+          const borderColor = worst.includes('q-red') ? '#ffb4ab' : worst.includes('q-yellow') ? '#fbbf24' : '#4edea3';
+          const stateBg = r.state === '✓' ? 'background:#222a3d; color:#c6c6cb;' : 'background:#93000a; color:#ffb4ab;';
+          const stateText = r.state === '✓' ? 'Stable' : r.state;
           const fpsRow = r.fps != null
-            ? `<div class="stat-metric"><span class="stat-metric-label">FPS</span><span class="stat-metric-value">${fpsStr}</span></div>
-               <div class="stat-metric"><span class="stat-metric-label">Resolução</span><span class="stat-metric-value">${resStr ?? '—'}</span></div>`
+            ? `<div><p style="font-size:8px; text-transform:uppercase; color:rgba(198,198,203,0.5);">FPS</p><p style="font-size:12px; font-family:monospace; font-weight:700;">${fpsStr}</p></div>
+               <div><p style="font-size:8px; text-transform:uppercase; color:rgba(198,198,203,0.5);">Resolução</p><p style="font-size:12px; font-family:monospace; font-weight:700;">${resStr}</p></div>`
             : '';
-          return `<div class="stat-card" style="border-left-color:${borderColor}">
-            <div class="stat-card-title">${r.label}<span class="stat-state">${r.state}</span></div>
-            <div class="stat-metrics">
-              <div class="stat-metric"><span class="stat-metric-label">Bitrate</span><span class="stat-metric-value ${kCls}">${kbpsStr}</span></div>
-              <div class="stat-metric"><span class="stat-metric-label">RTT</span><span class="stat-metric-value ${rCls}">${rttStr}</span></div>
-              <div class="stat-metric"><span class="stat-metric-label">Perda</span><span class="stat-metric-value ${lCls}">${lossStr}</span></div>
-              <div class="stat-metric"><span class="stat-metric-label">Jitter</span><span class="stat-metric-value ${jCls}">${jitStr}</span></div>
+          return `<div style="background:#131b2e; padding:12px; border-top:2px solid ${borderColor}; margin-bottom:12px; border-radius:2px;">
+            <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:8px;">
+              <span style="font-size:10px; font-family:monospace; color:#dae2fd;">${r.label}</span>
+              <span style="font-size:8px; padding:1px 4px; border-radius:2px; text-transform:uppercase; ${stateBg}">${stateText}</span>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px 8px;">
+              <div><p style="font-size:8px; text-transform:uppercase; color:rgba(198,198,203,0.5);">Bitrate</p><p class="${kCls}" style="font-size:12px; font-family:monospace; font-weight:700;">${kbpsStr}</p></div>
+              <div><p style="font-size:8px; text-transform:uppercase; color:rgba(198,198,203,0.5);">RTT</p><p class="${rCls}" style="font-size:12px; font-family:monospace; font-weight:700;">${rttStr}</p></div>
+              <div><p style="font-size:8px; text-transform:uppercase; color:rgba(198,198,203,0.5);">Perda</p><p class="${lCls}" style="font-size:12px; font-family:monospace; font-weight:700;">${lossStr}</p></div>
+              <div><p style="font-size:8px; text-transform:uppercase; color:rgba(198,198,203,0.5);">Jitter</p><p class="${jCls}" style="font-size:12px; font-family:monospace; font-weight:700;">${jitStr}</p></div>
               ${fpsRow}
             </div>
           </div>`;
@@ -922,12 +970,13 @@ function runSfuTest(config) {
     if (perfReconns) perfReconns.textContent = String(reconnectCount);
     if (perfUptime && connectedAt) {
       const secs = Math.floor((now - connectedAt) / 1000);
-      const mm   = String(Math.floor(secs / 60)).padStart(2, '0');
+      const hh   = String(Math.floor(secs / 3600)).padStart(2, '0');
+      const mm   = String(Math.floor((secs % 3600) / 60)).padStart(2, '0');
       const ss   = String(secs % 60).padStart(2, '0');
-      perfUptime.textContent = `${mm}:${ss}`;
+      perfUptime.textContent = `${hh}:${mm}:${ss}`;
     }
     if (perfHeap && typeof performance !== 'undefined' && performance.memory) {
-      perfHeap.textContent = (performance.memory.usedJSHeapSize / 1024 / 1024).toFixed(1) + 'MB';
+      perfHeap.textContent = (performance.memory.usedJSHeapSize / 1024 / 1024).toFixed(1) + ' MB';
     }
   }
 
@@ -993,6 +1042,6 @@ function runSfuTest(config) {
 
   // ── Init ──────────────────────────────────────────────────────────────────
   updateUI();
-  log('SFU Test v3 pronto. Sala: ' + (config.roomId || '—'));
-  log('💡 Dica: Use DevTools → Network → Throttle para simular internet ruim.');
+  log('SFU COMMAND v4.2 pronto. Sala: ' + (config.roomId || '—'));
+  log('TIP: Use DevTools → Network → Throttle para simular internet ruim.');
 }
