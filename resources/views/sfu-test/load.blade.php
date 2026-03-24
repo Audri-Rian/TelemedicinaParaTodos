@@ -7,15 +7,31 @@
     <title>Load Test SFU — {{ config('app.name') }}</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: system-ui, sans-serif; background: #0f0f1a; color: #e0e0e0; padding: 16px; }
+        html { -webkit-text-size-adjust: 100%; }
+        body {
+            font-family: system-ui, sans-serif;
+            background: #0f0f1a;
+            color: #e0e0e0;
+            padding: 16px;
+            padding-left: max(16px, env(safe-area-inset-left, 0px));
+            padding-right: max(16px, env(safe-area-inset-right, 0px));
+            padding-bottom: max(16px, env(safe-area-inset-bottom, 0px));
+            min-height: 100%;
+            min-height: 100dvh;
+        }
 
         /* Header */
         .header {
-            display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-            background: #1a1a2e; border-radius: 10px; padding: 14px 18px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            background: #1a1a2e;
+            border-radius: 10px;
+            padding: 14px 18px;
             margin-bottom: 16px;
         }
-        .header h1 { font-size: 1rem; font-weight: 600; }
+        .header h1 { font-size: clamp(0.9rem, 2.8vw, 1rem); font-weight: 600; }
         .badge {
             padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;
         }
@@ -27,22 +43,59 @@
 
         /* Info cards */
         .info-grid {
-            display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr));
+            gap: 10px;
+            margin-bottom: 16px;
         }
         .info-card {
             background: #1a1a2e; border-radius: 8px; padding: 12px 16px;
-            flex: 1; min-width: 130px;
+            min-width: 0;
         }
         .info-card .lbl { font-size: 10px; text-transform: uppercase; color: #666; margin-bottom: 4px; letter-spacing: 0.5px; }
         .info-card .val { font-size: 1.1rem; font-weight: 600; font-family: monospace; color: #eee; }
 
         /* Videos */
-        .videos-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; align-items: flex-start; }
-        .video-wrap { }
+        .videos-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 16px;
+            align-items: flex-start;
+        }
+        .video-wrap { flex: 0 0 auto; min-width: 0; }
         .video-wrap p { font-size: 10px; color: #888; margin-bottom: 3px; }
-        video { background: #111; border-radius: 7px; display: block; object-fit: cover; }
-        #localVideo { width: 160px; height: 120px; border: 2px solid #3b5bdb; }
-        #remoteVideos { display: flex; flex-wrap: wrap; gap: 8px; }
+        video { background: #111; border-radius: 7px; display: block; object-fit: cover; max-width: 100%; }
+        #localVideo {
+            width: min(160px, 100%);
+            max-width: min(160px, 45vw);
+            height: auto;
+            aspect-ratio: 4 / 3;
+            border: 2px solid #3b5bdb;
+        }
+        #remoteVideos {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            flex: 1 1 200px;
+            min-width: 0;
+        }
+        .load-remote-wrap {
+            display: inline-block;
+            margin: 4px;
+            vertical-align: top;
+            max-width: 100%;
+        }
+        .load-remote-wrap p { font-size: 9px; color: #666; margin-bottom: 2px; word-break: break-all; }
+        .load-remote-video {
+            width: clamp(100px, 32vw, 160px);
+            height: auto;
+            aspect-ratio: 4 / 3;
+            background: #111;
+            border-radius: 5px;
+            display: block;
+            object-fit: cover;
+        }
 
         /* Share box */
         .share-box {
@@ -73,8 +126,29 @@
         .log-label { font-size: 10px; text-transform: uppercase; color: #555; margin-bottom: 6px; }
         #logContainer {
             background: #0a0a14; border-radius: 8px; padding: 10px;
-            max-height: 200px; overflow-y: auto; font-size: 10px;
-            font-family: monospace; line-height: 1.5; color: #888;
+            max-height: min(40vh, 220px);
+            overflow-y: auto;
+            font-size: 10px;
+            font-family: monospace;
+            line-height: 1.5;
+            color: #888;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        @media (max-width: 640px) {
+            body { padding: 12px; }
+            .header { padding: 12px 14px; gap: 8px; }
+            .room-tag {
+                margin-left: 0;
+                flex-basis: 100%;
+                order: 3;
+            }
+            .stats-mini { font-size: 10px; }
+        }
+
+        @media (max-width: 400px) {
+            .load-remote-video { width: 100%; max-width: 100%; }
+            #remoteVideos { flex-basis: 100%; }
         }
     </style>
 </head>

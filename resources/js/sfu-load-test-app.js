@@ -165,15 +165,14 @@ function runLoadTest(config) {
       let entry = remotePeerContainers.get(peerId);
       if (!entry) {
         const div = document.createElement('div');
-        div.style.cssText = 'display:inline-block; margin:4px; vertical-align:top;';
+        div.className = 'load-remote-wrap';
         const lbl = document.createElement('p');
-        lbl.style.cssText = 'font-size:9px; color:#666; margin-bottom:2px;';
-        lbl.textContent   = peerId.slice(0, 16) + '…';
+        lbl.textContent = peerId.slice(0, 16) + '…';
         div.appendChild(lbl);
         const vid = document.createElement('video');
+        vid.className = 'load-remote-video';
         vid.autoplay = vid.playsInline = true;
         vid.muted    = true;
-        vid.style.cssText = 'width:120px; height:90px; background:#111; border-radius:5px; display:block; object-fit:cover;';
         div.appendChild(vid);
         const aud = document.createElement('audio');
         aud.autoplay = true; aud.muted = false; aud.volume = 1;

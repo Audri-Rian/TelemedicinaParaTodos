@@ -8,13 +8,15 @@
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+        html {
+            -webkit-text-size-adjust: 100%;
+        }
         html, body {
             height: 100%;
             font-family: system-ui, -apple-system, sans-serif;
             background: #0a0a14;
             color: #e0e0e0;
             font-size: 12px;
-            overflow: hidden;
         }
 
         /* ── Layout ──────────────────────────────────────────────────────── */
@@ -22,6 +24,7 @@
             display: flex;
             flex-direction: column;
             height: 100vh;
+            height: 100dvh;
         }
 
         /* ── Topbar ───────────────────────────────────────────────────────── */
@@ -357,6 +360,88 @@
         .q-yellow { color: #fbbf24; }
         .q-red    { color: #f87171; }
         .q-na     { color: #444; }
+
+        /* ── Responsivo (tablets / mobile) ───────────────────────────────── */
+        @media (max-width: 1024px) {
+            .remote-grid {
+                grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+                gap: 6px;
+                padding: 8px;
+            }
+        }
+
+        @media (max-width: 900px) {
+            html, body {
+                overflow-x: hidden;
+                overflow-y: auto;
+                height: auto;
+                min-height: 100%;
+                min-height: 100dvh;
+            }
+            .admin-layout {
+                height: auto;
+                min-height: 100dvh;
+            }
+            .topbar {
+                padding-left: max(10px, env(safe-area-inset-left, 0px));
+                padding-right: max(10px, env(safe-area-inset-right, 0px));
+                padding-top: max(6px, env(safe-area-inset-top, 0px));
+            }
+            .main-area {
+                flex-direction: column;
+                flex: 1 1 auto;
+                min-height: 0;
+                overflow: visible;
+            }
+            .sidebar-left {
+                width: 100%;
+                max-height: min(42vh, 320px);
+                border-right: none;
+                border-bottom: 1px solid #1e1e30;
+                flex-shrink: 0;
+            }
+            .video-center {
+                flex: 1 1 auto;
+                min-height: min(50vh, 420px);
+            }
+            .remote-grid {
+                grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            }
+            .sidebar-right {
+                width: 100%;
+                max-height: none;
+                border-left: none;
+                border-top: 1px solid #1e1e30;
+                flex-shrink: 0;
+            }
+            .local-pip {
+                bottom: max(8px, env(safe-area-inset-bottom, 0px));
+                right: max(8px, env(safe-area-inset-right, 0px));
+            }
+            #localVideo {
+                width: min(140px, 32vw);
+                height: auto;
+                aspect-ratio: 4 / 3;
+            }
+            .log-panel {
+                height: min(28vh, 180px);
+                padding-bottom: env(safe-area-inset-bottom, 0px);
+            }
+        }
+
+        @media (max-width: 480px) {
+            .topbar .app-name { font-size: 12px; }
+            .status-chip { font-size: 9px; padding: 2px 6px; }
+            #statusAutoReconn { margin-left: 0 !important; margin-top: 4px; flex-basis: 100%; justify-content: center; }
+            .remote-grid {
+                grid-template-columns: 1fr;
+            }
+            .video-center { min-height: 40vh; }
+        }
+
+        @media (min-width: 901px) {
+            html, body { overflow: hidden; }
+        }
     </style>
 </head>
 <body>
