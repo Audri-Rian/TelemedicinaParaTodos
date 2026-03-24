@@ -94,57 +94,108 @@
         button:disabled { opacity: 0.3; cursor: not-allowed; }
         button:not(:disabled):hover { opacity: 0.85; }
 
-        /* ── Responsive ──────────────────────────────────────────── */
-        @media (max-width: 900px) {
-            html, body { overflow-x: hidden; overflow-y: auto; height: auto; min-height: 100dvh; }
-            .admin-layout { height: auto !important; min-height: 100dvh; }
-            .main-area {
-                flex-direction: column !important;
-                flex: 1 1 auto;
-                min-height: 0;
-                overflow: visible !important;
+        /* ── Drawer backdrop ─────────────────────────────────────── */
+        .drawer-backdrop {
+            display: none;
+            position: fixed;
+            top: 3.5rem;
+            left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.55);
+            backdrop-filter: blur(2px);
+            z-index: 35;
+        }
+        .drawer-backdrop.active { display: block; }
+
+        /* ── Responsive: tablet & mobile (< 1024px) ─────────────── */
+        @media (max-width: 1023px) {
+            .sidebar-left,
+            .sidebar-right {
+                position: fixed !important;
+                top: 3.5rem;
+                bottom: 0;
+                z-index: 40;
+                transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                background: #0b1326 !important;
             }
             .sidebar-left {
-                width: 100% !important;
-                max-height: min(42vh, 320px);
-                border-right: none !important;
-                border-bottom: 1px solid rgba(69,71,75,0.15);
-                flex-shrink: 0;
+                left: 0;
+                width: min(280px, 82vw) !important;
+                transform: translateX(-100%);
             }
-            .video-center {
-                flex: 1 1 auto;
-                min-height: min(50vh, 420px);
+            .sidebar-left.drawer-open {
+                transform: translateX(0);
+                box-shadow: 4px 0 30px rgba(0,0,0,0.5);
             }
             .sidebar-right {
-                width: 100% !important;
-                max-height: none;
-                border-left: none !important;
-                border-top: 1px solid rgba(69,71,75,0.15);
-                flex-shrink: 0;
+                right: 0;
+                width: min(300px, 85vw) !important;
+                transform: translateX(100%);
+            }
+            .sidebar-right.drawer-open {
+                transform: translateX(0);
+                box-shadow: -4px 0 30px rgba(0,0,0,0.5);
             }
             .perf-grid-center {
-                grid-template-columns: repeat(2, 1fr) !important;
+                grid-template-columns: repeat(3, 1fr) !important;
+                gap: 8px !important;
+                padding-left: 16px !important;
+                padding-right: 16px !important;
+            }
+            .remote-grid-inner {
+                padding: 16px !important;
+                gap: 12px !important;
             }
             .local-pip video {
-                width: min(140px, 32vw) !important;
+                width: min(150px, 28vw) !important;
                 height: auto !important;
                 aspect-ratio: 4 / 3;
             }
+        }
+
+        /* ── Responsive: phone (< 640px) ────────────────────────── */
+        @media (max-width: 639px) {
+            .perf-grid-center {
+                grid-template-columns: repeat(2, 1fr) !important;
+                gap: 6px !important;
+                padding: 10px !important;
+            }
+            .perf-grid-center > div { padding: 8px !important; }
+            .perf-grid-center span[class*="text-xl"] { font-size: 1rem !important; }
+            .perf-grid-center span[class*="text-[9px]"] { font-size: 8px !important; }
+            .remote-grid-inner {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)) !important;
+                padding: 10px !important;
+                gap: 8px !important;
+            }
+            .local-pip {
+                bottom: 6px !important;
+                right: 6px !important;
+            }
+            .local-pip video {
+                width: min(110px, 26vw) !important;
+            }
+            .local-pip-label { font-size: 7px !important; padding: 1px 4px !important; }
+            .local-pip-live { font-size: 6px !important; padding: 2px 4px !important; }
             .log-panel {
-                height: min(28vh, 180px) !important;
+                height: 100px !important;
                 padding-bottom: env(safe-area-inset-bottom, 0px);
             }
+            .topbar-brand { font-size: 0.875rem !important; }
         }
-        @media (max-width: 480px) {
+
+        /* ── Responsive: very small phone (< 400px) ─────────────── */
+        @media (max-width: 399px) {
             .remote-grid-inner {
                 grid-template-columns: 1fr !important;
             }
             .perf-grid-center {
-                grid-template-columns: 1fr !important;
+                grid-template-columns: 1fr 1fr !important;
             }
-            .video-center { min-height: 40vh; }
+            .local-pip video { width: 90px !important; }
         }
-        @media (min-width: 901px) {
+
+        /* ── Desktop lock ───────────────────────────────────────── */
+        @media (min-width: 1024px) {
             html, body { overflow: hidden; }
         }
     </style>
@@ -157,7 +208,10 @@
     <header class="flex justify-between items-center w-full px-4 md:px-6 h-14 shrink-0 bg-background font-headline tracking-tight border-b border-outline-variant/15">
         <!-- Left -->
         <div class="flex items-center gap-3 md:gap-6 min-w-0">
-            <span class="text-lg md:text-xl font-bold tracking-tighter text-primary uppercase whitespace-nowrap">SFU COMMAND</span>
+            <button class="lg:hidden p-1 -ml-1 text-on-surface-variant hover:text-primary transition-colors" onclick="toggleDrawer('left')" aria-label="Controles">
+                <span class="material-symbols-outlined text-xl">menu</span>
+            </button>
+            <span class="topbar-brand text-lg md:text-xl font-bold tracking-tighter text-primary uppercase whitespace-nowrap">SFU COMMAND</span>
             <div class="flex items-center gap-3">
                 <span class="hidden sm:inline bg-surface-container-highest px-2 py-0.5 rounded text-[10px] font-mono text-primary border border-outline-variant/20 tracking-widest">{{ $roomId }}</span>
                 <div class="flex items-center gap-1.5 text-xs font-medium whitespace-nowrap">
@@ -188,9 +242,18 @@
                 <span class="material-symbols-outlined text-sm text-on-surface-variant">group</span>
                 <span id="statusPeers" class="text-sm font-bold">0</span>
             </div>
-            <button id="btnCleanup" class="bg-error/90 text-white text-[10px] font-black px-3 py-1.5 rounded hover:bg-error transition-colors tracking-widest whitespace-nowrap">KILL SWITCH</button>
+            <button class="lg:hidden p-1 text-on-surface-variant hover:text-primary transition-colors" onclick="toggleDrawer('right')" aria-label="Telemetria">
+                <span class="material-symbols-outlined text-xl">monitoring</span>
+            </button>
+            <button id="btnCleanup" class="bg-error/90 text-white text-[10px] font-black px-2 sm:px-3 py-1.5 rounded hover:bg-error transition-colors tracking-widest whitespace-nowrap">
+                <span class="hidden sm:inline">KILL SWITCH</span>
+                <span class="material-symbols-outlined text-sm sm:hidden">power_settings_new</span>
+            </button>
         </div>
     </header>
+
+    <!-- Drawer backdrop -->
+    <div id="drawerBackdrop" class="drawer-backdrop" onclick="closeDrawers()"></div>
 
     <!-- ── Main 3-column area ─────────────────────────────────────────── -->
     <div class="main-area flex flex-1 min-h-0 overflow-hidden">
@@ -364,10 +427,10 @@
                 <div class="local-pip absolute bottom-4 right-4 z-20 rounded-xl overflow-hidden border-2 border-primary/40 bg-surface-container-low" style="box-shadow: 0 4px 20px rgba(0,0,0,0.6);">
                     <div class="absolute inset-0 bg-primary/5 pointer-events-none z-10"></div>
                     <video id="localVideo" autoplay muted playsinline class="block object-cover bg-surface-container-lowest" style="width:180px; height:135px;"></video>
-                    <div class="absolute top-2 left-2 flex items-center gap-1.5 bg-primary/80 px-2 py-0.5 rounded z-20">
+                    <div class="local-pip-label absolute top-2 left-2 flex items-center gap-1.5 bg-primary/80 px-2 py-0.5 rounded z-20">
                         <span class="text-[9px] font-mono font-black text-on-primary uppercase tracking-widest">VOCÊ (HOST)</span>
                     </div>
-                    <div class="absolute bottom-2 right-2 bg-surface-container-highest/80 backdrop-blur-sm px-2 py-1 flex items-center gap-3 z-20">
+                    <div class="local-pip-live absolute bottom-2 right-2 bg-surface-container-highest/80 backdrop-blur-sm px-2 py-1 flex items-center gap-3 z-20">
                         <div class="flex items-center gap-1">
                             <span class="w-1 h-1 bg-secondary rounded-full animate-ping"></span>
                             <span class="text-[8px] font-mono text-secondary">LIVE</span>
@@ -443,6 +506,33 @@
 
 <script>
     window.__SFU_TEST_CONFIG__ = @json($sfuTestConfig);
+
+    /* ── Drawer toggle (responsive sidebars) ─────────────────── */
+    function toggleDrawer(side) {
+        var left = document.querySelector('.sidebar-left');
+        var right = document.querySelector('.sidebar-right');
+        var bd = document.getElementById('drawerBackdrop');
+        if (side === 'left') {
+            var open = left.classList.contains('drawer-open');
+            left.classList.toggle('drawer-open', !open);
+            right.classList.remove('drawer-open');
+            bd.classList.toggle('active', !open);
+        } else {
+            var open = right.classList.contains('drawer-open');
+            right.classList.toggle('drawer-open', !open);
+            left.classList.remove('drawer-open');
+            bd.classList.toggle('active', !open);
+        }
+    }
+    function closeDrawers() {
+        document.querySelector('.sidebar-left').classList.remove('drawer-open');
+        document.querySelector('.sidebar-right').classList.remove('drawer-open');
+        document.getElementById('drawerBackdrop').classList.remove('active');
+    }
+    /* Close drawers on resize to desktop */
+    window.addEventListener('resize', function() {
+        if (window.innerWidth >= 1024) closeDrawers();
+    });
 </script>
 @vite(['resources/js/sfu-test-app.js'])
 </body>
