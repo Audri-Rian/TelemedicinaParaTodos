@@ -11,10 +11,10 @@ class PatientDetailsController extends Controller
     /**
      * Display patient details.
      */
-    public function show(string $id): Response
+    public function show(string $patient): Response
     {
         return Inertia::render('Doctor/PatientDetails', [
-            'patientId' => $id
+            'patientId' => $patient
         ]);
     }
 }

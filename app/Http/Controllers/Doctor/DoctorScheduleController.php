@@ -7,6 +7,7 @@ use App\Http\Requests\Doctor\StoreScheduleConfigRequest;
 use App\Models\Doctor;
 use App\Services\Doctor\ScheduleService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -16,6 +17,17 @@ class DoctorScheduleController extends Controller
     public function __construct(
         protected ScheduleService $scheduleService
     ) {}
+
+    public function redirect(): RedirectResponse
+    {
+        $doctor = auth()->user()?->doctor;
+
+        if (! $doctor) {
+            return redirect()->route('doctor.dashboard');
+        }
+
+        return redirect()->route('doctor.schedule.show', ['doctor' => $doctor->id]);
+    }
 
     /**
      * Carregar configuração completa da agenda do médico
