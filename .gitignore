@@ -26,4 +26,5 @@ yarn-error.log
 /.vscode
 /.zed
 
-mediasoup-server/node_modules/
+mediasoup-server/
+tools/mediasoup-test-client/
