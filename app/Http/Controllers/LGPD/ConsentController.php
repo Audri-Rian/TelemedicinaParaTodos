@@ -7,6 +7,7 @@ use App\Services\LGPDService;
 use App\Models\Consent;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -27,14 +28,14 @@ class ConsentController extends Controller
             ->get()
             ->groupBy('type');
 
+        $activeConsents = [];
+        foreach (Consent::getAllowedTypes() as $type) {
+            $activeConsents[$type] = $this->lgpdService->hasActiveConsent($user, $type);
+        }
+
         return Inertia::render('LGPD/Consents', [
             'consents' => $consents,
-            'activeConsents' => [
-                'telemedicine' => $this->lgpdService->hasActiveConsent($user, Consent::TYPE_TELEMEDICINE),
-                'video_recording' => $this->lgpdService->hasActiveConsent($user, Consent::TYPE_VIDEO_RECORDING),
-                'data_processing' => $this->lgpdService->hasActiveConsent($user, Consent::TYPE_DATA_PROCESSING),
-                'marketing' => $this->lgpdService->hasActiveConsent($user, Consent::TYPE_MARKETING),
-            ],
+            'activeConsents' => $activeConsents,
         ]);
     }
 
@@ -44,13 +45,13 @@ class ConsentController extends Controller
     public function grant(Request $request): JsonResponse
     {
         $request->validate([
-            'type' => ['required', 'string', 'in:telemedicine,video_recording,data_processing,marketing'],
+            'type' => ['required', 'string', Rule::in(Consent::getAllowedTypes())],
             'version' => ['nullable', 'string'],
             'description' => ['nullable', 'string'],
         ]);
 
         $user = auth()->user();
-        
+
         $consent = $this->lgpdService->grantConsent(
             $user,
             $request->type,
@@ -72,11 +73,11 @@ class ConsentController extends Controller
     public function revoke(Request $request): JsonResponse
     {
         $request->validate([
-            'type' => ['required', 'string', 'in:telemedicine,video_recording,data_processing,marketing'],
+            'type' => ['required', 'string', Rule::in(Consent::getAllowedTypes())],
         ]);
 
         $user = auth()->user();
-        
+
         $this->lgpdService->revokeConsent($user, $request->type);
 
         return response()->json([
@@ -90,7 +91,7 @@ class ConsentController extends Controller
     public function check(Request $request): JsonResponse
     {
         $request->validate([
-            'type' => ['required', 'string', 'in:telemedicine,video_recording,data_processing,marketing'],
+            'type' => ['required', 'string', Rule::in(Consent::getAllowedTypes())],
         ]);
 
         $user = auth()->user();

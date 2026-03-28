@@ -14,6 +14,7 @@ export interface DoctorRegistrationData {
   password: string;
   password_confirmation: string;
   crm: string;
+  cns: string;
   specializations: string[];
   terms_accepted: boolean;
 }
@@ -39,6 +40,7 @@ const initialData: DoctorRegistrationData = {
   password: '',
   password_confirmation: '',
   crm: '',
+  cns: '',
   specializations: [],
   terms_accepted: false
 };

@@ -784,7 +784,17 @@ watch(() => props.mode, (newMode) => {
                                         <div class="flex items-center justify-between">
                                             <div>
                                                 <p class="font-medium">{{ exam.name }}</p>
-                                                <p class="text-sm text-gray-600">{{ exam.type }}</p>
+                                                <div class="flex items-center gap-2 mt-0.5">
+                                                    <p class="text-sm text-gray-600">{{ exam.type }}</p>
+                                                    <template v-if="exam.source === 'integration'">
+                                                        <span v-if="exam.partner?.name" class="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700 border border-blue-200">
+                                                            Recebido do {{ exam.partner.name }}
+                                                        </span>
+                                                        <span v-if="exam.status !== 'completed'" class="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 border border-amber-200">
+                                                            Aguardando resultado
+                                                        </span>
+                                                    </template>
+                                                </div>
                                             </div>
                                             <Badge>{{ exam.status }}</Badge>
                                         </div>

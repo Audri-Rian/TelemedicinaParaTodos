@@ -29,6 +29,11 @@ return Application::configure(basePath: dirname(__DIR__))
             'doctor' => \App\Http\Middleware\EnsureUserIsDoctor::class,
             'patient' => \App\Http\Middleware\EnsureUserIsPatient::class,
             'audit' => \App\Http\Middleware\AuditAccess::class,
+            'partner.auth' => \App\Integrations\Http\Middleware\AuthenticatePartner::class,
+            'partner.scope' => \App\Integrations\Http\Middleware\CheckPartnerScope::class,
+            'partner.rate' => \App\Integrations\Http\Middleware\RateLimitPartner::class,
+            'partner.consent' => \App\Integrations\Http\Middleware\EnforcePatientConsent::class,
+            'partner.audit' => \App\Integrations\Http\Middleware\AuditExternalAccess::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

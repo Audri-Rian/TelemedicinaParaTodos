@@ -210,7 +210,7 @@ class MedicalRecordService
      */
     public function getExaminationsForRecord(Patient $patient, array $filters = []): Collection
     {
-        $query = Examination::with(['doctor.user', 'appointment'])
+        $query = Examination::with(['doctor.user', 'appointment', 'partnerIntegration'])
             ->where('patient_id', $patient->id);
 
         if (!empty($filters['doctor_id'])) {
@@ -613,6 +613,13 @@ class MedicalRecordService
             'results' => $examination->results,
             'attachment_url' => $examination->attachment_url,
             'metadata' => $examination->metadata,
+            'source' => $examination->source ?? Examination::SOURCE_INTERNAL,
+            'partner' => $examination->partnerIntegration ? [
+                'id' => $examination->partnerIntegration->id,
+                'name' => $examination->partnerIntegration->name,
+                'slug' => $examination->partnerIntegration->slug,
+            ] : null,
+            'received_from_partner_at' => $examination->received_from_partner_at?->toIso8601String(),
         ];
     }
 

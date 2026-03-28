@@ -61,6 +61,10 @@ class PatientRegistrationRequest extends FormRequest
             'date_of_birth' => 'required|date|before:today',
             'phone_number' => 'required|string|max:20',
 
+            // Identificadores de saúde (interoperabilidade)
+            'cns' => ['nullable', 'string', 'regex:/^\d{15}$/'],
+            'cpf' => ['nullable', 'string', 'regex:/^\d{11}$/', Rule::unique('patients', 'cpf')],
+
             // Dados opcionais da tabela patients (conforme migration)
             'emergency_contact' => 'nullable|string|max:100',
             'emergency_phone' => 'nullable|string|max:20',
@@ -92,6 +96,9 @@ class PatientRegistrationRequest extends FormRequest
             'date_of_birth.required' => 'A data de nascimento é obrigatória.',
             'date_of_birth.before' => 'A data de nascimento deve ser anterior a hoje.',
             'phone_number.required' => 'O telefone é obrigatório.',
+            'cns.regex' => 'O CNS deve conter exatamente 15 dígitos numéricos.',
+            'cpf.regex' => 'O CPF deve conter exatamente 11 dígitos numéricos.',
+            'cpf.unique' => 'Este CPF já está cadastrado.',
         ];
     }
 
@@ -119,6 +126,8 @@ class PatientRegistrationRequest extends FormRequest
             'insurance_provider' => 'provedor de seguro',
             'insurance_number' => 'número do seguro',
             'consent_telemedicine' => 'consentimento de telemedicina',
+            'cns' => 'CNS',
+            'cpf' => 'CPF',
         ];
     }
 }

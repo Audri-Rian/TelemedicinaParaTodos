@@ -40,6 +40,23 @@ class Consent extends Model
     public const TYPE_VIDEO_RECORDING = 'video_recording';
     public const TYPE_DATA_PROCESSING = 'data_processing';
     public const TYPE_MARKETING = 'marketing';
+    public const TYPE_DATA_SHARING_LAB = 'data_sharing_lab';
+    public const TYPE_RNDS_SUBMISSION = 'rnds_submission';
+
+    /**
+     * Retorna todos os tipos de consentimento permitidos.
+     */
+    public static function getAllowedTypes(): array
+    {
+        return [
+            self::TYPE_TELEMEDICINE,
+            self::TYPE_VIDEO_RECORDING,
+            self::TYPE_DATA_PROCESSING,
+            self::TYPE_MARKETING,
+            self::TYPE_DATA_SHARING_LAB,
+            self::TYPE_RNDS_SUBMISSION,
+        ];
+    }
 
     /**
      * Relacionamento com User

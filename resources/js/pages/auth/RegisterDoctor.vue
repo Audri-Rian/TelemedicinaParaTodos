@@ -129,6 +129,10 @@ watch(() => formData.value.crm, (newValue) => {
   updateField('crm', newValue);
 });
 
+watch(() => formData.value.cns, (newValue) => {
+  updateField('cns', newValue);
+});
+
 watch(() => formData.value.specializations, (newValue) => {
   updateField('specializations', newValue);
 }, { deep: true });
@@ -307,6 +311,29 @@ const handleSubmit = async () => {
                                         />
                                     </div>
 
+                                    <!-- Campo CNS (opcional) -->
+                                    <div class="space-y-0.5">
+                                        <Label for="cns" class="text-sm font-bold text-gray-700 flex items-center gap-2">
+                                            <svg class="w-3 h-3 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
+                                            </svg>
+                                            CNS <span class="text-xs font-normal text-gray-400">(opcional)</span>
+                                        </Label>
+                                        <Input
+                                            id="cns"
+                                            type="text"
+                                            inputmode="numeric"
+                                            :tabindex="3"
+                                            autocomplete="off"
+                                            name="cns"
+                                            placeholder="000000000000000"
+                                            maxlength="15"
+                                            v-model="formData.cns"
+                                            class="h-9 lg:h-11 bg-gradient-to-r from-gray-50/90 to-white/90 border-2 border-gray-200/50 rounded-xl lg:rounded-2xl px-4 text-sm placeholder:text-gray-400 focus:bg-white focus:border-primary focus:shadow-lg focus:shadow-primary/10 transition-all duration-300 hover:border-gray-300 hover:shadow-md"
+                                        />
+                                        <p class="text-[10px] text-gray-400">Cartão Nacional de Saúde (15 dígitos)</p>
+                                    </div>
+
                                     <!-- Campo Especializações -->
                                     <div class="space-y-0.5">
                                         <Label class="text-sm font-bold text-gray-700 flex items-center gap-2">
@@ -333,7 +360,7 @@ const handleSubmit = async () => {
                                                 ]"
                                                 :aria-invalid="hasFieldError('specializations') && isFieldTouched('specializations')"
                                                 :aria-describedby="hasFieldError('specializations') && isFieldTouched('specializations') ? 'specializations-error' : undefined"
-                                                tabindex="3"
+                                                tabindex="4"
                                             >
                                                 <div class="flex flex-wrap items-center gap-1 flex-1 min-w-0">
                                                     <!-- Tags das especializações selecionadas -->
@@ -443,7 +470,7 @@ const handleSubmit = async () => {
                                             id="email" 
                                             type="email" 
                                             required 
-                                            :tabindex="4" 
+                                            :tabindex="5"
                                             autocomplete="email"
                                             name="email" 
                                             placeholder="seu@email.com"
@@ -479,11 +506,11 @@ const handleSubmit = async () => {
                                         Senha
                                     </Label>
                                     <div class="relative">
-                                        <Input 
-                                            id="password" 
-                                            type="password" 
-                                            required 
-                                            :tabindex="5"
+                                        <Input
+                                            id="password"
+                                            type="password"
+                                            required
+                                            :tabindex="6"
                                             autocomplete="new-password" 
                                             name="password"
                                             placeholder="Mínimo 8 caracteres"
@@ -518,11 +545,11 @@ const handleSubmit = async () => {
                                         Confirmar senha
                                     </Label>
                                     <div class="relative">
-                                        <Input 
-                                            id="password_confirmation" 
-                                            type="password" 
-                                            required 
-                                            :tabindex="6"
+                                        <Input
+                                            id="password_confirmation"
+                                            type="password"
+                                            required
+                                            :tabindex="7"
                                             autocomplete="new-password" 
                                             name="password_confirmation"
                                             placeholder="Digite a senha novamente"
@@ -548,10 +575,10 @@ const handleSubmit = async () => {
                                 <!-- Termos de Serviço e LGPD -->
                                 <div class="space-y-2">
                                     <div class="flex items-start gap-3">
-                                        <input 
-                                            id="terms_accepted" 
-                                            type="checkbox" 
-                                            :tabindex="7"
+                                        <input
+                                            id="terms_accepted"
+                                            type="checkbox"
+                                            :tabindex="8"
                                             v-model="formData.terms_accepted"
                                             class="mt-1 h-4 w-4 text-primary bg-gray-100 border-gray-300 rounded focus:ring-primary focus:ring-2"
                                         />
@@ -573,10 +600,10 @@ const handleSubmit = async () => {
 
                                 <!-- Botão de Registro -->
                                 <div class="">
-                                    <Button 
+                                    <Button
                                         type="submit"
                                         :disabled="!canSubmit"
-                                        :tabindex="8"
+                                        :tabindex="9"
                                         class="w-full h-9 lg:h-11 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-black text-sm font-bold rounded-xl lg:rounded-2xl shadow-xl hover:shadow-2xl transform hover:scale-[1.02] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none border-2 border-primary/20 hover:border-primary/30"
                                         :aria-describedby="rateLimit.remainingAttempts < 2 ? 'rate-limit-warning' : undefined"
                                     >
@@ -653,7 +680,7 @@ const handleSubmit = async () => {
                     Já tem uma conta?
                     <TextLink :href="login()"
                         class="text-black hover:text-black/80 font-bold underline underline-offset-4 hover:underline-offset-2 transition-all duration-300 ml-1"
-                        :tabindex="9">
+                        :tabindex="10">
                         Faça login aqui
                     </TextLink>
                 </p>

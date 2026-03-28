@@ -49,6 +49,7 @@ Route::middleware(['auth', 'verified', 'doctor'])->prefix('doctor')->name('docto
     Route::get('integrations/partners', [App\Http\Controllers\Doctor\DoctorIntegrationsController::class, 'partners'])->name('integrations.partners');
     Route::get('integrations/connect', [App\Http\Controllers\Doctor\DoctorIntegrationsController::class, 'connect'])->name('integrations.connect');
     Route::post('integrations/connect', [App\Http\Controllers\Doctor\DoctorIntegrationsController::class, 'store'])->middleware('throttle:10,1')->name('integrations.store');
+    Route::get('integrations/metrics', [App\Integrations\Http\Controllers\IntegrationMetricsController::class, 'index'])->name('integrations.metrics');
     Route::get('integrations/{partner}', [App\Http\Controllers\Doctor\DoctorIntegrationsController::class, 'show'])->name('integrations.show');
     Route::post('integrations/{partner}/sync', [App\Http\Controllers\Doctor\DoctorIntegrationsController::class, 'sync'])->middleware('throttle:10,1')->name('integrations.sync');
     Route::get('integrations', [App\Http\Controllers\Doctor\DoctorIntegrationsController::class, 'index'])->name('integrations');

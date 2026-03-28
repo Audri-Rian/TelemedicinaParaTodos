@@ -35,6 +35,8 @@ interface Patient {
     weight?: number | null;
     insurance_provider?: string | null;
     insurance_number?: string | null;
+    cns?: string | null;
+    cpf?: string | null;
     consent_telemedicine?: boolean;
 }
 
@@ -97,6 +99,8 @@ const form = useForm({
     weight: props.patient?.weight || '',
     insurance_provider: props.patient?.insurance_provider || '',
     insurance_number: props.patient?.insurance_number || '',
+    cns: props.patient?.cns || '',
+    cpf: props.patient?.cpf || '',
     consent_telemedicine: props.patient?.consent_telemedicine ?? false,
 });
 
@@ -623,6 +627,42 @@ const cancelPreview = () => {
                                         placeholder="Ex: 70.5"
                                     />
                                     <InputError class="mt-2" :message="form.errors.weight" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Identificadores de Saúde (interoperabilidade) -->
+                        <div class="space-y-4">
+                            <h3 class="text-sm font-semibold text-gray-800">Identificadores de Saúde</h3>
+                            <p class="text-xs text-gray-500">Necessários para integração com laboratórios e a Rede Nacional de Dados em Saúde (RNDS).</p>
+
+                            <div class="grid gap-4 md:grid-cols-2">
+                                <div class="grid gap-2">
+                                    <Label for="cns">Cartão Nacional de Saúde (CNS)</Label>
+                                    <Input
+                                        id="cns"
+                                        name="cns"
+                                        inputmode="numeric"
+                                        v-model="form.cns"
+                                        placeholder="000000000000000"
+                                        maxlength="15"
+                                    />
+                                    <p class="text-[10px] text-gray-400">15 dígitos numéricos</p>
+                                    <InputError class="mt-2" :message="form.errors.cns" />
+                                </div>
+
+                                <div class="grid gap-2">
+                                    <Label for="cpf">CPF</Label>
+                                    <Input
+                                        id="cpf"
+                                        name="cpf"
+                                        inputmode="numeric"
+                                        v-model="form.cpf"
+                                        placeholder="00000000000"
+                                        maxlength="11"
+                                    />
+                                    <p class="text-[10px] text-gray-400">11 dígitos, sem pontos ou traços</p>
+                                    <InputError class="mt-2" :message="form.errors.cpf" />
                                 </div>
                             </div>
                         </div>
