@@ -1,0 +1,85 @@
+# Compose só para ambiente de desenvolvimento local (composer run dev).
+# Usa nomes de container e volumes próprios para não conflitar com outros projetos
+# (ex.: outro repo telemedicina que use telemedicina_redis, etc.).
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: telemedicina_paratodos_dev_mysql
+    restart: always
+    environment:
+      MYSQL_DATABASE: telemedicina
+      MYSQL_USER: telemedicina_user
+      MYSQL_PASSWORD: secret
+      MYSQL_ROOT_PASSWORD: root_secret
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data_dev:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot_secret"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    command: --default-authentication-plugin=mysql_native_password
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: telemedicina_paratodos_dev_postgres
+    restart: always
+    environment:
+      POSTGRES_DB: telemedicina
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: secret
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: telemedicina_paratodos_dev_redis
+    restart: always
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_data_dev:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: telemedicina_paratodos_dev_rabbitmq
+    restart: always
+    environment:
+      RABBITMQ_DEFAULT_USER: telemedicina
+      RABBITMQ_DEFAULT_PASS: secret
+      RABBITMQ_DEFAULT_VHOST: /
+    ports:
+      - "5673:5672"
+      - "15673:15672"
+    volumes:
+      - rabbitmq_data_dev:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_running"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  mysql_data_dev:
+    driver: local
+  postgres_data_dev:
+    driver: local
+  redis_data_dev:
+    driver: local
+  rabbitmq_data_dev:
+    driver: local

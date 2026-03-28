@@ -35,4 +35,12 @@ return [
         ],
     ],
 
+    'media_gateway' => [
+        'sfu_http_url' => env('SFU_HTTP_URL', ''),
+        'sfu_ws_url' => env('SFU_WS_URL', ''),
+        'sfu_node' => env('SFU_NODE', 'local'),
+        'api_secret' => env('SFU_API_SECRET', ''),
+        'jwt_secret' => env('SFU_JWT_SECRET'),
+    ],
+
 ];

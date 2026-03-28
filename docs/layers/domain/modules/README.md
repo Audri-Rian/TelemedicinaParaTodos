@@ -14,9 +14,9 @@ Esta pasta contém a documentação detalhada de cada módulo específico do sis
 - **[📋 README](appointments/README.md)** - Visão geral do módulo
 
 ### 📹 [Videochamadas](videocall/)
-- **[🔧 Implementação de Videochamadas](videocall/VideoCallImplementation.md)** - Sistema de vídeo em tempo real
-- **[📋 Tarefas de Videochamadas](videocall/VideoCallTasks.md)** - Checklist de implementação
 - **[📋 README](videocall/README.md)** - Visão geral do módulo
+- **[🔧 Back-end SFU](videocall/BackendSFU.md)** - Estrutura e funcionalidades do back-end (Call, Room, CallManagerService, eventos)
+- **[📐 Implementação SFU/MediaSoup](../../videocall/IMPLEMENTACAO_SFU_MEDIASOUP.md)** - Especificação da arquitetura e checklist
 
 ### 🩺 [Prontuários Médicos](MedicalRecords/)
 - **[👨‍⚕️ Visão do Médico](MedicalRecords/MedicalRecordsDoctor.md)** - Gestão completa de prontuários
