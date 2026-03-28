@@ -1,11 +1,13 @@
 <?php
 
+use App\Http\Controllers\AppointmentsController;
+use App\Http\Controllers\PrivacyPolicyController;
+use App\Http\Controllers\SpecializationController;
+use App\Http\Controllers\TermsOfServiceController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
-use App\Http\Controllers\AppointmentsController;
 use App\Http\Controllers\ConsultationsController;
 use App\Http\Controllers\HealthController;
-use App\Http\Controllers\SpecializationController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\TermsOfServiceController;
 use App\Http\Controllers\PrivacyPolicyController;
@@ -20,15 +22,15 @@ Route::get('/', function () {
 // Rota para capturar /dashboard e redirecionar baseado no papel do usuário
 Route::middleware(['auth', 'verified'])->get('/dashboard', function () {
     $user = auth()->user();
-    
+
     if ($user->isDoctor()) {
         return redirect()->route('doctor.dashboard');
     }
-    
+
     if ($user->isPatient()) {
         return redirect()->route('patient.dashboard');
     }
-    
+
     return redirect()->route('home');
 })->name('dashboard');
 
@@ -48,6 +50,9 @@ Route::middleware(['auth', 'verified', 'doctor'])->prefix('doctor')->name('docto
     Route::get('history', [App\Http\Controllers\Doctor\DoctorHistoryController::class, 'index'])->name('history');
     Route::get('patients', [App\Http\Controllers\Doctor\DoctorPatientsController::class, 'index'])->name('patients');
     Route::get('documents', [App\Http\Controllers\Doctor\DoctorDocumentsController::class, 'index'])->name('documents');
+    Route::get('laboratorios/parceiros', [App\Http\Controllers\Doctor\DoctorLaboratoriesController::class, 'partners'])->name('laboratorios.parceiros');
+    Route::get('laboratorios/conectar', [App\Http\Controllers\Doctor\DoctorLaboratoriesController::class, 'connect'])->name('laboratorios.conectar');
+    Route::get('laboratorios', [App\Http\Controllers\Doctor\DoctorLaboratoriesController::class, 'index'])->name('laboratorios');
     Route::get('patient/{id}', [App\Http\Controllers\Doctor\PatientDetailsController::class, 'show'])->name('patient.details');
     Route::get('patients/{patient}/medical-record', [App\Http\Controllers\Doctor\DoctorPatientMedicalRecordController::class, 'show'])->name('patients.medical-record');
     Route::post('patients/{patient}/medical-record/export', [App\Http\Controllers\Doctor\DoctorPatientMedicalRecordController::class, 'export'])->middleware('throttle:5,1')->name('patients.medical-record.export');
@@ -59,28 +64,28 @@ Route::middleware(['auth', 'verified', 'doctor'])->prefix('doctor')->name('docto
     Route::post('patients/{patient}/medical-record/certificates', [App\Http\Controllers\Doctor\DoctorPatientMedicalRecordController::class, 'storeMedicalCertificate'])->name('patients.medical-record.certificates.store');
     Route::post('patients/{patient}/medical-record/vital-signs', [App\Http\Controllers\Doctor\DoctorPatientMedicalRecordController::class, 'storeVitalSigns'])->name('patients.medical-record.vital-signs.store');
     Route::post('patients/{patient}/medical-record/consultations/pdf', [App\Http\Controllers\Doctor\DoctorPatientMedicalRecordController::class, 'generateConsultationPdf'])->name('patients.medical-record.consultations.pdf');
-    
+
     // Rotas para configuração de agenda (médicos)
     Route::get('schedule', function () {
         return redirect()->route('doctor.schedule.show', ['doctor' => auth()->user()->doctor->id]);
     })->name('schedule');
     Route::get('doctors/{doctor}/schedule', [App\Http\Controllers\Doctor\DoctorScheduleController::class, 'show'])->name('schedule.show');
     Route::post('doctors/{doctor}/schedule/save', [App\Http\Controllers\Doctor\DoctorScheduleController::class, 'save'])->name('schedule.save');
-    
+
     // Rotas para locais de atendimento (médicos)
     Route::post('doctors/{doctor}/locations', [App\Http\Controllers\Doctor\DoctorServiceLocationController::class, 'store'])->name('locations.store');
     Route::put('doctors/{doctor}/locations/{location}', [App\Http\Controllers\Doctor\DoctorServiceLocationController::class, 'update'])->name('locations.update');
     Route::delete('doctors/{doctor}/locations/{location}', [App\Http\Controllers\Doctor\DoctorServiceLocationController::class, 'destroy'])->name('locations.destroy');
-    
+
     // Rotas para slots de disponibilidade (médicos)
     Route::post('doctors/{doctor}/availability', [App\Http\Controllers\Doctor\DoctorAvailabilitySlotController::class, 'store'])->name('availability.store');
     Route::put('doctors/{doctor}/availability/{slot}', [App\Http\Controllers\Doctor\DoctorAvailabilitySlotController::class, 'update'])->name('availability.update');
     Route::delete('doctors/{doctor}/availability/{slot}', [App\Http\Controllers\Doctor\DoctorAvailabilitySlotController::class, 'destroy'])->name('availability.destroy');
-    
+
     // Rotas para datas bloqueadas (médicos)
     Route::post('doctors/{doctor}/blocked-dates', [App\Http\Controllers\Doctor\DoctorBlockedDateController::class, 'store'])->name('blocked-dates.store');
     Route::delete('doctors/{doctor}/blocked-dates/{blockedDate}', [App\Http\Controllers\Doctor\DoctorBlockedDateController::class, 'destroy'])->name('blocked-dates.destroy');
-    
+
     // Rotas de onboarding (médicos)
     Route::post('tour/completed', [App\Http\Controllers\Patient\OnboardingController::class, 'completeTour'])->name('tour.completed');
     Route::post('onboarding/skip-welcome', [App\Http\Controllers\Patient\OnboardingController::class, 'skipWelcome'])->name('onboarding.skip-welcome');
@@ -100,7 +105,7 @@ Route::middleware(['auth', 'verified', 'patient'])->prefix('patient')->name('pat
     Route::get('medical-records', [App\Http\Controllers\Patient\PatientMedicalRecordController::class, 'index'])->name('medical-records');
     Route::post('medical-records/export', [App\Http\Controllers\Patient\PatientMedicalRecordController::class, 'export'])->middleware('throttle:5,1')->name('medical-records.export');
     Route::post('medical-records/documents', [App\Http\Controllers\MedicalRecordDocumentController::class, 'store'])->name('medical-records.documents.store');
-    
+
     // Rotas de onboarding
     Route::post('tour/completed', [App\Http\Controllers\Patient\OnboardingController::class, 'completeTour'])->name('tour.completed');
     Route::post('onboarding/skip-welcome', [App\Http\Controllers\Patient\OnboardingController::class, 'skipWelcome'])->name('onboarding.skip-welcome');
@@ -112,13 +117,13 @@ Route::middleware(['auth', 'verified', 'throttle:10,1'])->prefix('lgpd')->name('
     Route::post('consents/grant', [App\Http\Controllers\LGPD\ConsentController::class, 'grant'])->name('consents.grant');
     Route::post('consents/revoke', [App\Http\Controllers\LGPD\ConsentController::class, 'revoke'])->name('consents.revoke');
     Route::get('consents/check', [App\Http\Controllers\LGPD\ConsentController::class, 'check'])->name('consents.check');
-    
+
     Route::get('data-portability', [App\Http\Controllers\LGPD\DataPortabilityController::class, 'index'])->name('data-portability.index');
     Route::get('data-portability/export', [App\Http\Controllers\LGPD\DataPortabilityController::class, 'export'])->middleware('throttle:3,1')->name('data-portability.export');
-    
+
     Route::get('right-to-be-forgotten', [App\Http\Controllers\LGPD\RightToBeForgottenController::class, 'index'])->name('right-to-be-forgotten.index');
     Route::post('right-to-be-forgotten/request', [App\Http\Controllers\LGPD\RightToBeForgottenController::class, 'request'])->middleware('throttle:1,60')->name('right-to-be-forgotten.request');
-    
+
     Route::get('data-access-report', [App\Http\Controllers\LGPD\DataAccessReportController::class, 'index'])->name('data-access-report.index');
     Route::post('data-access-report/generate', [App\Http\Controllers\LGPD\DataAccessReportController::class, 'generate'])->name('data-access-report.generate');
 });
@@ -127,10 +132,10 @@ Route::middleware(['auth', 'verified', 'throttle:10,1'])->prefix('lgpd')->name('
 Route::middleware(['auth', 'verified'])->group(function () {
     // Rotas para especializações
     Route::resource('specializations', SpecializationController::class);
-    
+
     // Rotas para appointments
     Route::resource('appointments', AppointmentsController::class);
-    
+
     // Rotas customizadas para appointments
     Route::post('appointments/{appointment}/start', [AppointmentsController::class, 'start'])->middleware('throttle:10,1')->name('appointments.start');
     Route::post('appointments/{appointment}/end', [AppointmentsController::class, 'end'])->middleware('throttle:10,1')->name('appointments.end');
@@ -138,7 +143,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('appointments/{appointment}/reschedule', [AppointmentsController::class, 'reschedule'])->middleware('throttle:10,1')->name('appointments.reschedule');
 
     Route::get('api/appointments/availability', [AppointmentsController::class, 'availability'])->name('appointments.availability');
-    
+
     // Rotas para timeline events (educação, cursos, certificados, projetos)
     Route::prefix('api')->group(function () {
         Route::get('timeline-events', [App\Http\Controllers\TimelineEventController::class, 'index'])->name('api.timeline-events.index');
@@ -146,7 +151,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('timeline-events/{timelineEvent}', [App\Http\Controllers\TimelineEventController::class, 'show'])->name('api.timeline-events.show');
         Route::put('timeline-events/{timelineEvent}', [App\Http\Controllers\TimelineEventController::class, 'update'])->name('api.timeline-events.update');
         Route::delete('timeline-events/{timelineEvent}', [App\Http\Controllers\TimelineEventController::class, 'destroy'])->name('api.timeline-events.destroy');
-        
+
         // Rotas para mensagens
         Route::get('messages/conversations', [App\Http\Controllers\Api\MessageController::class, 'conversations'])->name('api.messages.conversations');
         Route::get('messages/{userId}', [App\Http\Controllers\Api\MessageController::class, 'messages'])->name('api.messages.show');
@@ -161,11 +166,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
 Route::prefix('api')->group(function () {
     Route::get('specializations/list', [SpecializationController::class, 'list'])->name('api.specializations.list');
     Route::get('specializations/options', [SpecializationController::class, 'options'])->name('api.specializations.options');
-    
+
     // Rotas públicas para disponibilidade de médicos (pacientes podem consultar)
     Route::get('doctors/{doctor}/availability/{date}', [App\Http\Controllers\Doctor\DoctorAvailabilitySlotController::class, 'getByDate'])->name('api.doctors.availability.date');
 });
-
 
 Route::get('font-test', function () {
     return Inertia::render('FontTest');
@@ -183,14 +187,14 @@ Route::get('sfu-load-test', [App\Http\Controllers\SfuTestController::class, 'loa
 Route::get('storage/avatars/{userId}/{filename}', function ($userId, $filename) {
     $path = "avatars/{$userId}/{$filename}";
     $disk = \Illuminate\Support\Facades\Storage::disk('public');
-    
-    if (!$disk->exists($path)) {
+
+    if (! $disk->exists($path)) {
         abort(404);
     }
-    
+
     $file = $disk->get($path);
     $mimeType = $disk->mimeType($path);
-    
+
     return response($file, 200)
         ->header('Content-Type', $mimeType)
         ->header('Cache-Control', 'public, max-age=31536000');
@@ -214,11 +218,12 @@ Route::middleware(['auth'])->prefix('api/notifications')->name('notifications.')
     Route::get('test', function () {
         try {
             $user = \Illuminate\Support\Facades\Auth::user();
-            if (!$user) {
+            if (! $user) {
                 return response()->json(['error' => 'Não autenticado'], 401);
             }
-            
+
             $count = \App\Models\Notification::where('user_id', $user->id)->count();
+
             return response()->json([
                 'user_id' => $user->id,
                 'total_notifications' => $count,
@@ -233,7 +238,7 @@ Route::middleware(['auth'])->prefix('api/notifications')->name('notifications.')
             ], 500);
         }
     });
-    
+
     Route::get('/', [App\Http\Controllers\NotificationController::class, 'index'])->name('index');
     Route::get('unread', [App\Http\Controllers\NotificationController::class, 'unread'])->name('unread');
     Route::get('unread-count', [App\Http\Controllers\NotificationController::class, 'unreadCount'])->name('unread-count');

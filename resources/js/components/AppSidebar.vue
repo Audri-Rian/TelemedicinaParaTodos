@@ -5,11 +5,30 @@ import NavUser from '@/components/NavUser.vue';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarInput, SidebarGroup, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/vue3';
-import { Calendar, CalendarClock, Home, Activity, Monitor, Users, History, FileText, MessageCircle, Search, Video, Stethoscope, Bug } from 'lucide-vue-next';
+import {
+    Calendar,
+    CalendarClock,
+    Home,
+    Activity,
+    Monitor,
+    Users,
+    History,
+    FileText,
+    MessageCircle,
+    Search,
+    Video,
+    Stethoscope,
+    Bug,
+    FlaskConical,
+    LayoutGrid,
+    Building2,
+    Plug2,
+} from 'lucide-vue-next';
 import AppLogo from './AppLogo.vue';
 import { useAuth } from '@/composables/auth';
 import { computed, ref } from 'vue';
 import * as doctorRoutes from '@/routes/doctor';
+import * as doctorLabRoutes from '@/routes/doctor/laboratorios';
 import * as patientRoutes from '@/routes/patient';
 
 const { isDoctor, isPatient } = useAuth();
@@ -58,6 +77,29 @@ const doctorNavItems = computed<NavItem[]>(() => [
         title: 'Documentos',
         href: '/doctor/documents',
         icon: FileText,
+    },
+    {
+        title: 'Laboratórios',
+        href: doctorRoutes.laboratorios(),
+        icon: FlaskConical,
+        activePathPrefix: doctorRoutes.laboratorios().url,
+        children: [
+            {
+                title: 'Hub de Integrações',
+                href: doctorRoutes.laboratorios(),
+                icon: LayoutGrid,
+            },
+            {
+                title: 'Gerenciar Parceiros',
+                href: doctorLabRoutes.parceiros(),
+                icon: Building2,
+            },
+            {
+                title: 'Conectar Parceiro',
+                href: doctorLabRoutes.conectar(),
+                icon: Plug2,
+            },
+        ],
     },
 ]);
 
