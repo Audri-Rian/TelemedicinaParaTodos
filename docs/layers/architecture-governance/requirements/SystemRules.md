@@ -1,5 +1,79 @@
 # 📜 Regras do Sistema
 
+## ✅ Regras Vigentes (Março/2026)
+
+> Esta seção consolida as regras efetivamente implementadas no código atual.  
+> O conteúdo anterior permanece como histórico e referência evolutiva.
+
+### Matriz de Regras Executáveis (Código como Fonte)
+
+| RN | Regra | Situação | Evidências |
+|---|---|---|---|
+| RN001 | Agendamento somente com médico ativo | ✅ | `AppointmentService::validateDoctorActive`, `Doctor::STATUS_ACTIVE` |
+| RN002 | Paciente precisa cadastro completo para agendar | ✅ | `AppointmentService::validatePatientComplete` |
+| RN003 | Conflito de horário em consultas | ✅ | `AppointmentService::validateNoConflict` |
+| RN004 | Transições controladas de status | ✅ | `AppointmentService::validateStatusTransition` |
+| RN005 | Janela de início da consulta | ✅ | `telemedicine.appointment.lead_minutes`, `DoctorConsultationDetailController` |
+| RN006 | Janela de cancelamento/reagendamento | ✅ | `telemedicine.appointment.cancel_before_hours`, `AppointmentService` |
+| RN007 | Somente participantes acessam consulta | ✅ | `AppointmentPolicy` |
+| RN008 | Restrição de acesso e edição do prontuário | ✅ | `MedicalRecordPolicy`, `MedicalRecordService` |
+| RN009 | Emissão clínica condicionada a CRM | ✅ | `MedicalRecordPolicy`, validações de médico |
+| RN010 | Notificações com limites anti-spam | ✅ | `NotificationService`, `DebounceNotifications` |
+| RN011 | Regras de agenda e disponibilidade por médico | ✅ | `ScheduleService`, `AvailabilityService`, requests de agenda |
+| RN012 | Timeline por propriedade do evento | ✅ | `TimelineEventPolicy` |
+| RN013 | Lembretes automáticos de consulta | ✅ | `SendAppointmentReminders`, `routes/console.php` |
+| RN014 | Configuração central de parâmetros de domínio | ✅ | `config/telemedicine.php` |
+| RN015 | Pagamentos eletrônicos | 📋 Planejado | Sem artefato implementado no backend atual |
+| RN016 | Fluxo completo de chamada de vídeo por rotas de produção | 🔄 Parcial | Base SFU existe; rotas públicas específicas ainda parciais |
+
+### Regras por Módulo (Atualizado)
+
+#### Usuários (Users, Doctors, Patients)
+- Registro separado de médico e paciente.
+- Email único por usuário.
+- CRM único e alfanumérico em caixa alta.
+- Paciente registra dados básicos e pode complementar dados clínicos.
+- Consulta depende de médico ativo e paciente completo.
+
+#### Consultas (Appointments)
+- Estados suportados: `scheduled`, `in_progress`, `completed`, `no_show`, `cancelled`, `rescheduled`.
+- Conflitos de agenda validados antes de criar/atualizar/reagendar.
+- Início, cancelamento e reagendamento obedecem janelas configuráveis em `config/telemedicine.php`.
+- Logs de eventos da consulta registrados com `AppointmentLog` e observers.
+
+#### Prontuário e Documentos Clínicos
+- Módulo clínico implementado (diagnóstico, prescrição, exame, nota clínica, atestado, sinais vitais, documento).
+- Acesso controlado por `MedicalRecordPolicy` com base em vínculo do atendimento.
+- Exportação de documentos clínicos/PDF suportada.
+- Auditoria de ações clínicas registrada.
+
+#### Agenda e Disponibilidade
+- Médico mantém locais de atendimento, slots recorrentes/específicos e bloqueio de datas.
+- Geração/consulta de disponibilidade com janela configurável.
+- Duração mínima de slot e limites são configuráveis.
+
+#### Comunicação (Mensagens e Notificações)
+- Mensageria interna via endpoints `/api/messages/*`.
+- Notificações in-app e envio de e-mail para eventos relevantes.
+- Debounce e limites de paginação para reduzir ruído/perda de performance.
+
+#### LGPD
+- Consentimento, portabilidade, relatório de acesso e solicitação de esquecimento estão expostos por rotas dedicadas.
+- Controle por autenticação e limites de taxa em operações sensíveis.
+
+#### Videoconferência
+- Base técnica SFU com entidades `Call` e `Room` e eventos de vídeo.
+- Fluxo ainda em evolução para fechamento de todo ciclo de chamada nas rotas de produção.
+
+### Decisões de Governança Registradas
+
+- Regras variáveis de negócio centralizadas em `config/telemedicine.php`.
+- Controle de acesso em profundidade: middleware + policy + service.
+- Documentação deve usar “implementado/parcial/planejado” com evidência de arquivo.
+- Divergência código-doc deve ser resolvida priorizando o código.
+
+---
+
 > **Implementação técnica das regras**  
 > Os parâmetros técnicos destas regras (janelas de agendamento, durações padrão, limites de histórico, lembretes, etc.) são configuráveis no backend via `config/telemedicine.php`.  
 > A rastreabilidade entre regras de negócio e configurações está documentada em `docs/Tasks/TASK_11_MIGRACAO_CONFIG_TELEMEDICINE.md`.

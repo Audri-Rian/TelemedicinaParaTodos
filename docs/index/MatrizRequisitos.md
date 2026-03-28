@@ -1,5 +1,61 @@
 # 📊 Matriz de Rastreabilidade - Telemedicina para Todos
 
+## ✅ Versão Vigente (Março/2026)
+
+> Esta seção substitui operacionalmente os status legados abaixo.  
+> Fonte de verdade: código em `routes/`, `app/`, `database/migrations/`, `config/` e `tests/`.
+
+### Escopo Atual de Requisitos Funcionais
+
+| ID | Requisito | Status Real | Evidências de Código | Cobertura de Testes |
+|---|---|---|---|---|
+| RF001 | Cadastro de Pacientes | ✅ Implementado | `app/Http/Requests/Auth/PatientRegistrationRequest.php`, `app/Models/Patient.php`, `routes/auth.php` | 🧪 Parcial |
+| RF002 | Cadastro de Profissionais | ✅ Implementado | `app/Http/Requests/Auth/DoctorRegistrationRequest.php`, `app/Models/Doctor.php`, `routes/auth.php` | 🧪 Parcial |
+| RF003 | Agendamento de Consultas | ✅ Implementado | `app/Services/AppointmentService.php`, `app/Http/Controllers/AppointmentsController.php`, `routes/web.php` | 🧪 Parcial |
+| RF004 | Consulta Online por Vídeo | 🔄 Parcial | `app/Models/Call.php`, `app/Models/Room.php`, `app/Services/CallManagerService.php`, `resources/views/sfu-test/index.blade.php` | 🧪 Baixa |
+| RF005 | Prescrição e Documentos Médicos | ✅ Implementado | `app/Services/MedicalRecordService.php`, `app/Models/Prescription.php`, `app/Http/Controllers/Doctor/DoctorPatientMedicalRecordController.php` | 🧪 Parcial |
+| RF006 | Pagamentos Online | 📋 Planejado | Sem controlador/serviço/migrations de pagamento no código atual | ❌ Ausente |
+| RF007 | Autenticação e Controle de Acesso | ✅ Implementado | `routes/auth.php`, `app/Policies/AppointmentPolicy.php`, `app/Policies/MedicalRecordPolicy.php` | 🧪 Boa (Auth/Settings) |
+| RF008 | Notificações de Consultas | ✅ Implementado (in-app + e-mail) | `app/Http/Controllers/Api/NotificationController.php`, `app/Services/NotificationService.php`, `app/Mail/AppointmentReminderMail.php` | 🧪 Parcial |
+| RF009 | Gestão de Especializações | ✅ Implementado | `app/Http/Controllers/SpecializationController.php`, `routes/web.php`, `app/Models/Specialization.php` | 🧪 Baixa |
+| RF010 | Médico com Especializações | ✅ Implementado | `DoctorRegistrationRequest`, `doctor_specialization` migrations, `app/Models/Doctor.php` | 🧪 Parcial |
+| RF011 | Paciente com Dados Clínicos | ✅ Implementado | `PatientRegistrationRequest`, `app/Models/Patient.php`, migrations de patients | 🧪 Parcial |
+| RF012 | Videoconferência em Tempo Real | 🔄 Parcial (base SFU) | `app/Events/VideoCall*`, `app/Services/CallManagerService.php`, `routes/channels.php` | 🧪 Baixa |
+| RF013 | Configurações de Perfil/Senha/Avatar | ✅ Implementado | `routes/settings.php`, `app/Http/Controllers/Settings/*`, `app/Http/Controllers/AvatarController.php` | 🧪 Boa |
+| RF014 | Gestão de Prontuários | ✅ Implementado | `MedicalRecordService`, `MedicalRecordPolicy`, migrations `2025_11_24_*` | 🧪 Parcial |
+| RF015 | Agenda e Disponibilidade | ✅ Implementado | `app/Services/Doctor/ScheduleService.php`, `app/Services/AvailabilityService.php`, `routes/web.php` | 🧪 Baixa |
+| RF016 | Timeline Profissional | ✅ Implementado (multiusuário autenticado) | `app/Http/Controllers/TimelineEventController.php`, `app/Policies/TimelineEventPolicy.php` | 🧪 Baixa |
+| RF017 | Mensageria entre Usuários | ✅ Implementado | `app/Http/Controllers/Api/MessageController.php`, `app/Services/MessageService.php`, `routes/web.php` | 🧪 Baixa |
+| RF018 | LGPD (consentimento, portabilidade, esquecimento) | ✅ Implementado | `app/Http/Controllers/LGPD/*`, `routes/web.php`, migrations `consents`, `data_access_logs`, `audit_logs` | 🧪 Baixa |
+
+### Requisitos Não Funcionais (Estado Real)
+
+| ID | Requisito | Status Real | Evidências |
+|---|---|---|---|
+| NF001 | Acesso Web | ✅ | Vue + Inertia + Vite em `package.json` e `resources/js` |
+| NF002 | Interface Amigável | ✅ | UI Vue, Tailwind, layouts e páginas por perfil |
+| NF003 | Backup de Dados | 🔄 Parcial | Há requisitos e rotinas operacionais, sem módulo interno de backup automatizado explícito |
+| NF004 | Desempenho | 🔄 Parcial | Cache/Queue configuráveis; sem benchmark automatizado no repositório |
+| NF005 | Autenticação Segura | ✅ | Rate limit de login + validações + hash de senha |
+| NF006 | Controle de Acesso | ✅ | Middlewares por perfil e Policies por domínio |
+| NF007 | Conformidade LGPD | ✅ | Rotas e controladores dedicados (`/lgpd/*`) |
+| NF008 | Disponibilidade | 🔄 Parcial | Reverb/filas e tratamento de erros; sem SLO monitorado no código |
+
+### Decisões Arquiteturais Confirmadas no Código
+
+- Videoconferência evoluiu para base SFU com entidades `Call` e `Room` e dependência `mediasoup-client`.
+- Regras centrais de negócio foram centralizadas em `config/telemedicine.php`.
+- API híbrida: rotas web + endpoints com prefixo `/api` no `routes/web.php` (sem `routes/api.php` dedicado).
+- Domínio protegido por `Policies` (appointments, prontuário, timeline) e `FormRequests`.
+
+### Gaps Críticos de Governança (Ação)
+
+- Fluxo HTTP completo de chamada de vídeo não está exposto publicamente em rotas dedicadas (estado parcial).
+- Pagamentos continuam planejados (sem artefatos de implementação).
+- Cobertura de testes ainda concentrada em Auth/Settings; módulos clínicos e comunicação exigem maior cobertura.
+
+---
+
 ## Sobre Este Documento
 
 Esta matriz conecta cada requisito funcional e não funcional aos seus artefatos de implementação, permitindo rastreabilidade completa desde a especificação até os testes. É uma ferramenta essencial para auditoria, manutenção e onboarding de novos desenvolvedores.

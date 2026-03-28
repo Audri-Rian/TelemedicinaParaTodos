@@ -86,6 +86,125 @@
 
 ---
 
+## Atualização Técnica Vigente (Março/2026)
+
+> Esta seção passa a ser a referência principal deste documento para requisitos, regras e arquitetura funcional.  
+> O conteúdo anterior permanece como histórico acadêmico e de evolução.
+
+### 0.1 Escopo funcional vigente (visão executiva)
+
+- RF001/RF002: cadastro separado de paciente e médico implementado com validação dedicada.
+- RF003: agendamento com conflitos, janelas de início/cancelamento e trilha de status.
+- RF004/RF012: videoconferência em evolução para arquitetura SFU (`Call`/`Room`) com base real no projeto.
+- RF005/RF014: prontuário médico com diagnósticos, prescrições, exames, notas, atestados, sinais vitais, documentos e exportações PDF.
+- RF007/RF013: autenticação, autorização, settings de perfil/senha/avatar e políticas de acesso.
+- RF008/RF017: notificações e mensageria interna em endpoints `/api/*` no `routes/web.php`.
+- RF009/RF010/RF015/RF016: especializações, vínculo médico-especializações, agenda/disponibilidade e timeline ativos.
+- RF018: recursos LGPD (consentimento, portabilidade, relatório de acesso, solicitação de esquecimento) implementados.
+
+### 0.2 Requisitos funcionais atualizados (estado real)
+
+#### [RF001] Cadastro de Pacientes
+- **Estado:** Implementado
+- **Evidências:** `PatientRegistrationRequest`, `Patient` model, rotas de registro em `routes/auth.php`
+- **Regra-chave:** dados mínimos obrigatórios no registro inicial; dados clínicos estendidos opcionais.
+
+#### [RF002] Cadastro de Profissionais
+- **Estado:** Implementado
+- **Evidências:** `DoctorRegistrationRequest`, `Doctor` model, rotas de registro em `routes/auth.php`
+- **Regra-chave:** CRM único e formato alfanumérico em caixa alta.
+
+#### [RF003] Agendamento de Consultas
+- **Estado:** Implementado
+- **Evidências:** `AppointmentService`, `AppointmentsController`, `AppointmentPolicy`
+- **Regra-chave:** valida médico ativo, cadastro completo do paciente, conflitos e transições de status.
+
+#### [RF004] Consulta Online (Videoconferência)
+- **Estado:** Parcial (base técnica implementada)
+- **Evidências:** `CallManagerService`, modelos `Call`/`Room`, eventos `VideoCall*`, view `sfu-test`
+- **Observação:** há infraestrutura SFU e eventos; fluxo público completo por rotas dedicadas ainda incompleto.
+
+#### [RF005] Prescrição e Documentos
+- **Estado:** Implementado
+- **Evidências:** `MedicalRecordService`, `DoctorPatientMedicalRecordController`, modelos clínicos.
+
+#### [RF006] Pagamentos Online
+- **Estado:** Planejado
+- **Evidências:** ausência de serviços/controladores/migrations de gateway de pagamento no código atual.
+
+#### [RF007] Autenticação e Controle de Acesso
+- **Estado:** Implementado
+- **Evidências:** `routes/auth.php`, middlewares de perfil, `AppointmentPolicy`, `MedicalRecordPolicy`.
+
+#### [RF008] Notificações de Consultas
+- **Estado:** Implementado (in-app + e-mail)
+- **Evidências:** `Api/NotificationController`, `NotificationService`, mailables de lembrete/confirmação/cancelamento.
+
+#### [RF009] Gestão de Especializações
+- **Estado:** Implementado
+- **Evidências:** `SpecializationController`, rotas resource e `/api/specializations/*`.
+
+#### [RF010] Médico com Especializações
+- **Estado:** Implementado
+- **Evidências:** validação em `DoctorRegistrationRequest` e pivot `doctor_specialization`.
+
+#### [RF011] Paciente com Dados Clínicos
+- **Estado:** Implementado
+- **Evidências:** campos clínicos em `patients` + validações no registro de paciente.
+
+#### [RF012] Videoconferência em Tempo Real
+- **Estado:** Parcial
+- **Evidências:** eventos de vídeo, canais e base SFU.
+
+#### [RF013] Configurações de Conta
+- **Estado:** Implementado
+- **Evidências:** `routes/settings.php`, controladores `Settings/*`, `AvatarController`.
+
+#### [RF014] Gestão de Prontuário Médico
+- **Estado:** Implementado
+- **Evidências:** serviços, políticas, migrations e controladores clínicos por perfil.
+
+#### [RF015] Agenda e Disponibilidade
+- **Estado:** Implementado
+- **Evidências:** `ScheduleService`, `AvailabilityService`, rotas `/doctor/doctors/{doctor}/...`.
+
+#### [RF016] Timeline Profissional
+- **Estado:** Implementado
+- **Evidências:** `TimelineEventController`, `TimelineEventService`, `TimelineEventPolicy`.
+- **Regra vigente no código:** criação/gestão permitida a usuário autenticado proprietário do evento.
+
+#### [RF017] Mensageria entre Usuários
+- **Estado:** Implementado
+- **Evidências:** `Api/MessageController`, `MessageService`, endpoints `/api/messages/*`.
+
+#### [RF018] Conformidade LGPD Operacional
+- **Estado:** Implementado
+- **Evidências:** controladores em `app/Http/Controllers/LGPD/*` e rotas `/lgpd/*`.
+
+### 0.3 Regras de negócio vigentes (resumo executável)
+
+- RN001: consultas só com médico ativo.
+- RN002: paciente precisa cadastro completo para agendar (inclui contato de emergência).
+- RN003: conflito de horário validado em `AppointmentService::validateNoConflict`.
+- RN004: transições de status de consulta são restritas.
+- RN005: cancelamento respeita janela configurável.
+- RN006: reagendamento respeita status e conflito.
+- RN007: apenas participantes acessam consulta (policy).
+- RN008: prontuário com acesso controlado por policy e vínculo de atendimento.
+- RN009: emissão clínica por médico com CRM.
+- RN010: lembretes/notificações com limites anti-spam e agendamento.
+- RN011: timelines por usuário dono do recurso.
+- RN012: parâmetros críticos centralizados em `config/telemedicine.php`.
+
+### 0.4 Divergências corrigidas em relação à versão anterior
+
+- Vídeo: referência antiga centrada em PeerJS foi substituída por base SFU/MediaSoup em evolução.
+- Banco: documentação passa a tratar o projeto como multi-driver com configuração por ambiente (default `sqlite`, ambiente costuma usar `pgsql`).
+- API: endpoints estão em `routes/web.php` com prefixo `/api`; não há `routes/api.php` ativo.
+- Segurança/arquitetura: rastreabilidade formal via `Policies`, `FormRequests`, `Services` e `config/telemedicine.php`.
+
+---
+
 # 1. DOCUMENTO DE DEFINIÇÃO DE ESCOPO (DDE)
 
 ## 1.1 Introdução

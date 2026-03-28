@@ -132,98 +132,259 @@ Desejável: não interfere nas funcionalidades básicas. O sistema funciona bem 
 
 2.1 REQUISITOS FUNCIONAIS
 
-Requisitos funcionais são as funções que usuários e clientes esperam que o software ofereça. Eles estão diretamente ligados às funcionalidades que o sistema deve fornecer. Abaixo estão os principais requisitos funcionais do Telemedicina para Todos (detalhamento completo em `docs/layers/architecture-governance/requirements/FuncionalitsGuide.md`).
+Requisitos funcionais são as funções que usuários e clientes esperam que o software ofereça. Eles estão diretamente ligados às funcionalidades que o sistema deve fornecer. Segundo Ian Sommerville, requisitos funcionais definem as funcionalidades específicas que um sistema de software deve realizar para atender às necessidades dos usuários e alcançar os objetivos do projeto. Abaixo estão os principais requisitos funcionais do Telemedicina para Todos (detalhamento completo em `docs/layers/architecture-governance/requirements/FuncionalitsGuide.md`).
 
-**[RF-01] Cadastro de Pacientes**  
-O sistema deve permitir cadastro, alteração e consulta de pacientes com dados básicos (nome, e-mail, senha, gênero, data de nascimento, telefone) e, em etapa posterior, contato de emergência e dados clínicos opcionais.  
-Atores: Paciente.  
-Prioridade: Essencial.  
-Critério de aceitação: Usuário preenche campos obrigatórios e recebe confirmação de conta; cadastro completo (incluindo contato de emergência) é exigido para agendamento.
+**[RF-01] Manter Cadastro de Pacientes**
+O sistema deve permitir o cadastro, alteração, inativação e consulta de pacientes em banco de dados seguro, com dados básicos (nome, e-mail, senha, gênero, data de nascimento, telefone) e, em etapa posterior, contato de emergência e dados clínicos opcionais.
+Atores: Paciente, Administrador.
+Prioridade: ☑ Essencial ☐ Importante ☐ Desejável
+Critério de aceitação: O usuário preenche os campos obrigatórios e recebe confirmação de criação de conta; o cadastro completo (incluindo contato de emergência) é exigido para agendamento; o paciente pode modificar seus próprios dados.
 
-**[RF-02] Cadastro de Médicos**  
-O sistema deve permitir cadastro de médicos com CRM único, seleção de uma ou mais especializações e criação de perfil vinculado ao usuário.  
-Atores: Médico.  
-Prioridade: Essencial.  
-Critério de aceitação: Médico registrado com CRM e especializações válidas; perfil ativo disponível para agendamentos.
+**[RF-02] Manter Cadastro de Profissionais da Saúde**
+O sistema deve permitir o cadastro, alteração, inativação e consulta de perfis de profissionais da saúde, com dados obrigatórios (nome, CPF, registro profissional, especialidade, telefone, e-mail, endereço, senha). Apenas profissionais com status "active" ficam visíveis para agendamento.
+Atores: Médico, Administrador.
+Prioridade: ☑ Essencial ☐ Importante ☐ Desejável
+Critério de aceitação: O perfil do médico é criado com status ativo após validação; somente médicos ativos recebem novos agendamentos; o status pode ser: active, inactive, suspended, blocked.
 
-**[RF-03] Agendamento de Consultas**  
-O sistema deve permitir que pacientes agendem consultas com médicos disponíveis, com validação de slots, conflitos de horário, reagendamento e cancelamento dentro das janelas configuradas.  
-Atores: Paciente, Médico.  
-Prioridade: Essencial.  
-Critério de aceitação: Consulta criada com status (scheduled, rescheduled, in_progress, completed, no_show, cancelled); integração com prontuário e geração de PDF da consulta.
+**[RF-03] Agendamento de Consultas**
+O sistema deve permitir que pacientes agendem consultas com médicos disponíveis, com validação de slots, conflitos de horário, reagendamento e cancelamento dentro das janelas configuradas. Suporta integração completa com prontuário, acesso e edição durante a consulta, finalização com bloqueio do prontuário (exceto complementos) e geração de PDF.
+Atores: Paciente, Médico.
+Prioridade: ☑ Essencial ☐ Importante ☐ Desejável
+Critério de aceitação: A consulta é registrada com status (scheduled, rescheduled, in_progress, completed, no_show, cancelled); código de acesso único gerado para cada consulta; o médico acessa e edita o prontuário durante consulta em andamento; após finalização, o prontuário é bloqueado (exceto complementos); geração de PDF da consulta completa com prontuário.
 
-**[RF-04] Videoconferência**  
-O sistema deve permitir solicitação e realização de chamada de vídeo entre médico e paciente em tempo real (WebRTC via PeerJS), com sinalização por WebSockets (Laravel Reverb).  
-Atores: Médico, Paciente.  
-Prioridade: Essencial.  
-Critério de aceitação: Sala de videoconferência criada para a consulta; áudio e vídeo estabelecidos; eventos de entrada/saída rastreados.
+**[RF-04] Realizar Consultas Online (Videoconferência e Chat Interno)**
+O sistema deve permitir a realização de consultas por videoconferência integrada ou chat interno. O sistema utiliza arquitetura SFU (Selective Forwarding Unit) com entidades Call e Room, cria salas de videoconferência automaticamente, rastreia eventos em tempo real e gerencia expiração automática de salas.
+Atores: Médico, Paciente.
+Prioridade: ☑ Essencial ☐ Importante ☐ Desejável
+Critério de aceitação: As salas de vídeo são criadas automaticamente para consultas agendadas; os eventos de videochamada são rastreados (entrada, saída, ações); as salas expiram automaticamente após período configurado; as consultas são atualizadas automaticamente a partir dos dados da sala.
 
-**[RF-05] Prontuários Médicos**  
-O sistema deve permitir gestão completa de prontuários: diagnósticos (CID-10), prescrições, exames, anotações clínicas, atestados, sinais vitais, documentos anexados, com auditoria e exportação em PDF.  
-Atores: Médico, Paciente.  
-Prioridade: Essencial.  
-Critério de aceitação: Médico edita prontuário durante/finalização da consulta; paciente visualiza itens não privados; todas as ações registradas em log.
+**[RF-05] Prescrição Digital e Envio de Documentos**
+O sistema deve permitir a emissão de prescrições digitais e a transmissão de documentos durante ou após a consulta. As prescrições incluem medicamentos com nome, dosagem e frequência.
+Atores: Médico.
+Prioridade: ☐ Essencial ☑ Importante ☐ Desejável
+Critério de aceitação: O médico emite prescrições digitais durante/após a consulta; os documentos podem ser anexados às consultas; o paciente visualiza e faz download dos documentos na área restrita; as prescrições incluem medicamentos com nome, dosagem e frequência.
 
-**[RF-06] Agenda e Disponibilidade**  
-O sistema deve permitir que médicos configurem locais de atendimento, slots recorrentes e específicos, e datas bloqueadas; pacientes devem poder consultar disponibilidade por data.  
-Atores: Médico, Paciente.  
-Prioridade: Essencial.  
-Critério de aceitação: Slots ativos e não bloqueados disponíveis para agendamento; validação de conflitos de horário.
+**[RF-06] Pagamentos Online**
+O sistema deve suportar pagamentos online para consultas quando aplicável, com múltiplos métodos de pagamento.
+Atores: Paciente, Médico, Administrador.
+Prioridade: ☐ Essencial ☐ Importante ☑ Desejável
+Critério de aceitação: O sistema suporta múltiplos métodos de pagamento (cartão, PIX, boleto); o pagamento é vinculado à consulta; o comprovante de pagamento é gerado e disponibilizado; mecanismo de reembolso para consultas canceladas.
 
-**[RF-07] Autenticação e Controle de Acesso**  
-O sistema deve autenticar usuários (e-mail e senha) e redirecionar conforme perfil (médico ou paciente), com proteção de rotas.  
-Atores: Todos.  
-Prioridade: Essencial.  
-Critério de aceitação: Login válido concede acesso à área restrita correspondente ao perfil.
+**[RF-07] Autenticação e Controle de Acesso**
+O sistema deve autenticar usuários (e-mail e senha) e redirecionar conforme perfil (médico ou paciente), com proteção de rotas e controle de permissões baseado em papéis.
+Atores: Todos.
+Prioridade: ☑ Essencial ☐ Importante ☐ Desejável
+Critério de aceitação: O login é realizado com e-mail e senha; a senha segue critérios de segurança (mínimo 8 caracteres, maiúsculas, números); criptografia bcrypt implementada; controle de acesso baseado em papéis (paciente, médico, admin); proteção contra força bruta (bloqueio após 5 tentativas).
+
+**[RF-08] Notificações de Consultas**
+O sistema deve enviar notificações sobre confirmações, alterações e cancelamentos de consultas via e-mail e painel da plataforma (in-app), com suporte a lembretes automáticos e limites anti-spam. Inclui notificações em tempo real via WebSockets (Laravel Reverb).
+Atores: Paciente, Médico.
+Prioridade: ☐ Essencial ☑ Importante ☐ Desejável
+Critério de aceitação: As notificações são enviadas automaticamente na criação, reagendamento e cancelamento de consultas; lembretes automáticos são disparados antes do horário agendado; o sistema aplica debounce e limites de paginação para evitar spam; as notificações são entregues in-app e por e-mail.
+
+**[RF-09] Gestão de Especializações Médicas**
+O sistema deve permitir o CRUD completo de especializações médicas, com listagem, exibição, edição, exclusão (com validação de integridade) e endpoints públicos de consulta.
+Atores: Administrador.
+Prioridade: ☐ Essencial ☑ Importante ☐ Desejável
+Critério de aceitação: O nome da especialização é único e com no máximo 100 caracteres; endpoints públicos da API disponíveis (`GET /api/specializations/list`, `GET /api/specializations/options`); a especialização pode ser ativada/desativada; validação de integridade antes da exclusão (impedir se vinculada a médicos); filtros disponíveis: busca, somente ativos, com contagem.
+
+**[RF-10] Cadastro de Médico com Especializações**
+O sistema deve oferecer fluxo dedicado de registro de médicos com CRM único, seleção de uma ou mais especializações (mínimo 1, máximo 5) e criação de perfil vinculado ao usuário.
+Atores: Médico, Administrador.
+Prioridade: ☑ Essencial ☐ Importante ☐ Desejável
+Critério de aceitação: O registro exige nome, e-mail, senha e CRM (único, alfanumérico, 4-20 caracteres, apenas letras maiúsculas e números); é obrigatória pelo menos 1 especialização e no máximo 5; as especializações devem existir no catálogo do sistema; o perfil do médico fica ativo após o registro.
+
+**[RF-11] Cadastro de Paciente com Dados Clínicos Básicos**
+O sistema deve oferecer fluxo dedicado de registro de pacientes com dados mínimos obrigatórios e campos clínicos opcionais, em duas etapas: dados básicos e contato de emergência.
+Atores: Paciente.
+Prioridade: ☑ Essencial ☐ Importante ☐ Desejável
+Critério de aceitação: Os campos obrigatórios são nome, e-mail, senha, gênero, data de nascimento e telefone; os campos opcionais incluem contato de emergência, histórico médico e alergias; o cadastro ocorre em duas etapas (dados básicos → contato de emergência); o contato de emergência é obrigatório antes de agendar consultas; o perfil do paciente fica ativo após o registro.
+
+**[RF-12] Videoconferência de Consultas (Tempo Real)**
+O sistema deve permitir a solicitação e aceitação de videochamadas entre usuários via arquitetura SFU (Selective Forwarding Unit) com entidades Call e Room, canais privados de sinalização e eventos em tempo real via broadcasting (Laravel Reverb).
+Atores: Paciente, Médico.
+Prioridade: ☑ Essencial ☐ Importante ☐ Desejável
+Critério de aceitação: A solicitação de videochamada é enviada via canal privado; a conexão SFU é estabelecida com gestão de Call e Room; eventos em tempo real de sinalização de vídeo são disparados; a sessão é estabelecida com vídeo/áudio; os recursos são liberados após o encerramento da sessão.
+
+**[RF-13] Configurações de Perfil e Senha**
+O sistema deve permitir a edição de perfil, atualização de senha e exclusão de conta para usuários autenticados, incluindo upload de avatar/foto.
+Atores: Usuário autenticado.
+Prioridade: ☐ Essencial ☑ Importante ☐ Desejável
+Critério de aceitação: O usuário pode editar seus próprios dados de perfil; a alteração de senha exige verificação da senha atual; o upload de avatar/foto é suportado; a opção de exclusão de conta está disponível.
+
+**[RF-14] Gestão de Prontuários Médicos**
+O sistema deve permitir a gestão completa de prontuários digitais: diagnósticos (CID-10), prescrições, exames, anotações clínicas (públicas/privadas), atestados médicos com código de verificação único, sinais vitais, documentos anexados, com auditoria completa (LGPD) e exportação em PDF.
+Atores: Médico, Paciente.
+Prioridade: ☑ Essencial ☐ Importante ☐ Desejável
+Critério de aceitação: O médico visualiza o prontuário completo dos pacientes atendidos; registra diagnósticos com código CID-10, prescrições com medicamentos estruturados, solicitação de exames, notas clínicas (públicas ou privadas), atestados com código de verificação único e sinais vitais; o paciente visualiza apenas itens não privados; geração de PDF da consulta completa e exportação do prontuário; todas as ações são registradas em log de auditoria (IP, user agent, metadados); os logs não podem ser excluídos (conformidade LGPD).
+
+**[RF-15] Sistema de Agenda e Disponibilidade**
+O sistema deve permitir a gestão completa de agenda e disponibilidade dos médicos, com configuração de múltiplos locais de atendimento (teleconsulta, consultório, hospital, clínica), slots recorrentes e específicos, bloqueio de datas e consulta pública de disponibilidade.
+Atores: Médico, Paciente.
+Prioridade: ☑ Essencial ☐ Importante ☐ Desejável
+Critério de aceitação: O médico registra múltiplos locais de atendimento; configura slots de disponibilidade recorrentes e específicos; bloqueia datas específicas (feriados, férias); o sistema valida conflitos de horário; disponibilidade padrão criada caso o médico não configure; pacientes consultam disponibilidade por data; teleconsulta é obrigatória para todos os médicos.
+
+**[RF-16] Timeline de Profissional**
+O sistema deve permitir o registro de eventos profissionais na timeline do médico: educação, cursos, certificados e projetos profissionais, com controle de visibilidade pública e ordenação personalizada.
+Atores: Médico.
+Prioridade: ☐ Essencial ☑ Importante ☐ Desejável
+Critério de aceitação: O profissional registra eventos de educação, cursos, certificações e projetos; controla a visibilidade (aparece ou não no perfil público); controla a ordem de exibição; pode anexar imagens/certificados aos eventos; tipos de evento: education, course, certificate, project; data de início obrigatória, data de fim opcional (para eventos em andamento).
+
+**[RF-17] Mensageria entre Usuários**
+O sistema deve permitir a troca de mensagens internas entre médicos e pacientes vinculados por consultas, com endpoints dedicados de envio, listagem e leitura de mensagens.
+Atores: Médico, Paciente.
+Prioridade: ☐ Essencial ☑ Importante ☐ Desejável
+Critério de aceitação: O usuário autenticado envia e recebe mensagens dentro da plataforma; as mensagens são vinculadas ao contexto da consulta ou conversa entre participantes; a listagem suporta paginação; as mensagens são entregues em tempo real.
+
+**[RF-18] Conformidade LGPD Operacional**
+O sistema deve oferecer funcionalidades operacionais de conformidade com a LGPD, incluindo consentimento explícito, portabilidade de dados, relatório de acesso e solicitação de esquecimento (exclusão de dados pessoais).
+Atores: Paciente, Médico, Administrador.
+Prioridade: ☑ Essencial ☐ Importante ☐ Desejável
+Critério de aceitação: O sistema disponibiliza rotas dedicadas para consentimento, portabilidade, relatório de acesso e solicitação de esquecimento; o controle é feito por autenticação com limites de taxa em operações sensíveis; os dados pessoais podem ser exportados ou excluídos mediante solicitação do titular.
 
 2.2 REQUISITOS NÃO FUNCIONAIS
 
-Os requisitos não funcionais representam atributos de qualidade que o software deve possuir (desempenho, segurança, usabilidade, confiabilidade). Referência completa em `docs/layers/architecture-governance/requirements/FuncionalitsGuide.md`.
+Os requisitos não funcionais representam atributos de qualidade que um software deve possuir, mesmo que não estejam diretamente ligados às funcionalidades principais. Eles indicam características esperadas em qualquer sistema profissionalmente desenvolvido, como desempenho, segurança, usabilidade e confiabilidade. Além disso, expressam restrições técnicas que o software precisa atender, garantindo que ele funcione de forma eficiente dentro de seu ambiente operacional.
 
-**[NF-01] Desempenho**  
-O tempo de resposta das operações críticas não deve exceder 3 segundos em rede banda larga; o sistema deve suportar até 500 usuários simultâneos em testes de carga.  
-Prioridade: Essencial.  
-Critério de medição: Ferramentas de medição (Lighthouse, testes de carga).
+**[NF-01] (Acesso Web):**
+O sistema deve ser acessível por navegadores modernos (Chrome, Firefox, Edge, Safari em versões recentes), com suporte a dispositivos que possuam câmera e microfone para videoconferência.
+Prioridade: ☑ Essencial ☐ Importante ☐ Desejável
+Critério de medição: Testes de compatibilidade em navegadores suportados; verificação de acesso a câmera e microfone via APIs do navegador.
 
-**[NF-02] Acesso Web**  
-Acesso por navegadores modernos; suporte a dispositivos com câmera e microfone para videoconferência.  
-Prioridade: Essencial.
+**[NF-02] (Interface Amigável):**
+O layout deve ser responsivo e intuitivo, com mensagens de erro claras e orientações visuais que facilitem a navegação para usuários com conhecimentos básicos de informática.
+Prioridade: ☐ Essencial ☑ Importante ☐ Desejável
+Critério de medição: Avaliação de usabilidade; validação de responsividade em diferentes resoluções de tela (mínima 1024×768).
 
-**[NF-03] Autenticação Segura**  
-Senhas criptografadas (bcrypt); proteção contra força bruta (ex.: bloqueio após tentativas falhas).  
-Prioridade: Essencial.
+**[NF-03] (Backup de Dados):**
+O sistema deve realizar backups automáticos diários do banco de dados, com capacidade de recuperação em até 24 horas em caso de falha.
+Prioridade: ☑ Essencial ☐ Importante ☐ Desejável
+Critério de medição: Verificação de execução de backups automáticos; teste de restauração de backup.
 
-**[NF-04] Conformidade LGPD**  
-Consentimento, direito de exclusão, criptografia em repouso e em trânsito (HTTPS/TLS), auditoria de ações em prontuários.  
-Prioridade: Essencial.
+**[NF-04] (Desempenho):**
+O tempo de resposta das operações críticas não deve exceder 3 segundos em rede banda larga; o sistema deve suportar até 500 usuários simultâneos em testes de carga.
+Prioridade: ☑ Essencial ☐ Importante ☐ Desejável
+Critério de medição: Teste com ferramentas de medição (Lighthouse, testes de carga).
 
-**[NF-05] Interface Amigável**  
-Layout responsivo e intuitivo; mensagens de erro claras.  
-Prioridade: Importante.
+**[NF-05] (Autenticação Segura):**
+As senhas devem ser criptografadas com bcrypt; o sistema deve implementar proteção contra força bruta com bloqueio após 5 tentativas falhas de login.
+Prioridade: ☑ Essencial ☐ Importante ☐ Desejável
+Critério de medição: Auditoria de segurança; testes de tentativas de login com credenciais inválidas.
+
+**[NF-06] (Controle de Acesso):**
+O sistema deve implementar permissões por perfil (paciente, médico, administrador), restringindo o acesso a dados sensíveis conforme o papel do usuário autenticado.
+Prioridade: ☑ Essencial ☐ Importante ☐ Desejável
+Critério de medição: Testes de acesso com diferentes perfis; verificação de bloqueio de rotas não autorizadas.
+
+**[NF-07] (Conformidade com a LGPD):**
+O sistema deve garantir consentimento explícito, direito de exclusão, criptografia em repouso e em trânsito (HTTPS/TLS) e auditoria completa de ações em prontuários médicos.
+Prioridade: ☑ Essencial ☐ Importante ☐ Desejável
+Critério de medição: Verificação de rotas de consentimento, portabilidade e esquecimento; auditoria de logs de prontuário; validação de HTTPS/TLS.
+
+**[NF-08] (Disponibilidade):**
+O sistema deve manter disponibilidade mínima de 99%, com janelas de manutenção agendadas e comunicadas previamente aos usuários.
+Prioridade: ☐ Essencial ☑ Importante ☐ Desejável
+Critério de medição: Monitoramento de uptime; registro de janelas de manutenção.
 
 2.3 REGRAS DE NEGÓCIO
 
-As regras de negócio definem os limites e comportamentos do sistema. Detalhamento em `docs/layers/architecture-governance/requirements/SystemRules.md` e `FuncionalitsGuide.md`.
+As regras de negócio definem os limites, comportamentos e restrições que regem o funcionamento da aplicação, garantindo conformidade com os objetivos organizacionais e legais. Os parâmetros técnicos destas regras são configuráveis no backend via `config/telemedicine.php`. Abaixo estão listadas as principais regras aplicáveis ao sistema:
 
-**[RN-01] Agendamento com profissionais ativos**  
-Pacientes só podem agendar consultas com médicos com status "active". Médicos inativos ou suspensos não recebem novos agendamentos.  
-Prioridade: Essencial.
+**[RN-01] Agendamento com Profissionais Ativos:**
+Pacientes só podem agendar consultas com médicos que possuem status "active" no sistema. Médicos com status "inactive", "suspended" ou "blocked" não recebem novos agendamentos e não aparecem nas buscas de disponibilidade.
+Prioridade: ☑ Essencial ☐ Importante ☐ Desejável
 
-**[RN-02] Cadastro completo para agendamento**  
-Pacientes devem completar a segunda etapa de cadastro (contato de emergência) antes de agendar consultas.  
-Prioridade: Essencial.
+**[RN-02] Cadastro Completo para Agendamento:**
+Pacientes devem completar duas etapas de cadastro antes de agendar consultas: dados básicos (nome, e-mail, senha, gênero, data de nascimento, telefone) e contato de emergência (nome e telefone). O sistema valida a completude antes de permitir o agendamento.
+Prioridade: ☑ Essencial ☐ Importante ☐ Desejável
 
-**[RN-03] Validação de conflitos de horário**  
-Não é permitido agendar consultas em horários que conflitem com outras consultas do mesmo médico (status scheduled, rescheduled ou in_progress).  
-Prioridade: Essencial.
+**[RN-03] Validação de Conflitos de Horário:**
+Não é permitido agendar consultas em horários que conflitem com outras consultas do mesmo médico (status scheduled, rescheduled ou in_progress). O sistema valida sobreposição de horários considerando a duração padrão da consulta (configurável, padrão 30 minutos).
+Prioridade: ☑ Essencial ☐ Importante ☐ Desejável
 
-**[RN-04] Transições de status de consulta**  
-Consultas seguem fluxo controlado: scheduled/rescheduled → in_progress, cancelled, no_show; in_progress → completed. Transições inválidas são bloqueadas.  
-Prioridade: Essencial.
+**[RN-04] Transições de Status de Consulta:**
+Consultas possuem fluxo controlado de status. Transições permitidas: scheduled → in_progress, cancelled, rescheduled, no_show; rescheduled → in_progress, cancelled, scheduled; in_progress → completed. Estados finais (completed, cancelled, no_show) não permitem novas transições.
+Prioridade: ☑ Essencial ☐ Importante ☐ Desejável
 
-**[RN-05] Acesso ao prontuário**  
-Apenas médicos que atenderam o paciente podem editar o prontuário; paciente visualiza apenas itens não privados. Todas as ações são registradas em log de auditoria.  
-Prioridade: Essencial.
+**[RN-05] Janela de Início da Consulta:**
+Consultas podem ser iniciadas somente dentro de uma janela de tempo configurável: 10 minutos antes e 10 minutos depois do horário agendado (parâmetros lead_minutes e trailing_minutes).
+Prioridade: ☑ Essencial ☐ Importante ☐ Desejável
+
+**[RN-06] Janela de Cancelamento e Reagendamento:**
+Consultas podem ser canceladas ou reagendadas somente se estiverem com status "scheduled" ou "rescheduled" e dentro da janela de tempo permitida (padrão: até 2 horas antes do horário agendado). Consultas em andamento ou finalizadas não podem ser canceladas.
+Prioridade: ☑ Essencial ☐ Importante ☐ Desejável
+
+**[RN-07] Acesso Restrito à Consulta por Participantes:**
+Apenas o médico e o paciente vinculados a uma consulta podem visualizar e acessar os detalhes da mesma. Outros usuários não têm permissão de acesso, mesmo sendo médicos ou pacientes do sistema.
+Prioridade: ☑ Essencial ☐ Importante ☐ Desejável
+
+**[RN-08] Restrição de Acesso e Edição do Prontuário:**
+Apenas médicos que atenderam o paciente podem editar o prontuário durante consultas com status "in_progress". Após finalização, o prontuário é bloqueado para edição (exceto complementos). O paciente visualiza apenas itens não privados. Todas as ações são registradas em log de auditoria.
+Prioridade: ☑ Essencial ☐ Importante ☐ Desejável
+
+**[RN-09] Emissão Clínica Condicionada a CRM:**
+Apenas médicos com CRM válido e registro profissional ativo podem emitir prescrições digitais, atestados médicos e outros documentos clínicos. O CRM deve seguir formato alfanumérico (4-20 caracteres, letras maiúsculas e números).
+Prioridade: ☑ Essencial ☐ Importante ☐ Desejável
+
+**[RN-10] Notificações com Limites Anti-Spam:**
+O sistema aplica debounce (padrão 10 segundos) e limites de paginação nas notificações para evitar spam e perda de performance. Lembretes automáticos de consulta são enviados 24 horas e 1 hora antes do horário agendado, com máximo de 2 lembretes por consulta.
+Prioridade: ☐ Essencial ☑ Importante ☐ Desejável
+
+**[RN-11] Regras de Agenda e Disponibilidade por Médico:**
+O médico deve configurar pelo menos um slot de disponibilidade. Teleconsulta é obrigatória para todos os médicos. Slots possuem duração mínima de 60 minutos e duração padrão de 45 minutos. O sistema cria disponibilidade padrão (segunda a sexta, 08h-18h com intervalo 12h-14h) caso o médico não configure. Datas passadas não podem ser bloqueadas. A janela de disponibilidade para agendamento é de 30 dias.
+Prioridade: ☑ Essencial ☐ Importante ☐ Desejável
+
+**[RN-12] Timeline por Propriedade do Evento:**
+Apenas o médico proprietário pode criar, editar e excluir eventos de timeline em seu perfil. A data de fim deve ser posterior à data de início. Eventos são ordenados por prioridade e depois por data.
+Prioridade: ☐ Essencial ☑ Importante ☐ Desejável
+
+**[RN-13] Lembretes Automáticos de Consulta:**
+O sistema dispara lembretes automáticos de consulta por e-mail nos horários configurados (padrão: 24h e 1h antes). A execução ocorre por job agendado (cron horário). O máximo de lembretes por consulta é configurável (padrão: 2).
+Prioridade: ☐ Essencial ☑ Importante ☐ Desejável
+
+**[RN-14] Configuração Central de Parâmetros de Domínio:**
+Todas as regras variáveis de negócio (janelas de agendamento, durações, limites de histórico, lembretes, validações, uploads, paginação) são centralizadas em `config/telemedicine.php`, evitando números mágicos no código e permitindo ajustes sem alteração de código-fonte.
+Prioridade: ☑ Essencial ☐ Importante ☐ Desejável
+
+**[RN-15] Pagamentos Eletrônicos:**
+O sistema deve suportar pagamentos online vinculados a consultas quando aplicável. Funcionalidade planejada para versão futura, sem artefato implementado no backend atual.
+Prioridade: ☐ Essencial ☐ Importante ☑ Desejável
+
+**[RN-16] Fluxo de Videoconferência SFU:**
+A videoconferência utiliza arquitetura SFU com entidades Call e Room. Salas inativas expiram após 60 minutos. A duração máxima de uma sala ativa é de 120 minutos. A janela para iniciar videoconferência segue os mesmos parâmetros de lead_minutes e trailing_minutes da consulta.
+Prioridade: ☑ Essencial ☐ Importante ☐ Desejável
+
+**[RN-17] CRM Único e Formato Válido:**
+Cada médico deve possuir um CRM único no sistema. O CRM deve seguir formato alfanumérico com apenas letras maiúsculas e números, tamanho mínimo de 4 e máximo de 20 caracteres.
+Prioridade: ☑ Essencial ☐ Importante ☐ Desejável
+
+**[RN-18] Especializações Mínimas para Médicos:**
+Médicos devem possuir pelo menos 1 e no máximo 5 especializações vinculadas ao perfil. As especializações devem existir no catálogo do sistema. O nome da especialização é único e tem no máximo 100 caracteres.
+Prioridade: ☑ Essencial ☐ Importante ☐ Desejável
+
+**[RN-19] Auditoria de Prontuários Médicos:**
+Todas as ações realizadas em prontuários médicos são registradas em logs de auditoria contendo IP, user agent e metadados. Os logs não podem ser excluídos (conformidade LGPD). O prontuário pode ser exportado em PDF pelo médico (completo) e pelo paciente (itens não privados).
+Prioridade: ☑ Essencial ☐ Importante ☐ Desejável
+
+**[RN-20] Marcação de No-Show:**
+Apenas médicos podem marcar consultas como "no_show" (paciente não compareceu). A consulta deve estar com status "scheduled" e dentro da tolerância configurável (padrão: 15 minutos após o horário agendado).
+Prioridade: ☑ Essencial ☐ Importante ☐ Desejável
+
+**[RN-21] Regras de Prontuário Clínico:**
+Prescrições possuem validade padrão de 30 dias quando não informada. Atestados médicos têm limite máximo de 60 dias. O código de verificação do atestado é único e possui 10 caracteres. Documentos médicos têm tamanho máximo de 10 MB. Avatares têm tamanho máximo de 5 MB.
+Prioridade: ☑ Essencial ☐ Importante ☐ Desejável
+
+**[RN-22] Mensageria Interna:**
+A troca de mensagens entre usuários possui limite máximo de 5.000 caracteres por mensagem e paginação padrão de 50 mensagens por página.
+Prioridade: ☐ Essencial ☑ Importante ☐ Desejável
+
+**[RN-23] Segurança de Autenticação:**
+O sistema bloqueia o login após 5 tentativas falhas consecutivas (rate limiting). Senhas devem ter mínimo de 8 caracteres com letras maiúsculas e números. Criptografia bcrypt é obrigatória.
+Prioridade: ☑ Essencial ☐ Importante ☐ Desejável
+
+**[RN-24] Conformidade LGPD Operacional:**
+O sistema expõe rotas dedicadas para consentimento, portabilidade de dados, relatório de acesso (janela padrão de 30 dias) e solicitação de esquecimento. Operações sensíveis possuem limites de taxa. Dados pessoais podem ser exportados ou excluídos mediante solicitação do titular.
+Prioridade: ☑ Essencial ☐ Importante ☐ Desejável
 
 3 DOCUMENTO DE ESPECIFICAÇÃO DE MODELAGEM (DEM)
 
