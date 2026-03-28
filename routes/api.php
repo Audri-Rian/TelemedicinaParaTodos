@@ -1,7 +1,8 @@
 <?php
 
-use App\Integrations\Http\Controllers\WebhookController;
+use App\Integrations\Http\Controllers\LabOrderController;
 use App\Integrations\Http\Controllers\PartnerHealthController;
+use App\Integrations\Http\Controllers\WebhookController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -27,6 +28,14 @@ Route::prefix('v1/public')->group(function () {
         Route::post('/lab/{partnerSlug}', [WebhookController::class, 'labResult'])
             ->name('api.webhooks.lab');
     });
+
+    /*
+    |----------------------------------------------------------------------
+    | Lab Orders (laboratórios consultam pedidos pendentes)
+    |----------------------------------------------------------------------
+    */
+    Route::get('/lab/{partnerSlug}/orders', [LabOrderController::class, 'index'])
+        ->name('api.lab.orders');
 
     /*
     |----------------------------------------------------------------------

@@ -48,6 +48,9 @@ Route::middleware(['auth', 'verified', 'doctor'])->prefix('doctor')->name('docto
     Route::get('documents', [App\Http\Controllers\Doctor\DoctorDocumentsController::class, 'index'])->name('documents');
     Route::get('integrations/partners', [App\Http\Controllers\Doctor\DoctorIntegrationsController::class, 'partners'])->name('integrations.partners');
     Route::get('integrations/connect', [App\Http\Controllers\Doctor\DoctorIntegrationsController::class, 'connect'])->name('integrations.connect');
+    Route::post('integrations/connect', [App\Http\Controllers\Doctor\DoctorIntegrationsController::class, 'store'])->middleware('throttle:10,1')->name('integrations.store');
+    Route::get('integrations/{partner}', [App\Http\Controllers\Doctor\DoctorIntegrationsController::class, 'show'])->name('integrations.show');
+    Route::post('integrations/{partner}/sync', [App\Http\Controllers\Doctor\DoctorIntegrationsController::class, 'sync'])->middleware('throttle:10,1')->name('integrations.sync');
     Route::get('integrations', [App\Http\Controllers\Doctor\DoctorIntegrationsController::class, 'index'])->name('integrations');
     Route::get('patient/{id}', [App\Http\Controllers\Doctor\PatientDetailsController::class, 'show'])->name('patient.details');
     Route::get('patients/{patient}/medical-record', [App\Http\Controllers\Doctor\DoctorPatientMedicalRecordController::class, 'show'])->name('patients.medical-record');
