@@ -740,8 +740,6 @@ class MedicalRecordService
 
     public function registerDiagnosis(Appointments $appointment, Doctor $doctor, array $payload): Diagnosis
     {
-        $this->ensureDoctorOwnsAppointment($appointment, $doctor);
-
         return DB::transaction(function () use ($appointment, $doctor, $payload) {
             $diagnosis = Diagnosis::create([
                 'appointment_id' => $appointment->id,
@@ -773,8 +771,6 @@ class MedicalRecordService
 
     public function issuePrescription(Doctor $doctor, Patient $patient, Appointments $appointment, array $payload): Prescription
     {
-        $this->ensureDoctorOwnsAppointment($appointment, $doctor);
-
         if ($appointment->patient_id !== $patient->id) {
             throw new \RuntimeException('Paciente não está associado à consulta.');
         }
@@ -805,8 +801,6 @@ class MedicalRecordService
 
     public function requestExamination(Doctor $doctor, Patient $patient, Appointments $appointment, array $payload): Examination
     {
-        $this->ensureDoctorOwnsAppointment($appointment, $doctor);
-
         $examination = Examination::create([
             'appointment_id' => $appointment->id,
             'doctor_id' => $doctor->id,
@@ -834,8 +828,6 @@ class MedicalRecordService
 
     public function createClinicalNote(Doctor $doctor, Patient $patient, Appointments $appointment, array $payload): ClinicalNote
     {
-        $this->ensureDoctorOwnsAppointment($appointment, $doctor);
-
         $version = 1;
         if (!empty($payload['parent_id'])) {
             $parent = ClinicalNote::findOrFail($payload['parent_id']);
@@ -868,8 +860,6 @@ class MedicalRecordService
 
     public function issueCertificate(Doctor $doctor, Patient $patient, Appointments $appointment, array $payload): MedicalCertificate
     {
-        $this->ensureDoctorOwnsAppointment($appointment, $doctor);
-
         $verificationCode = $this->generateVerificationCode();
 
         $certificate = MedicalCertificate::create([
@@ -906,8 +896,6 @@ class MedicalRecordService
 
     public function registerVitalSigns(Appointments $appointment, Doctor $doctor, array $payload): VitalSign
     {
-        $this->ensureDoctorOwnsAppointment($appointment, $doctor);
-
         $vitalSign = VitalSign::create([
             'appointment_id' => $appointment->id,
             'patient_id' => $appointment->patient_id,
@@ -1074,13 +1062,6 @@ class MedicalRecordService
             'filename' => $filename,
             'public_path' => "/storage/{$path}",
         ];
-    }
-
-    protected function ensureDoctorOwnsAppointment(Appointments $appointment, Doctor $doctor): void
-    {
-        if ($appointment->doctor_id !== $doctor->id) {
-            throw new \RuntimeException('O médico não está associado a esta consulta.');
-        }
     }
 
     protected function resolveDoctorUser(Doctor $doctor): User

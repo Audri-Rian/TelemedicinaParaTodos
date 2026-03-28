@@ -34,17 +34,17 @@ Esta task é o **fechamento de governança** para evitar que o backend vire um c
 - [x] Substituir valores hardcoded por `config('telemedicine.*')` no código
 
 ### T 11.2 — Onboarding e deploy
-- [ ] Atualizar `.env.example` (Reverb, Redis, Queue, Storage, Mail)
-- [ ] Documentar no README: serviços necessários e comandos de setup
-- [ ] Incluir checklist "subiu local e está ok" no README
+- [x] Atualizar `.env.example` (Reverb, Redis, Queue, Storage, Mail)
+- [x] Documentar no README: serviços necessários e comandos de setup
+- [x] Incluir checklist "subiu local e está ok" no README
 
 ### T 11.3 — Policies + Broadcast (ALTA)
-- [ ] Criar e registrar `AppointmentPolicy`
-- [ ] Criar e registrar `ConversationPolicy`
-- [ ] Criar e registrar `MedicalRecordPolicy`
-- [ ] Proteger canais `appointments.{uuid}` e `users.{uuid}`
-- [ ] Remover `ensureDoctorOwnsAppointment` e similares do `MedicalRecordService`
-- [ ] Garantir `authorize()` em FormRequests/Controllers antes de chamar Services
+- [x] Criar e registrar `AppointmentPolicy` (já existia; adicionados métodos createPrescription, requestExamination, etc.)
+- [x] Criar e registrar `ConversationPolicy` (Gate viewConversation/sendMessage)
+- [x] Criar e registrar `MedicalRecordPolicy` (já existia e registrada)
+- [x] Proteger canais `appointments.{uuid}` e `users.{uuid}`
+- [x] Remover `ensureDoctorOwnsAppointment` e similares do `MedicalRecordService`
+- [x] Garantir `authorize()` em FormRequests/Controllers antes de chamar Services
 
 ### T 11.4 — Migrations (ALTA)
 - [ ] Migration: `appointment_availabilities`

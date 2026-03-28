@@ -5,13 +5,14 @@ namespace App\Http\Controllers\Doctor;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Doctor\StoreAvailabilitySlotRequest;
 use App\Http\Requests\Doctor\UpdateAvailabilitySlotRequest;
-use App\Models\Doctor;
 use App\Models\AvailabilitySlot;
+use App\Models\Doctor;
 use App\Services\AvailabilityService;
 use App\Services\Doctor\ScheduleService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use OpenApi\Attributes as OA;
 
 class DoctorAvailabilitySlotController extends Controller
@@ -27,10 +28,8 @@ class DoctorAvailabilitySlotController extends Controller
      */
     public function store(StoreAvailabilitySlotRequest $request, Doctor $doctor): JsonResponse
     {
-        // Autorização
-        if (auth()->user()->doctor->id !== $doctor->id) {
-            abort(403, 'Você não tem permissão para criar slots para este médico.');
-        }
+        Gate::authorize('manageDoctorSchedule', $doctor);
+        $this->authorize('create', AvailabilitySlot::class);
 
         $validated = $request->validated();
 
@@ -100,10 +99,7 @@ class DoctorAvailabilitySlotController extends Controller
      */
     public function update(UpdateAvailabilitySlotRequest $request, Doctor $doctor, AvailabilitySlot $slot): JsonResponse
     {
-        // Autorização: médico só pode atualizar seus próprios slots
-        if (auth()->user()->doctor->id !== $doctor->id || $slot->doctor_id !== $doctor->id) {
-            abort(403, 'Você não tem permissão para atualizar este slot.');
-        }
+        $this->authorize('update', $slot);
 
         $validated = $request->validated();
 
@@ -179,10 +175,7 @@ class DoctorAvailabilitySlotController extends Controller
      */
     public function destroy(Doctor $doctor, AvailabilitySlot $slot): JsonResponse
     {
-        // Autorização: médico só pode deletar seus próprios slots
-        if (auth()->user()->doctor->id !== $doctor->id || $slot->doctor_id !== $doctor->id) {
-            abort(403, 'Você não tem permissão para deletar este slot.');
-        }
+        $this->authorize('delete', $slot);
 
         $slot->delete();
 
@@ -214,6 +207,8 @@ class DoctorAvailabilitySlotController extends Controller
     )]
     public function getByDate(Request $request, Doctor $doctor, string $date): JsonResponse
     {
+        Gate::authorize('manageDoctorSchedule', $doctor);
+
         try {
             $parsedDate = Carbon::parse($date);
         } catch (\Exception $e) {

@@ -276,7 +276,7 @@ class MessageService
         $user2IsPatient = $user2->patient && $user2->patient->id === $appointment->patient_id;
 
         if (!(($user1IsDoctor && $user2IsPatient) || ($user1IsPatient && $user2IsDoctor))) {
-            throw new \Exception('Você não tem permissão para enviar mensagens relacionadas a esta consulta');
+            throw new \Exception('Consulta inválida ou não relacionada aos participantes da mensagem.');
         }
     }
 }

@@ -59,7 +59,9 @@ Estes documentos guiam através de:
 ### Variáveis de Ambiente
 - **APP_ENV** - Ambiente (local, staging, production)
 - **DB_CONNECTION** - Tipo de banco (mysql, sqlite)
-- **BROADCAST_DRIVER** - Driver de broadcasting (reverb)
+- **BROADCAST_CONNECTION** - Broadcasting (log ou reverb)
+- **CACHE_STORE** - Cache (database, file ou redis)
+- **QUEUE_CONNECTION** - Filas (database ou redis)
 - **VITE_APP_NAME** - Nome da aplicação
 
 ### Editor

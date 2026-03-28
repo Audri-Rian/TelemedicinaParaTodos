@@ -7,6 +7,7 @@ use App\Http\Requests\Doctor\StoreScheduleConfigRequest;
 use App\Models\Doctor;
 use App\Services\Doctor\ScheduleService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -22,10 +23,7 @@ class DoctorScheduleController extends Controller
      */
     public function show(Doctor $doctor): JsonResponse|Response
     {
-        // Autorização: médico só pode ver sua própria agenda
-        if (auth()->user()->doctor->id !== $doctor->id) {
-            abort(403, 'Você não tem permissão para acessar esta agenda.');
-        }
+        Gate::authorize('manageDoctorSchedule', $doctor);
 
         $config = $this->scheduleService->getScheduleConfig($doctor);
 
@@ -49,10 +47,7 @@ class DoctorScheduleController extends Controller
      */
     public function save(StoreScheduleConfigRequest $request, Doctor $doctor): JsonResponse
     {
-        // Autorização: médico só pode salvar sua própria agenda
-        if (auth()->user()->doctor->id !== $doctor->id) {
-            abort(403, 'Você não tem permissão para alterar esta agenda.');
-        }
+        Gate::authorize('manageDoctorSchedule', $doctor);
 
         try {
             $config = $this->scheduleService->saveScheduleConfig($doctor, $request->validated());
