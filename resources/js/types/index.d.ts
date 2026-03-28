@@ -10,11 +10,25 @@ export interface BreadcrumbItem {
     href: string;
 }
 
+/** Item de submenu na sidebar (ex.: workspace com filhos). */
+export interface NavSubItem {
+    title: string;
+    href: NonNullable<InertiaLinkProps['href']>;
+    icon?: LucideIcon;
+}
+
 export interface NavItem {
     title: string;
     href: NonNullable<InertiaLinkProps['href']>;
     icon?: LucideIcon;
     isActive?: boolean;
+    /** Se definido, renderiza submenu indentado abaixo do item pai. */
+    children?: NavSubItem[];
+    /**
+     * Prefixo de URL para manter o pai destacado em qualquer subrota.
+     * Padrão: caminho do `href` do pai (ex.: /doctor/laboratorios).
+     */
+    activePathPrefix?: string;
 }
 
 export type AppPageProps<T extends Record<string, unknown> = Record<string, unknown>> = T & {

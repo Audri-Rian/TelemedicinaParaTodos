@@ -25,6 +25,11 @@ class Prescription extends Model
         'status',
         'metadata',
         'issued_at',
+        'partner_integration_id',
+        'external_id',
+        'signature_status',
+        'verification_code',
+        'signed_at',
     ];
 
     protected $casts = [
@@ -32,11 +37,17 @@ class Prescription extends Model
         'metadata' => 'array',
         'issued_at' => 'datetime',
         'valid_until' => 'date',
+        'signed_at' => 'datetime',
     ];
 
     public const STATUS_ACTIVE = 'active';
     public const STATUS_EXPIRED = 'expired';
     public const STATUS_CANCELLED = 'cancelled';
+
+    public const SIGNATURE_UNSIGNED = 'unsigned';
+    public const SIGNATURE_SIGNED = 'signed';
+    public const SIGNATURE_VERIFIED = 'verified';
+    public const SIGNATURE_INVALID = 'invalid';
 
     public function appointment(): BelongsTo
     {
@@ -51,5 +62,15 @@ class Prescription extends Model
     public function patient(): BelongsTo
     {
         return $this->belongsTo(Patient::class);
+    }
+
+    public function partnerIntegration(): BelongsTo
+    {
+        return $this->belongsTo(PartnerIntegration::class);
+    }
+
+    public function isSigned(): bool
+    {
+        return in_array($this->signature_status, [self::SIGNATURE_SIGNED, self::SIGNATURE_VERIFIED], true);
     }
 }

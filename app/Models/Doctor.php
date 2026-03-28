@@ -25,6 +25,8 @@ class Doctor extends Model
         'status',
         'availability_schedule',
         'consultation_fee',
+        'cns',
+        'cbo',
     ];
 
     protected $casts = [
@@ -198,6 +200,16 @@ class Doctor extends Model
     public function setCrmAttribute($value): void
     {
         $this->attributes['crm'] = strtoupper(trim($value));
+    }
+
+    public function setCnsAttribute($value): void
+    {
+        $this->attributes['cns'] = $value ? strtoupper(trim($value)) : null;
+    }
+
+    public function setCboAttribute($value): void
+    {
+        $this->attributes['cbo'] = $value ? strtoupper(trim($value)) : null;
     }
 
     // Validações

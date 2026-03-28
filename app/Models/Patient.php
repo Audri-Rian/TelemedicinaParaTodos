@@ -32,6 +32,9 @@ class Patient extends Model
         'status',
         'consent_telemedicine',
         'last_consultation_at',
+        'cns',
+        'cpf',
+        'mother_name',
     ];
 
     protected $casts = [
@@ -40,6 +43,8 @@ class Patient extends Model
         'weight' => 'decimal:2',
         'consent_telemedicine' => 'boolean',
         'last_consultation_at' => 'datetime',
+        'cpf' => 'encrypted',
+        'cns' => 'encrypted',
     ];
 
     // Constantes para enums
@@ -205,6 +210,16 @@ class Patient extends Model
     }
 
     // Mutators
+    public function setCpfAttribute($value): void
+    {
+        $this->attributes['cpf'] = $value ? preg_replace('/[^0-9]/', '', $value) : null;
+    }
+
+    public function setCnsAttribute($value): void
+    {
+        $this->attributes['cns'] = $value ? preg_replace('/[^0-9]/', '', $value) : null;
+    }
+
     public function setPhoneNumberAttribute($value): void
     {
         $this->attributes['phone_number'] = $value ? preg_replace('/[^0-9]/', '', $value) : null;
