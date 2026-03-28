@@ -26,7 +26,7 @@ export interface NavItem {
     children?: NavSubItem[];
     /**
      * Prefixo de URL para manter o pai destacado em qualquer subrota.
-     * Padrão: caminho do `href` do pai (ex.: /doctor/laboratorios).
+     * Padrão: caminho do `href` do pai (ex.: /doctor/integrations).
      */
     activePathPrefix?: string;
 }

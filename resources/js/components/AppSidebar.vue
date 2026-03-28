@@ -19,7 +19,6 @@ import {
     Video,
     Stethoscope,
     Bug,
-    FlaskConical,
     LayoutGrid,
     Building2,
     Plug2,
@@ -28,7 +27,7 @@ import AppLogo from './AppLogo.vue';
 import { useAuth } from '@/composables/auth';
 import { computed, ref } from 'vue';
 import * as doctorRoutes from '@/routes/doctor';
-import * as doctorLabRoutes from '@/routes/doctor/laboratorios';
+import * as integrationRoutes from '@/routes/doctor/integrations';
 import * as patientRoutes from '@/routes/patient';
 
 const { isDoctor, isPatient } = useAuth();
@@ -79,24 +78,24 @@ const doctorNavItems = computed<NavItem[]>(() => [
         icon: FileText,
     },
     {
-        title: 'Laboratórios',
-        href: doctorRoutes.laboratorios(),
-        icon: FlaskConical,
-        activePathPrefix: doctorRoutes.laboratorios().url,
+        title: 'Integrações',
+        href: doctorRoutes.integrations(),
+        icon: Plug2,
+        activePathPrefix: doctorRoutes.integrations().url,
         children: [
             {
                 title: 'Hub de Integrações',
-                href: doctorRoutes.laboratorios(),
+                href: doctorRoutes.integrations(),
                 icon: LayoutGrid,
             },
             {
                 title: 'Gerenciar Parceiros',
-                href: doctorLabRoutes.parceiros(),
+                href: integrationRoutes.partners(),
                 icon: Building2,
             },
             {
                 title: 'Conectar Parceiro',
-                href: doctorLabRoutes.conectar(),
+                href: integrationRoutes.connect(),
                 icon: Plug2,
             },
         ],

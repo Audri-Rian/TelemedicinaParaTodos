@@ -11,6 +11,7 @@ enum NotificationType: string
     case EXAMINATION_REQUESTED = 'examination_requested';
     case MEDICAL_CERTIFICATE_ISSUED = 'medical_certificate_issued';
     case APPOINTMENT_REMINDER = 'appointment_reminder';
+    case EXAM_RESULT_RECEIVED = 'exam_result_received';
 
     /**
      * Obter todos os tipos de notificação
