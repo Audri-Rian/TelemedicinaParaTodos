@@ -6,7 +6,6 @@ use App\Models\IntegrationCredential;
 use App\Models\PartnerIntegration;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
@@ -34,7 +33,9 @@ class OAuthTokenController
             ->with('partnerIntegration')
             ->first();
 
-        if (! $credential || ! Hash::check($request->input('client_secret'), $credential->client_secret)) {
+        // client_secret tem cast 'encrypted' no model — Eloquent decripta automaticamente.
+        // Comparação timing-safe com o valor decriptado (já protegido at rest).
+        if (! $credential || ! hash_equals((string) $credential->client_secret, $request->input('client_secret'))) {
             Log::channel('integration')->warning('OAuth2 token request failed: invalid credentials', [
                 'client_id' => $request->input('client_id'),
                 'ip' => $request->ip(),

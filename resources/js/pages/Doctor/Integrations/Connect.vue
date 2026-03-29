@@ -17,7 +17,7 @@ import {
     Globe, Lock, FileKey, Server, Settings, GitBranch, RefreshCw,
     ClipboardCheck, HelpCircle, ChevronRight, PlusCircle,
     CheckCircle2, Wifi, ShieldCheck,
-    Loader2,
+    Loader2, Copy, CheckCheck,
 } from 'lucide-vue-next';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -28,16 +28,36 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 // Wizard state
 const currentStep = ref(1);
-const totalSteps = 4;
 const isConnected = ref(false);
 const connectionError = ref(false);
 
-const steps = [
-    { num: 1, label: 'Configuração', icon: Settings },
-    { num: 2, label: 'Mapeamento', icon: GitBranch },
-    { num: 3, label: 'Sincronização', icon: RefreshCw },
-    { num: 4, label: 'Revisão', icon: ClipboardCheck },
+// Modo de integração
+type IntegrationMode = 'full' | 'receive_only';
+const integrationMode = ref<IntegrationMode | null>(null);
+
+const integrationModes = [
+    { key: 'full' as IntegrationMode, label: 'Enviar e receber dados', description: 'Envie pedidos de exame e receba resultados automaticamente.', icon: RefreshCw },
+    { key: 'receive_only' as IntegrationMode, label: 'Apenas receber resultados', description: 'O parceiro envia resultados via webhook. Você só precisa compartilhar a URL.', icon: ArrowRight },
 ];
+
+// Steps dinâmicos baseados no modo
+const steps = computed(() => {
+    if (integrationMode.value === 'receive_only') {
+        return [
+            { num: 1, label: 'Configuração', icon: Settings },
+            { num: 2, label: 'Webhook', icon: GitBranch },
+            { num: 3, label: 'Revisão', icon: ClipboardCheck },
+        ];
+    }
+    return [
+        { num: 1, label: 'Configuração', icon: Settings },
+        { num: 2, label: 'Mapeamento', icon: GitBranch },
+        { num: 3, label: 'Sincronização', icon: RefreshCw },
+        { num: 4, label: 'Revisão', icon: ClipboardCheck },
+    ];
+});
+
+const totalSteps = computed(() => steps.value.length);
 
 // Step 1: Parceiros
 const availablePartners = [
@@ -52,6 +72,7 @@ const form = useForm({
     partner_name: '',
     partner_slug: '',
     partner_type: 'laboratory',
+    integration_mode: '' as IntegrationMode | '',
     base_url: '',
     fhir_version: 'R4',
     contact_email: '',
@@ -77,17 +98,38 @@ const authMethods = [
 ];
 
 // Navegação
-const progressPercent = computed(() => (currentStep.value / totalSteps) * 100);
-const stepTitles: Record<number, { label: string; title: string; subtitle: string }> = {
-    1: { label: 'ESCOLHER PARCEIRO', title: 'Qual parceiro deseja conectar?', subtitle: 'Selecione uma das instituições abaixo para iniciar o mapeamento automático de exames e resultados.' },
-    2: { label: 'MAPEAMENTO', title: 'Configurar conexão', subtitle: 'Defina os parâmetros de comunicação e mapeamento de dados com o parceiro.' },
-    3: { label: 'SINCRONIZAÇÃO', title: 'Método de autenticação', subtitle: 'Como o parceiro vai se autenticar com o nosso sistema?' },
-    4: { label: 'REVISÃO', title: 'Revisar e confirmar', subtitle: 'Verifique todas as configurações antes de ativar a integração.' },
-};
+const progressPercent = computed(() => (currentStep.value / totalSteps.value) * 100);
+
+const isReceiveOnly = computed(() => integrationMode.value === 'receive_only');
+
+const stepTitles = computed<Record<number, { label: string; title: string; subtitle: string }>>(() => {
+    if (isReceiveOnly.value) {
+        return {
+            1: { label: 'ESCOLHER PARCEIRO', title: 'Qual parceiro deseja conectar?', subtitle: 'Selecione o parceiro e o modo de integração.' },
+            2: { label: 'WEBHOOK', title: 'Dados de conexão', subtitle: 'Compartilhe a URL de webhook com o parceiro para que ele envie resultados.' },
+            3: { label: 'REVISÃO', title: 'Revisar e confirmar', subtitle: 'Verifique as configurações antes de ativar.' },
+        };
+    }
+    return {
+        1: { label: 'ESCOLHER PARCEIRO', title: 'Qual parceiro deseja conectar?', subtitle: 'Selecione o parceiro e o modo de integração.' },
+        2: { label: 'MAPEAMENTO', title: 'Configurar conexão', subtitle: 'Defina os parâmetros de comunicação e mapeamento de dados com o parceiro.' },
+        3: { label: 'SINCRONIZAÇÃO', title: 'Método de autenticação', subtitle: 'Como o parceiro vai se autenticar com o nosso sistema?' },
+        4: { label: 'REVISÃO', title: 'Revisar e confirmar', subtitle: 'Verifique todas as configurações antes de ativar a integração.' },
+    };
+});
 
 const canProceed = computed(() => {
+    if (currentStep.value === 1) {
+        return selectedPartner.value !== null && integrationMode.value !== null;
+    }
+
+    if (isReceiveOnly.value) {
+        // Receive only: Step 2 = webhook (sempre ok), Step 3 = revisão
+        return true;
+    }
+
+    // Full mode
     switch (currentStep.value) {
-        case 1: return selectedPartner.value !== null;
         case 2: return form.base_url.trim() !== '';
         case 3: {
             if (!form.auth_method) return false;
@@ -111,12 +153,29 @@ const selectPartner = (key: string) => {
     }
 };
 
+const selectMode = (mode: IntegrationMode) => {
+    integrationMode.value = mode;
+    form.integration_mode = mode;
+    if (mode === 'receive_only') {
+        form.perm_send_orders = false;
+        form.perm_receive_results = true;
+        form.perm_webhook = true;
+        form.auth_method = '';
+        form.base_url = '';
+    } else {
+        form.perm_send_orders = true;
+    }
+};
+
 const nextStep = () => {
-    if (currentStep.value < totalSteps && canProceed.value) currentStep.value++;
+    if (currentStep.value < totalSteps.value && canProceed.value) currentStep.value++;
 };
 const prevStep = () => {
     if (currentStep.value > 1) currentStep.value--;
 };
+
+// Verifica se o step atual é o último (revisão)
+const isLastStep = computed(() => currentStep.value === totalSteps.value);
 
 const handleConnect = () => {
     form.post('/doctor/integrations/connect', {
@@ -135,6 +194,31 @@ const handleRetry = () => {
     form.clearErrors();
     handleConnect();
 };
+
+// Clipboard
+const copiedField = ref<string | null>(null);
+const copyToClipboard = async (text: string, field: string) => {
+    try {
+        await navigator.clipboard.writeText(text);
+        copiedField.value = field;
+        setTimeout(() => { copiedField.value = null; }, 2000);
+    } catch {
+        // Fallback para navegadores sem Clipboard API
+        const el = document.createElement('textarea');
+        el.value = text;
+        document.body.appendChild(el);
+        el.select();
+        document.execCommand('copy');
+        document.body.removeChild(el);
+        copiedField.value = field;
+        setTimeout(() => { copiedField.value = null; }, 2000);
+    }
+};
+
+const webhookUrl = computed(() => {
+    if (!selectedPartner.value) return '';
+    return `${window.location.origin}/api/v1/public/webhooks/lab/${selectedPartner.value}`;
+});
 </script>
 
 <template>
@@ -172,6 +256,64 @@ const handleRetry = () => {
                         </Link>
                     </Button>
                 </div>
+
+                <!-- Credenciais de conexão para compartilhar -->
+                <Card class="mt-12 w-full max-w-2xl gap-0 py-0 text-left shadow-sm">
+                    <CardContent class="space-y-4 px-6 py-6">
+                        <div class="flex items-center gap-2">
+                            <KeyRound class="size-5 text-primary" stroke-width="2" />
+                            <h3 class="text-base font-bold text-foreground">Credenciais de Conexão</h3>
+                        </div>
+                        <p class="text-xs text-muted-foreground">Compartilhe essas informações com a equipe técnica do parceiro para completar a integração.</p>
+
+                        <!-- Webhook URL -->
+                        <div class="rounded-lg border border-border bg-muted/30 px-4 py-3">
+                            <div class="flex items-center justify-between">
+                                <p class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Webhook URL</p>
+                                <button
+                                    type="button"
+                                    class="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                                    @click="copyToClipboard(webhookUrl, 'success-webhook')"
+                                >
+                                    <CheckCheck v-if="copiedField === 'success-webhook'" class="size-3.5 text-green-600" />
+                                    <Copy v-else class="size-3.5" />
+                                    {{ copiedField === 'success-webhook' ? 'Copiado!' : 'Copiar' }}
+                                </button>
+                            </div>
+                            <p class="mt-1 font-mono text-sm text-foreground break-all">{{ webhookUrl }}</p>
+                        </div>
+
+                        <!-- Client ID / API Key -->
+                        <div v-if="form.client_id && form.auth_method !== 'bearer'" class="rounded-lg border border-border bg-muted/30 px-4 py-3">
+                            <div class="flex items-center justify-between">
+                                <p class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                                    {{ form.auth_method === 'api_key' ? 'Chave de API' : 'Client ID' }}
+                                </p>
+                                <button
+                                    type="button"
+                                    class="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                                    @click="copyToClipboard(form.client_id, 'success-client-id')"
+                                >
+                                    <CheckCheck v-if="copiedField === 'success-client-id'" class="size-3.5 text-green-600" />
+                                    <Copy v-else class="size-3.5" />
+                                    {{ copiedField === 'success-client-id' ? 'Copiado!' : 'Copiar' }}
+                                </button>
+                            </div>
+                            <p class="mt-1 font-mono text-sm text-foreground">{{ form.client_id }}</p>
+                        </div>
+
+                        <!-- Auth Method -->
+                        <div class="rounded-lg border border-border bg-muted/30 px-4 py-3">
+                            <p class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Método de autenticação</p>
+                            <p class="mt-1 text-sm font-medium text-foreground">{{ authMethods.find(m => m.key === form.auth_method)?.label ?? form.auth_method }}</p>
+                        </div>
+
+                        <div class="flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                            <Lock class="size-3.5 shrink-0" />
+                            Secrets e tokens não são exibidos após esta tela por segurança. Salve-os agora.
+                        </div>
+                    </CardContent>
+                </Card>
 
                 <!-- Bento Grid de status -->
                 <div class="mt-20 grid w-full grid-cols-1 gap-6 md:grid-cols-3">
@@ -343,51 +485,122 @@ const handleRetry = () => {
                             leave-to-class="-translate-x-4 opacity-0"
                             mode="out-in"
                         >
-                            <!-- Step 1: Escolher parceiro -->
-                            <div v-if="currentStep === 1" key="step1" class="flex-grow">
-                                <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                                    <button
-                                        v-for="partner in availablePartners.filter(p => p.available)"
-                                        :key="partner.key"
-                                        @click="selectPartner(partner.key)"
-                                        :class="[
-                                            'group relative flex flex-col items-center rounded-xl border bg-card p-6 text-center transition-all duration-200',
-                                            selectedPartner === partner.key
-                                                ? 'border-primary/40 shadow-lg ring-2 ring-primary/20'
-                                                : 'border-border/60 hover:border-primary/20 hover:shadow-lg',
-                                        ]"
-                                    >
-                                        <div class="mb-4 flex size-16 items-center justify-center rounded-lg bg-muted">
-                                            <FlaskConical class="size-7 text-muted-foreground" stroke-width="1.5" />
-                                        </div>
-                                        <h3 class="font-bold text-foreground">{{ partner.name }}</h3>
-                                        <p class="mt-1 text-xs text-muted-foreground">{{ partner.description }}</p>
-                                        <div class="mt-4 flex items-center gap-1 text-xs font-bold text-primary opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-                                            Selecionar <ChevronRight class="size-3.5" />
-                                        </div>
-                                        <div v-if="selectedPartner === partner.key" class="absolute right-3 top-3 flex size-6 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                                            <Check class="size-3.5" stroke-width="3" />
-                                        </div>
-                                    </button>
+                            <!-- Step 1: Escolher parceiro + modo -->
+                            <div v-if="currentStep === 1" key="step1" class="flex-grow space-y-8">
+                                <!-- Parceiros -->
+                                <div>
+                                    <p class="mb-3 text-sm font-semibold text-foreground">Parceiro</p>
+                                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                                        <button
+                                            v-for="partner in availablePartners.filter(p => p.available)"
+                                            :key="partner.key"
+                                            type="button"
+                                            @click="selectPartner(partner.key)"
+                                            :class="[
+                                                'group relative flex flex-col items-center rounded-xl border bg-card p-6 text-center transition-all duration-200',
+                                                selectedPartner === partner.key
+                                                    ? 'border-primary/40 shadow-lg ring-2 ring-primary/20'
+                                                    : 'border-border/60 hover:border-primary/20 hover:shadow-lg',
+                                            ]"
+                                        >
+                                            <div class="mb-4 flex size-16 items-center justify-center rounded-lg bg-muted">
+                                                <FlaskConical class="size-7 text-muted-foreground" stroke-width="1.5" />
+                                            </div>
+                                            <h3 class="font-bold text-foreground">{{ partner.name }}</h3>
+                                            <p class="mt-1 text-xs text-muted-foreground">{{ partner.description }}</p>
+                                            <div class="mt-4 flex items-center gap-1 text-xs font-bold text-primary opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                                                Selecionar <ChevronRight class="size-3.5" />
+                                            </div>
+                                            <div v-if="selectedPartner === partner.key" class="absolute right-3 top-3 flex size-6 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                                                <Check class="size-3.5" stroke-width="3" />
+                                            </div>
+                                        </button>
 
-                                    <div class="flex animate-pulse flex-col items-center rounded-xl border border-border/60 bg-card p-6 opacity-50">
-                                        <div class="mb-4 size-16 rounded-lg bg-muted" />
-                                        <div class="mb-2 h-4 w-24 rounded bg-muted" />
-                                        <div class="h-3 w-32 rounded bg-muted" />
+                                        <div class="flex cursor-not-allowed flex-col items-center rounded-xl border border-dashed border-border bg-muted/20 p-6 text-center opacity-50 grayscale">
+                                            <div class="mb-4 flex size-16 items-center justify-center rounded-lg bg-muted">
+                                                <PlusCircle class="size-7 text-muted-foreground" stroke-width="1.5" />
+                                            </div>
+                                            <h3 class="font-bold text-muted-foreground">Outro</h3>
+                                            <p class="mt-1 text-xs text-muted-foreground">(em breve)</p>
+                                        </div>
                                     </div>
+                                </div>
 
-                                    <div class="flex cursor-not-allowed flex-col items-center rounded-xl border border-dashed border-border bg-muted/20 p-6 text-center opacity-50 grayscale">
-                                        <div class="mb-4 flex size-16 items-center justify-center rounded-lg bg-muted">
-                                            <PlusCircle class="size-7 text-muted-foreground" stroke-width="1.5" />
-                                        </div>
-                                        <h3 class="font-bold text-muted-foreground">Outro</h3>
-                                        <p class="mt-1 text-xs text-muted-foreground">(em breve)</p>
+                                <!-- Modo de integração -->
+                                <div v-if="selectedPartner">
+                                    <p class="mb-3 text-sm font-semibold text-foreground">Como deseja integrar?</p>
+                                    <div class="grid gap-3 sm:grid-cols-2">
+                                        <button
+                                            v-for="mode in integrationModes"
+                                            :key="mode.key"
+                                            type="button"
+                                            @click="selectMode(mode.key)"
+                                            :class="[
+                                                'flex items-start gap-3 rounded-xl border-2 p-5 text-left transition-all duration-200',
+                                                integrationMode === mode.key
+                                                    ? 'border-primary bg-primary/5 shadow-md'
+                                                    : 'border-border bg-card hover:border-primary/40 hover:shadow-sm',
+                                            ]"
+                                        >
+                                            <div :class="['flex size-10 shrink-0 items-center justify-center rounded-lg transition-colors duration-200', integrationMode === mode.key ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground']">
+                                                <component :is="mode.icon" class="size-5" stroke-width="2" />
+                                            </div>
+                                            <div>
+                                                <h3 class="text-sm font-bold text-foreground">{{ mode.label }}</h3>
+                                                <p class="mt-0.5 text-xs leading-relaxed text-muted-foreground">{{ mode.description }}</p>
+                                            </div>
+                                            <div v-if="integrationMode === mode.key" class="ml-auto flex size-6 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                                                <Check class="size-3.5" stroke-width="3" />
+                                            </div>
+                                        </button>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- Step 2: Mapeamento -->
-                            <div v-else-if="currentStep === 2" key="step2" class="flex-grow space-y-6">
+                            <!-- Step 2: Modo receive_only = Webhook -->
+                            <div v-else-if="currentStep === 2 && isReceiveOnly" key="step2-receive" class="flex-grow space-y-6">
+                                <Card class="gap-0 py-0 shadow-sm">
+                                    <CardContent class="space-y-6 px-6 py-6">
+                                        <p class="text-sm text-muted-foreground">
+                                            Compartilhe a URL abaixo com a equipe técnica do <strong class="text-foreground">{{ selectedPartnerName }}</strong> para que eles enviem resultados de exame automaticamente.
+                                        </p>
+
+                                        <!-- Webhook URL -->
+                                        <div class="rounded-lg border border-primary/20 bg-primary/5 px-5 py-4">
+                                            <div class="flex items-center justify-between">
+                                                <p class="text-[11px] font-bold uppercase tracking-widest text-primary">Webhook URL</p>
+                                                <button
+                                                    type="button"
+                                                    class="flex items-center gap-1.5 rounded-md bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/20"
+                                                    @click="copyToClipboard(webhookUrl, 'webhook-url')"
+                                                >
+                                                    <CheckCheck v-if="copiedField === 'webhook-url'" class="size-3.5 text-green-600" />
+                                                    <Copy v-else class="size-3.5" />
+                                                    {{ copiedField === 'webhook-url' ? 'Copiado!' : 'Copiar URL' }}
+                                                </button>
+                                            </div>
+                                            <p class="mt-2 font-mono text-sm text-foreground break-all">
+                                                {{ webhookUrl }}
+                                            </p>
+                                        </div>
+
+                                        <!-- Contato -->
+                                        <div class="space-y-2">
+                                            <Label for="contact-email-receive" class="text-sm font-semibold">E-mail de contato técnico do parceiro</Label>
+                                            <Input id="contact-email-receive" v-model="form.contact_email" type="email" placeholder="suporte@parceiro.com.br" />
+                                            <p class="text-[11px] text-muted-foreground">Para comunicação sobre a integração.</p>
+                                        </div>
+
+                                        <div class="flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                                            <Info class="size-3.5 shrink-0" />
+                                            O parceiro precisará configurar a URL acima no sistema deles para enviar resultados via POST.
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </div>
+
+                            <!-- Step 2: Modo full = Mapeamento -->
+                            <div v-else-if="currentStep === 2 && !isReceiveOnly" key="step2-full" class="flex-grow space-y-6">
                                 <Card class="gap-0 py-0 shadow-sm">
                                     <CardContent class="space-y-6 px-6 py-6">
                                         <div class="space-y-2">
@@ -410,17 +623,28 @@ const handleRetry = () => {
                                             </div>
                                         </div>
                                         <div v-if="selectedPartner" class="rounded-lg bg-muted/50 px-4 py-3">
-                                            <p class="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Webhook do parceiro</p>
+                                            <div class="flex items-center justify-between">
+                                                <p class="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Webhook URL (envie ao parceiro)</p>
+                                                <button
+                                                    type="button"
+                                                    class="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                                                    @click="copyToClipboard(webhookUrl, 'webhook-url')"
+                                                >
+                                                    <CheckCheck v-if="copiedField === 'webhook-url'" class="size-3.5 text-green-600" />
+                                                    <Copy v-else class="size-3.5" />
+                                                    {{ copiedField === 'webhook-url' ? 'Copiado!' : 'Copiar' }}
+                                                </button>
+                                            </div>
                                             <p class="mt-1 font-mono text-sm text-foreground">
-                                                /api/v1/public/webhooks/lab/<span class="font-bold text-primary">{{ selectedPartner }}</span>
+                                                {{ webhookUrl }}
                                             </p>
                                         </div>
                                     </CardContent>
                                 </Card>
                             </div>
 
-                            <!-- Step 3: Auth -->
-                            <div v-else-if="currentStep === 3" key="step3" class="flex-grow space-y-6">
+                            <!-- Step 3: Auth (apenas modo full) -->
+                            <div v-else-if="currentStep === 3 && !isReceiveOnly" key="step3" class="flex-grow space-y-6">
                                 <div class="grid gap-3 sm:grid-cols-2">
                                     <button
                                         v-for="method in authMethods"
@@ -449,18 +673,51 @@ const handleRetry = () => {
                                             <div class="grid gap-4 sm:grid-cols-2">
                                                 <div v-if="form.auth_method === 'bearer'" class="space-y-2 sm:col-span-2">
                                                     <Label for="bearer-token" class="text-sm font-semibold">Bearer Token</Label>
-                                                    <Input id="bearer-token" v-model="form.bearer_token" type="password" class="font-mono text-sm" placeholder="Insira o token de acesso..." />
+                                                    <div class="flex gap-2">
+                                                        <Input id="bearer-token" v-model="form.bearer_token" type="password" class="font-mono text-sm" placeholder="Insira o token de acesso..." />
+                                                        <button
+                                                            v-if="form.bearer_token"
+                                                            type="button"
+                                                            class="flex shrink-0 items-center gap-1.5 rounded-md border border-border bg-background px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                                                            @click="copyToClipboard(form.bearer_token, 'bearer')"
+                                                        >
+                                                            <CheckCheck v-if="copiedField === 'bearer'" class="size-3.5 text-green-600" />
+                                                            <Copy v-else class="size-3.5" />
+                                                        </button>
+                                                    </div>
                                                 </div>
                                                 <template v-else>
                                                     <div class="space-y-2">
                                                         <Label for="client-id" class="text-sm font-semibold">
                                                             {{ form.auth_method === 'api_key' ? 'Chave de API' : 'Client ID' }}
                                                         </Label>
-                                                        <Input id="client-id" v-model="form.client_id" class="font-mono text-sm" placeholder="Insira aqui..." />
+                                                        <div class="flex gap-2">
+                                                            <Input id="client-id" v-model="form.client_id" class="font-mono text-sm" placeholder="Insira aqui..." />
+                                                            <button
+                                                                v-if="form.client_id"
+                                                                type="button"
+                                                                class="flex shrink-0 items-center gap-1.5 rounded-md border border-border bg-background px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                                                                @click="copyToClipboard(form.client_id, 'client-id')"
+                                                            >
+                                                                <CheckCheck v-if="copiedField === 'client-id'" class="size-3.5 text-green-600" />
+                                                                <Copy v-else class="size-3.5" />
+                                                            </button>
+                                                        </div>
                                                     </div>
                                                     <div v-if="form.auth_method === 'oauth2'" class="space-y-2">
                                                         <Label for="client-secret" class="text-sm font-semibold">Client Secret</Label>
-                                                        <Input id="client-secret" v-model="form.client_secret" type="password" class="font-mono text-sm" placeholder="••••••••••••" />
+                                                        <div class="flex gap-2">
+                                                            <Input id="client-secret" v-model="form.client_secret" type="password" class="font-mono text-sm" placeholder="••••••••••••" />
+                                                            <button
+                                                                v-if="form.client_secret"
+                                                                type="button"
+                                                                class="flex shrink-0 items-center gap-1.5 rounded-md border border-border bg-background px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                                                                @click="copyToClipboard(form.client_secret, 'client-secret')"
+                                                            >
+                                                                <CheckCheck v-if="copiedField === 'client-secret'" class="size-3.5 text-green-600" />
+                                                                <Copy v-else class="size-3.5" />
+                                                            </button>
+                                                        </div>
                                                     </div>
                                                 </template>
                                             </div>
@@ -473,8 +730,8 @@ const handleRetry = () => {
                                 </Transition>
                             </div>
 
-                            <!-- Step 4: Revisão -->
-                            <div v-else-if="currentStep === 4" key="step4" class="flex-grow space-y-6">
+                            <!-- Step final: Revisão (step 4 no full, step 3 no receive_only) -->
+                            <div v-else-if="isLastStep" key="step-review" class="flex-grow space-y-6">
                                 <Card class="gap-0 py-0 shadow-sm">
                                     <CardContent class="divide-y divide-border/60 px-0 py-0">
                                         <label
@@ -542,7 +799,11 @@ const handleRetry = () => {
                                         </div>
                                         <div class="space-y-1">
                                             <h3 class="text-sm font-bold text-foreground">Resumo da conexão</h3>
-                                            <p class="text-sm text-foreground/70">
+                                            <p v-if="isReceiveOnly" class="text-sm text-foreground/70">
+                                                <strong>{{ selectedPartnerName }}</strong> será conectado no modo
+                                                <strong>apenas receber resultados</strong> via webhook.
+                                            </p>
+                                            <p v-else class="text-sm text-foreground/70">
                                                 <strong>{{ selectedPartnerName }}</strong> será conectado
                                                 via <strong>{{ authMethods.find(m => m.key === form.auth_method)?.label ?? '—' }}</strong>
                                                 com {{ [form.perm_send_orders, form.perm_receive_results, form.perm_webhook, form.perm_patient_data].filter(Boolean).length }} permissão(ões) ativa(s).

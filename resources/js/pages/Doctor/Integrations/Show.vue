@@ -11,7 +11,7 @@ import { ref, computed } from 'vue';
 import {
     FlaskConical, Building2, Shield, ArrowLeft, RefreshCw,
     CheckCircle2, XCircle, Clock, ArrowUpRight, ArrowDownLeft,
-    Loader2, Globe, KeyRound, Calendar, Mail,
+    Loader2, Globe, KeyRound, Calendar, Mail, Copy, CheckCheck, Link2,
 } from 'lucide-vue-next';
 
 interface PartnerEvent {
@@ -116,6 +116,26 @@ const formatDate = (dateStr: string) => {
         minute: '2-digit',
     });
 };
+
+// Clipboard
+const copiedField = ref<string | null>(null);
+const copyToClipboard = async (text: string, field: string) => {
+    try {
+        await navigator.clipboard.writeText(text);
+    } catch {
+        const el = document.createElement('textarea');
+        el.value = text;
+        document.body.appendChild(el);
+        el.select();
+        document.execCommand('copy');
+        document.body.removeChild(el);
+    }
+    copiedField.value = field;
+    setTimeout(() => { copiedField.value = null; }, 2000);
+};
+
+const webhookUrl = computed(() => `${window.location.origin}/api/v1/public/webhooks/lab/${props.partner.slug}`);
+const healthUrl = computed(() => `${window.location.origin}/api/v1/public/health/${props.partner.slug}`);
 
 const syncing = ref(false);
 const syncError = ref<string | null>(null);
@@ -250,6 +270,62 @@ const handleSync = () => {
                                     <p class="text-xs text-muted-foreground">Contato</p>
                                     <p class="font-medium text-foreground">{{ partner.contact_email }}</p>
                                 </div>
+                            </div>
+                        </div>
+
+                        <!-- Endpoints para o parceiro -->
+                        <div class="space-y-3 border-t border-border/60 pt-4">
+                            <p class="text-xs font-bold uppercase tracking-widest text-muted-foreground">Endpoints</p>
+
+                            <!-- Webhook URL -->
+                            <div class="rounded-lg border border-border bg-muted/30 px-3 py-2.5">
+                                <div class="flex items-center justify-between">
+                                    <p class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Webhook URL</p>
+                                    <button
+                                        type="button"
+                                        class="flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                                        @click="copyToClipboard(webhookUrl, 'show-webhook')"
+                                    >
+                                        <CheckCheck v-if="copiedField === 'show-webhook'" class="size-3 text-green-600" />
+                                        <Copy v-else class="size-3" />
+                                        {{ copiedField === 'show-webhook' ? 'Copiado!' : 'Copiar' }}
+                                    </button>
+                                </div>
+                                <p class="mt-1 font-mono text-[11px] text-foreground break-all">{{ webhookUrl }}</p>
+                            </div>
+
+                            <!-- Health URL -->
+                            <div class="rounded-lg border border-border bg-muted/30 px-3 py-2.5">
+                                <div class="flex items-center justify-between">
+                                    <p class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Health Check</p>
+                                    <button
+                                        type="button"
+                                        class="flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                                        @click="copyToClipboard(healthUrl, 'show-health')"
+                                    >
+                                        <CheckCheck v-if="copiedField === 'show-health'" class="size-3 text-green-600" />
+                                        <Copy v-else class="size-3" />
+                                        {{ copiedField === 'show-health' ? 'Copiado!' : 'Copiar' }}
+                                    </button>
+                                </div>
+                                <p class="mt-1 font-mono text-[11px] text-foreground break-all">{{ healthUrl }}</p>
+                            </div>
+
+                            <!-- Base URL do parceiro -->
+                            <div class="rounded-lg border border-border bg-muted/30 px-3 py-2.5">
+                                <div class="flex items-center justify-between">
+                                    <p class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">API do Parceiro</p>
+                                    <button
+                                        type="button"
+                                        class="flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                                        @click="copyToClipboard(partner.base_url, 'show-base-url')"
+                                    >
+                                        <CheckCheck v-if="copiedField === 'show-base-url'" class="size-3 text-green-600" />
+                                        <Copy v-else class="size-3" />
+                                        {{ copiedField === 'show-base-url' ? 'Copiado!' : 'Copiar' }}
+                                    </button>
+                                </div>
+                                <p class="mt-1 font-mono text-[11px] text-foreground break-all">{{ partner.base_url }}</p>
                             </div>
                         </div>
 

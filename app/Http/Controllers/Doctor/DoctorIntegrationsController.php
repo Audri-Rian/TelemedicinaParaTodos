@@ -124,6 +124,7 @@ class DoctorIntegrationsController extends Controller
     public function store(StorePartnerIntegrationRequest $request): RedirectResponse
     {
         $validated = $request->validated();
+        $isReceiveOnly = ($validated['integration_mode'] ?? '') === 'receive_only';
 
         $capabilities = [];
         if ($validated['perm_send_orders'] ?? false) {
@@ -141,27 +142,29 @@ class DoctorIntegrationsController extends Controller
             'slug' => $validated['partner_slug'],
             'type' => $validated['partner_type'] ?? PartnerIntegration::TYPE_LABORATORY,
             'status' => PartnerIntegration::STATUS_PENDING,
-            'base_url' => $validated['base_url'],
+            'base_url' => $validated['base_url'] ?? null,
             'fhir_version' => $validated['fhir_version'] ?? 'R4',
             'capabilities' => $capabilities,
             'contact_email' => $validated['contact_email'] ?? null,
         ]);
 
-        $authType = match ($validated['auth_method']) {
-            'oauth2' => IntegrationCredential::AUTH_OAUTH2_CLIENT_CREDENTIALS,
-            'api_key' => IntegrationCredential::AUTH_API_KEY,
-            'bearer' => IntegrationCredential::AUTH_BEARER,
-            'certificate' => IntegrationCredential::AUTH_CERTIFICATE,
-            default => IntegrationCredential::AUTH_API_KEY,
-        };
+        // Modo receive_only: não precisa de credenciais para acessar API do parceiro
+        if (! $isReceiveOnly && ! empty($validated['auth_method'])) {
+            $authType = match ($validated['auth_method']) {
+                'oauth2' => IntegrationCredential::AUTH_OAUTH2_CLIENT_CREDENTIALS,
+                'api_key' => IntegrationCredential::AUTH_API_KEY,
+                'bearer' => IntegrationCredential::AUTH_BEARER,
+                'certificate' => IntegrationCredential::AUTH_CERTIFICATE,
+                default => IntegrationCredential::AUTH_API_KEY,
+            };
 
-        // Fix: bearer usa campo dedicado bearer_token, não client_id
-        $partner->credential()->create([
-            'auth_type' => $authType,
-            'client_id' => $validated['auth_method'] !== 'bearer' ? ($validated['client_id'] ?? null) : null,
-            'client_secret' => $validated['client_secret'] ?? null,
-            'access_token' => $validated['bearer_token'] ?? null,
-        ]);
+            $partner->credential()->create([
+                'auth_type' => $authType,
+                'client_id' => $validated['auth_method'] !== 'bearer' ? ($validated['client_id'] ?? null) : null,
+                'client_secret' => $validated['client_secret'] ?? null,
+                'access_token' => $validated['bearer_token'] ?? null,
+            ]);
+        }
 
         $partner->update(['status' => PartnerIntegration::STATUS_ACTIVE]);
 

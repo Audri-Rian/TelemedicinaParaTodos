@@ -15,6 +15,8 @@ class StorePartnerIntegrationRequest extends FormRequest
 
     public function rules(): array
     {
+        $isReceiveOnly = $this->input('integration_mode') === 'receive_only';
+
         return [
             'partner_name' => ['required', 'string', 'max:255'],
             'partner_slug' => [
@@ -30,10 +32,11 @@ class StorePartnerIntegrationRequest extends FormRequest
                 PartnerIntegration::TYPE_HOSPITAL,
                 PartnerIntegration::TYPE_INSURANCE,
             ])],
-            'base_url' => ['required', 'url', 'max:500'],
+            'integration_mode' => ['required', 'string', Rule::in(['full', 'receive_only'])],
+            'base_url' => [$isReceiveOnly ? 'nullable' : 'required', 'nullable', 'url', 'max:500'],
             'fhir_version' => ['sometimes', 'string', 'max:10'],
             'contact_email' => ['nullable', 'email', 'max:255'],
-            'auth_method' => ['required', 'string', Rule::in(['oauth2', 'api_key', 'bearer', 'certificate'])],
+            'auth_method' => [$isReceiveOnly ? 'nullable' : 'required', 'nullable', 'string', Rule::in(['oauth2', 'api_key', 'bearer', 'certificate'])],
             'client_id' => ['nullable', 'string', 'max:500'],
             'client_secret' => ['nullable', 'string', 'max:500'],
             'bearer_token' => ['nullable', 'string', 'max:1000'],
