@@ -37,7 +37,7 @@ Route::prefix('v1/public')->group(function () {
     */
     Route::prefix('webhooks')->group(function () {
         Route::post('/lab/{partnerSlug}', [WebhookController::class, 'labResult'])
-            ->middleware('partner.audit')
+            ->middleware(['partner.hmac', 'partner.audit'])
             ->name('api.webhooks.lab');
     });
 

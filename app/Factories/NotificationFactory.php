@@ -70,6 +70,10 @@ class NotificationFactory
                 'Lembrete de Consulta',
                 self::formatAppointmentReminderMessage($metadata),
             ],
+            NotificationType::EXAM_RESULT_RECEIVED => [
+                'Resultado de Exame Recebido',
+                self::formatExamResultReceivedMessage($metadata),
+            ],
         };
     }
 
@@ -132,6 +136,27 @@ class NotificationFactory
     {
         $doctorName = $metadata['doctor_name'] ?? 'Médico';
         return "Dr(a). {$doctorName} emitiu um atestado médico para você.";
+    }
+
+    private static function formatExamResultReceivedMessage(array $metadata): string
+    {
+        $examinationName = $metadata['examination_name'] ?? 'exame';
+        $partnerName = $metadata['partner_name'] ?? null;
+        $patientName = $metadata['patient_name'] ?? null;
+
+        if ($patientName) {
+            // Notificação para o médico
+            $message = "O resultado do exame \"{$examinationName}\" do paciente {$patientName} foi recebido";
+        } else {
+            // Notificação para o paciente
+            $message = "O resultado do seu exame \"{$examinationName}\" está disponível";
+        }
+
+        if ($partnerName) {
+            $message .= " via {$partnerName}";
+        }
+
+        return $message . '.';
     }
 
     private static function formatAppointmentReminderMessage(array $metadata): string

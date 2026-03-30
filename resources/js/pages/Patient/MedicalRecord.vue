@@ -190,6 +190,7 @@ interface Props {
         mode?: 'patient' | 'doctor';
         viewer?: { id: string; name: string };
     };
+    lab_partners?: Array<{ id: string; name: string; slug: string }>;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -210,6 +211,7 @@ const props = withDefaults(defineProps<Props>(), {
         last_consultation_at: null,
     }),
     filters: () => ({}),
+    lab_partners: () => [],
 });
 
 const { canAccessPatientRoute, canAccessDoctorRoute } = useRouteGuard();
@@ -454,7 +456,17 @@ const examinationForm = useForm({
     justification: '',
     instructions: '',
     priority: 'normal',
+    partner_integration_id: '',
 });
+
+watch(
+    () => examinationForm.type,
+    (newType) => {
+        if (newType !== 'lab') {
+            examinationForm.partner_integration_id = '';
+        }
+    },
+);
 
 const noteForm = useForm({
     appointment_id: '',
@@ -952,6 +964,19 @@ const exportError = computed(() => page.props.errors?.export ?? null);
                                         <option value="normal">Normal</option>
                                         <option value="urgent">Urgente</option>
                                     </select>
+                                </div>
+                                <div v-if="examinationForm.type === 'lab' && lab_partners.length > 0" class="flex flex-col gap-1">
+                                    <label class="text-sm font-medium text-gray-700">Laboratório parceiro</label>
+                                    <select
+                                        v-model="examinationForm.partner_integration_id"
+                                        class="rounded-md border border-gray-300 px-3 py-2 text-sm"
+                                    >
+                                        <option value="">Selecionar automaticamente</option>
+                                        <option v-for="partner in lab_partners" :key="partner.id" :value="partner.id">
+                                            {{ partner.name }}
+                                        </option>
+                                    </select>
+                                    <p class="text-xs text-gray-500">Opcional. Se vazio, o sistema escolhe automaticamente.</p>
                                 </div>
                                 <div class="md:col-span-2 flex flex-col gap-1">
                                     <label class="text-sm font-medium text-gray-700">Justificativa clínica</label>

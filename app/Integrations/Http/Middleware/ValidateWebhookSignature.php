@@ -27,9 +27,12 @@ class ValidateWebhookSignature
         $signature = $request->header($signatureHeader);
         $timestamp = $request->header($timestampHeader);
 
-        // Se não houver headers de assinatura, pular validação (parceiro pode não suportar)
+        // Rejeitar requisições sem assinatura HMAC
         if (! $signature && ! $timestamp) {
-            return $next($request);
+            return response()->json([
+                'error' => 'webhook_signature_required',
+                'message' => 'Webhook signature and timestamp headers are required.',
+            ], 401);
         }
 
         // Se apenas um dos headers estiver presente, rejeitar

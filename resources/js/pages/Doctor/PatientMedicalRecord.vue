@@ -181,6 +181,7 @@ interface Props {
         mode?: 'patient' | 'doctor';
         viewer?: { id: string; name: string };
     };
+    lab_partners?: Array<{ id: string; name: string; slug: string }>;
 }
 
 defineProps<Props>();

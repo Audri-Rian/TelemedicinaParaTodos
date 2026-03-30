@@ -816,6 +816,7 @@ class MedicalRecordService
             'name' => $payload['name'],
             'requested_at' => now(),
             'status' => Examination::STATUS_REQUESTED,
+            'partner_integration_id' => $payload['partner_integration_id'] ?? null,
             'metadata' => [
                 'justification' => $payload['justification'] ?? null,
                 'priority' => $payload['priority'] ?? 'normal',

@@ -34,6 +34,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'partner.rate' => \App\Integrations\Http\Middleware\RateLimitPartner::class,
             'partner.consent' => \App\Integrations\Http\Middleware\EnforcePatientConsent::class,
             'partner.audit' => \App\Integrations\Http\Middleware\AuditExternalAccess::class,
+            'partner.hmac' => \App\Integrations\Http\Middleware\ValidateWebhookSignature::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

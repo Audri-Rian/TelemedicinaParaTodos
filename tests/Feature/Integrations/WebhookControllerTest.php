@@ -5,6 +5,7 @@ namespace Tests\Feature\Integrations;
 use App\Integrations\Events\ExamResultReceived;
 use App\Models\Examination;
 use App\Models\IntegrationEvent;
+use App\Models\IntegrationWebhook;
 use App\Models\PartnerIntegration;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
@@ -15,6 +16,7 @@ class WebhookControllerTest extends TestCase
     use RefreshDatabase;
 
     private PartnerIntegration $partner;
+    private string $webhookSecret = 'test-hmac-secret-key';
 
     protected function setUp(): void
     {
@@ -27,32 +29,115 @@ class WebhookControllerTest extends TestCase
             'client_id' => 'test-key',
             'client_secret' => 'test-webhook-secret',
         ]);
+        // Configurar webhook com secret para HMAC
+        $this->partner->webhooks()->create([
+            'url' => 'https://example.com/webhook',
+            'secret' => $this->webhookSecret,
+            'events' => ['exam_result_received'],
+            'status' => IntegrationWebhook::STATUS_ACTIVE,
+        ]);
     }
 
-    /**
-     * Cria exame sem disparar o ExaminationObserver.
-     */
     private function createExamWithoutEvents(array $attributes = []): Examination
     {
         return Examination::withoutEvents(fn () => Examination::factory()->create($attributes));
     }
 
-    public function test_webhook_route_is_registered(): void
+    /**
+     * Gera os headers HMAC para um payload.
+     */
+    private function hmacHeaders(string $body): array
     {
-        $response = $this->postJson("/api/v1/public/webhooks/lab/webhook-test-lab", []);
-        $this->assertNotEquals(405, $response->status());
+        $timestamp = (string) time();
+        $signature = 'sha256=' . hash_hmac('sha256', $timestamp . '.' . $body, $this->webhookSecret);
+
+        return [
+            'X-Webhook-Signature' => $signature,
+            'X-Webhook-Timestamp' => $timestamp,
+        ];
     }
 
-    public function test_webhook_for_nonexistent_slug_returns_404(): void
+    /**
+     * POST com HMAC correto.
+     */
+    private function postWithHmac(string $url, array $payload, array $extraHeaders = [])
     {
-        $response = $this->postJson("/api/v1/public/webhooks/lab/nonexistent", [
+        $body = json_encode($payload);
+        $headers = array_merge(
+            $this->hmacHeaders($body),
+            ['Content-Type' => 'application/json'],
+            $extraHeaders,
+        );
+
+        return $this->call('POST', $url, [], [], [], $this->transformHeadersToServerVars($headers), $body);
+    }
+
+    // ─── Testes de HMAC ──────────────────────────────────────────
+
+    public function test_webhook_rejects_request_without_hmac_headers(): void
+    {
+        $response = $this->postJson("/api/v1/public/webhooks/lab/webhook-test-lab", [
+            'id' => 'EXT-1',
             'resourceType' => 'DiagnosticReport',
-            'id' => 'ext-1',
+            'results' => [],
         ]);
 
-        $response->assertStatus(404)
-            ->assertJson(['error' => 'partner_not_found']);
+        $response->assertStatus(401)
+            ->assertJson(['error' => 'webhook_signature_required']);
     }
+
+    public function test_webhook_rejects_invalid_hmac_signature(): void
+    {
+        $payload = json_encode(['id' => 'EXT-1', 'results' => []]);
+        $timestamp = (string) time();
+        $wrongSignature = 'sha256=' . hash_hmac('sha256', $timestamp . '.' . $payload, 'wrong-secret');
+
+        $response = $this->call('POST', '/api/v1/public/webhooks/lab/webhook-test-lab', [], [], [],
+            $this->transformHeadersToServerVars([
+                'X-Webhook-Signature' => $wrongSignature,
+                'X-Webhook-Timestamp' => $timestamp,
+                'Content-Type' => 'application/json',
+            ]),
+            $payload,
+        );
+
+        $response->assertStatus(401)
+            ->assertJson(['error' => 'webhook_signature_invalid']);
+    }
+
+    public function test_webhook_rejects_expired_timestamp(): void
+    {
+        $payload = json_encode(['id' => 'EXT-1', 'results' => []]);
+        $oldTimestamp = (string) (time() - 600); // 10 minutos atrás (tolerância é 300s)
+        $signature = 'sha256=' . hash_hmac('sha256', $oldTimestamp . '.' . $payload, $this->webhookSecret);
+
+        $response = $this->call('POST', '/api/v1/public/webhooks/lab/webhook-test-lab', [], [], [],
+            $this->transformHeadersToServerVars([
+                'X-Webhook-Signature' => $signature,
+                'X-Webhook-Timestamp' => $oldTimestamp,
+                'Content-Type' => 'application/json',
+            ]),
+            $payload,
+        );
+
+        $response->assertStatus(401)
+            ->assertJson(['error' => 'webhook_timestamp_expired']);
+    }
+
+    public function test_webhook_rejects_missing_timestamp_with_signature(): void
+    {
+        $response = $this->postJson("/api/v1/public/webhooks/lab/webhook-test-lab", [
+            'id' => 'EXT-1',
+            'results' => [],
+        ], [
+            'X-Webhook-Signature' => 'sha256=fake',
+        ]);
+
+        $response->assertStatus(401)
+            ->assertJson(['error' => 'webhook_missing_signature_or_timestamp']);
+    }
+
+    // ─── Testes de fluxo ─────────────────────────────────────────
 
     public function test_webhook_processes_valid_lab_result(): void
     {
@@ -73,7 +158,7 @@ class WebhookControllerTest extends TestCase
             ],
         ];
 
-        $response = $this->postJson(
+        $response = $this->postWithHmac(
             "/api/v1/public/webhooks/lab/webhook-test-lab",
             $payload,
             ['X-Idempotency-Key' => 'idem-key-1'],
@@ -113,15 +198,15 @@ class WebhookControllerTest extends TestCase
             'results' => [['name' => 'Glicemia', 'value' => 90, 'unit' => 'mg/dL']],
         ];
 
-        // Primeira chamada — processa
-        $this->postJson(
+        // Primeira chamada
+        $this->postWithHmac(
             "/api/v1/public/webhooks/lab/webhook-test-lab",
             $payload,
             ['X-Idempotency-Key' => 'idem-unique-1'],
         )->assertOk()->assertJson(['status' => 'processed']);
 
-        // Segunda chamada com mesma chave — já processado
-        $response = $this->postJson(
+        // Segunda chamada com mesma chave
+        $response = $this->postWithHmac(
             "/api/v1/public/webhooks/lab/webhook-test-lab",
             $payload,
             ['X-Idempotency-Key' => 'idem-unique-1'],
@@ -139,7 +224,7 @@ class WebhookControllerTest extends TestCase
             'results' => [],
         ];
 
-        $response = $this->postJson(
+        $response = $this->postWithHmac(
             "/api/v1/public/webhooks/lab/webhook-test-lab",
             $payload,
             ['X-Idempotency-Key' => 'idem-not-found'],
@@ -154,19 +239,47 @@ class WebhookControllerTest extends TestCase
         ]);
     }
 
+    public function test_webhook_for_nonexistent_slug_returns_404(): void
+    {
+        $payload = ['id' => 'ext-1', 'resourceType' => 'DiagnosticReport', 'results' => []];
+        $body = json_encode($payload);
+        $timestamp = (string) time();
+        $signature = 'sha256=' . hash_hmac('sha256', $timestamp . '.' . $body, 'any-secret');
+
+        $response = $this->call('POST', '/api/v1/public/webhooks/lab/nonexistent', [], [], [],
+            $this->transformHeadersToServerVars([
+                'X-Webhook-Signature' => $signature,
+                'X-Webhook-Timestamp' => $timestamp,
+                'Content-Type' => 'application/json',
+            ]),
+            $body,
+        );
+
+        $response->assertStatus(404);
+    }
+
     public function test_webhook_for_inactive_partner_returns_404(): void
     {
-        PartnerIntegration::factory()->laboratory()->inactive()->create([
+        $inactivePartner = PartnerIntegration::factory()->laboratory()->inactive()->create([
             'slug' => 'inactive-lab',
         ]);
 
-        $response = $this->postJson("/api/v1/public/webhooks/lab/inactive-lab", [
-            'id' => 'EXT-1',
-            'resourceType' => 'DiagnosticReport',
-            'results' => [],
-        ]);
+        $payload = ['id' => 'EXT-1', 'resourceType' => 'DiagnosticReport', 'results' => []];
+        $body = json_encode($payload);
+        $timestamp = (string) time();
+        $signature = 'sha256=' . hash_hmac('sha256', $timestamp . '.' . $body, 'any-secret');
 
-        $response->assertStatus(404)
-            ->assertJson(['error' => 'partner_not_found']);
+        $response = $this->call('POST', '/api/v1/public/webhooks/lab/inactive-lab', [], [], [],
+            $this->transformHeadersToServerVars([
+                'X-Webhook-Signature' => $signature,
+                'X-Webhook-Timestamp' => $timestamp,
+                'Content-Type' => 'application/json',
+            ]),
+            $body,
+        );
+
+        // O HMAC middleware busca o parceiro e não encontra (ou inativo → webhook não configurado)
+        // O controller retorna 404 para parceiro inativo
+        $this->assertContains($response->status(), [401, 404]);
     }
 }

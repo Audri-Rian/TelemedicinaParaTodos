@@ -7,6 +7,7 @@ use App\Integrations\Events\ExamResultReceived;
 use App\Models\Doctor;
 use App\Models\Examination;
 use App\Models\IntegrationEvent;
+use App\Models\IntegrationWebhook;
 use App\Models\PartnerIntegration;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
@@ -20,7 +21,7 @@ use Tests\TestCase;
  * 2. Sistema solicita exame laboratorial (dispara evento)
  * 3. Stub retorna external_id
  * 4. Parceiro consulta pedidos pendentes via API
- * 5. Parceiro envia resultado via webhook
+ * 5. Parceiro envia resultado via webhook (com HMAC)
  * 6. Exame fica completo com source = integration
  */
 class IntegrationEndToEndTest extends TestCase
@@ -57,7 +58,7 @@ class IntegrationEndToEndTest extends TestCase
         $this->assertTrue($partner->hasCapability('send_exam_order'));
 
         // ── 2. Sistema solicita exame laboratorial ──────────────
-        // Criar exame SEM observer (para controlar o fluxo manualmente)
+
         $examination = Examination::withoutEvents(fn () => Examination::factory()->create([
             'type' => Examination::TYPE_LAB,
             'name' => 'Hemograma Completo',
@@ -65,7 +66,6 @@ class IntegrationEndToEndTest extends TestCase
             'doctor_id' => $doctor->id,
         ]));
 
-        // Disparar o evento manualmente — o listener + LabAdapterStub processam
         ExaminationRequested::dispatch($examination);
 
         // ── 3. Verificar que stub retornou external_id ──────────
@@ -77,7 +77,6 @@ class IntegrationEndToEndTest extends TestCase
         $this->assertEquals(Examination::STATUS_IN_PROGRESS, $examination->status);
         $this->assertEquals($partner->id, $examination->partner_integration_id);
 
-        // Evento outbound registrado
         $this->assertDatabaseHas('integration_events', [
             'partner_integration_id' => $partner->id,
             'direction' => IntegrationEvent::DIRECTION_OUTBOUND,
@@ -112,9 +111,18 @@ class IntegrationEndToEndTest extends TestCase
             $ordersResponse->json('entry.0.resource.id')
         );
 
-        // ── 5. Parceiro envia resultado via webhook ─────────────
-        // Fake ExamResultReceived para evitar que o listener ProcessExamResult
-        // dispare (o NotificationService ainda não suporta EXAM_RESULT_RECEIVED).
+        // ── 5. Parceiro envia resultado via webhook (com HMAC) ──
+
+        // Configurar webhook com secret HMAC
+        $webhookSecret = 'e2e-hmac-secret';
+        $partner->webhooks()->create([
+            'url' => 'https://api.e2e-lab.com/webhook',
+            'secret' => $webhookSecret,
+            'events' => ['exam_result_received'],
+            'status' => IntegrationWebhook::STATUS_ACTIVE,
+        ]);
+
+        // Fake ExamResultReceived para evitar que o ProcessExamResult listener dispare
         Event::fake([ExamResultReceived::class]);
 
         $webhookPayload = [
@@ -126,10 +134,18 @@ class IntegrationEndToEndTest extends TestCase
             ],
         ];
 
-        $webhookResponse = $this->postJson(
-            "/api/v1/public/webhooks/lab/lab-e2e-test",
-            $webhookPayload,
-            ['X-Idempotency-Key' => 'e2e-result-1'],
+        $body = json_encode($webhookPayload);
+        $timestamp = (string) time();
+        $signature = 'sha256=' . hash_hmac('sha256', $timestamp . '.' . $body, $webhookSecret);
+
+        $webhookResponse = $this->call('POST', '/api/v1/public/webhooks/lab/lab-e2e-test', [], [], [],
+            $this->transformHeadersToServerVars([
+                'X-Webhook-Signature' => $signature,
+                'X-Webhook-Timestamp' => $timestamp,
+                'X-Idempotency-Key' => 'e2e-result-1',
+                'Content-Type' => 'application/json',
+            ]),
+            $body,
         );
 
         $webhookResponse->assertOk()
@@ -146,7 +162,6 @@ class IntegrationEndToEndTest extends TestCase
         $this->assertIsArray($examination->results);
         $this->assertCount(2, $examination->results);
 
-        // Evento inbound registrado
         $this->assertDatabaseHas('integration_events', [
             'partner_integration_id' => $partner->id,
             'direction' => IntegrationEvent::DIRECTION_INBOUND,
@@ -157,13 +172,11 @@ class IntegrationEndToEndTest extends TestCase
         $partner->refresh();
         $this->assertNotNull($partner->last_sync_at);
 
-        // 2 eventos: 1 outbound (pedido) + 1 inbound (resultado)
         $this->assertEquals(2, IntegrationEvent::where('partner_integration_id', $partner->id)->count());
     }
 
     public function test_exam_without_lab_partner_follows_manual_flow(): void
     {
-        // Nenhum parceiro ativo
         PartnerIntegration::factory()->laboratory()->inactive()->create();
 
         $examination = Examination::withoutEvents(fn () => Examination::factory()->create([
@@ -175,7 +188,6 @@ class IntegrationEndToEndTest extends TestCase
 
         $examination->refresh();
 
-        // Exame permanece no estado original — fluxo manual
         $this->assertEquals(Examination::STATUS_REQUESTED, $examination->status);
         $this->assertNull($examination->external_id);
         $this->assertNull($examination->partner_integration_id);
