@@ -157,16 +157,16 @@ const formatEventType = (type: string) => {
     return map[type] ?? type;
 };
 
-// Toggle de atividade recente por parceiro
-const openActivities = ref<Set<number>>(new Set());
+// Toggle de atividade recente por parceiro (objeto plano: Set em ref tem reatividade frágil com .has() no template)
+const openActivities = ref<Record<number, boolean>>({});
+
+const isActivityOpen = (id: number) => !!openActivities.value[id];
+
 const toggleActivity = (id: number) => {
-    const next = new Set(openActivities.value);
-    if (next.has(id)) {
-        next.delete(id);
-    } else {
-        next.add(id);
-    }
-    openActivities.value = next;
+    openActivities.value = {
+        ...openActivities.value,
+        [id]: !openActivities.value[id],
+    };
 };
 
 // Partner details dialog
@@ -429,7 +429,7 @@ const overallHealthPercent = computed(() => {
                                 Atividade Recente
                                 <ChevronDown
                                     class="size-3.5 text-muted-foreground transition-transform duration-300 ease-in-out"
-                                    :class="{ 'rotate-180': openActivities.has(partner.id) }"
+                                    :class="{ 'rotate-180': isActivityOpen(partner.id) }"
                                 />
                             </button>
                             <Transition
@@ -441,7 +441,7 @@ const overallHealthPercent = computed(() => {
                                 leave-to-class="max-h-0 opacity-0"
                             >
                                 <div
-                                    v-show="openActivities.has(partner.id)"
+                                    v-show="isActivityOpen(partner.id)"
                                     class="overflow-hidden"
                                 >
                                     <div class="mt-2 space-y-1.5">
