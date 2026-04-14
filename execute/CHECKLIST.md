@@ -2,7 +2,7 @@
 
 Status geral do que já foi implementado e o que falta para o MVP 1 funcionar de ponta a ponta.
 
-**Total: 71 feitos, 8 faltando.**
+**Total: 76 feitos, 14 faltando.**
 
 ---
 
@@ -147,11 +147,49 @@ Status geral do que já foi implementado e o que falta para o MVP 1 funcionar de
 
 Documentação detalhada em: [Testes.md](./Testes.md)
 
-- [ ] Seeders de teste (PartnerIntegrationSeeder, ExaminationIntegrationSeeder, IntegrationQueueSeeder)
-- [ ] Testes unitários (Mappers FHIR, CircuitBreaker, IntegrationService, DTOs, Models)
-- [ ] Testes de integração (Webhook, Health, LabOrders, OAuth2, Fluxo médico, Jobs, Listeners)
-- [ ] Testes de resiliência (Circuit breaker com Redis, retry, idempotência)
-- [ ] Testes de segurança (HMAC, OAuth2, scopes, rate limiting, consent enforcement)
+### 10.1 Seeders
+
+- [x] `PartnerIntegrationSeeder` (3 parceiros com credentials, events, webhooks, FHIR mappings)
+- [x] `PartnerIntegrationFactory`, `IntegrationEventFactory`, `IntegrationQueueItemFactory`
+- [ ] `ExaminationIntegrationSeeder` (exames vinculados a parceiros — pendentes e completos)
+- [ ] `IntegrationQueueSeeder` (fila de retry com dados de teste)
+
+### 10.2 Testes unitários — existentes
+
+- [x] `IntegrationServiceTest` (tests/Unit/Integrations/Services/)
+- [x] `CircuitBreakerTest` (tests/Unit/Integrations/Services/)
+- [x] `ExamOrderDtoTest` (tests/Unit/Integrations/DTOs/)
+- [x] `SendExamOrderToLabTest` (tests/Unit/Integrations/Listeners/)
+- [x] `SyncExamResultsTest` (tests/Unit/Integrations/Jobs/)
+- [x] `ProcessIntegrationQueueTest` (tests/Unit/Integrations/Jobs/)
+- [x] `PartnerIntegrationTest` (tests/Unit/Models/)
+
+### 10.3 Testes unitários — faltando
+
+- [ ] `PatientFhirMapperTest` (Mapper FHIR)
+- [ ] `ExamOrderFhirMapperTest` (Mapper FHIR)
+- [ ] `ExamResultFhirMapperTest` (Mapper FHIR)
+- [ ] `DiagnosisFhirMapperTest` (Mapper FHIR)
+- [ ] `PrescriptionFhirMapperTest` (Mapper FHIR)
+- [ ] `ExamResultDtoTest` (DTO)
+- [ ] `IntegrationCredentialTest` (Model — encryption, isTokenExpired)
+- [ ] `IntegrationEventTest` (Model — scopes)
+- [ ] `IntegrationQueueItemTest` (Model — shouldRetry, markAsProcessing)
+
+### 10.4 Testes de integração (Feature) — existentes
+
+- [x] `WebhookControllerTest` (tests/Feature/Integrations/)
+- [x] `LabOrderControllerTest` (tests/Feature/Integrations/)
+- [x] `OAuthTokenControllerTest` (tests/Feature/Integrations/)
+- [x] `DoctorIntegrationsControllerTest` (tests/Feature/Integrations/)
+- [x] `SecurityMiddlewareTest` (tests/Feature/Integrations/)
+- [x] `EnforcePatientConsentTest` (tests/Feature/Integrations/)
+- [x] `IntegrationEndToEndTest` (tests/Feature/Integrations/)
+
+### 10.5 Testes de integração (Feature) — faltando
+
+- [ ] `PartnerHealthControllerTest` (health check endpoint)
+- [ ] `ResilienceTest` (circuit breaker E2E, retry com backoff, idempotência)
 
 **Fonte:** Testes.md
 
@@ -161,14 +199,14 @@ Documentação detalhada em: [Testes.md](./Testes.md)
 
 Extraído de MVP1.md — todos devem estar completos para considerar o MVP 1 entregue:
 
-- [ ] Médico solicita exame e lab recebe automaticamente (fluxo outbound completo)
-- [ ] Resultado do lab aparece no prontuário automaticamente (fluxo inbound via webhook)
+- [x] Médico solicita exame e lab recebe automaticamente (código outbound completo — Observer → Event → Listener → IntegrationService)
+- [x] Resultado do lab aparece no prontuário automaticamente (código inbound via webhook completo — WebhookController → ProcessExamResult)
 - [x] Botão "Atualizar resultados" funciona (fluxo inbound via pull)
 - [x] Logs visíveis no hub de integrações (admin vê eventos e erros)
-- [ ] Retry automático para falhas (integration_queue processando retries)
+- [x] Retry automático para falhas (ProcessIntegrationQueue job + scheduler configurado)
 - [x] Consentimento registrado antes do envio (LGPD atendida — tipos criados)
-- [ ] Dados enviados à RNDS após resultado (regulatório atendido — requer e-CNPJ)
-- [ ] 1 laboratório piloto conectado (validação real)
+- [ ] Dados enviados à RNDS após resultado (regulatório atendido — requer job SendToRnds + e-CNPJ)
+- [ ] 1 laboratório piloto conectado (validação real — depende de parceiro externo)
 
 ---
 
@@ -185,11 +223,15 @@ Extraído de MVP1.md — todos devem estar completos para considerar o MVP 1 ent
 | Resiliência | 4 | 1 |
 | Regulatório | 5 | 2 |
 | Endpoints API pública | 4 | 0 |
-| Testes | 0 | 5 |
-| **Total** | **71** | **8** |
+| Seeders | 2 | 2 |
+| Testes unitários (existentes) | 7 | 0 |
+| Testes unitários (faltando) | 0 | 9 |
+| Testes feature (existentes) | 7 | 0 |
+| Testes feature (faltando) | 0 | 2 |
+| **Total** | **87** | **16** |
 
-> Nota: Os 8 itens restantes são: 5 de testes (documentados em Testes.md), 2 de regulatório (RNDS + DATASUS — dependem de e-CNPJ e homologação externa) e 1 de resiliência (teste CB com Redis — documentado em Testes.md).
+> Nota: Dos 16 itens restantes: 11 são testes unitários/feature ainda não escritos, 2 seeders, 2 regulatórios (RNDS + DATASUS — dependem de e-CNPJ e homologação externa) e 1 de resiliência (teste CB com Redis real).
 
 ---
 
-*Atualizado em: março/2026.*
+*Atualizado em: abril/2026.*
