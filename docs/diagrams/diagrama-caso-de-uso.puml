@@ -1,0 +1,181 @@
+@startuml Diagrama-Caso-de-Uso
+
+skinparam packageStyle rectangle
+
+title Diagrama de Caso de Uso - Telemedicina Para Todos
+
+actor "Visitante" as Visitor
+actor "Paciente" as Patient
+actor "Medico" as Doctor
+actor "Sistema" as System
+
+Visitor <|-- Patient
+Visitor <|-- Doctor
+
+rectangle "Autenticacao e Registro" {
+  usecase "Registrar como Paciente" as UC_REG_PAT
+  usecase "Registrar como Medico" as UC_REG_DOC
+  usecase "Fazer Login" as UC_LOGIN
+  usecase "Recuperar Senha" as UC_FORGOT
+  usecase "Verificar E-mail" as UC_VERIFY
+  usecase "Visualizar Termos\ne Privacidade" as UC_TERMS
+}
+
+Visitor --> UC_LOGIN
+Visitor --> UC_REG_PAT
+Visitor --> UC_REG_DOC
+Visitor --> UC_FORGOT
+Visitor --> UC_TERMS
+UC_REG_PAT ..> UC_VERIFY : <<include>>
+UC_REG_DOC ..> UC_VERIFY : <<include>>
+
+rectangle "Agendamento de Consulta" {
+  usecase "Buscar Medicos por\nEspecializacao" as UC_SEARCH
+  usecase "Visualizar Perfil\ndo Medico" as UC_DOC_PROFILE
+  usecase "Consultar Disponibilidade\ndo Medico" as UC_AVAIL
+  usecase "Agendar Consulta" as UC_SCHEDULE
+  usecase "Cancelar Consulta" as UC_CANCEL
+  usecase "Reagendar Consulta" as UC_RESCHEDULE
+  usecase "Visualizar Proxima\nConsulta" as UC_NEXT
+  usecase "Visualizar Historico\nde Consultas" as UC_HISTORY
+}
+
+Patient --> UC_SEARCH
+Patient --> UC_DOC_PROFILE
+Patient --> UC_AVAIL
+Patient --> UC_SCHEDULE
+Patient --> UC_CANCEL
+Patient --> UC_RESCHEDULE
+Patient --> UC_NEXT
+Patient --> UC_HISTORY
+UC_SCHEDULE ..> UC_AVAIL : <<include>>
+
+rectangle "Gestao de Agenda Medica" {
+  usecase "Gerenciar Locais\nde Atendimento" as UC_LOCATIONS
+  usecase "Configurar Slots de\nDisponibilidade" as UC_SLOTS
+  usecase "Criar Slot Recorrente" as UC_RECURRING
+  usecase "Criar Slot Especifico" as UC_SPECIFIC
+  usecase "Bloquear Datas" as UC_BLOCK
+  usecase "Visualizar Agenda" as UC_VIEW_SCHED
+}
+
+Doctor --> UC_LOCATIONS
+Doctor --> UC_SLOTS
+Doctor --> UC_BLOCK
+Doctor --> UC_VIEW_SCHED
+UC_SLOTS ..> UC_RECURRING : <<extend>>
+UC_SLOTS ..> UC_SPECIFIC : <<extend>>
+
+rectangle "Teleconsulta" {
+  usecase "Iniciar Consulta" as UC_START
+  usecase "Realizar Videochamada" as UC_VIDEO
+  usecase "Registrar Sinais Vitais" as UC_VITALS
+  usecase "Adicionar Diagnostico\n(CID-10)" as UC_DIAG
+  usecase "Criar Prescricao" as UC_PRESC
+  usecase "Solicitar Exame" as UC_EXAM
+  usecase "Escrever Nota Clinica" as UC_NOTE
+  usecase "Emitir Atestado Medico" as UC_CERT
+  usecase "Anexar Documento" as UC_ATTACH
+  usecase "Finalizar Consulta" as UC_END
+  usecase "Gerar PDF da Consulta" as UC_PDF
+  usecase "Salvar Rascunho" as UC_DRAFT
+}
+
+Doctor --> UC_START
+Doctor --> UC_VIDEO
+Patient --> UC_VIDEO
+Doctor --> UC_VITALS
+Doctor --> UC_DIAG
+Doctor --> UC_PRESC
+Doctor --> UC_EXAM
+Doctor --> UC_NOTE
+Doctor --> UC_CERT
+Doctor --> UC_ATTACH
+Doctor --> UC_END
+Doctor --> UC_PDF
+Doctor --> UC_DRAFT
+
+UC_START ..> UC_VIDEO : <<extend>>
+UC_END ..> UC_PDF : <<extend>>
+
+rectangle "Prontuario Medico" {
+  usecase "Visualizar Prontuario\ndo Paciente" as UC_VIEW_REC
+  usecase "Visualizar Proprio\nProntuario" as UC_OWN_REC
+  usecase "Exportar Prontuario\n(PDF)" as UC_EXP_REC
+  usecase "Upload de Documento\nMedico" as UC_UPLOAD
+  usecase "Visualizar Historico\nde Prescricoes" as UC_HIST_PRESC
+  usecase "Visualizar Resultados\nde Exames" as UC_HIST_EXAM
+}
+
+Doctor --> UC_VIEW_REC
+Patient --> UC_OWN_REC
+Patient --> UC_UPLOAD
+Doctor --> UC_EXP_REC
+Patient --> UC_EXP_REC
+Patient --> UC_HIST_PRESC
+Patient --> UC_HIST_EXAM
+
+rectangle "Comunicacao" {
+  usecase "Enviar Mensagem" as UC_MSG
+  usecase "Visualizar Conversas" as UC_CONV
+  usecase "Receber Notificacao" as UC_NOTIF
+  usecase "Gerenciar Preferencias\nde Notificacao" as UC_NOTIF_PREF
+}
+
+Patient --> UC_MSG
+Doctor --> UC_MSG
+Patient --> UC_CONV
+Doctor --> UC_CONV
+Patient --> UC_NOTIF
+Doctor --> UC_NOTIF
+Patient --> UC_NOTIF_PREF
+Doctor --> UC_NOTIF_PREF
+
+System --> UC_NOTIF
+
+rectangle "Gestao de Pacientes" {
+  usecase "Listar Pacientes" as UC_PAT_LIST
+  usecase "Visualizar Detalhes\ndo Paciente" as UC_PAT_DET
+  usecase "Visualizar Dashboard\nMedico" as UC_DASH_DOC
+}
+
+Doctor --> UC_PAT_LIST
+Doctor --> UC_PAT_DET
+Doctor --> UC_DASH_DOC
+
+rectangle "Dashboard e Perfil" {
+  usecase "Visualizar Dashboard\ndo Paciente" as UC_DASH_PAT
+  usecase "Editar Perfil" as UC_PROFILE
+  usecase "Alterar Senha" as UC_PASS
+  usecase "Gerenciar Timeline\nProfissional" as UC_TIMELINE
+  usecase "Reportar Bug" as UC_BUG
+}
+
+Patient --> UC_DASH_PAT
+Patient --> UC_PROFILE
+Doctor --> UC_PROFILE
+Patient --> UC_PASS
+Doctor --> UC_PASS
+Doctor --> UC_TIMELINE
+Patient --> UC_BUG
+Doctor --> UC_BUG
+
+rectangle "LGPD e Compliance" {
+  usecase "Gerenciar Consentimentos" as UC_CONSENT
+  usecase "Solicitar Portabilidade\nde Dados" as UC_PORT
+  usecase "Solicitar Exclusao\nde Dados" as UC_FORGET
+  usecase "Consultar Relatorio\nde Acesso" as UC_ACCESS
+  usecase "Registrar Auditoria" as UC_AUDIT
+}
+
+Patient --> UC_CONSENT
+Doctor --> UC_CONSENT
+Patient --> UC_PORT
+Doctor --> UC_PORT
+Patient --> UC_FORGET
+Doctor --> UC_FORGET
+Patient --> UC_ACCESS
+Doctor --> UC_ACCESS
+System --> UC_AUDIT
+
+@enduml

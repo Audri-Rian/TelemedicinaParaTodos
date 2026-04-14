@@ -1,0 +1,501 @@
+@startuml Mapeamento-ORM
+
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+
+title Mapeamento Objeto-Relacional (ORM) - Telemedicina Para Todos
+
+package "Identidade e Perfis" as identity {
+
+  class User {
+    Tabela: users
+    Traits: HasFactory, Notifiable, HasUuids
+    --
+    + id : uuid
+    + name : string
+    + email : string
+    + password : string
+    + avatar_path : string
+    + timeline_completed : boolean
+    --
+    + doctor() : HasOne
+    + patient() : HasOne
+    + timelineEvents() : HasMany
+    + notifications() : HasMany
+    + notificationPreferences() : HasMany
+    + consents() : HasMany
+    + auditLogs() : HasMany
+    + sentMessages() : HasMany
+    + receivedMessages() : HasMany
+    --
+    + isDoctor() : bool
+    + isPatient() : bool
+    + getRole() : string
+  }
+
+  class Doctor {
+    Tabela: doctors
+    Traits: HasFactory, SoftDeletes, HasUuids
+    --
+    + id : uuid
+    + user_id : uuid (FK unique)
+    + crm : string (unique)
+    + biography : text
+    + language : array (json)
+    + license_number : string (unique)
+    + license_expiry_date : date
+    + status : string
+    + consultation_fee : decimal
+    --
+    + user() : BelongsTo
+    + specializations() : BelongsToMany
+    + serviceLocations() : HasMany
+    + appointments() : HasMany
+    + prescriptions() : HasMany
+    + examinations() : HasMany
+    + vitalSigns() : HasMany
+    + diagnoses() : HasMany
+    + clinicalNotes() : HasMany
+    + medicalCertificates() : HasMany
+    + availabilitySlots() : HasMany
+    + blockedDates() : HasMany
+    --
+    + scopeActive(query)
+    + scopeBySpecialization(query, id)
+    + isActive() : bool
+    + isLicenseExpired() : bool
+  }
+
+  class Patient {
+    Tabela: patients
+    Traits: HasFactory, SoftDeletes, HasUuids
+    --
+    + id : uuid
+    + user_id : uuid (FK unique)
+    + gender : string
+    + date_of_birth : date
+    + phone_number : string
+    + medical_history : text
+    + allergies : text
+    + current_medications : text
+    + blood_type : string
+    + height : decimal
+    + weight : decimal
+    + insurance_provider : string
+    + status : string
+    + consent_telemedicine : boolean
+    --
+    + user() : BelongsTo
+    + appointments() : HasMany
+    + prescriptions() : HasMany
+    + examinations() : HasMany
+    + vitalSigns() : HasMany
+    + diagnoses() : HasMany
+    + clinicalNotes() : HasMany
+    + medicalCertificates() : HasMany
+    + medicalDocuments() : HasMany
+    --
+    + age : int (accessor)
+    + bmi : float (accessor)
+    + scopeActive(query)
+    + scopeWithConsent(query)
+  }
+}
+
+package "Especializacao" as spec_pkg {
+
+  class Specialization {
+    Tabela: specializations
+    Traits: HasFactory, HasUuids
+    --
+    + id : uuid
+    + name : string (unique)
+    --
+    + doctors() : BelongsToMany
+    --
+    + scopeByName(query, name)
+    + scopeWithDoctorCount(query)
+  }
+}
+
+package "Agendamento" as scheduling {
+
+  class Appointments {
+    Tabela: appointments
+    Traits: HasFactory, SoftDeletes, HasUuids
+    --
+    + id : uuid
+    + doctor_id : uuid (FK)
+    + patient_id : uuid (FK)
+    + scheduled_at : datetime
+    + access_code : string (unique)
+    + started_at : datetime
+    + ended_at : datetime
+    + status : string
+    + notes : text
+    + metadata : array (json)
+    --
+    STATUS_SCHEDULED = scheduled
+    STATUS_IN_PROGRESS = in_progress
+    STATUS_COMPLETED = completed
+    STATUS_NO_SHOW = no_show
+    STATUS_CANCELLED = cancelled
+    STATUS_RESCHEDULED = rescheduled
+    --
+    + doctor() : BelongsTo
+    + patient() : BelongsTo
+    + logs() : HasMany
+    + prescriptions() : HasMany
+    + examinations() : HasMany
+    + vitalSigns() : HasMany
+    + diagnoses() : HasMany
+    + clinicalNotes() : HasMany
+    + medicalCertificates() : HasMany
+    --
+    + duration : int (accessor)
+    + scopeScheduled / inProgress / completed
+    + scopeToday / upcoming / past
+    + scopeByDoctor(id) / byPatient(id)
+  }
+
+  class AppointmentLog {
+    Tabela: appointment_logs
+    Traits: HasFactory, HasUuids
+    --
+    + id : uuid
+    + appointment_id : uuid (FK)
+    + user_id : uuid (FK)
+    + event : string
+    + payload : array (json)
+  }
+}
+
+package "Disponibilidade" as availability {
+
+  class ServiceLocation {
+    Tabela: doctor_service_locations
+    Traits: HasFactory, SoftDeletes, HasUuids
+    --
+    + id : uuid
+    + doctor_id : uuid (FK)
+    + name : string
+    + type : string
+    + address : string
+    + is_active : boolean
+    --
+    + doctor() : BelongsTo
+    + availabilitySlots() : HasMany
+  }
+
+  class AvailabilitySlot {
+    Tabela: doctor_availability_slots
+    Traits: HasFactory, SoftDeletes, HasUuids
+    --
+    + id : uuid
+    + doctor_id : uuid (FK)
+    + location_id : uuid (FK)
+    + type : string (recurring/specific)
+    + day_of_week : string
+    + specific_date : date
+    + start_time : time
+    + end_time : time
+    + is_active : boolean
+    --
+    + doctor() : BelongsTo
+    + location() : BelongsTo
+    + scopeActive / recurring / specific
+  }
+
+  class BlockedDate {
+    Tabela: doctor_blocked_dates
+    Traits: HasFactory, SoftDeletes, HasUuids
+    --
+    + id : uuid
+    + doctor_id : uuid (FK)
+    + blocked_date : date
+    + reason : string
+    --
+    + doctor() : BelongsTo
+    + scopeFutureDates
+  }
+}
+
+package "Registros Medicos" as medical {
+
+  class Prescription {
+    Tabela: prescriptions
+    --
+    + id : uuid
+    + appointment_id : uuid (FK)
+    + doctor_id : uuid (FK)
+    + patient_id : uuid (FK)
+    + medications : array (json)
+    + instructions : text
+    + valid_until : date
+    + status : string
+    --
+    + appointment() : BelongsTo
+    + doctor() : BelongsTo
+    + patient() : BelongsTo
+  }
+
+  class Examination {
+    Tabela: examinations
+    --
+    + id : uuid
+    + appointment_id : uuid (FK)
+    + patient_id : uuid (FK)
+    + doctor_id : uuid (FK)
+    + type : string (lab/image/other)
+    + name : string
+    + status : string
+    + results : array (json)
+    --
+    + appointment() : BelongsTo
+    + doctor() : BelongsTo
+    + patient() : BelongsTo
+  }
+
+  class Diagnosis {
+    Tabela: diagnoses
+    --
+    + id : uuid
+    + appointment_id : uuid (FK)
+    + doctor_id : uuid (FK)
+    + patient_id : uuid (FK)
+    + cid10_code : string
+    + cid10_description : string
+    + diagnosis_type : string
+    + description : text
+    --
+    + appointment() : BelongsTo
+    + doctor() : BelongsTo
+    + patient() : BelongsTo
+  }
+
+  class VitalSign {
+    Tabela: vital_signs
+    --
+    + id : uuid
+    + appointment_id : uuid (FK)
+    + patient_id : uuid (FK)
+    + doctor_id : uuid (FK)
+    + blood_pressure_systolic : int
+    + blood_pressure_diastolic : int
+    + temperature : decimal
+    + heart_rate : int
+    + respiratory_rate : int
+    + oxygen_saturation : decimal
+    --
+    + appointment() : BelongsTo
+    + doctor() : BelongsTo
+    + patient() : BelongsTo
+  }
+
+  class ClinicalNote {
+    Tabela: clinical_notes
+    --
+    + id : uuid
+    + appointment_id : uuid (FK)
+    + doctor_id : uuid (FK)
+    + patient_id : uuid (FK)
+    + title : string
+    + content : text
+    + is_private : boolean
+    + version : int
+    + parent_id : uuid (FK self)
+    --
+    + appointment() : BelongsTo
+    + doctor() : BelongsTo
+    + patient() : BelongsTo
+    + parent() : BelongsTo
+  }
+
+  class MedicalCertificate {
+    Tabela: medical_certificates
+    --
+    + id : uuid
+    + appointment_id : uuid (FK)
+    + doctor_id : uuid (FK)
+    + patient_id : uuid (FK)
+    + type : string
+    + start_date : date
+    + end_date : date
+    + days : int
+    + verification_code : string (unique)
+    + status : string
+    --
+    + appointment() : BelongsTo
+    + doctor() : BelongsTo
+    + patient() : BelongsTo
+  }
+
+  class MedicalDocument {
+    Tabela: medical_documents
+    --
+    + id : uuid
+    + patient_id : uuid (FK)
+    + appointment_id : uuid (FK)
+    + doctor_id : uuid (FK)
+    + uploaded_by : uuid (FK)
+    + category : string
+    + name : string
+    + file_path : string
+    + visibility : string
+    --
+    + patient() : BelongsTo
+    + appointment() : BelongsTo
+    + doctor() : BelongsTo
+    + uploader() : BelongsTo
+  }
+}
+
+package "Videochamada" as videocall {
+
+  class Call {
+    Tabela: calls
+    Traits: HasFactory, HasUuids
+    --
+    + id : uuid
+    + appointment_id : uuid (FK)
+    + doctor_id : uuid (FK)
+    + patient_id : uuid (FK)
+    + status : string
+    + requested_at : datetime
+    + accepted_at : datetime
+    + ended_at : datetime
+    --
+    + appointment() : BelongsTo
+    + doctor() : BelongsTo
+    + patient() : BelongsTo
+    + room() : HasOne
+    + isActive() : bool
+  }
+
+  class Room {
+    Tabela: rooms
+    --
+    + id : bigint
+    + call_id : uuid (FK)
+    + room_id : string (unique)
+    + sfu_node : string
+    --
+    + call() : BelongsTo
+  }
+}
+
+package "Comunicacao" as communication {
+
+  class Message {
+    Tabela: messages
+    Traits: HasFactory, SoftDeletes, HasUuids
+    --
+    + id : uuid
+    + sender_id : uuid (FK)
+    + receiver_id : uuid (FK)
+    + content : text
+    + appointment_id : uuid (FK)
+    + read_at : datetime
+    + status : string
+    --
+    + sender() : BelongsTo
+    + receiver() : BelongsTo
+    + appointment() : BelongsTo
+    + markAsRead() / markAsDelivered()
+  }
+
+  class Notification {
+    Tabela: notifications
+    --
+    + id : uuid
+    + user_id : uuid (FK)
+    + type : string
+    + title : string
+    + message : text
+    + metadata : array (json)
+    + read_at : datetime
+    --
+    + user() : BelongsTo
+    + markAsRead() / markAsUnread()
+  }
+}
+
+package "Compliance e LGPD" as compliance {
+
+  class Consent {
+    Tabela: consents
+    --
+    + id : uuid
+    + user_id : uuid (FK)
+    + type : string
+    + granted : boolean
+    + version : string
+    + granted_at : datetime
+    + revoked_at : datetime
+    --
+    + user() : BelongsTo
+  }
+
+  class AuditLog {
+    Tabela: audit_logs
+    --
+    + id : uuid
+    + user_id : uuid (FK)
+    + action : string
+    + resource_type : string
+    + resource_id : uuid
+    --
+    + user() : BelongsTo
+  }
+
+  class DataAccessLog {
+    Tabela: data_access_logs
+    --
+    + id : uuid
+    + user_id : uuid (FK)
+    + data_subject_id : uuid (FK)
+    + data_type : string
+    + action : string
+    + accessed_fields : array (json)
+    --
+    + user() : BelongsTo
+    + dataSubject() : BelongsTo
+  }
+}
+
+' === Relacionamentos ===
+
+User "1" -- "0..1" Doctor
+User "1" -- "0..1" Patient
+
+Doctor "1" -- "*" Appointments
+Patient "1" -- "*" Appointments
+
+Doctor "*" -- "*" Specialization
+
+Doctor "1" -- "*" ServiceLocation
+Doctor "1" -- "*" AvailabilitySlot
+Doctor "1" -- "*" BlockedDate
+ServiceLocation "1" -- "*" AvailabilitySlot
+
+Appointments "1" -- "*" AppointmentLog
+Appointments "1" -- "*" Prescription
+Appointments "1" -- "*" Examination
+Appointments "1" -- "*" VitalSign
+Appointments "1" -- "*" Diagnosis
+Appointments "1" -- "*" ClinicalNote
+Appointments "1" -- "*" MedicalCertificate
+Appointments "1" -- "*" MedicalDocument
+Appointments "1" -- "0..1" Call
+
+Call "1" -- "0..1" Room
+
+User "1" -- "*" Message : sender
+User "1" -- "*" Message : receiver
+User "1" -- "*" Notification
+User "1" -- "*" Consent
+User "1" -- "*" AuditLog
+
+ClinicalNote "0..1" -- "*" ClinicalNote : parent
+
+@enduml

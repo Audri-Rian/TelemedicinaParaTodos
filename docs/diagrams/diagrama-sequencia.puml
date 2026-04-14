@@ -1,0 +1,171 @@
+@startuml Diagrama-de-Sequencia
+
+skinparam responseMessageBelowArrow true
+skinparam maxMessageSize 200
+
+title Fluxo de Agendamento de Consulta
+
+actor Paciente as P
+participant "Frontend\n(Vue/Inertia)" as FE
+participant "ScheduleConsultation\nController" as SC
+participant "AvailabilityService" as AS
+participant "AppointmentService" as APS
+participant "NotificationService" as NS
+database "Database" as DB
+
+P -> FE : Acessa pagina de agendamento
+FE -> SC : GET /patient/schedule-consultation
+SC -> DB : Busca medicos com especializacao
+SC --> FE : Lista de medicos disponiveis
+
+P -> FE : Seleciona medico e data
+FE -> AS : GET /api/doctors/{doctor}/availability/{date}
+AS -> DB : Busca slots recorrentes (day_of_week)
+AS -> DB : Busca slots especificos (specific_date)
+AS -> DB : Busca datas bloqueadas
+AS -> DB : Busca agendamentos existentes
+AS -> AS : Calcula slots disponiveis\n(30 min cada, excluindo ocupados)
+AS --> FE : Lista de horarios disponiveis
+
+P -> FE : Seleciona horario e confirma
+FE -> APS : POST /appointments
+APS -> DB : Cria appointment\n(status=scheduled, gera access_code)
+APS -> NS : Dispara notificacao
+NS -> DB : Cria notification (doctor)
+NS -> DB : Cria notification (patient)
+APS --> FE : Appointment criado com sucesso
+FE --> P : Confirmacao do agendamento
+
+newpage Fluxo de Teleconsulta
+
+actor Medico as D
+actor Paciente as P2
+participant "Frontend\n(Vue/Inertia)" as FE2
+participant "ConsultationDetail\nController" as CDC
+participant "AppointmentService" as APS2
+participant "CallManagerService" as CMS
+participant "MedicalRecordService" as MRS
+participant "SFU Media\nGateway" as SFU
+database "Database" as DB2
+
+== Inicio da Consulta ==
+
+D -> FE2 : Acessa consulta agendada
+FE2 -> CDC : GET /doctor/consultations/{appointment}
+CDC -> DB2 : Busca appointment + patient + medical records
+CDC --> FE2 : Dados da consulta
+
+D -> FE2 : Clica Iniciar Consulta
+FE2 -> CDC : POST /consultations/{appointment}/start
+CDC -> APS2 : start(appointment)
+APS2 -> DB2 : UPDATE appointment\n(status=in_progress, started_at=now)
+APS2 -> DB2 : Cria appointment_log (event=started)
+APS2 --> FE2 : Consulta iniciada
+
+== Videochamada ==
+
+D -> FE2 : Inicia videochamada
+FE2 -> CMS : Criar chamada
+CMS -> DB2 : Cria call (status=requested)
+CMS -> SFU : Cria sala de midia
+SFU --> CMS : room_id + sfu_node
+CMS -> DB2 : Cria room (room_id, sfu_node)
+CMS --> FE2 : Call + Room criados
+
+P2 -> FE2 : Recebe notificacao de chamada
+FE2 -> CMS : Aceitar chamada
+CMS -> DB2 : UPDATE call (status=accepted)
+CMS -> SFU : Conecta participante a sala
+SFU --> FE2 : Stream de midia bidirecional
+
+D <--> P2 : Teleconsulta via SFU
+
+D -> FE2 : Encerra videochamada
+FE2 -> CMS : Encerrar chamada
+CMS -> DB2 : UPDATE call (status=ended, ended_at=now)
+CMS -> SFU : Fecha sala de midia
+
+== Registro Medico Durante a Consulta ==
+
+D -> FE2 : Registra sinais vitais
+FE2 -> MRS : POST vital_signs
+MRS -> DB2 : Cria vital_signs
+
+D -> FE2 : Adiciona diagnostico (CID-10)
+FE2 -> MRS : POST diagnoses
+MRS -> DB2 : Cria diagnosis (cid10_code, type)
+
+D -> FE2 : Cria prescricao
+FE2 -> MRS : POST prescriptions
+MRS -> DB2 : Cria prescription (medications JSON)
+
+D -> FE2 : Solicita exame
+FE2 -> MRS : POST examinations
+MRS -> DB2 : Cria examination (status=requested)
+
+D -> FE2 : Escreve nota clinica
+FE2 -> MRS : POST clinical_notes
+MRS -> DB2 : Cria clinical_note
+
+== Finalizacao ==
+
+D -> FE2 : Clica Finalizar Consulta
+FE2 -> CDC : POST /consultations/{appointment}/finalize
+CDC -> APS2 : end(appointment)
+APS2 -> DB2 : UPDATE appointment\n(status=completed, ended_at=now)
+APS2 -> DB2 : Cria appointment_log (event=completed)
+CDC --> FE2 : Consulta finalizada
+
+newpage Fluxo de Mensagens
+
+actor "Usuario A" as UA
+actor "Usuario B" as UB
+participant "Frontend\n(Vue/Inertia)" as FE3
+participant "MessageController" as MC
+participant "MessageService" as MS
+participant "WebSocket\n(Broadcasting)" as WS
+database "Database" as DB3
+
+UA -> FE3 : Abre conversa com Usuario B
+FE3 -> MC : GET /api/messages/{userId}
+MC -> MS : getMessages(userA, userB)
+MS -> DB3 : SELECT messages\nWHERE (sender=A, receiver=B)\nOR (sender=B, receiver=A)
+MS --> FE3 : Lista de mensagens
+
+UA -> FE3 : Envia mensagem
+FE3 -> MC : POST /api/messages
+MC -> MS : sendMessage(sender, receiver, content)
+MS -> DB3 : INSERT message\n(status=sent)
+MS -> WS : Broadcast NewMessage event
+WS --> UB : Notificacao em tempo real
+MS --> FE3 : Mensagem enviada
+
+UB -> FE3 : Visualiza mensagem
+FE3 -> MC : POST /api/messages/{userId}/read
+MC -> DB3 : UPDATE messages SET read_at=now
+MC --> FE3 : Mensagens marcadas como lidas
+
+newpage Fluxo LGPD - Portabilidade de Dados
+
+actor Usuario as U
+participant "Frontend\n(Vue/Inertia)" as FE4
+participant "DataPortability\nController" as DPC
+participant "LGPDService" as LS
+database "Database" as DB4
+
+U -> FE4 : Solicita exportacao de dados
+FE4 -> DPC : POST /lgpd/data-portability/export
+DPC -> LS : exportUserData(user)
+LS -> DB4 : Busca dados pessoais (users, patients/doctors)
+LS -> DB4 : Busca agendamentos (appointments)
+LS -> DB4 : Busca registros medicos\n(prescriptions, examinations,\nvital_signs, diagnoses, notes)
+LS -> DB4 : Busca documentos (medical_documents)
+LS -> DB4 : Busca consentimentos (consents)
+LS -> DB4 : Busca mensagens (messages)
+LS -> DB4 : Registra data_access_log\n(action=data_export)
+LS -> LS : Compila dados em formato portavel
+LS --> DPC : Dados exportados
+DPC --> FE4 : Download do arquivo
+FE4 --> U : Dados pessoais exportados
+
+@enduml

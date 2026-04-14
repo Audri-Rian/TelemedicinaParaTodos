@@ -1,0 +1,53 @@
+@startuml BPMN
+
+skinparam swimlaneWidth 200
+
+title BPMN - Cadastro e Onboarding
+
+|#E8F5E9| Visitante |
+|#E3F2FD| Sistema |
+|#FFF3E0| Banco de Dados |
+
+|Visitante|
+start
+:Acessa plataforma;
+:Seleciona tipo de cadastro\n(Paciente ou Medico);
+
+if (Tipo?) then (Paciente)
+  :Preenche formulario\nde Paciente;
+else (Medico)
+  :Preenche formulario\nde Medico;
+endif
+
+|Sistema|
+:Valida dados do formulario;
+
+if (Dados validos?) then (Sim)
+  :Dados aceitos;
+else (Nao)
+  :Retorna erros de validacao;
+  |Visitante|
+  :Corrige dados;
+  detach
+endif
+
+|Banco de Dados|
+:Cria registro em users;
+:Cria registro em\npatients ou doctors;
+
+|Sistema|
+:Envia e-mail de verificacao;
+
+|Visitante|
+:Clica no link de verificacao;
+
+|Sistema|
+:Marca email como verificado;
+:Redireciona para Dashboard;
+
+|Visitante|
+:Completa tour de boas-vindas;
+
+stop
+
+@enduml

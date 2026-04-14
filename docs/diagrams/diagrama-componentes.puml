@@ -1,0 +1,175 @@
+@startuml Diagrama-de-Componentes
+
+skinparam componentStyle uml2
+skinparam linetype ortho
+
+title Diagrama de Componentes - Telemedicina Para Todos
+
+package "Camada de Apresentacao (Frontend)" as presentation {
+
+  package "Vue 3 + Inertia.js" as vue {
+
+    component [Paginas de\nAutenticacao] as auth_pages
+
+    component [Dashboard\nPaciente] as pat_dash
+    component [Dashboard\nMedico] as doc_dash
+
+    component [Agendamento\nde Consulta] as scheduling
+
+    component [Teleconsulta] as teleconsult
+
+    component [Prontuario\nMedico] as medical_ui
+
+    component [Mensagens] as messages_ui
+    component [Configuracoes\ne Perfil] as settings_ui
+    component [Gestao de\nAgenda] as schedule_ui
+
+    component [Componentes UI\nCompartilhados] as shared_ui
+  }
+
+  pat_dash --> shared_ui
+  doc_dash --> shared_ui
+  scheduling --> shared_ui
+  teleconsult --> shared_ui
+  medical_ui --> shared_ui
+  messages_ui --> shared_ui
+  settings_ui --> shared_ui
+  schedule_ui --> shared_ui
+}
+
+package "Inertia.js Bridge" as inertia_bridge {
+  component [Inertia\nRouter] as inertia
+}
+
+presentation -down-> inertia_bridge : HTTP + Inertia Props
+
+package "Camada de Aplicacao (Backend Laravel)" as application {
+
+  package "Middleware" as middleware {
+    component [Auth\nMiddleware] as auth_mw
+    component [Role\nMiddleware] as role_mw
+    component [Throttle\nMiddleware] as throttle_mw
+    component [Verified\nMiddleware] as verified_mw
+  }
+
+  package "Controllers" as controllers {
+
+    component [Auth\nControllers] as auth_ctrl
+
+    component [Patient\nControllers] as pat_ctrl
+
+    component [Doctor\nControllers] as doc_ctrl
+
+    component [Shared\nControllers] as shared_ctrl
+
+    component [LGPD\nControllers] as lgpd_ctrl
+  }
+
+  inertia_bridge -down-> middleware
+  middleware -down-> controllers
+
+  package "Services (Logica de Negocio)" as services {
+    component [AppointmentService] as appt_svc
+    component [AvailabilityService] as avail_svc
+    component [CallManagerService] as call_svc
+    component [MedicalRecordService] as med_svc
+    component [MessageService] as msg_svc
+    component [NotificationService] as notif_svc
+    component [ScheduleService] as sched_svc
+    component [LGPDService] as lgpd_svc
+    component [AvatarService] as avatar_svc
+    component [TimelineEventService] as timeline_svc
+  }
+
+  pat_ctrl -down-> appt_svc
+  pat_ctrl -down-> avail_svc
+  pat_ctrl -down-> med_svc
+  pat_ctrl -down-> msg_svc
+
+  doc_ctrl -down-> appt_svc
+  doc_ctrl -down-> avail_svc
+  doc_ctrl -down-> call_svc
+  doc_ctrl -down-> med_svc
+  doc_ctrl -down-> sched_svc
+
+  shared_ctrl -down-> appt_svc
+  shared_ctrl -down-> msg_svc
+  shared_ctrl -down-> notif_svc
+  shared_ctrl -down-> timeline_svc
+
+  lgpd_ctrl -down-> lgpd_svc
+
+  package "Policies e Requests" as policies {
+    component [Authorization\nPolicies] as auth_pol
+    component [Form\nRequests] as form_req
+  }
+
+  controllers -right-> policies
+
+  package "Events e Observers" as events {
+    component [Events] as evt
+    component [Listeners] as listeners
+    component [Observers] as observers
+    component [Jobs] as jobs
+  }
+
+  services -right-> events
+}
+
+package "Camada de Dominio (Eloquent ORM)" as domain {
+
+  component [User] as user_model
+  component [Doctor] as doctor_model
+  component [Patient] as patient_model
+  component [Appointments] as appt_model
+  component [Specialization] as spec_model
+  component [Call e Room] as call_model
+  component [Message] as msg_model
+  component [Notification] as notif_model
+
+  package "Registros Medicos" as medical_models {
+    component [Prescription] as presc_model
+    component [Examination] as exam_model
+    component [VitalSign] as vital_model
+    component [Diagnosis] as diag_model
+    component [ClinicalNote] as note_model
+    component [MedicalCertificate] as cert_model
+    component [MedicalDocument] as doc_model
+  }
+
+  package "Disponibilidade" as avail_models {
+    component [ServiceLocation] as loc_model
+    component [AvailabilitySlot] as slot_model
+    component [BlockedDate] as block_model
+  }
+
+  package "Compliance" as compliance_models {
+    component [Consent] as consent_model
+    component [AuditLog] as audit_model
+    component [DataAccessLog] as access_model
+  }
+}
+
+services -down-> domain
+
+package "Camada de Infraestrutura" as infrastructure {
+
+  database "PostgreSQL / MySQL" as db
+
+  component [Laravel\nSanctum] as sanctum
+  component [Laravel\nBroadcasting] as broadcasting
+  component [File\nStorage] as storage
+  component [Queue\nWorker] as queue
+
+  component [SFU Media\nGateway] as sfu
+}
+
+domain -down-> db
+auth_mw -down-> sanctum
+msg_svc -down-> broadcasting
+med_svc -down-> storage
+call_svc -down-> sfu
+jobs -down-> queue
+events -down-> broadcasting
+
+@enduml

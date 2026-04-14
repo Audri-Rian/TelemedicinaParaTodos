@@ -1,0 +1,520 @@
+@startuml Entidade-Relacionamento
+
+skinparam linetype ortho
+skinparam ranksep 40
+skinparam nodesep 30
+
+title Diagrama Entidade-Relacionamento - Telemedicina Para Todos
+
+' --- Usuarios e Perfis ---
+
+entity "users" as users {
+  * id : uuid <<PK>>
+  --
+  name : string
+  email : string <<unique>>
+  password : string
+  avatar_path : string
+  timeline_completed : boolean
+  has_seen_welcome_screen : boolean
+  has_seen_dashboard_tour : boolean
+  created_at : timestamp
+  updated_at : timestamp
+}
+
+entity "doctors" as doctors {
+  * id : uuid <<PK>>
+  --
+  * user_id : uuid <<FK>> <<unique>>
+  crm : string <<unique>>
+  biography : text
+  language : json
+  license_number : string <<unique>>
+  license_expiry_date : date
+  status : enum(active,inactive,suspended)
+  availability_schedule : json
+  consultation_fee : decimal(10,2)
+  created_at : timestamp
+  updated_at : timestamp
+  deleted_at : timestamp
+}
+
+entity "patients" as patients {
+  * id : uuid <<PK>>
+  --
+  * user_id : uuid <<FK>> <<unique>>
+  gender : enum(male,female,other)
+  date_of_birth : date
+  phone_number : string
+  emergency_contact : string
+  emergency_phone : string
+  medical_history : text
+  allergies : text
+  current_medications : text
+  blood_type : string
+  height : decimal
+  weight : decimal
+  insurance_provider : string
+  insurance_number : string
+  status : enum(active,inactive,blocked)
+  consent_telemedicine : boolean
+  last_consultation_at : timestamp
+  created_at : timestamp
+  updated_at : timestamp
+  deleted_at : timestamp
+}
+
+' --- Especializacao ---
+
+entity "specializations" as specializations {
+  * id : uuid <<PK>>
+  --
+  name : string <<unique>>
+  created_at : timestamp
+  updated_at : timestamp
+}
+
+entity "doctor_specialization" as doctor_spec {
+  * doctor_id : uuid <<PK>> <<FK>>
+  * specialization_id : uuid <<PK>> <<FK>>
+  --
+  created_at : timestamp
+  updated_at : timestamp
+}
+
+' --- Agendamento e Consulta ---
+
+entity "appointments" as appointments {
+  * id : uuid <<PK>>
+  --
+  * doctor_id : uuid <<FK>>
+  * patient_id : uuid <<FK>>
+  scheduled_at : timestamp
+  access_code : string <<unique>>
+  started_at : timestamp
+  ended_at : timestamp
+  video_recording_url : string
+  status : enum(scheduled,in_progress,completed,no_show,cancelled,rescheduled)
+  notes : text
+  metadata : json
+  created_at : timestamp
+  updated_at : timestamp
+  deleted_at : timestamp
+}
+
+entity "appointment_logs" as appt_logs {
+  * id : uuid <<PK>>
+  --
+  * appointment_id : uuid <<FK>>
+  user_id : uuid <<FK>>
+  event : string
+  payload : json
+  created_at : timestamp
+  updated_at : timestamp
+}
+
+' --- Disponibilidade Medica ---
+
+entity "doctor_service_locations" as locations {
+  * id : uuid <<PK>>
+  --
+  * doctor_id : uuid <<FK>>
+  name : string
+  type : enum(teleconsultation,office,hospital,clinic)
+  address : string
+  phone : string
+  description : text
+  is_active : boolean
+  created_at : timestamp
+  updated_at : timestamp
+  deleted_at : timestamp
+}
+
+entity "doctor_availability_slots" as avail_slots {
+  * id : uuid <<PK>>
+  --
+  * doctor_id : uuid <<FK>>
+  location_id : uuid <<FK>>
+  type : enum(recurring,specific)
+  day_of_week : enum(monday..sunday)
+  specific_date : date
+  start_time : time
+  end_time : time
+  is_active : boolean
+  created_at : timestamp
+  updated_at : timestamp
+  deleted_at : timestamp
+}
+
+entity "doctor_blocked_dates" as blocked_dates {
+  * id : uuid <<PK>>
+  --
+  * doctor_id : uuid <<FK>>
+  blocked_date : date
+  reason : string
+  created_at : timestamp
+  updated_at : timestamp
+  deleted_at : timestamp
+}
+
+' --- Registros Medicos ---
+
+entity "prescriptions" as prescriptions {
+  * id : uuid <<PK>>
+  --
+  appointment_id : uuid <<FK>>
+  * doctor_id : uuid <<FK>>
+  * patient_id : uuid <<FK>>
+  medications : json
+  instructions : text
+  valid_until : date
+  status : enum(active,expired,cancelled)
+  metadata : json
+  issued_at : timestamp
+  created_at : timestamp
+  updated_at : timestamp
+  deleted_at : timestamp
+}
+
+entity "examinations" as examinations {
+  * id : uuid <<PK>>
+  --
+  appointment_id : uuid <<FK>>
+  * patient_id : uuid <<FK>>
+  doctor_id : uuid <<FK>>
+  type : enum(lab,image,other)
+  name : string
+  requested_at : timestamp
+  completed_at : timestamp
+  results : json
+  attachment_url : string
+  status : enum(requested,in_progress,completed,cancelled)
+  metadata : json
+  created_at : timestamp
+  updated_at : timestamp
+  deleted_at : timestamp
+}
+
+entity "vital_signs" as vitals {
+  * id : uuid <<PK>>
+  --
+  appointment_id : uuid <<FK>>
+  * patient_id : uuid <<FK>>
+  doctor_id : uuid <<FK>>
+  recorded_at : timestamp
+  blood_pressure_systolic : integer
+  blood_pressure_diastolic : integer
+  temperature : decimal
+  heart_rate : integer
+  respiratory_rate : integer
+  oxygen_saturation : decimal
+  weight : decimal
+  height : decimal
+  notes : text
+  metadata : json
+  created_at : timestamp
+  updated_at : timestamp
+}
+
+entity "diagnoses" as diagnoses {
+  * id : uuid <<PK>>
+  --
+  * appointment_id : uuid <<FK>>
+  * doctor_id : uuid <<FK>>
+  * patient_id : uuid <<FK>>
+  cid10_code : string
+  cid10_description : string
+  diagnosis_type : enum(principal,secondary)
+  description : text
+  created_at : timestamp
+  updated_at : timestamp
+  deleted_at : timestamp
+}
+
+entity "clinical_notes" as notes {
+  * id : uuid <<PK>>
+  --
+  appointment_id : uuid <<FK>>
+  * doctor_id : uuid <<FK>>
+  * patient_id : uuid <<FK>>
+  title : string
+  content : text
+  is_private : boolean
+  category : string
+  tags : json
+  version : integer
+  parent_id : uuid <<FK self>>
+  metadata : json
+  created_at : timestamp
+  updated_at : timestamp
+  deleted_at : timestamp
+}
+
+entity "medical_certificates" as certificates {
+  * id : uuid <<PK>>
+  --
+  appointment_id : uuid <<FK>>
+  * doctor_id : uuid <<FK>>
+  * patient_id : uuid <<FK>>
+  type : enum(absence,attendance,disability,other)
+  start_date : date
+  end_date : date
+  days : integer
+  reason : text
+  restrictions : text
+  signature_hash : string
+  crm_number : string
+  verification_code : string <<unique>>
+  pdf_url : string
+  status : enum(active,expired,cancelled)
+  metadata : json
+  created_at : timestamp
+  updated_at : timestamp
+  deleted_at : timestamp
+}
+
+entity "medical_documents" as med_docs {
+  * id : uuid <<PK>>
+  --
+  * patient_id : uuid <<FK>>
+  appointment_id : uuid <<FK>>
+  doctor_id : uuid <<FK>>
+  uploaded_by : uuid <<FK>>
+  category : enum(exam,prescription,report,other)
+  name : string
+  file_path : string
+  file_type : string
+  file_size : bigint
+  description : text
+  metadata : json
+  visibility : enum(patient,doctor,shared)
+  created_at : timestamp
+  updated_at : timestamp
+  deleted_at : timestamp
+}
+
+entity "medical_record_audit_logs" as med_audit {
+  * id : uuid <<PK>>
+  --
+  * patient_id : uuid <<FK>>
+  user_id : uuid <<FK>>
+  action : string
+  resource_type : string
+  resource_id : uuid
+  ip_address : string
+  user_agent : string
+  metadata : json
+  created_at : timestamp
+  updated_at : timestamp
+}
+
+' --- Comunicacao ---
+
+entity "messages" as messages {
+  * id : uuid <<PK>>
+  --
+  * sender_id : uuid <<FK>>
+  * receiver_id : uuid <<FK>>
+  content : text
+  appointment_id : uuid <<FK>>
+  read_at : timestamp
+  status : enum(sending,sent,delivered,failed)
+  delivered_at : timestamp
+  created_at : timestamp
+  updated_at : timestamp
+  deleted_at : timestamp
+}
+
+entity "notifications" as notifications {
+  * id : uuid <<PK>>
+  --
+  * user_id : uuid <<FK>>
+  type : string
+  title : string
+  message : text
+  metadata : json
+  read_at : timestamp
+  created_at : timestamp
+  updated_at : timestamp
+}
+
+entity "notification_preferences" as notif_prefs {
+  * id : uuid <<PK>>
+  --
+  * user_id : uuid <<FK>>
+  channel : string
+  type : string
+  enabled : boolean
+  created_at : timestamp
+  updated_at : timestamp
+}
+
+' --- Videochamada ---
+
+entity "calls" as calls {
+  * id : uuid <<PK>>
+  --
+  * appointment_id : uuid <<FK>>
+  * doctor_id : uuid <<FK>>
+  * patient_id : uuid <<FK>>
+  status : string
+  requested_at : timestamp
+  accepted_at : timestamp
+  ended_at : timestamp
+  created_at : timestamp
+  updated_at : timestamp
+}
+
+entity "rooms" as rooms {
+  * id : bigint <<PK>>
+  --
+  * call_id : uuid <<FK>>
+  room_id : string <<unique>>
+  sfu_node : string
+  created_at : timestamp
+  updated_at : timestamp
+}
+
+' --- Timeline e Compliance ---
+
+entity "timeline_events" as timeline {
+  * id : uuid <<PK>>
+  --
+  * user_id : uuid <<FK>>
+  type : enum(education,course,certificate,project)
+  title : string
+  subtitle : string
+  start_date : date
+  end_date : date
+  description : text
+  media_url : string
+  degree_type : enum
+  is_public : boolean
+  extra_data : json
+  order_priority : integer
+  created_at : timestamp
+  updated_at : timestamp
+  deleted_at : timestamp
+}
+
+entity "consents" as consents {
+  * id : uuid <<PK>>
+  --
+  * user_id : uuid <<FK>>
+  type : string
+  granted : boolean
+  description : text
+  version : string
+  granted_at : timestamp
+  revoked_at : timestamp
+  ip_address : string
+  user_agent : string
+  metadata : json
+  created_at : timestamp
+  updated_at : timestamp
+  deleted_at : timestamp
+}
+
+entity "audit_logs" as audit_logs {
+  * id : uuid <<PK>>
+  --
+  user_id : uuid <<FK>>
+  action : string
+  resource_type : string
+  resource_id : uuid
+  ip_address : string
+  user_agent : string
+  request_data : json
+  response_status : integer
+  metadata : json
+  created_at : timestamp
+  updated_at : timestamp
+  deleted_at : timestamp
+}
+
+entity "data_access_logs" as data_logs {
+  * id : uuid <<PK>>
+  --
+  * user_id : uuid <<FK>>
+  * data_subject_id : uuid <<FK>>
+  data_type : string
+  resource_id : uuid
+  action : string
+  ip_address : string
+  user_agent : string
+  reason : string
+  accessed_fields : json
+  created_at : timestamp
+  updated_at : timestamp
+}
+
+' === RELACIONAMENTOS ===
+
+users ||--o| doctors : "1:1"
+users ||--o| patients : "1:1"
+
+doctors ||--o{ doctor_spec
+specializations ||--o{ doctor_spec
+
+doctors ||--o{ locations
+doctors ||--o{ avail_slots
+doctors ||--o{ blocked_dates
+locations ||--o{ avail_slots
+
+doctors ||--o{ appointments
+patients ||--o{ appointments
+appointments ||--o{ appt_logs
+users ||--o{ appt_logs
+
+appointments ||--o{ prescriptions
+doctors ||--o{ prescriptions
+patients ||--o{ prescriptions
+
+appointments ||--o{ examinations
+doctors ||--o{ examinations
+patients ||--o{ examinations
+
+appointments ||--o{ vitals
+doctors ||--o{ vitals
+patients ||--o{ vitals
+
+appointments ||--o{ diagnoses
+doctors ||--o{ diagnoses
+patients ||--o{ diagnoses
+
+appointments ||--o{ notes
+doctors ||--o{ notes
+patients ||--o{ notes
+notes ||--o{ notes : "parent_id"
+
+appointments ||--o{ certificates
+doctors ||--o{ certificates
+patients ||--o{ certificates
+
+patients ||--o{ med_docs
+appointments ||--o{ med_docs
+doctors ||--o{ med_docs
+users ||--o{ med_docs : "uploaded_by"
+
+patients ||--o{ med_audit
+users ||--o{ med_audit
+
+users ||--o{ messages : "sender"
+users ||--o{ messages : "receiver"
+appointments ||--o{ messages
+
+users ||--o{ notifications
+users ||--o{ notif_prefs
+
+appointments ||--o| calls
+doctors ||--o{ calls
+patients ||--o{ calls
+calls ||--o| rooms
+
+users ||--o{ timeline
+users ||--o{ consents
+users ||--o{ audit_logs
+users ||--o{ data_logs : "user"
+users ||--o{ data_logs : "data_subject"
+
+@enduml
