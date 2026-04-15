@@ -11,6 +11,7 @@ import { Head, Link } from '@inertiajs/vue3';
 import {
     FlaskConical, Plus, Shield, Settings2, FileBarChart, Clock,
     AlertCircle, CheckCircle2, RefreshCw, Wrench, CalendarClock,
+    FlaskRound, ArrowRight,
 } from 'lucide-vue-next';
 import { computed } from 'vue';
 
@@ -43,7 +44,13 @@ const formatLastSync = computed(() => {
     return date.toLocaleString('pt-BR', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' });
 });
 
-const hasActiveLabs = computed(() => props.laboratories.some(l => l.status === 'active'));
+// MVP 1: indicador de laboratório piloto ainda não definido.
+// TODO: quando o backend expor settings.is_pilot na Laboratory, trocar a heurística
+// "primeiro lab ativo" por: props.laboratories.find(l => l.settings?.is_pilot === true).
+// Até lá, qualquer lab ativo é tratado como piloto — é uma aproximação segura no MVP.
+const pilotLab = computed(() => props.laboratories.find(l => l.status === 'active') ?? null);
+const hasActiveLabs = computed(() => pilotLab.value !== null);
+const needsPilotLabSetup = computed(() => !pilotLab.value);
 </script>
 
 <template>
@@ -57,6 +64,76 @@ const hasActiveLabs = computed(() => props.laboratories.some(l => l.status === '
                     Gerencie e monitore as conexões clínicas da sua rede.
                 </p>
             </header>
+
+            <!-- 1b. Banner: Laboratório piloto (MVP 1) -->
+            <!--
+                Placeholder para o MVP 1. Enquanto nenhum laboratório piloto estiver
+                definido, exibe CTA para cadastrar. Quando houver, exibe o piloto
+                selecionado com badge "Piloto MVP 1".
+                TODO: trocar heurística quando houver campo settings.is_pilot real.
+            -->
+            <section
+                v-if="needsPilotLabSetup"
+                class="relative overflow-hidden rounded-xl border-2 border-dashed border-amber-300 bg-amber-50/60 px-6 py-5"
+                data-testid="pilot-lab-setup-banner"
+            >
+                <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                    <div class="flex items-start gap-4">
+                        <div class="flex size-11 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-700">
+                            <FlaskRound class="size-5" stroke-width="2" />
+                        </div>
+                        <div class="space-y-1.5">
+                            <div class="flex items-center gap-2">
+                                <h2 class="text-lg font-bold text-amber-900">Defina o laboratório piloto</h2>
+                                <Badge variant="outline" class="border-amber-300 bg-amber-100 text-[10px] font-bold uppercase tracking-widest text-amber-800">
+                                    MVP 1 · Pendente
+                                </Badge>
+                            </div>
+                            <p class="max-w-2xl text-sm leading-relaxed text-amber-900/80">
+                                Para validar o fluxo de integração fim-a-fim, conecte o primeiro laboratório parceiro.
+                                Após o cadastro ele poderá ser marcado como piloto do MVP 1 e usado para os testes reais.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="shrink-0">
+                        <Button as-child size="lg" class="gap-2 bg-amber-700 text-amber-50 shadow-sm hover:bg-amber-800">
+                            <Link :href="integrationRoutes.connect()">
+                                Cadastrar laboratório piloto
+                                <ArrowRight class="size-4" />
+                            </Link>
+                        </Button>
+                    </div>
+                </div>
+            </section>
+
+            <section
+                v-else
+                class="rounded-xl border border-primary/20 bg-primary/5 px-6 py-4"
+                data-testid="pilot-lab-configured-banner"
+            >
+                <div class="flex items-center justify-between gap-4">
+                    <div class="flex items-center gap-3">
+                        <div class="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                            <FlaskRound class="size-5" stroke-width="2" />
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <!-- pilotLab é garantidamente não-null neste branch v-else -->
+                                <p class="font-semibold text-foreground">{{ pilotLab!.name }}</p>
+                                <Badge class="bg-primary px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-primary-foreground">
+                                    Piloto MVP 1
+                                </Badge>
+                            </div>
+                            <p class="text-xs text-muted-foreground">
+                                Laboratório piloto ativo — validação do fluxo de interoperabilidade.
+                            </p>
+                        </div>
+                    </div>
+                    <Button variant="ghost" size="sm" as-child>
+                        <Link :href="`/doctor/integrations/${pilotLab!.id}`">Ver detalhes</Link>
+                    </Button>
+                </div>
+            </section>
 
             <!-- 2. Cards de resumo operacional -->
             <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

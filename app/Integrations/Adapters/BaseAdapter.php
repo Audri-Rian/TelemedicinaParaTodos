@@ -69,6 +69,31 @@ abstract class BaseAdapter
 
     /**
      * Obtém token OAuth2 (usa cache ou renova se expirado).
+     *
+     * ┌─────────────────────────────────────────────────────────────────┐
+     * │ TODO (fase de integração com parceiro externo — pós-MVP 1):     │
+     * │                                                                  │
+     * │ Implementar renovação real do access_token OAuth2. Hoje este    │
+     * │ método apenas verifica expiração e lança exceção — o que é      │
+     * │ intencional enquanto não há parceiro piloto com credenciais     │
+     * │ reais de OAuth2.                                                 │
+     * │                                                                  │
+     * │ Quando a integração real for ativada, substituir o throw por:   │
+     * │   1. POST ao token endpoint do parceiro com client_credentials  │
+     * │      ($credential->client_id + $credential->client_secret +     │
+     * │       $credential->scopes)                                       │
+     * │   2. Atualizar $credential->access_token e $credential->        │
+     * │      token_expires_at com os valores retornados                 │
+     * │   3. Retornar o novo token                                       │
+     * │                                                                  │
+     * │ Usar Redis lock por partner_integration_id para evitar renovação│
+     * │ concorrente de múltiplos workers (pattern "request coalescing").│
+     * │                                                                  │
+     * │ Referência: RFC 6749 §4.4 (Client Credentials Grant).           │
+     * │ Ver também: app/Integrations/Http/Controllers/OAuthTokenController│
+     * │             — nós SOMOS o auth server para parceiros inbound;   │
+     * │             aqui implementaremos o client para parceiros outbound.│
+     * └─────────────────────────────────────────────────────────────────┘
      */
     protected function getOAuthToken(IntegrationCredential $credential): string
     {
@@ -81,9 +106,10 @@ abstract class BaseAdapter
             'partner_id' => $credential->partner_integration_id,
         ]);
 
-        // TODO: Implementar renovação real no IntegrationService (passo 3)
+        // TODO: Implementar renovação real (ver bloco de TODO acima)
         throw new \RuntimeException(
-            "OAuth2 token expired or expiring soon for partner_integration_id={$credential->partner_integration_id}"
+            "Token OAuth2 expirado ou prestes a expirar para partner_integration_id={$credential->partner_integration_id}. "
+            . 'Implementação de refresh pendente — será habilitada quando houver parceiro OAuth2 real integrado.'
         );
     }
 

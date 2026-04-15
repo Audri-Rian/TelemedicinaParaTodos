@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue';
+import { ref, watch, onMounted, computed } from 'vue';
 import { useDoctorRegistration } from '@/composables/Doctor/useDoctorRegistration';
 import BackgroundDecorativo from '@/components/BackgroundDecorativo.vue';
-import InputError from '@/components/InputError.vue';
 import TextLink from '@/components/TextLink.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,7 +22,7 @@ const props = defineProps<{
 const {
   formData,
   isSubmitting,
-  canSubmit,
+  hasErrors,
   submitError,
   rateLimit,
   updateField,
@@ -42,6 +41,44 @@ const filteredSpecializations = ref<Array<{ id: string; name: string }>>([]);
 
 // Estado local
 const showSuccessMessage = ref(false);
+
+const fieldLabels: Record<string, string> = {
+  name: 'nome completo',
+  crm: 'CRM',
+  cns: 'CNS',
+  specializations: 'especialização',
+  email: 'e-mail profissional',
+  password: 'senha',
+  password_confirmation: 'confirmação de senha'
+};
+
+const showValidationNotice = computed(() => hasErrors.value && !submitError.value && !isSubmitting.value);
+
+// terms_accepted não é validado pelo composable (não está em RequiredDoctorFields),
+// então gerenciamos estado de "tocado" e erro localmente para exibir feedback inline.
+const termsTouched = ref(false);
+const termsError = computed(() => {
+    if (!termsTouched.value) return '';
+    return formData.value.terms_accepted ? '' : 'Aceite os Termos de Uso e a Política de Privacidade para continuar.';
+});
+
+const getFriendlyFieldError = (fieldName: string): string => {
+  const rawMessage = getFieldError(fieldName as 'name' | 'crm' | 'email' | 'password' | 'password_confirmation' | 'specializations');
+  if (!rawMessage) return '';
+
+  const label = fieldLabels[fieldName] || 'campo';
+  const normalized = rawMessage.toLowerCase();
+
+  if (normalized.includes('é obrigatório')) return `Informe ${label}.`;
+  if (normalized.includes('email válido')) return 'Digite um e-mail no formato nome@dominio.com.';
+  if (normalized.includes('pelo menos') && normalized.includes('caracteres')) return `Use pelo menos ${rawMessage.match(/\d+/)?.[0] || '8'} caracteres em ${label}.`;
+  if (normalized.includes('deve ser igual')) return 'A confirmação precisa ser igual à senha informada.';
+  if (normalized.includes('apenas letras e espaços')) return 'Use somente letras e espaços no nome.';
+  if (normalized.includes('crm deve conter')) return 'Digite o CRM usando letras maiúsculas e números (sem símbolos).';
+  if (normalized.includes('especializa')) return 'Selecione ao menos uma especialização válida.';
+
+  return rawMessage;
+};
 
 // Função para fechar dropdown quando clicar fora
 const closeDropdown = () => {
@@ -149,542 +186,371 @@ watch(() => formData.value.password_confirmation, (newValue) => {
   updateField('password_confirmation', newValue);
 });
 
-// Função para lidar com submissão
+// Função para lidar com submissão.
+// O submitForm agora dispara toasts para qualquer caminho de falha (rate limit,
+// form inválido, erro do backend), então não precisamos de fallback manual aqui.
+// O redirect acontece automaticamente via Inertia quando o backend responde 302.
 const handleSubmit = async () => {
+  // Força validação do terms_accepted para exibir erro inline antes de submeter.
+  termsTouched.value = true;
+
   const success = await submitForm();
   if (success) {
     showSuccessMessage.value = true;
-    // Redirecionar após sucesso
-    setTimeout(() => {
-      window.location.href = '/dashboard';
-    }, 2000);
   }
 };
 </script>
 
 <template>
-    <AuthBase title="Seja bem-vindo a Telemedicina para Todos"
-        description="Conecte-se com pacientes e ofereça cuidados médicos de qualidade.">
-
+    <AuthBase title=""
+        description="">
         <Head title="Registro de Médico" />
+        <BackgroundDecorativo variant="doctor" intensity="medium" :enable-animations="true" />
 
-        <!-- Background decorativo moderno -->
-        <BackgroundDecorativo 
-            variant="doctor" 
-            intensity="medium" 
-            :enable-animations="true" 
-        />
+        <div class="relative z-10 mx-auto w-full max-w-7xl">
+            <div class="grid grid-cols-1 items-stretch gap-8 lg:grid-cols-[420px_minmax(0,1fr)] lg:gap-12">
+                <div class="animate-fade-up rounded-[28px] bg-white/90 p-6 shadow-xl ring-1 ring-gray-200/70 backdrop-blur transition-transform duration-300 hover:-translate-y-0.5 lg:min-h-[660px]">
+                    <div class="mb-6">
+                        <h1 class="text-4xl font-extrabold tracking-tight text-gray-900">Registro de Médico</h1>
+                        <p class="mt-2 text-lg text-gray-500">Junte-se à nossa plataforma médica</p>
+                    </div>
 
-        <!-- Container principal com layout responsivo -->
-        <div class="relative w-full max-w-8xl mx-auto z-10">
-            <div class="flex flex-col lg:flex-row items-center justify-between gap-8 lg:gap-20">
-
-                <!-- Formulário -->
-                <div class="w-full lg:w-200 border rounded-3xl">
-                    <div>
-                        <!-- Card do formulário -->
-                        <div
-                            class="bg-white/95 backdrop-blur-lg rounded-2xl lg:rounded-3xl p-3 lg:p-4 shadow-2xl border border-white/40 hover:shadow-3xl transition-all duration-500 relative z-20">
-                            <!-- Header com ícone -->
-                            <div class="text-center">
-                                <div
-                                    class="inline-flex items-center justify-center w-10 h-10 bg-gradient-to-br from-primary/20 to-primary/10 rounded-xl mb-2 shadow-lg">
-                                    <svg class="w-5 h-5 text-black" fill="none" stroke="currentColor"
-                                        viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
-                                        </path>
-                                    </svg>
-                                </div>
-                                <h1
-                                    class="text-lg lg:text-xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
-                                    Registro de Médico</h1>
-                                <p class="text-xs text-gray-500 mt-1 font-medium">Junte-se à nossa plataforma médica</p>
-                            </div>
-
-                            <!-- Mensagem de sucesso -->
-                            <div v-if="showSuccessMessage" 
-                                class="mb-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded-lg"
-                                role="alert"
-                                aria-live="polite">
-                                <div class="flex items-center">
-                                    <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
-                                    </svg>
-                                    Conta criada com sucesso! Redirecionando...
-                                </div>
-                            </div>
-
-                            <!-- Mensagem de erro de rate limit -->
-                            <div v-if="submitError" 
-                                class="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg"
-                                role="alert"
-                                aria-live="assertive">
-                                <div class="flex items-center">
-                                    <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
-                                    </svg>
-                                    {{ submitError }}
-                                </div>
-                            </div>
-
-                            <form @submit.prevent="handleSubmit" class="space-y-2 lg:space-y-3">
-
-                                <!-- Campo Nome -->
-                                <div class="space-y-0.5">
-                                    <Label for="name" class="text-sm font-bold text-gray-700 flex items-center gap-2">
-                                        <svg class="w-3 h-3 text-black" fill="none" stroke="currentColor"
-                                            viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z">
-                                            </path>
-                                        </svg>
-                                        Nome completo
-                                    </Label>
-                                    <div class="relative">
-                                        <Input 
-                                            id="name" 
-                                            type="text" 
-                                            required 
-                                            autofocus 
-                                            :tabindex="1"
-                                            autocomplete="name" 
-                                            name="name" 
-                                            placeholder="Dr. Seu Nome Completo"
-                                            v-model="formData.name"
-                                            @blur="touchField('name')"
-                                            :class="[
-                                                'h-9 lg:h-11 bg-gradient-to-r from-gray-50/90 to-white/90 border-2 rounded-xl lg:rounded-2xl px-4 text-sm placeholder:text-gray-400 focus:bg-white focus:shadow-lg focus:shadow-primary/10 transition-all duration-300 hover:border-gray-300 hover:shadow-md',
-                                                hasFieldError('name') && isFieldTouched('name') 
-                                                    ? 'border-red-500 focus:border-red-500' 
-                                                    : 'border-gray-200/50 focus:border-primary'
-                                            ]"
-                                            :aria-invalid="hasFieldError('name') && isFieldTouched('name')"
-                                            :aria-describedby="hasFieldError('name') && isFieldTouched('name') ? 'name-error' : undefined"
-                                        />
-                                    </div>
-                                    <InputError 
-                                        v-if="hasFieldError('name') && isFieldTouched('name')"
-                                        :message="getFieldError('name')" 
-                                        id="name-error"
-                                    />
-                                </div>
-
-                                <!-- Campos CRM e Especializações lado a lado -->
-                                <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 lg:gap-3">
-                                    <!-- Campo CRM -->
-                                    <div class="space-y-0.5">
-                                        <Label for="crm" class="text-sm font-bold text-gray-700 flex items-center gap-2">
-                                            <svg class="w-3 h-3 text-black" fill="none" stroke="currentColor"
-                                                viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
-                                                </path>
-                                            </svg>
-                                            CRM
-                                        </Label>
-                                        <div class="relative">
-                                            <Input 
-                                                id="crm" 
-                                                type="text" 
-                                                required 
-                                                :tabindex="2"
-                                                autocomplete="off" 
-                                                name="crm" 
-                                                placeholder="Ex: 123456SP"
-                                                v-model="formData.crm"
-                                                @blur="touchField('crm')"
-                                                :class="[
-                                                    'h-9 lg:h-11 bg-gradient-to-r from-gray-50/90 to-white/90 border-2 rounded-xl lg:rounded-2xl px-4 text-sm placeholder:text-gray-400 focus:bg-white focus:shadow-lg focus:shadow-primary/10 transition-all duration-300 hover:border-gray-300 hover:shadow-md',
-                                                    hasFieldError('crm') && isFieldTouched('crm') 
-                                                        ? 'border-red-500 focus:border-red-500' 
-                                                        : 'border-gray-200/50 focus:border-primary'
-                                                ]"
-                                                :aria-invalid="hasFieldError('crm') && isFieldTouched('crm')"
-                                                :aria-describedby="hasFieldError('crm') && isFieldTouched('crm') ? 'crm-error' : undefined"
-                                            />
-                                        </div>
-                                        <InputError 
-                                            v-if="hasFieldError('crm') && isFieldTouched('crm')"
-                                            :message="getFieldError('crm')" 
-                                            id="crm-error"
-                                        />
-                                    </div>
-
-                                    <!-- Campo CNS (opcional) -->
-                                    <div class="space-y-0.5">
-                                        <Label for="cns" class="text-sm font-bold text-gray-700 flex items-center gap-2">
-                                            <svg class="w-3 h-3 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
-                                            </svg>
-                                            CNS <span class="text-xs font-normal text-gray-400">(opcional)</span>
-                                        </Label>
-                                        <Input
-                                            id="cns"
-                                            type="text"
-                                            inputmode="numeric"
-                                            :tabindex="3"
-                                            autocomplete="off"
-                                            name="cns"
-                                            placeholder="000000000000000"
-                                            maxlength="15"
-                                            v-model="formData.cns"
-                                            class="h-9 lg:h-11 bg-gradient-to-r from-gray-50/90 to-white/90 border-2 border-gray-200/50 rounded-xl lg:rounded-2xl px-4 text-sm placeholder:text-gray-400 focus:bg-white focus:border-primary focus:shadow-lg focus:shadow-primary/10 transition-all duration-300 hover:border-gray-300 hover:shadow-md"
-                                        />
-                                        <p class="text-[10px] text-gray-400">Cartão Nacional de Saúde (15 dígitos)</p>
-                                    </div>
-
-                                    <!-- Campo Especializações -->
-                                    <div class="space-y-0.5">
-                                        <Label class="text-sm font-bold text-gray-700 flex items-center gap-2">
-                                            <svg class="w-3 h-3 text-black" fill="none" stroke="currentColor"
-                                                viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                    d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z">
-                                                </path>
-                                            </svg>
-                                            Especializações
-                                        </Label>
-                                        
-                                        <!-- Multi-select de especializações -->
-                                        <div class="relative specialization-dropdown">
-                                            <!-- Campo de entrada com tags selecionadas -->
-                                            <div 
-                                                @click="isDropdownOpen = !isDropdownOpen"
-                                                @blur="touchField('specializations')"
-                                                :class="[
-                                                    'h-9 lg:h-11 bg-gradient-to-r from-gray-50/90 to-white/90 border-2 rounded-xl lg:rounded-2xl px-4 text-sm focus:bg-white focus:shadow-lg focus:shadow-primary/10 transition-all duration-300 hover:border-gray-300 hover:shadow-md w-full cursor-pointer flex items-center justify-between',
-                                                    hasFieldError('specializations') && isFieldTouched('specializations') 
-                                                        ? 'border-red-500 focus:border-red-500' 
-                                                        : 'border-gray-200/50 focus:border-primary'
-                                                ]"
-                                                :aria-invalid="hasFieldError('specializations') && isFieldTouched('specializations')"
-                                                :aria-describedby="hasFieldError('specializations') && isFieldTouched('specializations') ? 'specializations-error' : undefined"
-                                                tabindex="4"
-                                            >
-                                                <div class="flex flex-wrap items-center gap-1 flex-1 min-w-0">
-                                                    <!-- Tags das especializações selecionadas -->
-                                                    <span 
-                                                        v-for="spec in getSelectedSpecializations()" 
-                                                        :key="spec.id"
-                                                        class="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-black text-xs rounded-md"
-                                                    >
-                                                        {{ spec.name }}
-                                                        <button 
-                                                            type="button"
-                                                            @click.stop="removeSpecialization(spec.id)"
-                                                            class="hover:text-gray-600 text-gray-500"
-                                                        >
-                                                            <X class="w-3 h-3" />
-                                                        </button>
-                                                    </span>
-                                                    
-                                                    <!-- Placeholder quando nenhuma especialização está selecionada -->
-                                                    <span 
-                                                        v-if="formData.specializations.length === 0"
-                                                        class="text-gray-400"
-                                                    >
-                                                        Selecione suas especializações
-                                                    </span>
-                                                </div>
-                                                
-                                                <!-- Ícone de dropdown -->
-                                                <ChevronDown 
-                                                    :class="[
-                                                        'w-4 h-4 text-gray-400 transition-transform duration-200',
-                                                        isDropdownOpen ? 'rotate-180' : ''
-                                                    ]"
-                                                />
-                                            </div>
-
-                                            <!-- Dropdown de especializações -->
-                                            <div 
-                                                v-if="isDropdownOpen"
-                                                class="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-xl lg:rounded-2xl shadow-lg max-h-60 overflow-hidden"
-                                            >
-                                                <!-- Campo de busca -->
-                                                <div class="p-3 border-b border-gray-100">
-                                                    <Input 
-                                                        v-model="searchTerm"
-                                                        placeholder="Buscar especializações..."
-                                                        class="h-8 text-sm"
-                                                        @click.stop
-                                                    />
-                                                </div>
-                                                
-                                                <!-- Lista de especializações -->
-                                                <div class="max-h-48 overflow-y-auto">
-                                                    <div 
-                                                        v-for="spec in filteredSpecializations" 
-                                                        :key="spec.id"
-                                                        @click="toggleSpecialization(spec.id)"
-                                                        :class="[
-                                                            'px-3 py-2 text-sm cursor-pointer hover:bg-gray-50 flex items-center justify-between',
-                                                            isSpecializationSelected(spec.id) ? 'bg-primary/5 text-primary' : 'text-gray-700'
-                                                        ]"
-                                                    >
-                                                        <span>{{ spec.name }}</span>
-                                                        <Checkbox 
-                                                            :checked="isSpecializationSelected(spec.id)"
-                                                            class="pointer-events-none"
-                                                        />
-                                                    </div>
-                                                    
-                                                    <!-- Mensagem quando não há resultados -->
-                                                    <div 
-                                                        v-if="filteredSpecializations.length === 0"
-                                                        class="px-3 py-2 text-sm text-gray-500 text-center"
-                                                    >
-                                                        Nenhuma especialização encontrada
-                                                    </div>
-                                                </div>
-                                                
-                                                <!-- Contador de seleções -->
-                                                <div class="px-3 py-2 text-xs text-gray-500 border-t border-gray-100 bg-gray-50">
-                                                    {{ formData.specializations.length }} de 5 especializações selecionadas
-                                                </div>
-                                            </div>
-                                        </div>
-                                        
-                                        <InputError 
-                                            v-if="hasFieldError('specializations') && isFieldTouched('specializations')"
-                                            :message="getFieldError('specializations')" 
-                                            id="specializations-error"
-                                        />
-                                    </div>
-                                </div>
-
-                                <!-- Campo Email -->
-                                <div class="space-y-0.5">
-                                    <Label for="email" class="text-sm font-bold text-gray-700 flex items-center gap-2">
-                                        <svg class="w-3 h-3 text-black" fill="none" stroke="currentColor"
-                                            viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z">
-                                            </path>
-                                        </svg>
-                                        E-mail Profissional
-                                    </Label>
-                                    <div class="relative">
-                                        <Input 
-                                            id="email" 
-                                            type="email" 
-                                            required 
-                                            :tabindex="5"
-                                            autocomplete="email"
-                                            name="email" 
-                                            placeholder="seu@email.com"
-                                            v-model="formData.email"
-                                            @blur="touchField('email')"
-                                            :class="[
-                                                'h-9 lg:h-11 bg-gradient-to-r from-gray-50/90 to-white/90 border-2 rounded-xl lg:rounded-2xl px-4 text-sm placeholder:text-gray-400 focus:bg-white focus:shadow-lg focus:shadow-primary/10 transition-all duration-300 hover:border-gray-300 hover:shadow-md',
-                                                hasFieldError('email') && isFieldTouched('email') 
-                                                    ? 'border-red-500 focus:border-red-500' 
-                                                    : 'border-gray-200/50 focus:border-primary'
-                                            ]"
-                                            :aria-invalid="hasFieldError('email') && isFieldTouched('email')"
-                                            :aria-describedby="hasFieldError('email') && isFieldTouched('email') ? 'email-error' : undefined"
-                                        />
-                                    </div>
-                                    <InputError 
-                                        v-if="hasFieldError('email') && isFieldTouched('email')"
-                                        :message="getFieldError('email')" 
-                                        id="email-error"
-                                    />
-                                </div>
-
-                                <!-- Campo Senha -->
-                                <div class="space-y-0.5">
-                                    <Label for="password"
-                                        class="text-sm font-bold text-gray-700 flex items-center gap-2">
-                                        <svg class="w-3 h-3 text-black" fill="none" stroke="currentColor"
-                                            viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z">
-                                            </path>
-                                        </svg>
-                                        Senha
-                                    </Label>
-                                    <div class="relative">
-                                        <Input
-                                            id="password"
-                                            type="password"
-                                            required
-                                            :tabindex="6"
-                                            autocomplete="new-password" 
-                                            name="password"
-                                            placeholder="Mínimo 8 caracteres"
-                                            v-model="formData.password"
-                                            @blur="touchField('password')"
-                                            :class="[
-                                                'h-9 lg:h-11 bg-gradient-to-r from-gray-50/90 to-white/90 border-2 rounded-xl lg:rounded-2xl px-4 text-sm placeholder:text-gray-400 focus:bg-white focus:shadow-lg focus:shadow-primary/10 transition-all duration-300 hover:border-gray-300 hover:shadow-md',
-                                                hasFieldError('password') && isFieldTouched('password') 
-                                                    ? 'border-red-500 focus:border-red-500' 
-                                                    : 'border-gray-200/50 focus:border-primary'
-                                            ]"
-                                            :aria-invalid="hasFieldError('password') && isFieldTouched('password')"
-                                            :aria-describedby="hasFieldError('password') && isFieldTouched('password') ? 'password-error' : undefined"
-                                        />
-                                    </div>
-                                    <InputError 
-                                        v-if="hasFieldError('password') && isFieldTouched('password')"
-                                        :message="getFieldError('password')" 
-                                        id="password-error"
-                                    />
-                                </div>
-
-                                <!-- Campo Confirmar Senha -->
-                                <div class="space-y-0.5">
-                                    <Label for="password_confirmation"
-                                        class="text-sm font-bold text-gray-700 flex items-center gap-2">
-                                        <svg class="w-3 h-3 text-black" fill="none" stroke="currentColor"
-                                            viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                        </svg>
-                                        Confirmar senha
-                                    </Label>
-                                    <div class="relative">
-                                        <Input
-                                            id="password_confirmation"
-                                            type="password"
-                                            required
-                                            :tabindex="7"
-                                            autocomplete="new-password" 
-                                            name="password_confirmation"
-                                            placeholder="Digite a senha novamente"
-                                            v-model="formData.password_confirmation"
-                                            @blur="touchField('password_confirmation')"
-                                            :class="[
-                                                'h-9 lg:h-11 bg-gradient-to-r from-gray-50/90 to-white/90 border-2 rounded-xl lg:rounded-2xl px-4 text-sm placeholder:text-gray-400 focus:bg-white focus:shadow-lg focus:shadow-primary/10 transition-all duration-300 hover:border-gray-300 hover:shadow-md',
-                                                hasFieldError('password_confirmation') && isFieldTouched('password_confirmation') 
-                                                    ? 'border-red-500 focus:border-red-500' 
-                                                    : 'border-gray-200/50 focus:border-primary'
-                                            ]"
-                                            :aria-invalid="hasFieldError('password_confirmation') && isFieldTouched('password_confirmation')"
-                                            :aria-describedby="hasFieldError('password_confirmation') && isFieldTouched('password_confirmation') ? 'password_confirmation-error' : undefined"
-                                        />
-                                    </div>
-                                    <InputError 
-                                        v-if="hasFieldError('password_confirmation') && isFieldTouched('password_confirmation')"
-                                        :message="getFieldError('password_confirmation')" 
-                                        id="password_confirmation-error"
-                                    />
-                                </div>
-
-                                <!-- Termos de Serviço e LGPD -->
-                                <div class="space-y-2">
-                                    <div class="flex items-start gap-3">
-                                        <input
-                                            id="terms_accepted"
-                                            type="checkbox"
-                                            :tabindex="8"
-                                            v-model="formData.terms_accepted"
-                                            class="mt-1 h-4 w-4 text-primary bg-gray-100 border-gray-300 rounded focus:ring-primary focus:ring-2"
-                                        />
-                                        <div class="text-xs text-gray-600 leading-relaxed">
-                                            <label for="terms_accepted" class="cursor-pointer">
-                                                Concordo com os 
-                                                <a href="/terms" target="_blank" class="text-primary hover:text-primary/80 underline underline-offset-2 hover:underline-offset-4 transition-all duration-300">
-                                                    Termos de Serviço
-                                                </a> 
-                                                e 
-                                                <a href="/privacy" target="_blank" class="text-primary hover:text-primary/80 underline underline-offset-2 hover:underline-offset-4 transition-all duration-300">
-                                                    Política de Privacidade
-                                                </a>
-                                                conforme a LGPD.
-                                            </label>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Botão de Registro -->
-                                <div class="">
-                                    <Button
-                                        type="submit"
-                                        :disabled="!canSubmit"
-                                        :tabindex="9"
-                                        class="w-full h-9 lg:h-11 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-black text-sm font-bold rounded-xl lg:rounded-2xl shadow-xl hover:shadow-2xl transform hover:scale-[1.02] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none border-2 border-primary/20 hover:border-primary/30"
-                                        :aria-describedby="rateLimit.remainingAttempts < 2 ? 'rate-limit-warning' : undefined"
-                                    >
-                                        <div class="flex items-center justify-center gap-2">
-                                            <LoaderCircle v-if="isSubmitting" class="w-4 h-4 animate-spin" aria-hidden="true" />
-                                            <svg v-if="!isSubmitting" class="w-4 h-4" fill="none" stroke="currentColor"
-                                                viewBox="0 0 24 24" aria-hidden="true">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
-                                                </path>
-                                            </svg>
-                                            <span class="font-bold">
-                                                {{ isSubmitting ? 'Registrando médico...' : 'Registrar como Médico' }}
-                                            </span>
-                                        </div>
-                                    </Button>
-                                    
-                                    <!-- Aviso de rate limit -->
-                                    <div v-if="rateLimit.remainingAttempts < 2 && rateLimit.remainingAttempts > 0" 
-                                        id="rate-limit-warning"
-                                        class="mt-2 text-sm text-orange-600 text-center"
-                                        role="alert"
-                                        aria-live="polite">
-                                        ⚠️ Restam {{ rateLimit.remainingAttempts }} tentativa{{ rateLimit.remainingAttempts > 1 ? 's' : '' }}
-                                    </div>
-                                </div>
-                            </form>
+                    <Transition name="fade-slide">
+                        <div v-if="showSuccessMessage" class="mb-4 rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-700" role="alert" aria-live="polite">
+                            Conta criada com sucesso! Redirecionando...
                         </div>
+                    </Transition>
+
+                    <Transition name="fade-slide">
+                        <div v-if="submitError" class="mb-4 rounded-xl border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert" aria-live="assertive">
+                            {{ submitError }}
+                        </div>
+                    </Transition>
+
+                    <Transition name="fade-slide">
+                        <div v-if="showValidationNotice" class="mb-4 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800" role="status" aria-live="polite">
+                            Revise os campos destacados para continuar.
+                        </div>
+                    </Transition>
+
+                    <form @submit.prevent="handleSubmit" class="space-y-4">
+                        <div>
+                            <Label for="name" class="mb-2 block text-[11px] font-bold uppercase tracking-[0.08em] text-gray-500">Nome completo</Label>
+                            <Input id="name" type="text" required autofocus :tabindex="1" autocomplete="name" name="name"
+                                placeholder="Dr. Nome Completo" v-model="formData.name" @blur="touchField('name')"
+                                :class="[
+                                    'h-11 rounded-full border-0 bg-gray-100 px-4 text-sm shadow-inner placeholder:text-gray-400 transition-all duration-200 placeholder:transition-colors focus-visible:ring-2 focus-visible:ring-teal-500',
+                                    hasFieldError('name') && isFieldTouched('name') ? 'bg-red-50/70 ring-2 ring-red-300' : ''
+                                ]"
+                                :aria-invalid="hasFieldError('name') && isFieldTouched('name')"
+                                :aria-describedby="hasFieldError('name') && isFieldTouched('name') ? 'name-error' : undefined" />
+                            <Transition name="fade-slide">
+                                <p v-if="hasFieldError('name') && isFieldTouched('name')" id="name-error" class="mt-1 flex items-center gap-1 text-xs text-red-600">
+                                    <span class="material-icons shrink-0 text-[14px] leading-none text-red-500" aria-hidden="true">error_outline</span>{{ getFriendlyFieldError('name') }}
+                                </p>
+                            </Transition>
+                        </div>
+
+                        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                            <div>
+                                <Label for="crm" class="mb-2 block text-[11px] font-bold uppercase tracking-[0.08em] text-gray-500">CRM</Label>
+                                <Input id="crm" type="text" required :tabindex="2" autocomplete="off" name="crm"
+                                    placeholder="000000-SP" v-model="formData.crm" @blur="touchField('crm')"
+                                    :class="[
+                                        'h-11 rounded-full border-0 bg-gray-100 px-4 text-sm shadow-inner placeholder:text-gray-400 transition-all duration-200 placeholder:transition-colors focus-visible:ring-2 focus-visible:ring-teal-500',
+                                        hasFieldError('crm') && isFieldTouched('crm') ? 'bg-red-50/70 ring-2 ring-red-300' : ''
+                                    ]"
+                                    :aria-invalid="hasFieldError('crm') && isFieldTouched('crm')"
+                                    :aria-describedby="hasFieldError('crm') && isFieldTouched('crm') ? 'crm-error' : undefined" />
+                                <Transition name="fade-slide">
+                                    <p v-if="hasFieldError('crm') && isFieldTouched('crm')" id="crm-error" class="mt-1 flex items-center gap-1 text-xs text-red-600">
+                                        <span class="material-icons shrink-0 text-[14px] leading-none text-red-500" aria-hidden="true">error_outline</span>{{ getFriendlyFieldError('crm') }}
+                                    </p>
+                                </Transition>
+                            </div>
+
+                            <div>
+                                <Label for="cns" class="mb-2 block text-[11px] font-bold uppercase tracking-[0.08em] text-gray-500">CNS (opcional)</Label>
+                                <Input id="cns" type="text" inputmode="numeric" :tabindex="3" autocomplete="off" name="cns"
+                                    placeholder="000 0000 0000 000" maxlength="15" v-model="formData.cns"
+                                    class="h-11 rounded-full border-0 bg-gray-100 px-4 text-sm shadow-inner placeholder:text-gray-400 transition-all duration-200 placeholder:transition-colors focus-visible:ring-2 focus-visible:ring-teal-500" />
+                            </div>
+                        </div>
+
+                        <div>
+                            <Label for="specializations" class="mb-2 block text-[11px] font-bold uppercase tracking-[0.08em] text-gray-500">Especializações</Label>
+                            <div class="relative specialization-dropdown">
+                                <!-- @focusout em vez de @blur: blur em <div> com tabindex é flaky,
+                                     focusout propaga corretamente quando foco sai do elemento ou filhos. -->
+                                <div id="specializations" @click="isDropdownOpen = !isDropdownOpen" @focusout="touchField('specializations')" tabindex="4"
+                                    :class="[
+                                        'min-h-11 w-full cursor-pointer rounded-full border-0 bg-gray-100 px-3 py-2 text-sm shadow-inner focus-visible:ring-2 focus-visible:ring-teal-500',
+                                        hasFieldError('specializations') && isFieldTouched('specializations') ? 'bg-red-50/70 ring-2 ring-red-300' : ''
+                                    ]"
+                                    :aria-invalid="hasFieldError('specializations') && isFieldTouched('specializations')"
+                                    :aria-describedby="hasFieldError('specializations') && isFieldTouched('specializations') ? 'specializations-error' : undefined">
+                                    <div class="flex items-center justify-between gap-2">
+                                        <div class="flex min-w-0 flex-wrap items-center gap-1.5">
+                                            <TransitionGroup name="chip-pop" tag="div" class="flex flex-wrap items-center gap-1.5">
+                                                <span v-for="spec in getSelectedSpecializations()" :key="spec.id"
+                                                    class="inline-flex items-center gap-1 rounded-full bg-teal-100 px-2.5 py-1 text-xs font-medium text-teal-700">
+                                                    {{ spec.name }}
+                                                    <button type="button" @click.stop="removeSpecialization(spec.id)" class="text-teal-600 hover:text-teal-800">
+                                                        <X class="h-3 w-3" />
+                                                    </button>
+                                                </span>
+                                            </TransitionGroup>
+                                            <span v-if="formData.specializations.length === 0" class="text-sm text-gray-400">Adicionar especializações</span>
+                                        </div>
+                                        <button type="button" class="shrink-0 text-sm font-semibold text-teal-700">+ Adicionar</button>
+                                    </div>
+                                </div>
+
+                                <Transition name="dropdown-pop">
+                                    <div v-if="isDropdownOpen" class="absolute z-50 mt-2 w-full overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-lg">
+                                        <div class="border-b border-gray-100 p-3">
+                                            <Input v-model="searchTerm" placeholder="Buscar especializações..." class="h-9 rounded-xl border-gray-200 text-sm" @click.stop />
+                                        </div>
+                                        <div class="max-h-48 overflow-y-auto">
+                                            <div v-for="spec in filteredSpecializations" :key="spec.id" @click="toggleSpecialization(spec.id)"
+                                                :class="[
+                                                    'flex cursor-pointer items-center justify-between px-3 py-2 text-sm transition-colors duration-150 hover:bg-gray-50',
+                                                    isSpecializationSelected(spec.id) ? 'bg-teal-50 text-teal-700' : 'text-gray-700'
+                                                ]">
+                                                <span>{{ spec.name }}</span>
+                                                <Checkbox :checked="isSpecializationSelected(spec.id)" class="pointer-events-none" />
+                                            </div>
+                                            <div v-if="filteredSpecializations.length === 0" class="px-3 py-2 text-center text-sm text-gray-500">
+                                                Nenhuma especialização encontrada
+                                            </div>
+                                        </div>
+                                        <div class="border-t border-gray-100 bg-gray-50 px-3 py-2 text-xs text-gray-500">
+                                            {{ formData.specializations.length }} de 5 especializações selecionadas
+                                        </div>
+                                    </div>
+                                </Transition>
+                            </div>
+                            <Transition name="fade-slide">
+                                <p v-if="hasFieldError('specializations') && isFieldTouched('specializations')" id="specializations-error" class="mt-1 flex items-center gap-1 text-xs text-red-600">
+                                    <span class="material-icons shrink-0 text-[14px] leading-none text-red-500" aria-hidden="true">error_outline</span>{{ getFriendlyFieldError('specializations') }}
+                                </p>
+                            </Transition>
+                        </div>
+
+                        <div>
+                            <Label for="email" class="mb-2 block text-[11px] font-bold uppercase tracking-[0.08em] text-gray-500">E-mail profissional</Label>
+                            <Input id="email" type="email" required :tabindex="5" autocomplete="email" name="email"
+                                placeholder="medico@telemedicina.com" v-model="formData.email" @blur="touchField('email')"
+                                :class="[
+                                    'h-11 rounded-full border-0 bg-gray-100 px-4 text-sm shadow-inner placeholder:text-gray-400 transition-all duration-200 placeholder:transition-colors focus-visible:ring-2 focus-visible:ring-teal-500',
+                                    hasFieldError('email') && isFieldTouched('email') ? 'bg-red-50/70 ring-2 ring-red-300' : ''
+                                ]"
+                                :aria-invalid="hasFieldError('email') && isFieldTouched('email')"
+                                :aria-describedby="hasFieldError('email') && isFieldTouched('email') ? 'email-error' : undefined" />
+                            <Transition name="fade-slide">
+                                <p v-if="hasFieldError('email') && isFieldTouched('email')" id="email-error" class="mt-1 flex items-center gap-1 text-xs text-red-600">
+                                    <span class="material-icons shrink-0 text-[14px] leading-none text-red-500" aria-hidden="true">error_outline</span>{{ getFriendlyFieldError('email') }}
+                                </p>
+                            </Transition>
+                        </div>
+
+                        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                            <div>
+                                <Label for="password" class="mb-2 block text-[11px] font-bold uppercase tracking-[0.08em] text-gray-500">Senha</Label>
+                                <Input id="password" type="password" required :tabindex="6" autocomplete="new-password" name="password"
+                                    placeholder="••••••••" v-model="formData.password" @blur="touchField('password')"
+                                    :class="[
+                                        'h-11 rounded-full border-0 bg-gray-100 px-4 text-sm shadow-inner placeholder:text-gray-400 transition-all duration-200 placeholder:transition-colors focus-visible:ring-2 focus-visible:ring-teal-500',
+                                        hasFieldError('password') && isFieldTouched('password') ? 'bg-red-50/70 ring-2 ring-red-300' : ''
+                                    ]"
+                                    :aria-invalid="hasFieldError('password') && isFieldTouched('password')"
+                                    :aria-describedby="hasFieldError('password') && isFieldTouched('password') ? 'password-error' : undefined" />
+                                <Transition name="fade-slide">
+                                    <p v-if="hasFieldError('password') && isFieldTouched('password')" id="password-error" class="mt-1 flex items-center gap-1 text-xs text-red-600">
+                                        <span class="material-icons shrink-0 text-[14px] leading-none text-red-500" aria-hidden="true">error_outline</span>{{ getFriendlyFieldError('password') }}
+                                    </p>
+                                </Transition>
+                            </div>
+
+                            <div>
+                                <Label for="password_confirmation" class="mb-2 block text-[11px] font-bold uppercase tracking-[0.08em] text-gray-500">Confirmar senha</Label>
+                                <Input id="password_confirmation" type="password" required :tabindex="7" autocomplete="new-password" name="password_confirmation"
+                                    placeholder="••••••••" v-model="formData.password_confirmation" @blur="touchField('password_confirmation')"
+                                    :class="[
+                                        'h-11 rounded-full border-0 bg-gray-100 px-4 text-sm shadow-inner placeholder:text-gray-400 transition-all duration-200 placeholder:transition-colors focus-visible:ring-2 focus-visible:ring-teal-500',
+                                        hasFieldError('password_confirmation') && isFieldTouched('password_confirmation') ? 'bg-red-50/70 ring-2 ring-red-300' : ''
+                                    ]"
+                                    :aria-invalid="hasFieldError('password_confirmation') && isFieldTouched('password_confirmation')"
+                                    :aria-describedby="hasFieldError('password_confirmation') && isFieldTouched('password_confirmation') ? 'password_confirmation-error' : undefined" />
+                                <Transition name="fade-slide">
+                                    <p v-if="hasFieldError('password_confirmation') && isFieldTouched('password_confirmation')" id="password_confirmation-error" class="mt-1 flex items-center gap-1 text-xs text-red-600">
+                                        <span class="material-icons shrink-0 text-[14px] leading-none text-red-500" aria-hidden="true">error_outline</span>{{ getFriendlyFieldError('password_confirmation') }}
+                                    </p>
+                                </Transition>
+                            </div>
+                        </div>
+
+                        <div class="space-y-2">
+                            <div class="flex items-start gap-3">
+                                <input id="terms_accepted" type="checkbox" :tabindex="8" v-model="formData.terms_accepted"
+                                    @blur="termsTouched = true"
+                                    @change="termsTouched = true"
+                                    :aria-invalid="!!termsError"
+                                    :aria-describedby="termsError ? 'terms_accepted-error' : undefined"
+                                    :class="[
+                                        'mt-1 h-4 w-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500',
+                                        termsError ? 'border-red-400 ring-1 ring-red-300' : ''
+                                    ]" />
+                                <div class="text-xs leading-relaxed text-gray-500">
+                                    <label for="terms_accepted" class="cursor-pointer">
+                                        Eu aceito os
+                                        <a href="/terms" target="_blank" class="font-semibold text-teal-700 hover:text-teal-800">
+                                            Termos de Uso
+                                        </a>
+                                        e a
+                                        <a href="/privacy" target="_blank" class="font-semibold text-teal-700 hover:text-teal-800">
+                                            Política de Privacidade
+                                        </a>.
+                                    </label>
+                                </div>
+                            </div>
+                            <Transition name="fade-slide">
+                                <p v-if="termsError" id="terms_accepted-error" class="ml-7 flex items-center gap-1 text-xs text-red-600">
+                                    <span class="material-icons shrink-0 text-[14px] leading-none text-red-500" aria-hidden="true">error_outline</span>{{ termsError }}
+                                </p>
+                            </Transition>
+                        </div>
+
+                        <div class="pt-1">
+                            <!--
+                                :disabled="isSubmitting" (não mais !canSubmit): queremos que o clique
+                                sempre dispare submitForm() — que agora emite toast explicando o motivo
+                                quando há problema (rate limit, campos faltando, etc.), evitando o
+                                "botão apagado sem explicação" que frustrava o usuário.
+                            -->
+                            <Button type="submit" :disabled="isSubmitting" :tabindex="9"
+                                class="h-12 w-full rounded-full border-0 bg-teal-700 text-sm font-bold text-white shadow-lg transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-50"
+                                :aria-describedby="rateLimit.remainingAttempts < 2 ? 'rate-limit-warning' : undefined">
+                                <div class="flex items-center justify-center gap-2">
+                                    <LoaderCircle v-if="isSubmitting" class="h-4 w-4 animate-spin" aria-hidden="true" />
+                                    <span>{{ isSubmitting ? 'Registrando médico...' : 'Registrar como Médico' }}</span>
+                                </div>
+                            </Button>
+
+                            <div v-if="rateLimit.remainingAttempts < 2 && rateLimit.remainingAttempts > 0" id="rate-limit-warning"
+                                class="mt-2 flex items-center justify-center gap-1 text-center text-sm text-orange-600" role="alert" aria-live="polite">
+                                <span class="material-icons shrink-0 text-[16px] leading-none text-orange-500" aria-hidden="true">warning</span>
+                                <span>Restam {{ rateLimit.remainingAttempts }} tentativa{{ rateLimit.remainingAttempts > 1 ? 's' : '' }}</span>
+                            </div>
+                        </div>
+                    </form>
+
+                    <div class="mt-5 text-center text-sm text-gray-500">
+                        Já tem uma conta?
+                        <TextLink :href="login()" class="ml-1 font-semibold text-teal-700 hover:text-teal-800" :tabindex="10">
+                            Faça login aqui
+                        </TextLink>
                     </div>
                 </div>
 
-                <!-- Imagem central - apenas em desktop -->
-                <div class="hidden lg:flex relative w-[400px] h-[400px] items-center justify-center">
-                    <!-- Container principal com gradiente de fundo sutil -->
-                    <div class="relative w-full h-full flex items-center justify-center">
-                        <!-- Gradiente de fundo sutil -->
-                        <div
-                            class="absolute inset-0 bg-gradient-to-br from-primary/8 via-transparent to-primary/12 rounded-full blur-3xl">
-                        </div>
-
-                        <!-- Bolas decorativas estáticas -->
-                        <div class="absolute top-8 left-8 w-16 h-16 bg-primary/20 rounded-full shadow-lg"></div>
-                        <div class="absolute top-16 left-16 w-12 h-12 bg-primary/15 rounded-full shadow-md"></div>
-
-                        <div class="absolute bottom-12 right-12 w-20 h-20 bg-primary/18 rounded-full shadow-lg"></div>
-                        <div class="absolute bottom-20 right-20 w-14 h-14 bg-primary/12 rounded-full shadow-md"></div>
-
-                        <div class="absolute top-1/4 right-8 w-10 h-10 bg-primary/25 rounded-full shadow-md"></div>
-                        <div class="absolute bottom-1/4 left-8 w-8 h-8 bg-primary/20 rounded-full shadow-sm"></div>
-
-                        <div class="absolute top-1/2 left-4 w-6 h-6 bg-primary/30 rounded-full shadow-sm"></div>
-                        <div class="absolute top-1/2 right-4 w-7 h-7 bg-primary/22 rounded-full shadow-sm"></div>
-
-                        <!-- Imagem central -->
-                        <div class="relative z-10 flex items-center justify-center">
-                            <img :src="doctorDoodleImage" alt="Doctor Doodle"
-                                class="w-[420px] h-[420px] object-contain drop-shadow-2xl" />
+                <div class="animate-fade-left relative hidden h-full min-h-[660px] rounded-[28px] p-6 lg:block">
+                    <div class="absolute inset-0 overflow-hidden rounded-[28px]">
+                        <div class="absolute -left-10 top-24 h-40 w-40 rounded-3xl bg-white/20"></div>
+                        <div class="absolute -right-12 bottom-16 h-56 w-56 rounded-3xl bg-white/20"></div>
+                    </div>
+                    <div class="relative flex h-full items-end justify-center">
+                        <img :src="doctorDoodleImage" alt="Ilustração de médico" class="h-[620px] w-auto object-contain drop-shadow-xl" />
+                        <div class="absolute bottom-8 left-8 right-8 rounded-3xl bg-white/90 p-6 shadow-lg backdrop-blur">
+                            <p class="text-3xl font-extrabold leading-tight text-gray-900">O futuro da medicina é humano.</p>
+                            <p class="mt-2 text-base text-gray-600">
+                                Sua jornada para uma prática clínica mais eficiente e conectada começa aqui.
+                            </p>
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
-
-        <!-- Link para login -->
-        <div class="text-center mt-6 lg:mt-1 relative z-10">
-            <div
-                class="inline-flex items-center gap-1 bg-white/80 backdrop-blur-md rounded-lg lg:rounded-xl px-2 lg:px-3 py-1 lg:py-2 shadow-lg border border-white/30">
-                <svg class="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1">
-                    </path>
-                </svg>
-                <p class="text-gray-600 text-xs lg:text-sm font-medium">
-                    Já tem uma conta?
-                    <TextLink :href="login()"
-                        class="text-black hover:text-black/80 font-bold underline underline-offset-4 hover:underline-offset-2 transition-all duration-300 ml-1"
-                        :tabindex="10">
-                        Faça login aqui
-                    </TextLink>
-                </p>
             </div>
         </div>
     </AuthBase>
 </template>
+
+<style scoped>
+.animate-fade-up {
+    animation: fadeUp 550ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.animate-fade-left {
+    animation: fadeLeft 650ms cubic-bezier(0.22, 1, 0.36, 1) 120ms both;
+}
+
+@keyframes fadeUp {
+    from {
+        opacity: 0;
+        transform: translateY(18px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeLeft {
+    from {
+        opacity: 0;
+        transform: translateX(24px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+    transition: all 220ms ease;
+}
+
+.fade-slide-enter-from,
+.fade-slide-leave-to {
+    opacity: 0;
+    transform: translateY(-6px);
+}
+
+.dropdown-pop-enter-active,
+.dropdown-pop-leave-active {
+    transition: all 180ms ease;
+    transform-origin: top center;
+}
+
+.dropdown-pop-enter-from,
+.dropdown-pop-leave-to {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+}
+
+.chip-pop-enter-active,
+.chip-pop-leave-active {
+    transition: all 180ms ease;
+}
+
+.chip-pop-enter-from,
+.chip-pop-leave-to {
+    opacity: 0;
+    transform: scale(0.9);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .animate-fade-up,
+    .animate-fade-left {
+        animation: none;
+    }
+
+    .fade-slide-enter-active,
+    .fade-slide-leave-active,
+    .dropdown-pop-enter-active,
+    .dropdown-pop-leave-active,
+    .chip-pop-enter-active,
+    .chip-pop-leave-active {
+        transition: none;
+    }
+}
+</style>

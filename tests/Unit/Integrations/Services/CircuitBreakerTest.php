@@ -8,6 +8,9 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Redis;
 use Tests\TestCase;
 
+/**
+ * @group redis
+ */
 class CircuitBreakerTest extends TestCase
 {
     use RefreshDatabase;
@@ -89,5 +92,72 @@ class CircuitBreakerTest extends TestCase
         sleep(2);
 
         $this->assertTrue($this->cb->isAvailable($this->partnerId));
+    }
+
+    public function test_circuit_opens_after_failure_threshold_is_reached(): void
+    {
+        $threshold = config('integrations.circuit_breaker.laboratory.failure_threshold', 5);
+
+        for ($i = 0; $i < $threshold; $i++) {
+            $this->cb->recordFailure($this->partnerId);
+        }
+
+        $this->assertEquals('open', $this->cb->getState($this->partnerId));
+    }
+
+    public function test_circuit_stays_closed_below_threshold(): void
+    {
+        $threshold = config('integrations.circuit_breaker.laboratory.failure_threshold', 5);
+
+        // Garante pelo menos 1 falha registrada mesmo se threshold for 1 —
+        // sem isso, a função de recordFailure nunca seria exercitada.
+        $iterations = max(1, $threshold - 1);
+        for ($i = 0; $i < $iterations; $i++) {
+            $this->cb->recordFailure($this->partnerId);
+        }
+
+        $this->assertEquals('closed', $this->cb->getState($this->partnerId));
+        $this->assertTrue($this->cb->isAvailable($this->partnerId));
+    }
+
+    public function test_half_open_success_closes_circuit(): void
+    {
+        // Simula circuito aberto em estado half-open (tentativa permitida)
+        Redis::setex("circuit_breaker:{$this->partnerId}", 300, 'open');
+        // isAvailable em 'open' com half-open livre permite 1 tentativa
+        $this->assertTrue($this->cb->isAvailable($this->partnerId));
+
+        // Se a tentativa é bem-sucedida, o circuito fecha
+        $this->cb->recordSuccess($this->partnerId);
+
+        $this->assertEquals('closed', $this->cb->getState($this->partnerId));
+        // Failures counter também zerado
+        $this->assertNull(Redis::get("circuit_breaker:{$this->partnerId}:failures"));
+    }
+
+    public function test_half_open_attempts_are_limited(): void
+    {
+        // Torna a dependência de config explícita: fixa half_open_attempts=1
+        // para este teste, em vez de depender do valor default. Evita falha
+        // se o default mudar (ex.: aumentar para 2 tentativas).
+        $originalConfig = config('integrations.circuit_breaker.laboratory');
+        config(['integrations.circuit_breaker.laboratory' => array_merge(
+            $originalConfig ?? [],
+            ['half_open_attempts' => 1],
+        )]);
+
+        try {
+            // Circuito aberto — primeira tentativa é permitida (half-open)
+            Redis::setex("circuit_breaker:{$this->partnerId}", 300, 'open');
+
+            $this->assertTrue($this->cb->isAvailable($this->partnerId));
+
+            // Segunda chamada consecutiva a isAvailable sem sucesso prévio deve bloquear
+            $this->assertFalse($this->cb->isAvailable($this->partnerId));
+        } finally {
+            // Isolar a mudança de config: restaurar o valor original para
+            // não vazar estado para outros testes.
+            config(['integrations.circuit_breaker.laboratory' => $originalConfig]);
+        }
     }
 }

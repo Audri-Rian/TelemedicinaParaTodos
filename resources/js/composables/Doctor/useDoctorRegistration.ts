@@ -2,6 +2,7 @@ import { ref, computed, watch } from 'vue';
 import { router } from '@inertiajs/vue3';
 import { useRealTimeValidation, type ValidationRule } from '../useRealTimeValidation';
 import { useRateLimit } from '../useRateLimit';
+import { useToast } from '../useToast';
 import { useDoctorFormValidation } from './useDoctorFormValidation';
 
 /**
@@ -50,7 +51,8 @@ const initialData: DoctorRegistrationData = {
  * Focado apenas nos campos obrigatórios para criação da conta
  */
 export function useDoctorRegistration() {
-  const { 
+  const toast = useToast();
+  const {
     nameValidation,
     emailValidation,
     passwordValidation,
@@ -100,23 +102,23 @@ export function useDoctorRegistration() {
   watch(() => formData.value.name, (newValue) => {
     validationFormData.value.name = newValue;
   });
-  
+
   watch(() => formData.value.email, (newValue) => {
     validationFormData.value.email = newValue;
   });
-  
+
   watch(() => formData.value.password, (newValue) => {
     validationFormData.value.password = newValue;
   });
-  
+
   watch(() => formData.value.password_confirmation, (newValue) => {
     validationFormData.value.password_confirmation = newValue;
   });
-  
+
   watch(() => formData.value.crm, (newValue) => {
     validationFormData.value.crm = newValue;
   });
-  
+
   watch(() => formData.value.specializations, (newValue) => {
     validationFormData.value.specializations = newValue;
   }, { deep: true });
@@ -140,19 +142,71 @@ export function useDoctorRegistration() {
     return null;
   });
 
+  /**
+   * Rotulos amigáveis para exibir quais campos têm erro nas notificações.
+   */
+  const fieldLabels: Record<keyof RequiredDoctorFields, string> = {
+    name: 'nome completo',
+    email: 'e-mail profissional',
+    password: 'senha',
+    password_confirmation: 'confirmação de senha',
+    crm: 'CRM',
+    specializations: 'especialização'
+  };
+
+  /**
+   * Lista os rótulos dos campos com erro, em ordem e formatados como
+   * "nome, CRM e especialização".
+   */
+  const describeInvalidFields = (): string => {
+    const invalidKeys = (Object.keys(fields.value) as Array<keyof RequiredDoctorFields>)
+      .filter((k) => fields.value[k].errors.length > 0);
+
+    if (!invalidKeys.length) return '';
+
+    const labels = invalidKeys.map((k) => fieldLabels[k]);
+    if (labels.length === 1) return labels[0];
+    if (labels.length === 2) return `${labels[0]} e ${labels[1]}`;
+    return `${labels.slice(0, -1).join(', ')} e ${labels[labels.length - 1]}`;
+  };
+
   // Função para submeter formulário de registro
   const submitForm = async (): Promise<boolean> => {
-    if (!canSubmit.value) {
+    // 1. Rate limit bloqueado → mensagem explícita
+    if (rateLimit.isBlocked.value) {
+      toast.error(rateLimit.getErrorMessage(), {
+        title: 'Limite de tentativas atingido',
+      });
       return false;
     }
 
-    // Verifica rate limit
+    // 2. Validações client-side falharam (campos obrigatórios não preenchidos)
+    if (!isFormValid.value) {
+      // Marcar todos os campos como tocados para exibir os erros inline
+      validateAll();
+      const invalid = describeInvalidFields();
+      toast.warning(
+        invalid
+          ? `Revise ${invalid} antes de enviar.`
+          : 'Preencha os campos obrigatórios antes de enviar.',
+        { title: 'Formulário incompleto' },
+      );
+      return false;
+    }
+
+    // 3. Já está submetendo
+    if (isSubmitting.value) {
+      return false;
+    }
+
+    // 4. Registrar tentativa (pode bloquear agora mesmo)
+    // A checagem #2 (isFormValid) acima já cobre validação — não chamamos
+    // validateAll() de novo pois isso consumiria uma tentativa do rate limit
+    // sem de fato tentar submeter.
     if (!rateLimit.recordAttempt()) {
-      return false;
-    }
-
-    // Validação final
-    if (!validateAll()) {
+      toast.error(rateLimit.getErrorMessage(), {
+        title: 'Limite de tentativas atingido',
+      });
       return false;
     }
 
@@ -162,22 +216,44 @@ export function useDoctorRegistration() {
         isSubmitting.value = true;
       },
       onSuccess: () => {
-        // Sucesso - o Laravel já redireciona para dashboard
+        toast.success('Bem-vindo! Redirecionando para seu painel...', {
+          title: 'Conta criada',
+          durationMs: 3000,
+        });
         resetForm();
         rateLimit.reset();
         return true;
       },
       onError: (errors) => {
-        // Mapear erros do backend para os campos do frontend
-        Object.keys(errors).forEach(field => {
-          const fieldKey = field as keyof RequiredDoctorFields;
-          if (fields.value[fieldKey]) {
-            fields.value[fieldKey].errors = Array.isArray(errors[field]) 
-              ? errors[field] 
-              : [errors[field]];
+        // Mapear erros do backend para os campos do frontend.
+        // Alguns campos do backend (ex.: terms_accepted, cns) não estão mapeados
+        // no objeto de validação — nesses casos exibimos a mensagem via toast.
+        const unmappedMessages: string[] = [];
+
+        Object.keys(errors).forEach((field) => {
+          const value = errors[field];
+          const message = Array.isArray(value) ? value[0] : value;
+
+          if (Object.prototype.hasOwnProperty.call(fields.value, field)) {
+            const fieldKey = field as keyof RequiredDoctorFields;
+            fields.value[fieldKey].errors = Array.isArray(value) ? value : [value];
             fields.value[fieldKey].touched = true;
+          } else if (typeof message === 'string' && message) {
+            unmappedMessages.push(message);
           }
         });
+
+        // Toast com mensagens do backend. Prioriza os campos não mapeados (que
+        // não aparecem inline no form) e cai para a primeira mensagem como fallback.
+        const firstError = Object.values(errors)[0];
+        const fallback = Array.isArray(firstError) ? firstError[0] : firstError;
+        const message = unmappedMessages[0]
+          ?? (typeof fallback === 'string' && fallback ? fallback : null);
+
+        toast.error(
+          message ?? 'Não foi possível concluir o registro. Verifique os campos destacados.',
+          { title: 'Falha no registro' },
+        );
         return false;
       },
       onFinish: () => {
@@ -208,20 +284,20 @@ export function useDoctorRegistration() {
     // Dados do formulário
     formData,
     fields,
-    
+
     // Estado
     isSubmitting,
     hasErrors,
     isFormValid,
     canSubmit,
-    
+
     // Erros
     allErrors,
     submitError,
-    
+
     // Rate limiting
     rateLimit: rateLimit.getStatus(),
-    
+
     // Funções
     updateField,
     touchField,

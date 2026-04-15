@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import AuthBase from '@/layouts/AuthLayout.vue';
+import { useToast } from '@/composables/useToast';
 import { register } from '@/routes';
 import { request } from '@/routes/password';
 import { useForm, Head } from '@inertiajs/vue3';
@@ -20,6 +21,8 @@ defineProps<{
     canResetPassword: boolean;
 }>();
 
+const toast = useToast();
+
 // Criar o formulário usando useForm do Inertia
 const form = useForm({
     email: '',
@@ -29,7 +32,35 @@ const form = useForm({
 
 // Função para enviar o formulário
 const submit = () => {
+    if (!form.email || !form.password) {
+        toast.warning('Informe e-mail e senha para entrar.', {
+            title: 'Campos obrigatórios',
+        });
+        return;
+    }
+
     form.post(storeRoute.url(), {
+        // Duração curta — o redirect do Inertia pode cortar o toast.
+        // Para persistir entre navegações seria preciso mover o toast p/ flash
+        // de session; aqui optamos por manter o UX simples.
+        onSuccess: () => {
+            toast.success('Login realizado. Redirecionando...', {
+                title: 'Bem-vindo de volta',
+                durationMs: 1800,
+            });
+        },
+        onError: (errors: Record<string, string | string[]>) => {
+            // Laravel retorna o erro em `email` via throw ValidationException.
+            // Mensagens típicas: "Credenciais inválidas" ou "Muitas tentativas" (throttle).
+            const firstError = errors.email ?? errors.password ?? Object.values(errors)[0];
+            const message = Array.isArray(firstError) ? firstError[0] : firstError;
+            toast.error(
+                typeof message === 'string' && message
+                    ? message
+                    : 'Não foi possível entrar. Verifique suas credenciais.',
+                { title: 'Falha no login' },
+            );
+        },
         onFinish: () => form.reset('password'),
     });
 };
