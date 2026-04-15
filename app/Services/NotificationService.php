@@ -183,6 +183,7 @@ class NotificationService
             NotificationType::EXAMINATION_REQUESTED => \App\Mail\ExaminationRequestedMail::class,
             NotificationType::MEDICAL_CERTIFICATE_ISSUED => \App\Mail\MedicalCertificateIssuedMail::class,
             NotificationType::APPOINTMENT_REMINDER => \App\Mail\AppointmentReminderMail::class,
+            NotificationType::EXAM_RESULT_RECEIVED => null,
         };
     }
 

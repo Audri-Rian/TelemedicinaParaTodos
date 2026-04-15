@@ -21,6 +21,7 @@ class StoreExaminationRequest extends FormRequest
             'justification' => ['required', 'string'],
             'instructions' => ['nullable', 'string'],
             'priority' => ['nullable', Rule::in(['normal', 'urgent'])],
+            'partner_integration_id' => ['nullable', 'uuid', 'exists:partner_integrations,id'],
         ];
     }
 }

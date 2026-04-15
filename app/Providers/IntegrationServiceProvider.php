@@ -10,6 +10,7 @@ use App\Integrations\Events\IntegrationFailed;
 use App\Integrations\Listeners\NotifyIntegrationFailure;
 use App\Integrations\Listeners\ProcessExamResult;
 use App\Integrations\Listeners\SendExamOrderToLab;
+use App\Integrations\Listeners\SendExamResultToRnds;
 use App\Integrations\Services\IntegrationService;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
@@ -46,6 +47,14 @@ class IntegrationServiceProvider extends ServiceProvider
         Event::listen(
             ExamResultReceived::class,
             [ProcessExamResult::class, 'handle']
+        );
+
+        // Listener: quando resultado chega, submete Bundle FHIR à RNDS
+        // (só executa se RNDS_ENABLED=true — seguro deixar registrado mesmo
+        // antes do registro no DATASUS ser concluído)
+        Event::listen(
+            ExamResultReceived::class,
+            [SendExamResultToRnds::class, 'handle']
         );
 
         // Listener: quando integração falha, notifica admin

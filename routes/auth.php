@@ -11,15 +11,10 @@ use App\Http\Controllers\Auth\PatientRegistrationController;
 use App\Http\Controllers\Auth\DoctorRegistrationController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
 
 Route::middleware('guest')->group(function () {
     Route::get('register', [RegisteredUserController::class, 'create'])
         ->name('register');
-
-    Route::get('register/select', function () {
-        return Inertia::render('auth/RegisterSelect');
-    })->name('register.select');
 
     Route::get('register/patient', [PatientRegistrationController::class, 'create'])
         ->name('register.patient');

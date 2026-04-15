@@ -1,7 +1,7 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { usePatientRegistration } from '@/composables/Patient/usePatientRegistration';
 import BackgroundDecorativo from '@/components/BackgroundDecorativo.vue';
-import InputError from '@/components/InputError.vue';
 import TextLink from '@/components/TextLink.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,12 +10,12 @@ import AuthBase from '@/layouts/AuthLayout.vue';
 import { login } from '@/routes';
 import { Head } from '@inertiajs/vue3';
 import { LoaderCircle } from 'lucide-vue-next';
-import patientDoodleImage from '@images/PatientDoodle.png';
 
 // Composables
 const {
     formData,
     isSubmitting,
+    hasErrors,
     canSubmit,
     submitError,
     rateLimit,
@@ -26,6 +26,37 @@ const {
     hasFieldError,
     isFieldTouched
 } = usePatientRegistration();
+
+const fieldLabels: Record<string, string> = {
+    name: 'nome completo',
+    date_of_birth: 'data de nascimento',
+    email: 'e-mail',
+    phone_number: 'telefone',
+    gender: 'gênero',
+    password: 'senha',
+    password_confirmation: 'confirmação de senha',
+    consent_telemedicine: 'termos de telemedicina'
+};
+
+const showValidationNotice = computed(() => hasErrors.value && !submitError.value && !isSubmitting.value);
+
+const getFriendlyFieldError = (fieldName: keyof typeof fieldLabels): string => {
+    const rawMessage = getFieldError(fieldName as any);
+    if (!rawMessage) return '';
+
+    const label = fieldLabels[fieldName] || 'campo';
+    const normalized = rawMessage.toLowerCase();
+
+    if (normalized.includes('é obrigatório')) return `Informe ${label}.`;
+    if (normalized.includes('email válido')) return 'Digite um e-mail no formato nome@dominio.com.';
+    if (normalized.includes('formato dd/mm/aaaa')) return 'Use o formato dd/mm/aaaa para a data de nascimento.';
+    if (normalized.includes('não pode ser no futuro')) return 'Informe uma data de nascimento anterior à data de hoje.';
+    if (normalized.includes('selecione um gênero válido')) return 'Selecione uma opção de gênero para continuar.';
+    if (normalized.includes('deve ser igual')) return 'A confirmação precisa ser igual à senha informada.';
+    if (normalized.includes('termos de telemedicina')) return 'Para seguir, aceite os Termos de Serviço e a Política de Privacidade.';
+
+    return rawMessage;
+};
 
 // Função para aplicar máscara de data brasileira
 const applyDateMask = (value: string) => {
@@ -58,389 +89,316 @@ const handleSubmit = async () => {
 </script>
 
 <template>
-    <AuthBase title="Seja bem-vindo a Telemedicina para Todos"
-        description="Sua jornada de saúde começa aqui. Registre-se para começar.">
-
+    <AuthBase title="" description="">
         <Head title="Registro de Paciente" />
+        <BackgroundDecorativo variant="patient" intensity="low" :enable-animations="false" />
 
-        <!-- Background decorativo moderno -->
-        <BackgroundDecorativo variant="patient" intensity="medium" :enable-animations="true" />
+        <div class="relative z-10 mx-auto w-full max-w-7xl space-y-5">
+            <Transition name="fade-slide">
+                <div
+                    v-if="isSubmitting"
+                    class="mx-auto flex w-full max-w-4xl items-center justify-center rounded-full bg-teal-700 px-4 py-2 text-sm font-semibold text-white shadow-lg"
+                >
+                    Criando conta...
+                </div>
+            </Transition>
 
-        <!-- Container principal com layout responsivo -->
-        <div class="relative w-full max-w-8xl mx-auto z-10">
-            <div class="flex flex-col lg:flex-row items-center justify-between gap-8 lg:gap-20">
+            <div class="grid grid-cols-1 gap-6 lg:grid-cols-[360px_minmax(0,1fr)]">
+                <aside class="hidden space-y-5 lg:block animate-fade-up">
+                    <div class="space-y-4">
+                        <h1 class="text-5xl font-extrabold leading-[0.95] text-teal-700">Comece sua jornada de cuidado.</h1>
+                        <p class="text-xl leading-relaxed text-gray-600">
+                            Junte-se ao Sanctuary Health para uma experiência de saúde personalizada, humana e de alta tecnologia.
+                        </p>
+                    </div>
+                    <div class="flex h-72 items-center justify-center rounded-[32px] border-2 border-dashed border-gray-300 bg-white/70 shadow-lg">
+                        <p class="text-lg font-semibold text-gray-500">Imagem pendente</p>
+                    </div>
+                </aside>
 
-                <!-- Formulário -->
-                <div class="w-full lg:w-200 border rounded-3xl">
-                    <div>
-                        <!-- Card do formulário -->
-                        <div
-                            class="bg-white/95 backdrop-blur-lg rounded-2xl lg:rounded-3xl p-2 lg:p-3 shadow-2xl border border-white/40 hover:shadow-3xl transition-all duration-500 relative z-20">
-                            <!-- Header com ícone -->
-                            <div class="text-center">
-                                <div
-                                    class="inline-flex items-center justify-center w-8 h-8 bg-gradient-to-br from-primary/20 to-primary/10 rounded-lg mb-1 shadow-lg">
-                                    <svg class="w-4 h-4 text-black" fill="none" stroke="currentColor"
-                                        viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z">
-                                        </path>
-                                    </svg>
+                <section class="space-y-5">
+                    <div class="rounded-[34px] bg-white/90 p-6 shadow-xl ring-1 ring-gray-200/60 backdrop-blur animate-fade-up-delayed">
+                        <div class="mb-5">
+                            <h2 class="text-4xl font-bold text-gray-800">Dados do Paciente</h2>
+                            <p class="mt-1 text-lg text-gray-500">Preencha as informações abaixo para criar seu prontuário digital.</p>
+                        </div>
+
+                        <Transition name="fade-slide">
+                            <div v-if="submitError" class="mb-4 rounded-xl border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert" aria-live="assertive">
+                                {{ submitError }}
+                            </div>
+                        </Transition>
+
+                        <Transition name="fade-slide">
+                            <div v-if="showValidationNotice" class="mb-4 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800" role="status" aria-live="polite">
+                                Revise os campos destacados para continuar.
+                            </div>
+                        </Transition>
+
+                        <form @submit.prevent="handleSubmit" class="space-y-4">
+                            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                <div>
+                                    <Label for="name" class="mb-2 block text-[11px] font-bold uppercase tracking-[0.08em] text-gray-500">Nome Completo</Label>
+                                    <Input id="name" type="text" required autofocus :tabindex="1" autocomplete="name" name="name"
+                                        placeholder="Ana Beatriz Silva" :model-value="formData.name"
+                                        @update:model-value="updateField('name', $event)" @blur="touchField('name')"
+                                        :class="[
+                                            'h-11 rounded-lg border-0 bg-gray-100 px-4 text-sm shadow-inner placeholder:text-gray-400 transition-all duration-200 focus-visible:ring-2 focus-visible:ring-teal-500',
+                                            hasFieldError('name') && isFieldTouched('name') ? 'bg-red-50/70 ring-2 ring-red-300' : ''
+                                        ]"
+                                        :aria-invalid="hasFieldError('name') && isFieldTouched('name')"
+                                        :aria-describedby="hasFieldError('name') && isFieldTouched('name') ? 'name-error' : undefined" />
+                                    <Transition name="fade-slide">
+                                        <p v-if="hasFieldError('name') && isFieldTouched('name')" id="name-error" class="mt-1 flex items-center gap-1 text-xs text-red-600">
+                                            <span class="material-icons shrink-0 text-[14px] leading-none text-red-500" aria-hidden="true">error_outline</span>{{ getFriendlyFieldError('name') }}
+                                        </p>
+                                    </Transition>
                                 </div>
-                                <h1
-                                    class="text-base lg:text-lg font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
-                                    Registro de Paciente</h1>
-                                <p class="text-xs text-gray-500 font-medium">Junte-se à nossa comunidade
-                                    médica</p>
+
+                                <div>
+                                    <Label for="date_of_birth" class="mb-2 block text-[11px] font-bold uppercase tracking-[0.08em] text-gray-500">Data de Nascimento</Label>
+                                    <Input id="date_of_birth" type="text" required :tabindex="2" name="date_of_birth" placeholder="12/05/1992" maxlength="10"
+                                        :model-value="formData.date_of_birth" @update:model-value="handleDateInput" @blur="touchField('date_of_birth')"
+                                        :class="[
+                                            'h-11 rounded-lg border-0 bg-gray-100 px-4 text-sm shadow-inner placeholder:text-gray-400 transition-all duration-200 focus-visible:ring-2 focus-visible:ring-teal-500',
+                                            hasFieldError('date_of_birth') && isFieldTouched('date_of_birth') ? 'bg-red-50/70 ring-2 ring-red-300' : ''
+                                        ]"
+                                        :aria-invalid="hasFieldError('date_of_birth') && isFieldTouched('date_of_birth')"
+                                        :aria-describedby="hasFieldError('date_of_birth') && isFieldTouched('date_of_birth') ? 'date_of_birth-error' : undefined" />
+                                    <Transition name="fade-slide">
+                                        <p v-if="hasFieldError('date_of_birth') && isFieldTouched('date_of_birth')" id="date_of_birth-error" class="mt-1 flex items-center gap-1 text-xs text-red-600">
+                                            <span class="material-icons shrink-0 text-[14px] leading-none text-red-500" aria-hidden="true">error_outline</span>{{ getFriendlyFieldError('date_of_birth') }}
+                                        </p>
+                                    </Transition>
+                                </div>
                             </div>
 
-                            <!-- Mensagem de erro de rate limit -->
-                            <div v-if="submitError"
-                                class="mb-2 p-2 bg-red-100 border border-red-400 text-red-700 rounded-lg" role="alert"
-                                aria-live="assertive">
-                                <div class="flex items-center">
-                                    <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd"
-                                            d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                                            clip-rule="evenodd"></path>
-                                    </svg>
-                                    {{ submitError }}
+                            <div>
+                                <Label for="email" class="mb-2 block text-[11px] font-bold uppercase tracking-[0.08em] text-gray-500">E-mail</Label>
+                                <Input id="email" type="email" required :tabindex="3" autocomplete="email" name="email"
+                                    placeholder="ana.beatriz@email.com" :model-value="formData.email"
+                                    @update:model-value="updateField('email', $event)" @blur="touchField('email')"
+                                    :class="[
+                                        'h-11 rounded-lg border-0 bg-gray-100 px-4 text-sm shadow-inner placeholder:text-gray-400 transition-all duration-200 focus-visible:ring-2 focus-visible:ring-teal-500',
+                                        hasFieldError('email') && isFieldTouched('email') ? 'bg-red-50/70 ring-2 ring-red-300' : ''
+                                    ]"
+                                    :aria-invalid="hasFieldError('email') && isFieldTouched('email')"
+                                    :aria-describedby="hasFieldError('email') && isFieldTouched('email') ? 'email-error' : undefined" />
+                                <Transition name="fade-slide">
+                                    <p v-if="hasFieldError('email') && isFieldTouched('email')" id="email-error" class="mt-1 flex items-center gap-1 text-xs text-red-600">
+                                        <span class="material-icons shrink-0 text-[14px] leading-none text-red-500" aria-hidden="true">error_outline</span>{{ getFriendlyFieldError('email') }}
+                                    </p>
+                                </Transition>
+                            </div>
+
+                            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                <div>
+                                    <Label for="phone_number" class="mb-2 block text-[11px] font-bold uppercase tracking-[0.08em] text-gray-500">Telefone</Label>
+                                    <Input id="phone_number" type="tel" required :tabindex="4" name="phone_number" placeholder="(11) 98765-4321"
+                                        :model-value="formData.phone_number" @update:model-value="updateField('phone_number', $event)" @blur="touchField('phone_number')"
+                                        :class="[
+                                            'h-11 rounded-lg border-0 bg-gray-100 px-4 text-sm shadow-inner placeholder:text-gray-400 transition-all duration-200 focus-visible:ring-2 focus-visible:ring-teal-500',
+                                            hasFieldError('phone_number') && isFieldTouched('phone_number') ? 'bg-red-50/70 ring-2 ring-red-300' : ''
+                                        ]"
+                                        :aria-invalid="hasFieldError('phone_number') && isFieldTouched('phone_number')"
+                                        :aria-describedby="hasFieldError('phone_number') && isFieldTouched('phone_number') ? 'phone_number-error' : undefined" />
+                                    <Transition name="fade-slide">
+                                        <p v-if="hasFieldError('phone_number') && isFieldTouched('phone_number')" id="phone_number-error" class="mt-1 flex items-center gap-1 text-xs text-red-600">
+                                            <span class="material-icons shrink-0 text-[14px] leading-none text-red-500" aria-hidden="true">error_outline</span>{{ getFriendlyFieldError('phone_number') }}
+                                        </p>
+                                    </Transition>
+                                </div>
+
+                                <div>
+                                    <Label for="gender" class="mb-2 block text-[11px] font-bold uppercase tracking-[0.08em] text-gray-500">Gênero</Label>
+                                    <select id="gender" required :tabindex="5" name="gender" :value="formData.gender"
+                                        @change="updateField('gender', ($event.target as HTMLSelectElement).value)"
+                                        @blur="touchField('gender')"
+                                        :class="[
+                                            'h-11 w-full rounded-lg border-0 bg-gray-100 px-4 text-sm text-gray-700 shadow-inner transition-all duration-200 focus-visible:ring-2 focus-visible:ring-teal-500',
+                                            hasFieldError('gender') && isFieldTouched('gender') ? 'bg-red-50/70 ring-2 ring-red-300' : ''
+                                        ]"
+                                        :aria-invalid="hasFieldError('gender') && isFieldTouched('gender')"
+                                        :aria-describedby="hasFieldError('gender') && isFieldTouched('gender') ? 'gender-error' : undefined">
+                                        <option value="">Selecione</option>
+                                        <option value="male">Masculino</option>
+                                        <option value="female">Feminino</option>
+                                        <option value="other">Outro</option>
+                                    </select>
+                                    <Transition name="fade-slide">
+                                        <p v-if="hasFieldError('gender') && isFieldTouched('gender')" id="gender-error" class="mt-1 flex items-center gap-1 text-xs text-red-600">
+                                            <span class="material-icons shrink-0 text-[14px] leading-none text-red-500" aria-hidden="true">error_outline</span>{{ getFriendlyFieldError('gender') }}
+                                        </p>
+                                    </Transition>
                                 </div>
                             </div>
 
-                            <form @submit.prevent="handleSubmit" class="space-y-2 lg:space-y-3">
-
-                                <!-- Campo Nome -->
-                                <div class="space-y-0.5">
-                                    <Label for="name" class="text-sm font-bold text-gray-700 flex items-center gap-2">
-                                        <svg class="w-3 h-3 text-black" fill="none" stroke="currentColor"
-                                            viewBox="0 0 24 24" aria-hidden="true">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z">
-                                            </path>
-                                        </svg>
-                                        Nome completo
-                                    </Label>
-                                    <div class="relative">
-                                        <Input id="name" type="text" required autofocus :tabindex="1"
-                                            autocomplete="name" name="name" placeholder="Digite seu nome completo"
-                                            :model-value="formData.name"
-                                            @update:model-value="updateField('name', $event)"
-                                            @blur="touchField('name')" :class="[
-                                                'h-9 lg:h-10 bg-gradient-to-r from-gray-50/90 to-white/90 border-2 rounded-lg lg:rounded-xl px-3 lg:px-4 text-sm placeholder:text-gray-400 focus:bg-white focus:shadow-lg focus:shadow-primary/10 transition-all duration-300 hover:border-gray-300 hover:shadow-md',
-                                                hasFieldError('name') && isFieldTouched('name')
-                                                    ? 'border-red-500 focus:border-red-500'
-                                                    : 'border-gray-200/50 focus:border-primary'
-                                            ]" :aria-invalid="hasFieldError('name') && isFieldTouched('name')"
-                                            :aria-describedby="hasFieldError('name') && isFieldTouched('name') ? 'name-error' : undefined" />
-                                    </div>
-                                    <InputError v-if="hasFieldError('name') && isFieldTouched('name')"
-                                        :message="getFieldError('name')" id="name-error" />
+                            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                <div>
+                                    <Label for="password" class="mb-2 block text-[11px] font-bold uppercase tracking-[0.08em] text-gray-500">Senha</Label>
+                                    <Input id="password" type="password" required :tabindex="6" autocomplete="new-password" name="password"
+                                        placeholder="Mínimo 8 caracteres" :model-value="formData.password"
+                                        @update:model-value="updateField('password', $event)" @blur="touchField('password')"
+                                        :class="[
+                                            'h-11 rounded-lg border-0 bg-gray-100 px-4 text-sm shadow-inner placeholder:text-gray-400 transition-all duration-200 focus-visible:ring-2 focus-visible:ring-teal-500',
+                                            hasFieldError('password') && isFieldTouched('password') ? 'bg-red-50/70 ring-2 ring-red-300' : ''
+                                        ]"
+                                        :aria-invalid="hasFieldError('password') && isFieldTouched('password')"
+                                        :aria-describedby="hasFieldError('password') && isFieldTouched('password') ? 'password-error' : undefined" />
+                                    <Transition name="fade-slide">
+                                        <p v-if="hasFieldError('password') && isFieldTouched('password')" id="password-error" class="mt-1 flex items-center gap-1 text-xs text-red-600">
+                                            <span class="material-icons shrink-0 text-[14px] leading-none text-red-500" aria-hidden="true">error_outline</span>{{ getFriendlyFieldError('password') }}
+                                        </p>
+                                    </Transition>
                                 </div>
 
-                                <!-- Campo Email -->
-                                <div class="space-y-0.5">
-                                    <Label for="email" class="text-sm font-bold text-gray-700 flex items-center gap-2">
-                                        <svg class="w-3 h-3 text-black" fill="none" stroke="currentColor"
-                                            viewBox="0 0 24 24" aria-hidden="true">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z">
-                                            </path>
-                                        </svg>
-                                        E-mail
-                                    </Label>
-                                    <div class="relative">
-                                        <Input id="email" type="email" required :tabindex="2" autocomplete="email"
-                                            name="email" placeholder="seu@email.com" :model-value="formData.email"
-                                            @update:model-value="updateField('email', $event)"
-                                            @blur="touchField('email')" :class="[
-                                                'h-9 lg:h-10 bg-gradient-to-r from-gray-50/90 to-white/90 border-2 rounded-lg lg:rounded-xl px-3 lg:px-4 text-sm placeholder:text-gray-400 focus:bg-white focus:shadow-lg focus:shadow-primary/10 transition-all duration-300 hover:border-gray-300 hover:shadow-md',
-                                                hasFieldError('email') && isFieldTouched('email')
-                                                    ? 'border-red-500 focus:border-red-500'
-                                                    : 'border-gray-200/50 focus:border-primary'
-                                            ]" :aria-invalid="hasFieldError('email') && isFieldTouched('email')"
-                                            :aria-describedby="hasFieldError('email') && isFieldTouched('email') ? 'email-error' : undefined" />
-                                    </div>
-                                    <InputError v-if="hasFieldError('email') && isFieldTouched('email')"
-                                        :message="getFieldError('email')" id="email-error" />
+                                <div>
+                                    <Label for="password_confirmation" class="mb-2 block text-[11px] font-bold uppercase tracking-[0.08em] text-gray-500">Confirmar Senha</Label>
+                                    <Input id="password_confirmation" type="password" required :tabindex="7" autocomplete="new-password" name="password_confirmation"
+                                        placeholder="Digite novamente" :model-value="formData.password_confirmation"
+                                        @update:model-value="updateField('password_confirmation', $event)" @blur="touchField('password_confirmation')"
+                                        :class="[
+                                            'h-11 rounded-lg border-0 bg-gray-100 px-4 text-sm shadow-inner placeholder:text-gray-400 transition-all duration-200 focus-visible:ring-2 focus-visible:ring-teal-500',
+                                            hasFieldError('password_confirmation') && isFieldTouched('password_confirmation') ? 'bg-red-50/70 ring-2 ring-red-300' : ''
+                                        ]"
+                                        :aria-invalid="hasFieldError('password_confirmation') && isFieldTouched('password_confirmation')"
+                                        :aria-describedby="hasFieldError('password_confirmation') && isFieldTouched('password_confirmation') ? 'password_confirmation-error' : undefined" />
+                                    <Transition name="fade-slide">
+                                        <p v-if="hasFieldError('password_confirmation') && isFieldTouched('password_confirmation')" id="password_confirmation-error" class="mt-1 flex items-center gap-1 text-xs text-red-600">
+                                            <span class="material-icons shrink-0 text-[14px] leading-none text-red-500" aria-hidden="true">error_outline</span>{{ getFriendlyFieldError('password_confirmation') }}
+                                        </p>
+                                    </Transition>
                                 </div>
+                            </div>
 
-                                <!-- Campos Data de Nascimento e Gênero lado a lado -->
-                                <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 lg:gap-3">
-                                    <!-- Campo Data de Nascimento -->
-                                    <div class="space-y-0.5">
-                                        <Label for="date_of_birth"
-                                            class="text-sm font-bold text-gray-700 flex items-center gap-2">
-                                            <svg class="w-3 h-3 text-black" fill="none" stroke="currentColor"
-                                                viewBox="0 0 24 24" aria-hidden="true">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
-                                                </path>
-                                            </svg>
-                                            Data de Nascimento
-                                        </Label>
-                                        <div class="relative">
-                                            <Input id="date_of_birth" type="text" required :tabindex="3"
-                                                name="date_of_birth" placeholder="dd/mm/aaaa" maxlength="10"
-                                                :model-value="formData.date_of_birth"
-                                                @update:model-value="handleDateInput"
-                                                @blur="touchField('date_of_birth')" :class="[
-                                                    'h-9 lg:h-10 bg-gradient-to-r from-gray-50/90 to-white/90 border-2 rounded-lg lg:rounded-xl px-3 lg:px-4 text-sm placeholder:text-gray-400 focus:bg-white focus:shadow-lg focus:shadow-primary/10 transition-all duration-300 hover:border-gray-300 hover:shadow-md',
-                                                    hasFieldError('date_of_birth') && isFieldTouched('date_of_birth')
-                                                        ? 'border-red-500 focus:border-red-500'
-                                                        : 'border-gray-200/50 focus:border-primary'
-                                                ]"
-                                                :aria-invalid="hasFieldError('date_of_birth') && isFieldTouched('date_of_birth')"
-                                                :aria-describedby="hasFieldError('date_of_birth') && isFieldTouched('date_of_birth') ? 'date_of_birth-error' : undefined" />
-                                        </div>
-                                        <InputError v-if="hasFieldError('date_of_birth') && isFieldTouched('date_of_birth')"
-                                            :message="getFieldError('date_of_birth')" id="date_of_birth-error" />
-                                    </div>
-
-                                    <!-- Campo Gênero -->
-                                    <div class="space-y-0.5">
-                                        <Label for="gender"
-                                            class="text-sm font-bold text-gray-700 flex items-center gap-2">
-                                            <svg class="w-3 h-3 text-black" fill="none" stroke="currentColor"
-                                                viewBox="0 0 24 24" aria-hidden="true">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z">
-                                                </path>
-                                            </svg>
-                                            Gênero
-                                        </Label>
-                                        <div class="relative">
-                                            <select id="gender" required :tabindex="4"
-                                                name="gender" :value="formData.gender"
-                                                @change="updateField('gender', ($event.target as HTMLSelectElement).value)"
-                                                @blur="touchField('gender')" :class="[
-                                                    'h-9 lg:h-10 bg-gradient-to-r from-gray-50/90 to-white/90 border-2 rounded-lg lg:rounded-xl px-3 lg:px-4 text-sm focus:bg-white focus:shadow-lg focus:shadow-primary/10 transition-all duration-300 hover:border-gray-300 hover:shadow-md w-full',
-                                                    hasFieldError('gender') && isFieldTouched('gender')
-                                                        ? 'border-red-500 focus:border-red-500'
-                                                        : 'border-gray-200/50 focus:border-primary'
-                                                ]"
-                                                :aria-invalid="hasFieldError('gender') && isFieldTouched('gender')"
-                                                :aria-describedby="hasFieldError('gender') && isFieldTouched('gender') ? 'gender-error' : undefined">
-                                                <option value="">Selecione seu gênero</option>
-                                                <option value="male">Masculino</option>
-                                                <option value="female">Feminino</option>
-                                                <option value="other">Outro</option>
-                                            </select>
-                                        </div>
-                                        <InputError v-if="hasFieldError('gender') && isFieldTouched('gender')"
-                                            :message="getFieldError('gender')" id="gender-error" />
-                                    </div>
+                            <div>
+                                <div class="flex items-start gap-3 rounded-xl bg-gray-50 p-3">
+                                    <input id="consent_telemedicine" type="checkbox" required :tabindex="8"
+                                        :checked="formData.consent_telemedicine"
+                                        @change="updateField('consent_telemedicine', ($event.target as HTMLInputElement).checked)"
+                                        @blur="touchField('consent_telemedicine')"
+                                        :class="[
+                                            'mt-1 h-4 w-4 rounded border border-gray-300 text-teal-700 focus:ring-teal-500',
+                                            hasFieldError('consent_telemedicine') && isFieldTouched('consent_telemedicine') ? 'border-red-400 bg-red-50/70 ring-1 ring-red-300' : ''
+                                        ]"
+                                        :aria-invalid="hasFieldError('consent_telemedicine') && isFieldTouched('consent_telemedicine')"
+                                        :aria-describedby="hasFieldError('consent_telemedicine') && isFieldTouched('consent_telemedicine') ? 'consent_telemedicine-error' : undefined" />
+                                    <label for="consent_telemedicine" class="cursor-pointer text-sm leading-relaxed text-gray-600">
+                                        Concordo com os
+                                        <a href="/terms" target="_blank" class="font-semibold text-teal-700 hover:text-teal-800">Termos de Serviço</a>
+                                        e
+                                        <a href="/privacy" target="_blank" class="font-semibold text-teal-700 hover:text-teal-800">Política de Privacidade</a>
+                                        conforme a LGPD e autorizo o uso da telemedicina.
+                                    </label>
                                 </div>
+                                <Transition name="fade-slide">
+                                    <p v-if="hasFieldError('consent_telemedicine') && isFieldTouched('consent_telemedicine')" id="consent_telemedicine-error" class="mt-1 flex items-center gap-1 text-xs text-red-600">
+                                        <span class="material-icons shrink-0 text-[14px] leading-none text-red-500" aria-hidden="true">error_outline</span>{{ getFriendlyFieldError('consent_telemedicine') }}
+                                    </p>
+                                </Transition>
+                            </div>
 
-                                <!-- Campo Telefone -->
-                                <div class="space-y-0.5">
-                                    <Label for="phone_number"
-                                        class="text-sm font-bold text-gray-700 flex items-center gap-2">
-                                        <svg class="w-3 h-3 text-black" fill="none" stroke="currentColor"
-                                            viewBox="0 0 24 24" aria-hidden="true">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z">
-                                            </path>
-                                        </svg>
-                                        Telefone
-                                    </Label>
-                                    <div class="relative">
-                                        <Input id="phone_number" type="tel" required :tabindex="5"
-                                            name="phone_number" placeholder="(11) 99999-9999"
-                                            :model-value="formData.phone_number"
-                                            @update:model-value="updateField('phone_number', $event)"
-                                            @blur="touchField('phone_number')" :class="[
-                                                'h-9 lg:h-10 bg-gradient-to-r from-gray-50/90 to-white/90 border-2 rounded-lg lg:rounded-xl px-3 lg:px-4 text-sm placeholder:text-gray-400 focus:bg-white focus:shadow-lg focus:shadow-primary/10 transition-all duration-300 hover:border-gray-300 hover:shadow-md',
-                                                hasFieldError('phone_number') && isFieldTouched('phone_number')
-                                                    ? 'border-red-500 focus:border-red-500'
-                                                    : 'border-gray-200/50 focus:border-primary'
-                                            ]"
-                                            :aria-invalid="hasFieldError('phone_number') && isFieldTouched('phone_number')"
-                                            :aria-describedby="hasFieldError('phone_number') && isFieldTouched('phone_number') ? 'phone_number-error' : undefined" />
+                            <div class="space-y-2 pt-1">
+                                <!--
+                                    :disabled="isSubmitting" (não !canSubmit): o clique deve sempre
+                                    disparar submitForm(), que mostra toast com a razão específica
+                                    da falha (rate limit, campos faltando, etc.).
+                                -->
+                                <Button
+                                    type="submit"
+                                    :disabled="isSubmitting"
+                                    :tabindex="9"
+                                    class="mx-auto h-12 w-full max-w-xs rounded-full border-0 bg-teal-700 text-base font-bold text-white shadow-lg transition-all duration-300 hover:scale-[1.02] hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
+                                    :aria-describedby="rateLimit.remainingAttempts < 3 ? 'rate-limit-warning' : undefined"
+                                >
+                                    <div class="flex items-center justify-center gap-2">
+                                        <LoaderCircle v-if="isSubmitting" class="h-4 w-4 animate-spin" aria-hidden="true" />
+                                        <span>{{ isSubmitting ? 'Criando conta...' : 'Criar conta' }}</span>
                                     </div>
-                                    <InputError v-if="hasFieldError('phone_number') && isFieldTouched('phone_number')"
-                                        :message="getFieldError('phone_number')" id="phone_number-error" />
-                                </div>
+                                </Button>
 
-                                <!-- Campo Senha -->
-                                <div class="space-y-0.5">
-                                    <Label for="password"
-                                        class="text-sm font-bold text-gray-700 flex items-center gap-2">
-                                        <svg class="w-3 h-3 text-black" fill="none" stroke="currentColor"
-                                            viewBox="0 0 24 24" aria-hidden="true">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z">
-                                            </path>
-                                        </svg>
-                                        Senha
-                                    </Label>
-                                    <div class="relative">
-                                        <Input id="password" type="password" required :tabindex="6"
-                                            autocomplete="new-password" name="password"
-                                            placeholder="Mínimo 8 caracteres" :model-value="formData.password"
-                                            @update:model-value="updateField('password', $event)"
-                                            @blur="touchField('password')" :class="[
-                                                'h-9 lg:h-10 bg-gradient-to-r from-gray-50/90 to-white/90 border-2 rounded-lg lg:rounded-xl px-3 lg:px-4 text-sm placeholder:text-gray-400 focus:bg-white focus:shadow-lg focus:shadow-primary/10 transition-all duration-300 hover:border-gray-300 hover:shadow-md',
-                                                hasFieldError('password') && isFieldTouched('password')
-                                                    ? 'border-red-500 focus:border-red-500'
-                                                    : 'border-gray-200/50 focus:border-primary'
-                                            ]" :aria-invalid="hasFieldError('password') && isFieldTouched('password')"
-                                            :aria-describedby="hasFieldError('password') && isFieldTouched('password') ? 'password-error' : undefined" />
-                                    </div>
-                                    <InputError v-if="hasFieldError('password') && isFieldTouched('password')"
-                                        :message="getFieldError('password')" id="password-error" />
+                                <div v-if="rateLimit.remainingAttempts < 3 && rateLimit.remainingAttempts > 0" id="rate-limit-warning" class="flex items-center justify-center gap-1 text-center text-sm text-orange-600" role="alert" aria-live="polite">
+                                    <span class="material-icons shrink-0 text-[16px] leading-none text-orange-500" aria-hidden="true">warning</span>
+                                    <span>{{ rateLimit.remainingAttempts }} tentativa{{ rateLimit.remainingAttempts > 1 ? 's' : '' }} restantes</span>
                                 </div>
+                            </div>
+                        </form>
+                    </div>
 
-                                <!-- Campo Confirmar Senha -->
-                                <div class="space-y-0.5">
-                                    <Label for="password_confirmation"
-                                        class="text-sm font-bold text-gray-700 flex items-center gap-2">
-                                        <svg class="w-3 h-3 text-black" fill="none" stroke="currentColor"
-                                            viewBox="0 0 24 24" aria-hidden="true">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                        </svg>
-                                        Confirmar senha
-                                    </Label>
-                                    <div class="relative">
-                                        <Input id="password_confirmation" type="password" required :tabindex="7"
-                                            autocomplete="new-password" name="password_confirmation"
-                                            placeholder="Digite a senha novamente"
-                                            :model-value="formData.password_confirmation"
-                                            @update:model-value="updateField('password_confirmation', $event)"
-                                            @blur="touchField('password_confirmation')" :class="[
-                                                'h-9 lg:h-10 bg-gradient-to-r from-gray-50/90 to-white/90 border-2 rounded-lg lg:rounded-xl px-3 lg:px-4 text-sm placeholder:text-gray-400 focus:bg-white focus:shadow-lg focus:shadow-primary/10 transition-all duration-300 hover:border-gray-300 hover:shadow-md',
-                                                hasFieldError('password_confirmation') && isFieldTouched('password_confirmation')
-                                                    ? 'border-red-500 focus:border-red-500'
-                                                    : 'border-gray-200/50 focus:border-primary'
-                                            ]"
-                                            :aria-invalid="hasFieldError('password_confirmation') && isFieldTouched('password_confirmation')"
-                                            :aria-describedby="hasFieldError('password_confirmation') && isFieldTouched('password_confirmation') ? 'password_confirmation-error' : undefined" />
-                                    </div>
-                                    <InputError
-                                        v-if="hasFieldError('password_confirmation') && isFieldTouched('password_confirmation')"
-                                        :message="getFieldError('password_confirmation')"
-                                        id="password_confirmation-error" />
-                                </div>
+                    <div class="hidden grid-cols-1 gap-4 md:grid-cols-2 lg:grid">
+                        <div class="rounded-3xl bg-white/85 p-5 shadow-md ring-1 ring-gray-200/60 transition-transform duration-300 hover:-translate-y-1">
+                            <div class="mb-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-teal-100 text-teal-700">
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8V4m0 0l-3 3m3-3l3 3m-9 9a6 6 0 1112 0v1a2 2 0 11-4 0v-1a2 2 0 10-4 0v1a2 2 0 11-4 0v-1z" />
+                                </svg>
+                            </div>
+                            <p class="text-2xl font-bold text-gray-800">Privacidade Total</p>
+                            <p class="mt-2 text-sm text-gray-600">Seus dados são criptografados e seguem rigorosamente a LGPD.</p>
+                        </div>
 
-                                <!-- Checkbox Consentimento Telemedicina -->
-                                <div class="space-y-0.5">
-                                    <div class="flex items-start gap-3">
-                                        <input id="consent_telemedicine" type="checkbox" required :tabindex="7"
-                                            :checked="formData.consent_telemedicine"
-                                            @change="updateField('consent_telemedicine', ($event.target as HTMLInputElement).checked)"
-                                            @blur="touchField('consent_telemedicine')" :class="[
-                                                'mt-1 h-4 w-4 rounded border-2 focus:ring-2 focus:ring-primary',
-                                                hasFieldError('consent_telemedicine') && isFieldTouched('consent_telemedicine')
-                                                    ? 'border-red-500'
-                                                    : 'border-gray-300'
-                                            ]"
-                                            :aria-invalid="hasFieldError('consent_telemedicine') && isFieldTouched('consent_telemedicine')"
-                                            :aria-describedby="hasFieldError('consent_telemedicine') && isFieldTouched('consent_telemedicine') ? 'consent_telemedicine-error' : undefined" />
-                                        <div class="text-xs text-gray-600 leading-relaxed">
-                                            <label for="consent_telemedicine" class="cursor-pointer">
-                                                Concordo com os
-                                                <a href="/terms" target="_blank"
-                                                    class="text-primary hover:text-primary/80 underline underline-offset-2 hover:underline-offset-4 transition-all duration-300">
-                                                    Termos de Serviço
-                                                </a>
-                                                e
-                                                <a href="/privacy" target="_blank"
-                                                    class="text-primary hover:text-primary/80 underline underline-offset-2 hover:underline-offset-4 transition-all duration-300">
-                                                    Política de Privacidade
-                                                </a>
-                                                conforme a LGPD e autorizo o uso da telemedicina.
-                                            </label>
-                                        </div>
-                                    </div>
-                                    <InputError
-                                        v-if="hasFieldError('consent_telemedicine') && isFieldTouched('consent_telemedicine')"
-                                        :message="getFieldError('consent_telemedicine')"
-                                        id="consent_telemedicine-error" />
-                                </div>
-
-                                <!-- Botão de Registro -->
-                                <div class="">
-                                    <Button type="submit" :disabled="!canSubmit" :tabindex="8"
-                                        class="w-full h-9 lg:h-10 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-black text-sm font-bold rounded-lg lg:rounded-xl shadow-xl hover:shadow-2xl transform hover:scale-[1.02] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none border-2 border-primary/20 hover:border-primary/30"
-                                        :aria-describedby="rateLimit.remainingAttempts < 3 ? 'rate-limit-warning' : undefined">
-                                        <div class="flex items-center justify-center gap-2">
-                                            <LoaderCircle v-if="isSubmitting" class="w-4 h-4 animate-spin"
-                                                aria-hidden="true" />
-                                            <svg v-if="!isSubmitting" class="w-4 h-4" fill="none" stroke="currentColor"
-                                                viewBox="0 0 24 24" aria-hidden="true">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                    d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                                            </svg>
-                                            <span class="font-bold">
-                                                {{ isSubmitting ? 'Criando conta...' : 'Criar conta' }}
-                                            </span>
-                                        </div>
-                                    </Button>
-
-                                    <!-- Aviso de rate limit -->
-                                    <div v-if="rateLimit.remainingAttempts < 3 && rateLimit.remainingAttempts > 0"
-                                        id="rate-limit-warning" class="mt-2 text-sm text-orange-600 text-center"
-                                        role="alert" aria-live="polite">
-                                        ⚠️ Restam {{ rateLimit.remainingAttempts }} tentativa{{
-                                            rateLimit.remainingAttempts > 1 ? 's' : '' }}
-                                    </div>
-                                </div>
-                            </form>
+                        <div class="rounded-3xl bg-white/85 p-5 shadow-md ring-1 ring-gray-200/60 transition-transform duration-300 hover:-translate-y-1">
+                            <div class="mb-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-orange-100 text-orange-700">
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                </svg>
+                            </div>
+                            <p class="text-2xl font-bold text-gray-800">Atendimento Ágil</p>
+                            <p class="mt-2 text-sm text-gray-600">Conecte-se com especialistas em minutos após a validação.</p>
                         </div>
                     </div>
-                </div>
 
-                <!-- Imagem central - apenas em desktop -->
-                <div class="hidden lg:flex relative w-[400px] h-[400px] items-center justify-center">
-                    <!-- Container principal com gradiente de fundo sutil -->
-                    <div class="relative w-full h-full flex items-center justify-center">
-                        <!-- Gradiente de fundo sutil -->
-                        <div
-                            class="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/10 rounded-full blur-3xl">
-                        </div>
-
-                        <!-- Bolas decorativas estáticas -->
-                        <div class="absolute top-8 left-8 w-16 h-16 bg-primary/20 rounded-full shadow-lg"></div>
-                        <div class="absolute top-16 left-16 w-12 h-12 bg-primary/15 rounded-full shadow-md"></div>
-
-                        <div class="absolute bottom-12 right-12 w-20 h-20 bg-primary/18 rounded-full shadow-lg"></div>
-                        <div class="absolute bottom-20 right-20 w-14 h-14 bg-primary/12 rounded-full shadow-md"></div>
-
-                        <div class="absolute top-1/4 right-8 w-10 h-10 bg-primary/25 rounded-full shadow-md"></div>
-                        <div class="absolute bottom-1/4 left-8 w-8 h-8 bg-primary/20 rounded-full shadow-sm"></div>
-
-                        <div class="absolute top-1/2 left-4 w-6 h-6 bg-primary/30 rounded-full shadow-sm"></div>
-                        <div class="absolute top-1/2 right-4 w-7 h-7 bg-primary/22 rounded-full shadow-sm"></div>
-
-                        <!-- Imagem central -->
-                        <div class="relative z-10 flex items-center justify-center">
-                            <img :src="patientDoodleImage" alt="Patient Doodle"
-                                class="w-[420px] h-[420px] object-contain drop-shadow-2xl" />
-                        </div>
+                    <div class="text-center text-sm text-gray-600">
+                        Já tem uma conta?
+                        <TextLink :href="login()" class="ml-1 font-semibold text-teal-700 hover:text-teal-800" :tabindex="10">
+                            Faça login aqui
+                        </TextLink>
                     </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Link para login -->
-        <div class="text-center relative z-10">
-            <div
-                class="inline-flex items-center gap-1 bg-white/80 backdrop-blur-md rounded-lg lg:rounded-xl px-2 lg:px-3 py-1 lg:py-2 shadow-lg border border-white/30">
-                <svg class="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1">
-                    </path>
-                </svg>
-                <p class="text-gray-600 text-xs lg:text-sm font-medium">
-                    Já tem uma conta?
-                    <TextLink :href="login()"
-                        class="text-black hover:text-black/80 font-bold underline underline-offset-4 hover:underline-offset-2 transition-all duration-300 ml-1"
-                        :tabindex="9">
-                        Faça login aqui
-                    </TextLink>
-                </p>
+                </section>
             </div>
         </div>
     </AuthBase>
 </template>
+
+<style scoped>
+.animate-fade-up {
+    animation: fadeUp 500ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.animate-fade-up-delayed {
+    animation: fadeUp 580ms cubic-bezier(0.22, 1, 0.36, 1) 80ms both;
+}
+
+@keyframes fadeUp {
+    from {
+        opacity: 0;
+        transform: translateY(18px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+    transition: all 220ms ease;
+}
+
+.fade-slide-enter-from,
+.fade-slide-leave-to {
+    opacity: 0;
+    transform: translateY(-8px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .animate-fade-up,
+    .animate-fade-up-delayed {
+        animation: none;
+    }
+
+    .fade-slide-enter-active,
+    .fade-slide-leave-active {
+        transition: none;
+    }
+}
+</style>

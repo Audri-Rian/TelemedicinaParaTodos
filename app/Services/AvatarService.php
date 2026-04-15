@@ -214,6 +214,29 @@ class AvatarService
     }
 
     /**
+     * Resolver o caminho completo no disco para servir um avatar.
+     *
+     * @return array{path: string, mimeType: string}|null
+     */
+    public function resolveAvatarFile(string $userId, string $filename): ?array
+    {
+        $filename = basename($filename);
+        $userId = basename($userId);
+
+        $path = "avatars/{$userId}/{$filename}";
+        $disk = Storage::disk('public');
+
+        if (! $disk->exists($path)) {
+            return null;
+        }
+
+        return [
+            'path' => $disk->path($path),
+            'mimeType' => $disk->mimeType($path),
+        ];
+    }
+
+    /**
      * Obter caminho do thumbnail a partir do caminho do avatar
      *
      * @param string $avatarPath

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { login, register, home } from '@/routes';
+import { login, home } from '@/routes';
 import { Head, Link } from '@inertiajs/vue3';
 import { useAuth, useRoleRoutes } from '@/composables/auth';
 import AppLogoIcon from '@/components/AppLogoIcon.vue';
@@ -13,6 +13,8 @@ import { ref, onMounted, onUnmounted } from 'vue';
 
 const { isAuthenticated } = useAuth();
 const { dashboardRoute } = useRoleRoutes();
+const patientRegisterUrl = '/register/patient';
+const doctorRegisterUrl = '/register/doctor';
 const isMenuOpen = ref(false);
 const activeMenu = ref<string | null>(null);
 let closeTimer: ReturnType<typeof setTimeout> | null = null;
@@ -593,10 +595,16 @@ const testimonials = [
                             <Link :href="login()" class="text-sm font-bold text-muted-foreground hover:text-foreground">
                                 Entrar
                             </Link>
-                            <Link :href="register()">
+                            <Link :href="patientRegisterUrl">
                                 <Button size="sm"
                                     class="rounded-full bg-primary px-6 text-primary-foreground hover:bg-primary/90 font-bold">
-                                    Registre-se
+                                    Registre-se para pacientes
+                                </Button>
+                            </Link>
+                            <Link :href="doctorRegisterUrl">
+                                <Button size="sm"
+                                    class="rounded-full border border-primary bg-transparent px-6 text-primary hover:bg-primary/10 font-bold">
+                                    Faça parte da equipe
                                 </Button>
                             </Link>
                         </template>
@@ -650,10 +658,15 @@ const testimonials = [
                                     @click="isMenuOpen = false">
                                     Entrar
                                 </Link>
-                                <Link :href="register()"
+                                <Link :href="patientRegisterUrl"
                                     class="block rounded-md bg-primary px-3 py-2 text-center text-base font-medium text-primary-foreground hover:bg-primary/90"
                                     @click="isMenuOpen = false">
-                                    Registre-se
+                                    Registre-se para pacientes
+                                </Link>
+                                <Link :href="doctorRegisterUrl"
+                                    class="block rounded-md border border-primary px-3 py-2 text-center text-base font-medium text-primary hover:bg-primary/10"
+                                    @click="isMenuOpen = false">
+                                    Faça parte da equipe
                                 </Link>
                             </template>
                         </div>
@@ -702,7 +715,7 @@ const testimonials = [
                 <div class="mt-auto flex items-center justify-between gap-4 pt-8">
                     <!-- Left Side Buttons -->
                     <div class="flex flex-wrap items-center gap-4">
-                        <Link v-if="!isAuthenticated" :href="register()">
+                        <Link v-if="!isAuthenticated" :href="patientRegisterUrl">
                             <Button size="lg"
                                 class="rounded-full bg-white px-8 py-6 text-base font-bold text-gray-900 transition-all hover:bg-gray-100 hover:scale-105 shadow-xl">
                                 Agendar agora

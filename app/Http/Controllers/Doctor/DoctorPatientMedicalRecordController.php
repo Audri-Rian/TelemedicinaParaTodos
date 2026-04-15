@@ -10,6 +10,7 @@ use App\Http\Requests\Doctor\MedicalRecords\StoreMedicalCertificateRequest;
 use App\Http\Requests\Doctor\MedicalRecords\StorePrescriptionRequest;
 use App\Http\Requests\Doctor\MedicalRecords\StoreVitalSignRequest;
 use App\Models\Appointments;
+use App\Models\PartnerIntegration;
 use App\Models\Patient;
 use App\Services\MedicalRecordService;
 use Illuminate\Http\Request;
@@ -50,6 +51,11 @@ class DoctorPatientMedicalRecordController extends Controller
             ],
             'mode' => 'doctor',
         ];
+
+        $payload['lab_partners'] = PartnerIntegration::active()
+            ->laboratories()
+            ->get(['id', 'name', 'slug'])
+            ->toArray();
 
         return Inertia::render('Doctor/PatientMedicalRecord', $payload);
     }

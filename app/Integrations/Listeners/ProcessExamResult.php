@@ -2,6 +2,7 @@
 
 namespace App\Integrations\Listeners;
 
+use App\Enums\NotificationType;
 use App\Integrations\Events\ExamResultReceived;
 use App\Services\NotificationService;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -31,28 +32,28 @@ class ProcessExamResult implements ShouldQueue
         // Notificar médico
         if ($examination->doctor?->user) {
             $this->notificationService->create(
-                userId: $examination->doctor->user->id,
-                type: 'exam_result_received',
-                title: 'Resultado de exame recebido',
-                message: "O resultado do exame \"{$examination->name}\" do paciente {$examination->patient?->user?->name ?? 'Paciente'} foi recebido automaticamente do laboratório.",
-                data: [
+                type: NotificationType::EXAM_RESULT_RECEIVED,
+                metadata: [
                     'examination_id' => $examination->id,
+                    'examination_name' => $examination->name,
                     'patient_id' => $examination->patient_id,
+                    'patient_name' => $examination->patient?->user?->name ?? 'Paciente',
                     'partner_id' => $event->partner->id,
+                    'partner_name' => $event->partner->name,
                 ],
+                user: $examination->doctor->user,
             );
         }
 
         // Notificar paciente
         if ($examination->patient?->user) {
             $this->notificationService->create(
-                userId: $examination->patient->user->id,
-                type: 'exam_result_received',
-                title: 'Resultado de exame disponível',
-                message: "O resultado do seu exame \"{$examination->name}\" já está disponível no prontuário.",
-                data: [
+                type: NotificationType::EXAM_RESULT_RECEIVED,
+                metadata: [
                     'examination_id' => $examination->id,
+                    'examination_name' => $examination->name,
                 ],
+                user: $examination->patient->user,
             );
         }
     }

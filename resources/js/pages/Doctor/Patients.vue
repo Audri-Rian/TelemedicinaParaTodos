@@ -298,7 +298,7 @@ const hasResults = computed(() => filteredUpcoming.value.length > 0 || filteredH
                                 Iniciar vídeo
                             </Link>
                             <Link
-                                :href="doctorRoutes.patient.details({ id: patient.id }).url"
+                                :href="doctorRoutes.patient.details({ patient: patient.id }).url"
                                 class="flex-1 rounded-xl border border-gray-200 px-4 py-2 text-center text-sm font-semibold text-gray-700 transition hover:border-primary/40 hover:text-primary"
                             >
                                 Prontuário
@@ -353,7 +353,7 @@ const hasResults = computed(() => filteredUpcoming.value.length > 0 || filteredH
                             </div>
                             <div class="flex gap-2">
                                 <Link
-                                    :href="doctorRoutes.patient.details({ id: patient.id }).url"
+                                    :href="doctorRoutes.patient.details({ patient: patient.id }).url"
                                     class="rounded-xl bg-primary/20 px-4 py-2 text-sm font-semibold text-primary transition hover:bg-primary/30"
                                 >
                                     Abrir prontuário

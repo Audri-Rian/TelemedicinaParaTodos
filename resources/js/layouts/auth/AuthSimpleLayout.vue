@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import AppLogoIcon from '@/components/AppLogoIcon.vue';
+import ToastContainer from '@/components/ToastContainer.vue';
 import { home } from '@/routes';
 import { Link } from '@inertiajs/vue3';
 
@@ -11,6 +12,8 @@ defineProps<{
 
 <template>
     <div class="min-h-svh bg-background">
+        <!-- Toasts globais (feedback de erros/sucessos do formulário) -->
+        <ToastContainer />
         <!-- Header com logo e nome no canto superior esquerdo -->
         <div class="absolute left-4 md:left-8 z-10">
             <Link :href="home()"

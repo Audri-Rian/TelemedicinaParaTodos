@@ -28,7 +28,7 @@ class DoctorConsultationDetailController extends Controller
             'doctor.user',
             'doctor.specializations',
             'prescriptions',
-            'examinations',
+            'examinations.partnerIntegration',
             'diagnoses',
             'clinicalNotes',
             'vitalSigns',
@@ -106,6 +106,13 @@ class DoctorConsultationDetailController extends Controller
                 'type' => $e->type,
                 'status' => $e->status,
                 'priority' => $e->metadata['priority'] ?? 'normal',
+                'source' => $e->source ?? 'internal',
+                'partner' => $e->partnerIntegration ? [
+                    'id' => $e->partnerIntegration->id,
+                    'name' => $e->partnerIntegration->name,
+                ] : null,
+                'results' => $e->results,
+                'completed_at' => $e->completed_at?->toIso8601String(),
             ]),
             'diagnoses' => $appointment->diagnoses->map(fn ($d) => [
                 'id' => $d->id,

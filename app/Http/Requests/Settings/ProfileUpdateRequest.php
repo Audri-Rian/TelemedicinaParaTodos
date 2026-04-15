@@ -27,6 +27,10 @@ class ProfileUpdateRequest extends FormRequest
                 'max:255',
                 Rule::unique(User::class)->ignore($this->user()->id),
             ],
+            // Identificadores de saúde (interoperabilidade)
+            'cns' => ['nullable', 'string', 'regex:/^\d{15}$/'],
+            'cpf' => ['nullable', 'string', 'regex:/^\d{11}$/'],
+            'cbo' => ['nullable', 'string', 'regex:/^\d{6}$/'],
             // Dados do Patient (segunda etapa de autenticação)
             'emergency_contact' => ['nullable', 'string', 'max:100'],
             'emergency_phone' => ['nullable', 'string', 'max:20'],

@@ -25,6 +25,8 @@ import {
     TestTube,
     Clock,
     FilePlus2,
+    Loader2,
+    RefreshCw,
 } from 'lucide-vue-next';
 
 interface DoctorSummary {
@@ -188,6 +190,7 @@ interface Props {
         mode?: 'patient' | 'doctor';
         viewer?: { id: string; name: string };
     };
+    lab_partners?: Array<{ id: string; name: string; slug: string }>;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -208,12 +211,28 @@ const props = withDefaults(defineProps<Props>(), {
         last_consultation_at: null,
     }),
     filters: () => ({}),
+    lab_partners: () => [],
 });
 
 const { canAccessPatientRoute, canAccessDoctorRoute } = useRouteGuard();
 const { getInitials } = useInitials();
 const page = usePage();
 const isDoctorViewer = computed(() => props.context?.mode === 'doctor');
+
+// Sync de resultados de exames (médico)
+const syncingResults = ref(false);
+const handleSyncResults = () => {
+    if (!isDoctorViewer.value) return;
+    syncingResults.value = true;
+
+    // Buscar parceiros ativos do paciente e sincronizar cada um
+    router.reload({
+        only: ['examinations'],
+        onFinish: () => {
+            syncingResults.value = false;
+        },
+    });
+};
 
 onMounted(() => {
     if (isDoctorViewer.value) {
@@ -437,7 +456,17 @@ const examinationForm = useForm({
     justification: '',
     instructions: '',
     priority: 'normal',
+    partner_integration_id: '',
 });
+
+watch(
+    () => examinationForm.type,
+    (newType) => {
+        if (newType !== 'lab') {
+            examinationForm.partner_integration_id = '';
+        }
+    },
+);
 
 const noteForm = useForm({
     appointment_id: '',
@@ -936,6 +965,19 @@ const exportError = computed(() => page.props.errors?.export ?? null);
                                         <option value="urgent">Urgente</option>
                                     </select>
                                 </div>
+                                <div v-if="examinationForm.type === 'lab' && lab_partners.length > 0" class="flex flex-col gap-1">
+                                    <label class="text-sm font-medium text-gray-700">Laboratório parceiro</label>
+                                    <select
+                                        v-model="examinationForm.partner_integration_id"
+                                        class="rounded-md border border-gray-300 px-3 py-2 text-sm"
+                                    >
+                                        <option value="">Selecionar automaticamente</option>
+                                        <option v-for="partner in lab_partners" :key="partner.id" :value="partner.id">
+                                            {{ partner.name }}
+                                        </option>
+                                    </select>
+                                    <p class="text-xs text-gray-500">Opcional. Se vazio, o sistema escolhe automaticamente.</p>
+                                </div>
                                 <div class="md:col-span-2 flex flex-col gap-1">
                                     <label class="text-sm font-medium text-gray-700">Justificativa clínica</label>
                                     <Textarea
@@ -1324,32 +1366,59 @@ const exportError = computed(() => page.props.errors?.export ?? null);
                     </p>
                 </div>
 
-                <div v-if="activeTab === 'exames'" class="grid gap-4 md:grid-cols-2">
-                    <Card v-for="exam in examinations" :key="exam.id" class="border border-gray-200">
-                        <CardHeader>
-                            <CardTitle class="text-base text-gray-900">{{ exam.name }}</CardTitle>
-                            <p class="text-sm text-gray-600">
-                                Tipo: {{ formatStatus(exam.type) }} · Status: {{ formatStatus(exam.status) }}
-                            </p>
-                        </CardHeader>
-                        <CardContent class="space-y-2 text-sm text-gray-700">
-                            <p><span class="font-medium text-gray-900">Solicitado em:</span> {{ formatDate(exam.requested_at) }}</p>
-                            <p><span class="font-medium text-gray-900">Concluído em:</span> {{ formatDate(exam.completed_at) }}</p>
-                            <p><span class="font-medium text-gray-900">Resultado:</span> {{ exam.results?.summary || '—' }}</p>
-                            <Link
-                                v-if="exam.attachment_url"
-                                :href="exam.attachment_url"
-                                class="inline-flex items-center text-sm text-blue-600 hover:underline"
-                                target="_blank"
-                            >
-                                <FileText class="mr-1 h-4 w-4" />
-                                Ver laudo
-                            </Link>
-                        </CardContent>
-                    </Card>
-                    <p v-if="examinations.length === 0" class="text-sm text-gray-500">
-                        Nenhum exame encontrado.
-                    </p>
+                <div v-if="activeTab === 'exames'">
+                    <!-- Botão Atualizar resultados (apenas médico) -->
+                    <div v-if="isDoctorViewer" class="mb-4 flex justify-end">
+                        <button
+                            type="button"
+                            class="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50"
+                            :disabled="syncingResults"
+                            @click="handleSyncResults"
+                        >
+                            <Loader2 v-if="syncingResults" class="h-4 w-4 animate-spin" />
+                            <RefreshCw v-else class="h-4 w-4" />
+                            {{ syncingResults ? 'Atualizando...' : 'Atualizar resultados' }}
+                        </button>
+                    </div>
+
+                    <div class="grid gap-4 md:grid-cols-2">
+                        <Card v-for="exam in examinations" :key="exam.id" class="border border-gray-200">
+                            <CardHeader>
+                                <div class="flex items-start justify-between gap-2">
+                                    <CardTitle class="text-base text-gray-900">{{ exam.name }}</CardTitle>
+                                    <span v-if="exam.source === 'integration' && exam.partner" class="inline-flex shrink-0 items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700 border border-blue-200">
+                                        Recebido do {{ exam.partner.name }}
+                                    </span>
+                                </div>
+                                <p class="text-sm text-gray-600">
+                                    Tipo: {{ formatStatus(exam.type) }} · Status: {{ formatStatus(exam.status) }}
+                                    <span v-if="exam.source === 'integration' && exam.status !== 'completed'" class="ml-1 inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 border border-amber-200">
+                                        Aguardando resultado
+                                    </span>
+                                </p>
+                            </CardHeader>
+                            <CardContent class="space-y-2 text-sm text-gray-700">
+                                <p><span class="font-medium text-gray-900">Solicitado em:</span> {{ formatDate(exam.requested_at) }}</p>
+                                <p><span class="font-medium text-gray-900">Concluído em:</span> {{ formatDate(exam.completed_at) }}</p>
+                                <p><span class="font-medium text-gray-900">Resultado:</span> {{ exam.results?.summary || '—' }}</p>
+                                <p v-if="exam.received_from_partner_at" class="text-xs text-gray-500">
+                                    Recebido automaticamente em {{ formatDate(exam.received_from_partner_at) }}
+                                </p>
+                                <Link
+                                    v-if="exam.attachment_url"
+                                    :href="exam.attachment_url"
+                                    class="inline-flex items-center text-sm text-blue-600 hover:underline"
+                                    target="_blank"
+                                >
+                                    <FileText class="mr-1 h-4 w-4" />
+                                    Ver laudo
+                                </Link>
+                            </CardContent>
+                        </Card>
+                        <p v-if="examinations.length === 0" class="text-sm text-gray-500">
+                            Nenhum exame encontrado.
+                        </p>
+                    </div>
                 </div>
 
                 <div v-if="activeTab === 'documentos'" class="grid gap-6 lg:grid-cols-3">
