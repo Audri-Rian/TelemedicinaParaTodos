@@ -1,18 +1,32 @@
 <script setup lang="ts">
-import AppLayout from '@/layouts/AppLayout.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import AppLayout from '@/layouts/AppLayout.vue';
 import * as doctorRoutes from '@/routes/doctor';
 import * as integrationRoutes from '@/routes/doctor/integrations';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/vue3';
-import { ref, computed } from 'vue';
 import {
-    FlaskConical, Building2, Shield, ArrowLeft, RefreshCw,
-    CheckCircle2, XCircle, Clock, ArrowUpRight, ArrowDownLeft,
-    Loader2, Globe, KeyRound, Calendar, Mail, Copy, CheckCheck, Link2,
+    ArrowDownLeft,
+    ArrowLeft,
+    ArrowUpRight,
+    Building2,
+    Calendar,
+    CheckCheck,
+    CheckCircle2,
+    Clock,
+    Copy,
+    FlaskConical,
+    Globe,
+    KeyRound,
+    Loader2,
+    Mail,
+    RefreshCw,
+    Shield,
+    XCircle,
 } from 'lucide-vue-next';
+import { computed, ref } from 'vue';
 
 interface PartnerEvent {
     id: number;
@@ -61,38 +75,51 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 const getPartnerIcon = (type: string) => {
     switch (type) {
-        case 'laboratory': return FlaskConical;
-        case 'pharmacy': return Building2;
-        case 'insurance': return Shield;
-        default: return Building2;
+        case 'laboratory':
+            return FlaskConical;
+        case 'pharmacy':
+            return Building2;
+        case 'insurance':
+            return Shield;
+        default:
+            return Building2;
     }
 };
 
 const getStatusBadge = (status: string) => {
     switch (status) {
-        case 'active': return { label: 'Ativo', class: 'border-green-200 bg-green-50 text-green-800' };
-        case 'pending': return { label: 'Pendente', class: 'border-amber-200 bg-amber-50 text-amber-800' };
-        case 'error': return { label: 'Erro', class: 'border-red-200 bg-red-50 text-red-800' };
-        case 'inactive': return { label: 'Inativo', class: 'border-border bg-muted text-muted-foreground' };
-        default: return { label: status, class: 'border-border bg-muted text-muted-foreground' };
+        case 'active':
+            return { label: 'Ativo', class: 'border-green-200 bg-green-50 text-green-800' };
+        case 'pending':
+            return { label: 'Pendente', class: 'border-amber-200 bg-amber-50 text-amber-800' };
+        case 'error':
+            return { label: 'Erro', class: 'border-red-200 bg-red-50 text-red-800' };
+        case 'inactive':
+            return { label: 'Inativo', class: 'border-border bg-muted text-muted-foreground' };
+        default:
+            return { label: status, class: 'border-border bg-muted text-muted-foreground' };
     }
 };
 
 const getEventStatusIcon = (status: string) => {
     switch (status) {
-        case 'success': return { icon: CheckCircle2, class: 'text-green-600' };
-        case 'failed': return { icon: XCircle, class: 'text-red-600' };
-        case 'processing': return { icon: Loader2, class: 'text-amber-600 animate-spin' };
-        default: return { icon: Clock, class: 'text-muted-foreground' };
+        case 'success':
+            return { icon: CheckCircle2, class: 'text-green-600' };
+        case 'failed':
+            return { icon: XCircle, class: 'text-red-600' };
+        case 'processing':
+            return { icon: Loader2, class: 'text-amber-600 animate-spin' };
+        default:
+            return { icon: Clock, class: 'text-muted-foreground' };
     }
 };
 
 const formatEventType = (type: string) => {
     const map: Record<string, string> = {
-        'exam_order_sent': 'Pedido de exame enviado',
-        'exam_result_received': 'Resultado de exame recebido',
-        'prescription_sent': 'Receita enviada',
-        'webhook_received': 'Webhook recebido',
+        exam_order_sent: 'Pedido de exame enviado',
+        exam_result_received: 'Resultado de exame recebido',
+        prescription_sent: 'Receita enviada',
+        webhook_received: 'Webhook recebido',
     };
     return map[type] ?? type;
 };
@@ -131,7 +158,9 @@ const copyToClipboard = async (text: string, field: string) => {
         document.body.removeChild(el);
     }
     copiedField.value = field;
-    setTimeout(() => { copiedField.value = null; }, 2000);
+    setTimeout(() => {
+        copiedField.value = null;
+    }, 2000);
 };
 
 const webhookUrl = computed(() => `${window.location.origin}/api/v1/public/webhooks/lab/${props.partner.slug}`);
@@ -143,19 +172,23 @@ const syncError = ref<string | null>(null);
 const handleSync = () => {
     syncing.value = true;
     syncError.value = null;
-    router.post(`/doctor/integrations/${props.partner.id}/sync`, {}, {
-        preserveScroll: true,
-        onSuccess: () => {
-            syncing.value = false;
+    router.post(
+        `/doctor/integrations/${props.partner.id}/sync`,
+        {},
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                syncing.value = false;
+            },
+            onError: () => {
+                syncing.value = false;
+                syncError.value = 'Falha ao sincronizar. Tente novamente em alguns instantes.';
+            },
+            onFinish: () => {
+                syncing.value = false;
+            },
         },
-        onError: () => {
-            syncing.value = false;
-            syncError.value = 'Falha ao sincronizar. Tente novamente em alguns instantes.';
-        },
-        onFinish: () => {
-            syncing.value = false;
-        },
-    });
+    );
 };
 </script>
 
@@ -177,19 +210,18 @@ const handleSync = () => {
                     <div>
                         <div class="flex items-center gap-3">
                             <h1 class="text-2xl font-bold text-foreground">{{ partner.name }}</h1>
-                            <Badge variant="outline" :class="getStatusBadge(partner.status).class" class="text-[10px] font-semibold uppercase tracking-wide">
+                            <Badge
+                                variant="outline"
+                                :class="getStatusBadge(partner.status).class"
+                                class="text-[10px] font-semibold tracking-wide uppercase"
+                            >
                                 {{ getStatusBadge(partner.status).label }}
                             </Badge>
                         </div>
                         <p class="mt-0.5 text-sm text-muted-foreground">{{ partner.slug }} · FHIR {{ partner.fhir_version }}</p>
                     </div>
                 </div>
-                <Button
-                    v-if="partner.status === 'active'"
-                    :disabled="syncing"
-                    @click="handleSync"
-                    class="gap-2"
-                >
+                <Button v-if="partner.status === 'active'" :disabled="syncing" @click="handleSync" class="gap-2">
                     <Loader2 v-if="syncing" class="size-4 animate-spin" />
                     <RefreshCw v-else class="size-4" />
                     {{ syncing ? 'Sincronizando...' : 'Sincronizar agora' }}
@@ -205,25 +237,27 @@ const handleSync = () => {
             <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <Card class="gap-0 py-0 shadow-sm">
                     <CardContent class="space-y-2 px-5 py-5">
-                        <span class="text-xs font-bold uppercase tracking-widest text-muted-foreground">Enviados</span>
+                        <span class="text-xs font-bold tracking-widest text-muted-foreground uppercase">Enviados</span>
                         <p class="text-3xl font-bold text-foreground">{{ stats.sent }}</p>
                     </CardContent>
                 </Card>
                 <Card class="gap-0 py-0 shadow-sm">
                     <CardContent class="space-y-2 px-5 py-5">
-                        <span class="text-xs font-bold uppercase tracking-widest text-muted-foreground">Recebidos</span>
+                        <span class="text-xs font-bold tracking-widest text-muted-foreground uppercase">Recebidos</span>
                         <p class="text-3xl font-bold text-foreground">{{ stats.received }}</p>
                     </CardContent>
                 </Card>
                 <Card class="gap-0 py-0 shadow-sm">
                     <CardContent class="space-y-2 px-5 py-5">
-                        <span class="text-xs font-bold uppercase tracking-widest" :class="stats.errors > 0 ? 'text-red-600' : 'text-muted-foreground'">Erros</span>
+                        <span class="text-xs font-bold tracking-widest uppercase" :class="stats.errors > 0 ? 'text-red-600' : 'text-muted-foreground'"
+                            >Erros</span
+                        >
                         <p class="text-3xl font-bold" :class="stats.errors > 0 ? 'text-red-600' : 'text-foreground'">{{ stats.errors }}</p>
                     </CardContent>
                 </Card>
                 <Card class="gap-0 py-0 shadow-sm">
                     <CardContent class="space-y-2 px-5 py-5">
-                        <span class="text-xs font-bold uppercase tracking-widest text-muted-foreground">Taxa de sucesso</span>
+                        <span class="text-xs font-bold tracking-widest text-muted-foreground uppercase">Taxa de sucesso</span>
                         <p class="text-3xl font-bold text-foreground">{{ stats.success_rate }}%</p>
                     </CardContent>
                 </Card>
@@ -240,7 +274,7 @@ const handleSync = () => {
                                 <Globe class="size-4 text-muted-foreground" />
                                 <div>
                                     <p class="text-xs text-muted-foreground">URL base</p>
-                                    <p class="font-mono text-xs text-foreground break-all">{{ partner.base_url }}</p>
+                                    <p class="font-mono text-xs break-all text-foreground">{{ partner.base_url }}</p>
                                 </div>
                             </div>
                             <div class="flex items-center gap-3">
@@ -275,12 +309,12 @@ const handleSync = () => {
 
                         <!-- Endpoints para o parceiro -->
                         <div class="space-y-3 border-t border-border/60 pt-4">
-                            <p class="text-xs font-bold uppercase tracking-widest text-muted-foreground">Endpoints</p>
+                            <p class="text-xs font-bold tracking-widest text-muted-foreground uppercase">Endpoints</p>
 
                             <!-- Webhook URL -->
                             <div class="rounded-lg border border-border bg-muted/30 px-3 py-2.5">
                                 <div class="flex items-center justify-between">
-                                    <p class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Webhook URL</p>
+                                    <p class="text-[10px] font-bold tracking-widest text-muted-foreground uppercase">Webhook URL</p>
                                     <button
                                         type="button"
                                         class="flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
@@ -291,13 +325,13 @@ const handleSync = () => {
                                         {{ copiedField === 'show-webhook' ? 'Copiado!' : 'Copiar' }}
                                     </button>
                                 </div>
-                                <p class="mt-1 font-mono text-[11px] text-foreground break-all">{{ webhookUrl }}</p>
+                                <p class="mt-1 font-mono text-[11px] break-all text-foreground">{{ webhookUrl }}</p>
                             </div>
 
                             <!-- Health URL -->
                             <div class="rounded-lg border border-border bg-muted/30 px-3 py-2.5">
                                 <div class="flex items-center justify-between">
-                                    <p class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Health Check</p>
+                                    <p class="text-[10px] font-bold tracking-widest text-muted-foreground uppercase">Health Check</p>
                                     <button
                                         type="button"
                                         class="flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
@@ -308,13 +342,13 @@ const handleSync = () => {
                                         {{ copiedField === 'show-health' ? 'Copiado!' : 'Copiar' }}
                                     </button>
                                 </div>
-                                <p class="mt-1 font-mono text-[11px] text-foreground break-all">{{ healthUrl }}</p>
+                                <p class="mt-1 font-mono text-[11px] break-all text-foreground">{{ healthUrl }}</p>
                             </div>
 
                             <!-- Base URL do parceiro -->
                             <div class="rounded-lg border border-border bg-muted/30 px-3 py-2.5">
                                 <div class="flex items-center justify-between">
-                                    <p class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">API do Parceiro</p>
+                                    <p class="text-[10px] font-bold tracking-widest text-muted-foreground uppercase">API do Parceiro</p>
                                     <button
                                         type="button"
                                         class="flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
@@ -325,12 +359,12 @@ const handleSync = () => {
                                         {{ copiedField === 'show-base-url' ? 'Copiado!' : 'Copiar' }}
                                     </button>
                                 </div>
-                                <p class="mt-1 font-mono text-[11px] text-foreground break-all">{{ partner.base_url }}</p>
+                                <p class="mt-1 font-mono text-[11px] break-all text-foreground">{{ partner.base_url }}</p>
                             </div>
                         </div>
 
                         <div v-if="partner.capabilities.length" class="pt-2">
-                            <p class="mb-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">Capabilities</p>
+                            <p class="mb-2 text-xs font-bold tracking-widest text-muted-foreground uppercase">Capabilities</p>
                             <div class="flex flex-wrap gap-1.5">
                                 <Badge v-for="cap in partner.capabilities" :key="cap" variant="secondary" class="text-[10px]">
                                     {{ cap }}
@@ -372,9 +406,7 @@ const handleSync = () => {
                                             :is="event.direction === 'outbound' ? ArrowUpRight : ArrowDownLeft"
                                             class="size-3 text-muted-foreground"
                                         />
-                                        <Badge v-if="event.status === 'failed'" variant="destructive" class="text-[9px] px-1.5 py-0">
-                                            FALHA
-                                        </Badge>
+                                        <Badge v-if="event.status === 'failed'" variant="destructive" class="px-1.5 py-0 text-[9px]"> FALHA </Badge>
                                     </div>
                                     <div class="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
                                         <span>{{ formatRelativeTime(event.created_at) }}</span>

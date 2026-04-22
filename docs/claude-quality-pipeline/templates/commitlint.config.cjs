@@ -1,0 +1,42 @@
+module.exports = {
+  extends: ['@commitlint/config-conventional'],
+  parserPreset: {
+    parserOpts: {
+      headerPattern: /^(.*?)([A-Za-z]+)(?:\((.*)\))?:\s*(.*)$/,
+      headerCorrespondence: ['emoji', 'type', 'scope', 'subject'],
+    },
+  },
+  rules: {
+    'type-enum': [
+      2,
+      'always',
+      [
+        'build',
+        'chore',
+        'ci',
+        'docs',
+        'feat',
+        'fix',
+        'perf',
+        'refactor',
+        'revert',
+        'style',
+        'test',
+        'Build',
+        'Chore',
+        'Ci',
+        'Docs',
+        'Feat',
+        'Fix',
+        'Perf',
+        'Refactor',
+        'Revert',
+        'Style',
+        'Test',
+      ],
+    ],
+    'type-case': [0],
+    'subject-case': [0],
+    'body-max-line-length': [0],
+  },
+};
