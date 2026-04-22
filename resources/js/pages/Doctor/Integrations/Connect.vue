@@ -1,24 +1,44 @@
 <script setup lang="ts">
-import AppLayout from '@/layouts/AppLayout.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import AppLayout from '@/layouts/AppLayout.vue';
 import * as doctorRoutes from '@/routes/doctor';
 import * as integrationRoutes from '@/routes/doctor/integrations';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, useForm } from '@inertiajs/vue3';
-import { ref, computed } from 'vue';
 import {
-    FlaskConical, ArrowLeft, ArrowRight,
-    Check, KeyRound, ScanEye, Plug2, Sparkles, Info,
-    Globe, Lock, FileKey, Server, Settings, GitBranch, RefreshCw,
-    ClipboardCheck, HelpCircle, ChevronRight, PlusCircle,
-    CheckCircle2, Wifi, ShieldCheck,
-    Loader2, Copy, CheckCheck,
+    ArrowLeft,
+    ArrowRight,
+    Check,
+    CheckCheck,
+    CheckCircle2,
+    ChevronRight,
+    ClipboardCheck,
+    Copy,
+    FileKey,
+    FlaskConical,
+    GitBranch,
+    Globe,
+    HelpCircle,
+    Info,
+    KeyRound,
+    Loader2,
+    Lock,
+    Plug2,
+    PlusCircle,
+    RefreshCw,
+    ScanEye,
+    Server,
+    Settings,
+    ShieldCheck,
+    Sparkles,
+    Wifi,
 } from 'lucide-vue-next';
+import { computed, ref } from 'vue';
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: doctorRoutes.dashboard().url },
@@ -36,8 +56,18 @@ type IntegrationMode = 'full' | 'receive_only';
 const integrationMode = ref<IntegrationMode | null>(null);
 
 const integrationModes = [
-    { key: 'full' as IntegrationMode, label: 'Enviar e receber dados', description: 'Envie pedidos de exame e receba resultados automaticamente.', icon: RefreshCw },
-    { key: 'receive_only' as IntegrationMode, label: 'Apenas receber resultados', description: 'O parceiro envia resultados via webhook. Você só precisa compartilhar a URL.', icon: ArrowRight },
+    {
+        key: 'full' as IntegrationMode,
+        label: 'Enviar e receber dados',
+        description: 'Envie pedidos de exame e receba resultados automaticamente.',
+        icon: RefreshCw,
+    },
+    {
+        key: 'receive_only' as IntegrationMode,
+        label: 'Apenas receber resultados',
+        description: 'O parceiro envia resultados via webhook. Você só precisa compartilhar a URL.',
+        icon: ArrowRight,
+    },
 ];
 
 // Steps dinâmicos baseados no modo
@@ -61,9 +91,21 @@ const totalSteps = computed(() => steps.value.length);
 
 // Step 1: Parceiros
 const availablePartners = [
-    { key: 'hermes-pardini', name: 'Hermes Pardini', description: 'Líder em medicina diagnóstica e preventiva no Brasil.', type: 'laboratory', available: true },
+    {
+        key: 'hermes-pardini',
+        name: 'Hermes Pardini',
+        description: 'Líder em medicina diagnóstica e preventiva no Brasil.',
+        type: 'laboratory',
+        available: true,
+    },
     { key: 'fleury', name: 'Fleury', description: 'Excelência médica e técnica em análises clínicas.', type: 'laboratory', available: true },
-    { key: 'a-plus-medicina', name: 'A+ Medicina', description: 'Atendimento humanizado e resultados precisos.', type: 'laboratory', available: true },
+    {
+        key: 'a-plus-medicina',
+        name: 'A+ Medicina',
+        description: 'Atendimento humanizado e resultados precisos.',
+        type: 'laboratory',
+        available: true,
+    },
     { key: 'custom', name: 'Outro', description: '(em breve)', type: 'other', available: false },
 ];
 
@@ -87,7 +129,7 @@ const form = useForm({
 });
 
 const selectedPartner = ref<string | null>(null);
-const selectedPartnerName = computed(() => availablePartners.find(p => p.key === selectedPartner.value)?.name ?? '—');
+const selectedPartnerName = computed(() => availablePartners.find((p) => p.key === selectedPartner.value)?.name ?? '—');
 
 // Step 3
 const authMethods = [
@@ -106,13 +148,21 @@ const stepTitles = computed<Record<number, { label: string; title: string; subti
     if (isReceiveOnly.value) {
         return {
             1: { label: 'ESCOLHER PARCEIRO', title: 'Qual parceiro deseja conectar?', subtitle: 'Selecione o parceiro e o modo de integração.' },
-            2: { label: 'WEBHOOK', title: 'Dados de conexão', subtitle: 'Compartilhe a URL de webhook com o parceiro para que ele envie resultados.' },
+            2: {
+                label: 'WEBHOOK',
+                title: 'Dados de conexão',
+                subtitle: 'Compartilhe a URL de webhook com o parceiro para que ele envie resultados.',
+            },
             3: { label: 'REVISÃO', title: 'Revisar e confirmar', subtitle: 'Verifique as configurações antes de ativar.' },
         };
     }
     return {
         1: { label: 'ESCOLHER PARCEIRO', title: 'Qual parceiro deseja conectar?', subtitle: 'Selecione o parceiro e o modo de integração.' },
-        2: { label: 'MAPEAMENTO', title: 'Configurar conexão', subtitle: 'Defina os parâmetros de comunicação e mapeamento de dados com o parceiro.' },
+        2: {
+            label: 'MAPEAMENTO',
+            title: 'Configurar conexão',
+            subtitle: 'Defina os parâmetros de comunicação e mapeamento de dados com o parceiro.',
+        },
         3: { label: 'SINCRONIZAÇÃO', title: 'Método de autenticação', subtitle: 'Como o parceiro vai se autenticar com o nosso sistema?' },
         4: { label: 'REVISÃO', title: 'Revisar e confirmar', subtitle: 'Verifique todas as configurações antes de ativar a integração.' },
     };
@@ -130,7 +180,8 @@ const canProceed = computed(() => {
 
     // Full mode
     switch (currentStep.value) {
-        case 2: return form.base_url.trim() !== '';
+        case 2:
+            return form.base_url.trim() !== '';
         case 3: {
             if (!form.auth_method) return false;
             if (form.auth_method === 'oauth2') return form.client_id.trim() !== '' && form.client_secret.trim() !== '';
@@ -138,14 +189,16 @@ const canProceed = computed(() => {
             if (form.auth_method === 'bearer') return form.bearer_token.trim() !== '';
             return true;
         }
-        case 4: return true;
-        default: return false;
+        case 4:
+            return true;
+        default:
+            return false;
     }
 });
 
 const selectPartner = (key: string) => {
     selectedPartner.value = key;
-    const partner = availablePartners.find(p => p.key === key);
+    const partner = availablePartners.find((p) => p.key === key);
     if (partner) {
         form.partner_name = partner.name;
         form.partner_slug = partner.key;
@@ -189,19 +242,15 @@ const handleConnect = () => {
     });
 };
 
-const handleRetry = () => {
-    connectionError.value = false;
-    form.clearErrors();
-    handleConnect();
-};
-
 // Clipboard
 const copiedField = ref<string | null>(null);
 const copyToClipboard = async (text: string, field: string) => {
     try {
         await navigator.clipboard.writeText(text);
         copiedField.value = field;
-        setTimeout(() => { copiedField.value = null; }, 2000);
+        setTimeout(() => {
+            copiedField.value = null;
+        }, 2000);
     } catch {
         // Fallback para navegadores sem Clipboard API
         const el = document.createElement('textarea');
@@ -211,7 +260,9 @@ const copyToClipboard = async (text: string, field: string) => {
         document.execCommand('copy');
         document.body.removeChild(el);
         copiedField.value = field;
-        setTimeout(() => { copiedField.value = null; }, 2000);
+        setTimeout(() => {
+            copiedField.value = null;
+        }, 2000);
     }
 };
 
@@ -235,11 +286,10 @@ const webhookUrl = computed(() => {
                     <div class="absolute inset-0 scale-150 rounded-full bg-primary/5 blur-3xl" />
                 </div>
 
-                <h1 class="text-4xl font-extrabold tracking-tight text-foreground md:text-5xl">
-                    Integração conectada com sucesso!
-                </h1>
+                <h1 class="text-4xl font-extrabold tracking-tight text-foreground md:text-5xl">Integração conectada com sucesso!</h1>
                 <p class="mt-4 max-w-2xl text-lg text-muted-foreground">
-                    A conexão com o parceiro <span class="font-semibold text-primary">{{ selectedPartnerName }}</span> foi estabelecida com segurança. O fluxo de dados diagnósticos agora está ativo e monitorado.
+                    A conexão com o parceiro <span class="font-semibold text-primary">{{ selectedPartnerName }}</span> foi estabelecida com segurança.
+                    O fluxo de dados diagnósticos agora está ativo e monitorado.
                 </p>
 
                 <!-- Botões de ação -->
@@ -251,9 +301,7 @@ const webhookUrl = computed(() => {
                         </Link>
                     </Button>
                     <Button as-child variant="secondary" size="lg" class="gap-2">
-                        <Link :href="integrationRoutes.partners()">
-                            Gerenciar integração
-                        </Link>
+                        <Link :href="integrationRoutes.partners()"> Gerenciar integração </Link>
                     </Button>
                 </div>
 
@@ -264,12 +312,14 @@ const webhookUrl = computed(() => {
                             <KeyRound class="size-5 text-primary" stroke-width="2" />
                             <h3 class="text-base font-bold text-foreground">Credenciais de Conexão</h3>
                         </div>
-                        <p class="text-xs text-muted-foreground">Compartilhe essas informações com a equipe técnica do parceiro para completar a integração.</p>
+                        <p class="text-xs text-muted-foreground">
+                            Compartilhe essas informações com a equipe técnica do parceiro para completar a integração.
+                        </p>
 
                         <!-- Webhook URL -->
                         <div class="rounded-lg border border-border bg-muted/30 px-4 py-3">
                             <div class="flex items-center justify-between">
-                                <p class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Webhook URL</p>
+                                <p class="text-[10px] font-bold tracking-widest text-muted-foreground uppercase">Webhook URL</p>
                                 <button
                                     type="button"
                                     class="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
@@ -280,13 +330,13 @@ const webhookUrl = computed(() => {
                                     {{ copiedField === 'success-webhook' ? 'Copiado!' : 'Copiar' }}
                                 </button>
                             </div>
-                            <p class="mt-1 font-mono text-sm text-foreground break-all">{{ webhookUrl }}</p>
+                            <p class="mt-1 font-mono text-sm break-all text-foreground">{{ webhookUrl }}</p>
                         </div>
 
                         <!-- Client ID / API Key -->
                         <div v-if="form.client_id && form.auth_method !== 'bearer'" class="rounded-lg border border-border bg-muted/30 px-4 py-3">
                             <div class="flex items-center justify-between">
-                                <p class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                                <p class="text-[10px] font-bold tracking-widest text-muted-foreground uppercase">
                                     {{ form.auth_method === 'api_key' ? 'Chave de API' : 'Client ID' }}
                                 </p>
                                 <button
@@ -304,8 +354,10 @@ const webhookUrl = computed(() => {
 
                         <!-- Auth Method -->
                         <div class="rounded-lg border border-border bg-muted/30 px-4 py-3">
-                            <p class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Método de autenticação</p>
-                            <p class="mt-1 text-sm font-medium text-foreground">{{ authMethods.find(m => m.key === form.auth_method)?.label ?? form.auth_method }}</p>
+                            <p class="text-[10px] font-bold tracking-widest text-muted-foreground uppercase">Método de autenticação</p>
+                            <p class="mt-1 text-sm font-medium text-foreground">
+                                {{ authMethods.find((m) => m.key === form.auth_method)?.label ?? form.auth_method }}
+                            </p>
                         </div>
 
                         <div class="flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
@@ -322,7 +374,7 @@ const webhookUrl = computed(() => {
                         <CardContent class="flex flex-col gap-4 px-6 py-6">
                             <div class="flex items-center justify-between">
                                 <Wifi class="size-5 text-primary" stroke-width="2" />
-                                <Badge class="rounded-full bg-green-600 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
+                                <Badge class="rounded-full bg-green-600 px-2.5 py-0.5 text-[10px] font-bold tracking-wider text-white uppercase">
                                     Online
                                 </Badge>
                             </div>
@@ -338,7 +390,7 @@ const webhookUrl = computed(() => {
                         <CardContent class="flex flex-col gap-4 px-6 py-6">
                             <div class="flex items-center justify-between">
                                 <ShieldCheck class="size-5 text-primary" stroke-width="2" />
-                                <Badge class="rounded-full bg-green-600 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
+                                <Badge class="rounded-full bg-green-600 px-2.5 py-0.5 text-[10px] font-bold tracking-wider text-white uppercase">
                                     Criptografado
                                 </Badge>
                             </div>
@@ -354,7 +406,7 @@ const webhookUrl = computed(() => {
                         <CardContent class="flex flex-col gap-4 px-6 py-6">
                             <div class="flex items-center justify-between">
                                 <RefreshCw class="size-5 text-primary" stroke-width="2" />
-                                <Badge class="rounded-full bg-green-600 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
+                                <Badge class="rounded-full bg-green-600 px-2.5 py-0.5 text-[10px] font-bold tracking-wider text-white uppercase">
                                     Ativo
                                 </Badge>
                             </div>
@@ -375,12 +427,13 @@ const webhookUrl = computed(() => {
                         </div>
                     </div>
                     <div class="pr-0 md:pr-12">
-                        <span class="mb-4 block text-xs font-bold uppercase tracking-widest text-primary">Processamento Seguro</span>
-                        <h2 class="mb-6 text-3xl font-extrabold leading-tight tracking-tight text-foreground">
+                        <span class="mb-4 block text-xs font-bold tracking-widest text-primary uppercase">Processamento Seguro</span>
+                        <h2 class="mb-6 text-3xl leading-tight font-extrabold tracking-tight text-foreground">
                             Como seus dados são curados e integrados.
                         </h2>
                         <p class="mb-8 leading-relaxed text-muted-foreground">
-                            Utilizamos protocolos de criptografia de ponta a ponta e camadas de abstração FHIR para garantir que cada registro médico mantenha sua integridade durante o trânsito entre sistemas.
+                            Utilizamos protocolos de criptografia de ponta a ponta e camadas de abstração FHIR para garantir que cada registro médico
+                            mantenha sua integridade durante o trânsito entre sistemas.
                         </p>
                         <div class="space-y-4">
                             <div class="flex items-center gap-3">
@@ -404,7 +457,6 @@ const webhookUrl = computed(() => {
         <!-- Estado: Wizard (não conectado ainda) -->
         <div v-else class="w-full px-8 py-12">
             <div class="flex w-full flex-col gap-8 md:flex-row">
-
                 <!-- Sidebar do Wizard -->
                 <aside class="hidden w-64 shrink-0 md:block">
                     <div class="rounded-xl border border-border/60 bg-muted/40 py-8 shadow-sm">
@@ -418,27 +470,37 @@ const webhookUrl = computed(() => {
                                 v-for="step in steps"
                                 :key="step.num"
                                 type="button"
-                                @click="step.num < currentStep ? currentStep = step.num : undefined"
+                                @click="step.num < currentStep ? (currentStep = step.num) : undefined"
                                 :class="[
                                     'flex items-center gap-3 py-3 text-sm font-semibold transition-all duration-200',
                                     currentStep === step.num
                                         ? 'ml-4 rounded-l-full bg-card pl-4 text-primary shadow-sm'
                                         : step.num < currentStep
-                                            ? 'cursor-pointer px-8 text-primary/70 hover:bg-muted/60'
-                                            : 'cursor-not-allowed px-8 text-muted-foreground',
+                                          ? 'cursor-pointer px-8 text-primary/70 hover:bg-muted/60'
+                                          : 'cursor-not-allowed px-8 text-muted-foreground',
                                 ]"
                             >
-                                <component :is="step.icon" class="size-5" :class="currentStep === step.num ? 'text-primary' : ''" stroke-width="1.75" />
+                                <component
+                                    :is="step.icon"
+                                    class="size-5"
+                                    :class="currentStep === step.num ? 'text-primary' : ''"
+                                    stroke-width="1.75"
+                                />
                                 {{ step.label }}
                             </button>
                         </nav>
 
                         <div class="mt-12 border-t border-border px-8 pt-8">
-                            <button class="flex items-center gap-3 text-sm font-semibold text-muted-foreground transition-colors duration-150 hover:text-primary">
+                            <button
+                                class="flex items-center gap-3 text-sm font-semibold text-muted-foreground transition-colors duration-150 hover:text-primary"
+                            >
                                 <HelpCircle class="size-5" stroke-width="1.75" />
                                 Suporte
                             </button>
-                            <Link :href="integrationRoutes.partners()" class="mt-4 block text-sm font-semibold text-red-500 transition-colors duration-150 hover:text-red-600 hover:underline">
+                            <Link
+                                :href="integrationRoutes.partners()"
+                                class="mt-4 block text-sm font-semibold text-red-500 transition-colors duration-150 hover:text-red-600 hover:underline"
+                            >
                                 Cancelar
                             </Link>
                         </div>
@@ -456,8 +518,17 @@ const webhookUrl = computed(() => {
                                 </span>
                                 <span class="text-xs text-muted-foreground">{{ progressPercent.toFixed(0) }}% Completo</span>
                             </div>
-                            <div class="h-1.5 w-full overflow-hidden rounded-full bg-muted" role="progressbar" :aria-valuenow="Math.round(progressPercent)" aria-valuemin="0" aria-valuemax="100">
-                                <div class="h-full rounded-full bg-primary transition-all duration-500 ease-out" :style="{ width: progressPercent + '%' }" />
+                            <div
+                                class="h-1.5 w-full overflow-hidden rounded-full bg-muted"
+                                role="progressbar"
+                                :aria-valuenow="Math.round(progressPercent)"
+                                aria-valuemin="0"
+                                aria-valuemax="100"
+                            >
+                                <div
+                                    class="h-full rounded-full bg-primary transition-all duration-500 ease-out"
+                                    :style="{ width: progressPercent + '%' }"
+                                />
                             </div>
                         </div>
 
@@ -468,7 +539,10 @@ const webhookUrl = computed(() => {
                         </div>
 
                         <!-- Erros de validação -->
-                        <div v-if="Object.keys(form.errors).length > 0 && connectionError" class="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3">
+                        <div
+                            v-if="Object.keys(form.errors).length > 0 && connectionError"
+                            class="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3"
+                        >
                             <p class="text-sm font-semibold text-red-800">Erro ao conectar parceiro:</p>
                             <ul class="mt-1 space-y-1">
                                 <li v-for="(error, field) in form.errors" :key="field" class="text-sm text-red-700">{{ error }}</li>
@@ -492,7 +566,7 @@ const webhookUrl = computed(() => {
                                     <p class="mb-3 text-sm font-semibold text-foreground">Parceiro</p>
                                     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                                         <button
-                                            v-for="partner in availablePartners.filter(p => p.available)"
+                                            v-for="partner in availablePartners.filter((p) => p.available)"
                                             :key="partner.key"
                                             type="button"
                                             @click="selectPartner(partner.key)"
@@ -508,15 +582,22 @@ const webhookUrl = computed(() => {
                                             </div>
                                             <h3 class="font-bold text-foreground">{{ partner.name }}</h3>
                                             <p class="mt-1 text-xs text-muted-foreground">{{ partner.description }}</p>
-                                            <div class="mt-4 flex items-center gap-1 text-xs font-bold text-primary opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                                            <div
+                                                class="mt-4 flex items-center gap-1 text-xs font-bold text-primary opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+                                            >
                                                 Selecionar <ChevronRight class="size-3.5" />
                                             </div>
-                                            <div v-if="selectedPartner === partner.key" class="absolute right-3 top-3 flex size-6 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                                            <div
+                                                v-if="selectedPartner === partner.key"
+                                                class="absolute top-3 right-3 flex size-6 items-center justify-center rounded-full bg-primary text-primary-foreground"
+                                            >
                                                 <Check class="size-3.5" stroke-width="3" />
                                             </div>
                                         </button>
 
-                                        <div class="flex cursor-not-allowed flex-col items-center rounded-xl border border-dashed border-border bg-muted/20 p-6 text-center opacity-50 grayscale">
+                                        <div
+                                            class="flex cursor-not-allowed flex-col items-center rounded-xl border border-dashed border-border bg-muted/20 p-6 text-center opacity-50 grayscale"
+                                        >
                                             <div class="mb-4 flex size-16 items-center justify-center rounded-lg bg-muted">
                                                 <PlusCircle class="size-7 text-muted-foreground" stroke-width="1.5" />
                                             </div>
@@ -542,14 +623,24 @@ const webhookUrl = computed(() => {
                                                     : 'border-border bg-card hover:border-primary/40 hover:shadow-sm',
                                             ]"
                                         >
-                                            <div :class="['flex size-10 shrink-0 items-center justify-center rounded-lg transition-colors duration-200', integrationMode === mode.key ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground']">
+                                            <div
+                                                :class="[
+                                                    'flex size-10 shrink-0 items-center justify-center rounded-lg transition-colors duration-200',
+                                                    integrationMode === mode.key
+                                                        ? 'bg-primary text-primary-foreground'
+                                                        : 'bg-muted text-muted-foreground',
+                                                ]"
+                                            >
                                                 <component :is="mode.icon" class="size-5" stroke-width="2" />
                                             </div>
                                             <div>
                                                 <h3 class="text-sm font-bold text-foreground">{{ mode.label }}</h3>
                                                 <p class="mt-0.5 text-xs leading-relaxed text-muted-foreground">{{ mode.description }}</p>
                                             </div>
-                                            <div v-if="integrationMode === mode.key" class="ml-auto flex size-6 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                                            <div
+                                                v-if="integrationMode === mode.key"
+                                                class="ml-auto flex size-6 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground"
+                                            >
                                                 <Check class="size-3.5" stroke-width="3" />
                                             </div>
                                         </button>
@@ -562,13 +653,15 @@ const webhookUrl = computed(() => {
                                 <Card class="gap-0 py-0 shadow-sm">
                                     <CardContent class="space-y-6 px-6 py-6">
                                         <p class="text-sm text-muted-foreground">
-                                            Compartilhe a URL abaixo com a equipe técnica do <strong class="text-foreground">{{ selectedPartnerName }}</strong> para que eles enviem resultados de exame automaticamente.
+                                            Compartilhe a URL abaixo com a equipe técnica do
+                                            <strong class="text-foreground">{{ selectedPartnerName }}</strong> para que eles enviem resultados de
+                                            exame automaticamente.
                                         </p>
 
                                         <!-- Webhook URL -->
                                         <div class="rounded-lg border border-primary/20 bg-primary/5 px-5 py-4">
                                             <div class="flex items-center justify-between">
-                                                <p class="text-[11px] font-bold uppercase tracking-widest text-primary">Webhook URL</p>
+                                                <p class="text-[11px] font-bold tracking-widest text-primary uppercase">Webhook URL</p>
                                                 <button
                                                     type="button"
                                                     class="flex items-center gap-1.5 rounded-md bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/20"
@@ -579,15 +672,22 @@ const webhookUrl = computed(() => {
                                                     {{ copiedField === 'webhook-url' ? 'Copiado!' : 'Copiar URL' }}
                                                 </button>
                                             </div>
-                                            <p class="mt-2 font-mono text-sm text-foreground break-all">
+                                            <p class="mt-2 font-mono text-sm break-all text-foreground">
                                                 {{ webhookUrl }}
                                             </p>
                                         </div>
 
                                         <!-- Contato -->
                                         <div class="space-y-2">
-                                            <Label for="contact-email-receive" class="text-sm font-semibold">E-mail de contato técnico do parceiro</Label>
-                                            <Input id="contact-email-receive" v-model="form.contact_email" type="email" placeholder="suporte@parceiro.com.br" />
+                                            <Label for="contact-email-receive" class="text-sm font-semibold"
+                                                >E-mail de contato técnico do parceiro</Label
+                                            >
+                                            <Input
+                                                id="contact-email-receive"
+                                                v-model="form.contact_email"
+                                                type="email"
+                                                placeholder="suporte@parceiro.com.br"
+                                            />
                                             <p class="text-[11px] text-muted-foreground">Para comunicação sobre a integração.</p>
                                         </div>
 
@@ -606,8 +706,13 @@ const webhookUrl = computed(() => {
                                         <div class="space-y-2">
                                             <Label for="partner-url" class="text-sm font-semibold">URL base da API *</Label>
                                             <div class="relative">
-                                                <Globe class="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                                                <Input id="partner-url" v-model="form.base_url" placeholder="https://api.parceiro.com.br/fhir/r4" class="pl-10" />
+                                                <Globe class="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                                                <Input
+                                                    id="partner-url"
+                                                    v-model="form.base_url"
+                                                    placeholder="https://api.parceiro.com.br/fhir/r4"
+                                                    class="pl-10"
+                                                />
                                             </div>
                                             <p v-if="form.errors.base_url" class="text-xs text-red-600">{{ form.errors.base_url }}</p>
                                             <p class="text-[11px] text-muted-foreground">Endpoint FHIR R4 ou URL base do serviço.</p>
@@ -619,12 +724,19 @@ const webhookUrl = computed(() => {
                                             </div>
                                             <div class="space-y-2">
                                                 <Label for="contact-email" class="text-sm font-semibold">E-mail de contato técnico</Label>
-                                                <Input id="contact-email" v-model="form.contact_email" type="email" placeholder="suporte@parceiro.com.br" />
+                                                <Input
+                                                    id="contact-email"
+                                                    v-model="form.contact_email"
+                                                    type="email"
+                                                    placeholder="suporte@parceiro.com.br"
+                                                />
                                             </div>
                                         </div>
                                         <div v-if="selectedPartner" class="rounded-lg bg-muted/50 px-4 py-3">
                                             <div class="flex items-center justify-between">
-                                                <p class="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Webhook URL (envie ao parceiro)</p>
+                                                <p class="text-[11px] font-bold tracking-widest text-muted-foreground uppercase">
+                                                    Webhook URL (envie ao parceiro)
+                                                </p>
                                                 <button
                                                     type="button"
                                                     class="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
@@ -657,7 +769,14 @@ const webhookUrl = computed(() => {
                                                 : 'border-border bg-card hover:border-primary/40 hover:shadow-sm',
                                         ]"
                                     >
-                                        <div :class="['flex size-9 shrink-0 items-center justify-center rounded-lg transition-colors duration-200', form.auth_method === method.key ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground']">
+                                        <div
+                                            :class="[
+                                                'flex size-9 shrink-0 items-center justify-center rounded-lg transition-colors duration-200',
+                                                form.auth_method === method.key
+                                                    ? 'bg-primary text-primary-foreground'
+                                                    : 'bg-muted text-muted-foreground',
+                                            ]"
+                                        >
                                             <component :is="method.icon" class="size-4" stroke-width="2" />
                                         </div>
                                         <div>
@@ -666,7 +785,14 @@ const webhookUrl = computed(() => {
                                         </div>
                                     </button>
                                 </div>
-                                <Transition enter-active-class="transition-all duration-300 ease-out" enter-from-class="max-h-0 opacity-0" enter-to-class="max-h-96 opacity-100" leave-active-class="transition-all duration-200 ease-in" leave-from-class="max-h-96 opacity-100" leave-to-class="max-h-0 opacity-0">
+                                <Transition
+                                    enter-active-class="transition-all duration-300 ease-out"
+                                    enter-from-class="max-h-0 opacity-0"
+                                    enter-to-class="max-h-96 opacity-100"
+                                    leave-active-class="transition-all duration-200 ease-in"
+                                    leave-from-class="max-h-96 opacity-100"
+                                    leave-to-class="max-h-0 opacity-0"
+                                >
                                     <Card v-if="form.auth_method" class="gap-0 overflow-hidden py-0 shadow-sm">
                                         <CardContent class="space-y-4 px-6 py-5">
                                             <h3 class="text-sm font-bold text-foreground">Credenciais</h3>
@@ -674,7 +800,13 @@ const webhookUrl = computed(() => {
                                                 <div v-if="form.auth_method === 'bearer'" class="space-y-2 sm:col-span-2">
                                                     <Label for="bearer-token" class="text-sm font-semibold">Bearer Token</Label>
                                                     <div class="flex gap-2">
-                                                        <Input id="bearer-token" v-model="form.bearer_token" type="password" class="font-mono text-sm" placeholder="Insira o token de acesso..." />
+                                                        <Input
+                                                            id="bearer-token"
+                                                            v-model="form.bearer_token"
+                                                            type="password"
+                                                            class="font-mono text-sm"
+                                                            placeholder="Insira o token de acesso..."
+                                                        />
                                                         <button
                                                             v-if="form.bearer_token"
                                                             type="button"
@@ -692,7 +824,12 @@ const webhookUrl = computed(() => {
                                                             {{ form.auth_method === 'api_key' ? 'Chave de API' : 'Client ID' }}
                                                         </Label>
                                                         <div class="flex gap-2">
-                                                            <Input id="client-id" v-model="form.client_id" class="font-mono text-sm" placeholder="Insira aqui..." />
+                                                            <Input
+                                                                id="client-id"
+                                                                v-model="form.client_id"
+                                                                class="font-mono text-sm"
+                                                                placeholder="Insira aqui..."
+                                                            />
                                                             <button
                                                                 v-if="form.client_id"
                                                                 type="button"
@@ -707,7 +844,13 @@ const webhookUrl = computed(() => {
                                                     <div v-if="form.auth_method === 'oauth2'" class="space-y-2">
                                                         <Label for="client-secret" class="text-sm font-semibold">Client Secret</Label>
                                                         <div class="flex gap-2">
-                                                            <Input id="client-secret" v-model="form.client_secret" type="password" class="font-mono text-sm" placeholder="••••••••••••" />
+                                                            <Input
+                                                                id="client-secret"
+                                                                v-model="form.client_secret"
+                                                                type="password"
+                                                                class="font-mono text-sm"
+                                                                placeholder="••••••••••••"
+                                                            />
                                                             <button
                                                                 v-if="form.client_secret"
                                                                 type="button"
@@ -804,9 +947,17 @@ const webhookUrl = computed(() => {
                                                 <strong>apenas receber resultados</strong> via webhook.
                                             </p>
                                             <p v-else class="text-sm text-foreground/70">
-                                                <strong>{{ selectedPartnerName }}</strong> será conectado
-                                                via <strong>{{ authMethods.find(m => m.key === form.auth_method)?.label ?? '—' }}</strong>
-                                                com {{ [form.perm_send_orders, form.perm_receive_results, form.perm_webhook, form.perm_patient_data].filter(Boolean).length }} permissão(ões) ativa(s).
+                                                <strong>{{ selectedPartnerName }}</strong> será conectado via
+                                                <strong>{{ authMethods.find((m) => m.key === form.auth_method)?.label ?? '—' }}</strong> com
+                                                {{
+                                                    [
+                                                        form.perm_send_orders,
+                                                        form.perm_receive_results,
+                                                        form.perm_webhook,
+                                                        form.perm_patient_data,
+                                                    ].filter(Boolean).length
+                                                }}
+                                                permissão(ões) ativa(s).
                                             </p>
                                         </div>
                                     </CardContent>
@@ -816,17 +967,31 @@ const webhookUrl = computed(() => {
 
                         <!-- Footer Actions -->
                         <div class="mt-12 flex items-center justify-between gap-4 border-t border-border pt-8">
-                            <Button v-if="currentStep > 1" variant="ghost" @click="prevStep" class="text-muted-foreground transition-all duration-200 hover:text-foreground">
+                            <Button
+                                v-if="currentStep > 1"
+                                variant="ghost"
+                                @click="prevStep"
+                                class="text-muted-foreground transition-all duration-200 hover:text-foreground"
+                            >
                                 <ArrowLeft class="mr-2 size-4" /> Voltar
                             </Button>
-                            <Link v-else :href="integrationRoutes.partners()" class="px-4 py-2 text-sm font-semibold text-primary transition-colors duration-150 hover:bg-primary/5">
+                            <Link
+                                v-else
+                                :href="integrationRoutes.partners()"
+                                class="px-4 py-2 text-sm font-semibold text-primary transition-colors duration-150 hover:bg-primary/5"
+                            >
                                 Cancelar
                             </Link>
                             <div class="flex items-center gap-4">
                                 <Button v-if="currentStep < totalSteps" @click="nextStep" :disabled="!canProceed" class="transition-all duration-200">
                                     Continuar <ArrowRight class="ml-2 size-4" />
                                 </Button>
-                                <Button v-else @click="handleConnect" :disabled="!canProceed || form.processing" class="bg-green-600 transition-all duration-200 hover:bg-green-700 hover:shadow-sm">
+                                <Button
+                                    v-else
+                                    @click="handleConnect"
+                                    :disabled="!canProceed || form.processing"
+                                    class="bg-green-600 transition-all duration-200 hover:bg-green-700 hover:shadow-sm"
+                                >
                                     <Loader2 v-if="form.processing" class="mr-2 size-4 animate-spin" />
                                     <Plug2 v-else class="mr-2 size-4" />
                                     {{ form.processing ? 'Conectando...' : 'Conectar Parceiro' }}
@@ -837,13 +1002,14 @@ const webhookUrl = computed(() => {
 
                     <!-- Dica de segurança -->
                     <div class="relative mt-8 overflow-hidden rounded-xl border border-border/60 bg-muted/50 p-6 backdrop-blur-md">
-                        <div class="absolute bottom-0 left-0 top-0 w-1 bg-primary" />
+                        <div class="absolute top-0 bottom-0 left-0 w-1 bg-primary" />
                         <div class="flex items-start gap-4 pl-4">
                             <Info class="size-5 shrink-0 text-primary" stroke-width="2" />
                             <div>
                                 <h4 class="text-sm font-bold text-primary">Dica de Segurança</h4>
                                 <p class="mt-1 text-xs leading-relaxed text-muted-foreground">
-                                    A conexão é criptografada de ponta a ponta. Seus dados de login nunca são armazenados em texto plano, garantindo total privacidade do paciente.
+                                    A conexão é criptografada de ponta a ponta. Seus dados de login nunca são armazenados em texto plano, garantindo
+                                    total privacidade do paciente.
                                 </p>
                             </div>
                         </div>

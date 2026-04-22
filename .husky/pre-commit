@@ -1,0 +1,62 @@
+#!/usr/bin/env sh
+set -e
+
+cd "$(dirname "$0")/.."
+
+# 1. Laravel Pint — formata PHP staged (se o projeto tiver Pint instalado)
+if [ -f "./vendor/bin/pint" ]; then
+  PHP_STAGED=$(git diff --cached --name-only --diff-filter=ACMR | grep -E "\.php$" || true)
+  if [ -n "$PHP_STAGED" ]; then
+    echo "🎨 Formatando PHP staged com Pint..."
+    ./vendor/bin/pint --dirty
+    git add -u $(echo "$PHP_STAGED")
+    echo "✅ Pint concluiu."
+  fi
+fi
+
+# 2. Lint completo do front (usa cache — rápido após primeira execução)
+echo "🔍 Executando lint..."
+
+LINT_OUTPUT=$(npm run lint 2>&1) && LINT_STATUS=0 || LINT_STATUS=$?
+
+# 3. Se o lint reportou diretivas eslint-disable obsoletas, remove automaticamente
+if echo "$LINT_OUTPUT" | grep -q "Unused eslint-disable directive"; then
+  echo "🧹 Detectadas diretivas ESLint obsoletas. Removendo automaticamente..."
+  npm run lint:fix-safe > /dev/null 2>&1 || true
+  git add -u
+  LINT_OUTPUT=$(npm run lint 2>&1) && LINT_STATUS=0 || LINT_STATUS=$?
+fi
+
+# 4. Avalia resultado do lint
+if [ $LINT_STATUS -eq 0 ]; then
+  echo "✅ Lint passou com sucesso!"
+else
+  echo "$LINT_OUTPUT"
+  echo "⚠️  Lint encontrou problemas. Tentando aplicar correções automáticas..."
+
+  npm run lint:fix
+
+  echo "🔁 Re-adicionando arquivos corrigidos..."
+  git add -u
+
+  if npm run lint; then
+    echo "✅ Problemas corrigidos automaticamente!"
+  else
+    echo "❌ Ainda existem erros de lint que precisam ser corrigidos manualmente."
+    echo "🔒 Commit abortado."
+    exit 1
+  fi
+fi
+
+# 5. Format apenas nos arquivos staged (via lint-staged — cobre TS/Vue/MD/JSON)
+echo "🎨 Verificando formatação dos arquivos alterados..."
+
+if npx lint-staged; then
+  echo "✅ Formatação dos arquivos alterados está correta!"
+else
+  echo "❌ Problemas de formatação que precisam ser corrigidos manualmente."
+  echo "🔒 Commit abortado."
+  exit 1
+fi
+
+echo "🎉 Validações passaram! Prosseguindo com o commit..."

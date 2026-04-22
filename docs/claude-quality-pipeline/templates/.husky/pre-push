@@ -1,0 +1,18 @@
+#!/usr/bin/env sh
+set -e
+
+cd "$(dirname "$0")/.."
+
+# Se o projeto tem script de build, roda antes do push.
+# Se não tem, este hook é inofensivo (pula silenciosamente).
+if node -e "process.exit(require('./package.json').scripts?.build ? 0 : 1)" 2>/dev/null; then
+  echo "🚀 Executando build..."
+  if {{PM}} build; then
+    echo "✅ Build passou com sucesso!"
+  else
+    echo "❌ Build falhou. Push abortado."
+    exit 1
+  fi
+else
+  echo "ℹ️  Sem script 'build' no package.json — pulando."
+fi

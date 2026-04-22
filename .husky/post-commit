@@ -1,0 +1,27 @@
+#!/usr/bin/env sh
+
+# Lembrete sobre reviewers do Claude Code — não bloqueia nada, apenas informa.
+
+cd "$(dirname "$0")/.."
+
+BOLD='\033[1m'
+CYAN='\033[36m'
+YELLOW='\033[33m'
+GREEN='\033[32m'
+DIM='\033[2m'
+RESET='\033[0m'
+
+printf "\n"
+printf "${BOLD}${CYAN}┌─────────────────────────────────────────────────────────────────────────┐${RESET}\n"
+printf "${BOLD}${CYAN}│${RESET}  ${BOLD}🤖 Claude Code — reviewers disponíveis${RESET}                                 ${BOLD}${CYAN}│${RESET}\n"
+printf "${BOLD}${CYAN}├─────────────────────────────────────────────────────────────────────────┤${RESET}\n"
+printf "${BOLD}${CYAN}│${RESET}  Antes de dar ${YELLOW}git push${RESET}, considere rodar no Claude Code:              ${BOLD}${CYAN}│${RESET}\n"
+printf "${BOLD}${CYAN}│${RESET}                                                                         ${BOLD}${CYAN}│${RESET}\n"
+printf "${BOLD}${CYAN}│${RESET}    ${GREEN}/review-full${RESET}         ${DIM}— roda todos em paralelo${RESET}                    ${BOLD}${CYAN}│${RESET}\n"
+printf "${BOLD}${CYAN}│${RESET}    ${GREEN}/review-security${RESET}     ${DIM}— OWASP, auth, secrets${RESET}                      ${BOLD}${CYAN}│${RESET}\n"
+printf "${BOLD}${CYAN}│${RESET}    ${GREEN}/review-performance${RESET}  ${DIM}— gargalos, N+1, event loop${RESET}                 ${BOLD}${CYAN}│${RESET}\n"
+printf "${BOLD}${CYAN}│${RESET}                                                                         ${BOLD}${CYAN}│${RESET}\n"
+printf "${BOLD}${CYAN}│${RESET}  ${DIM}Skills ativas: development-rules, commit-message${RESET}                      ${BOLD}${CYAN}│${RESET}\n"
+printf "${BOLD}${CYAN}│${RESET}  ${DIM}Docs: .claude/agents/  .claude/skills/  .claude/commands/${RESET}             ${BOLD}${CYAN}│${RESET}\n"
+printf "${BOLD}${CYAN}└─────────────────────────────────────────────────────────────────────────┘${RESET}\n"
+printf "\n"
