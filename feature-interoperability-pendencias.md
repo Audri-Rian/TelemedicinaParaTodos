@@ -245,6 +245,82 @@ Fonte: analise completa do codigo, docs/TrueIssues.md, execute/, docs/Tasks/
 
 ---
 
+# QA MANUAL - TESTES DE PAGINA (em andamento)
+
+Realizado em: 2026-04-16
+
+### Landing Page (`/`)
+
+- [ ] Ajustar navbar: botoes "Registrar-se para Pacientes" e "Faca parte da equipe" estao muito colados, quebrando nomes como "A quem servimos"
+- [ ] Corrigir links do dropdown da navbar que nao redirecionam para lugar nenhum. Devem redirecionar para login (se nao autenticado) e depois para a pagina relacionada (ex: Documentacao API -> login -> /api/documentation; Interoperabilidade -> login -> secao de integracao)
+- [ ] Corrigir height do botao "Conheca nossa visao" que esta desalinhado em relacao ao botao "Agendar agora" - devem ter o mesmo tamanho
+- [ ] Corrigir botao "Conheca agora" que nao redireciona para login -> dashboard
+- [ ] Corrigir links da section 2 ("Descubra por que a Telemedicina para todos...") para direcionar ao login (se nao autenticado) ou ao dashboard (se ja logado)
+- [ ] Corrigir botao "Agendar consulta agora" na penultima section para redirecionar ao login (se nao autenticado) ou a pagina de agendamentos (se ja logado)
+- [ ] Corrigir links do footer para redirecionarem corretamente (passando pelo login se nao autenticado):
+  - Especialidades -> pagina de agendamentos
+  - Como funciona -> pagina de Dashboard
+  - Sobre telemedicina -> landing page
+  - Entrar no sistema -> pagina de Dashboard
+- [ ] Redesenhar botao "Entrar" na navbar que esta escondido/pouco visivel
+
+### Login (`/login`)
+
+- [ ] Botoes de conexao com Google, Apple e Meta nao tem feature implementada (placeholder)
+- [ ] Botao "Cadastre-se" redireciona apenas para /register/patient. Adicionar link/opcao para redirecionar tambem para /register/doctor
+- [ ] Pagina e funcionalidade de "Esqueceu senha" nao esta implementada (design + backend)
+
+### Registro Paciente (`/register/patient`)
+
+- [ ] Imagem pendente/faltando na pagina
+- [ ] Campo de data de nascimento nao tem seletor por calendario, apenas input de texto
+- [ ] Botao "Criar conta" em telas grandes esta no canto inferior esquerdo - ajustar design (centralizar)
+- [ ] Funcionalidade de registro com Google e outros provedores sociais nao implementada
+- [ ] Container da esquerda ("Comece sua jornada") deve ter a mesma altura do container do formulario
+- [ ] Criar componente padrao de select para o campo Genero
+
+### Registro Medico (`/register/doctor`)
+
+- [ ] Ajustar tamanho do input de especializacoes que esta fora de ordem visual comparado aos campos nome, CRM etc.
+- [ ] Avaliar melhoria de arquitetura: carregar catalogo de especializacoes por endpoint dedicado/cache no frontend, reduzindo payload em respostas com erro de validacao (atualmente traz lista completa no retorno da tela)
+- [ ] Separar conceitualmente dados de especializacoes disponiveis (renderizacao) das especializacoes selecionadas (formulario), para evitar confusao
+
+### Dashboard Medico (`/doctor/dashboard`)
+
+- [ ] Corrigir funcionalidade do tour que esta totalmente quebrada
+- [ ] Corrigir: clicar em "Explorar por conta propria" ainda faz o tour aparecer
+- [ ] Corrigir posicionamento das instrucoes do tour (aparecem no canto superior esquerdo em vez de junto ao elemento alvo)
+- [ ] Implementar responsividade do tour
+- [ ] Corrigir persistencia do estado do tour: fechar no X antes do fim e dar F5 nao deve reabrir o tour
+- [ ] Investigar e corrigir lentidao/performance do tour
+- [ ] Melhorar performance geral da pagina (Lighthouse)
+- [ ] Corrigir KPI "Taxa de cumprimento" que mostra valor semanticamente incorreto
+- [ ] Ajustar calculo de "Taxa de cumprimento" para considerar estados reais (concluidas, canceladas, no_show)
+- [ ] Corrigir card "Pacientes agendados": UI informa "Proximas 24h" mas o numero exibido nao representa esse recorte
+- [ ] Ajustar acoes da "Proxima consulta" e da tabela para levarem a consulta especifica, nao para paginas genericas
+- [ ] Corrigir graficos semanal e mensal que subcontam consultas
+- [ ] Fazer grafico semanal considerar toda a janela da estatistica semanal (nao apenas Seg a Sex)
+- [ ] Fazer grafico mensal considerar corretamente meses com 5 semanas
+- [ ] Implementar ou remover acoes visuais que hoje nao executam o que prometem
+- [ ] Implementar handler real para o botao "Cancelar"
+- [ ] Fazer botoes de "entrar em chamada" e "detalhes" levarem para a consulta/agendamento especifico
+
+### Dashboard Paciente (`/patient/dashboard`)
+
+- [ ] Problema de performance detectado no Lighthouse
+- [ ] Tour esta quebrado
+- [ ] Corrigir secao "Historico de Consultas": aponta para rota errada (search-consultations em vez de historico do paciente)
+- [ ] Corrigir acoes da "Proxima Consulta" que nao levam para a consulta especifica:
+  - "Entrar na videochamada" leva para tela generica video-call
+  - "Reagendar" leva para search-consultations
+  - "Cancelar" nao tem acao implementada
+  - Tela de video-call esta marcada como "em atualizacao"
+- [ ] Corrigir filtro de "Convenio" na secao "Encontrar Medico": estado insuranceFilter existe mas nao participa do filteredDoctors (filtro sem efeito real)
+- [ ] Corrigir tour/welcome: comportamento incompativel com documentacao do projeto. "Explorar por conta" nao deveria iniciar tour; persistencia da decisao e fragil; fechar no X nao marca nada no backend
+- [ ] Remover payload desnecessario do controller: recentAppointments e stats sao montados no backend mas nao aparecem na tela; reminders e healthTips sao sempre arrays vazios
+
+---
+
 # RESUMO
 
 | Categoria                        | Pendente |
@@ -264,4 +340,10 @@ Fonte: analise completa do codigo, docs/TrueIssues.md, execute/, docs/Tasks/
 | Interoperabilidade (branch)      | 3        |
 | Gravacao de sessao               | 6        |
 | Observabilidade                  | 5        |
-| **TOTAL**                        | **~96**  |
+| **QA Manual - Landing Page**     | **8**    |
+| **QA Manual - Login**            | **3**    |
+| **QA Manual - Registro Paciente**| **6**    |
+| **QA Manual - Registro Medico**  | **3**    |
+| **QA Manual - Dashboard Medico** | **17**   |
+| **QA Manual - Dashboard Paciente**| **7**   |
+| **TOTAL**                        | **~140** |
