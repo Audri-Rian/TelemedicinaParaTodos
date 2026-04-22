@@ -1,0 +1,51 @@
+#!/usr/bin/env sh
+set -e
+
+cd "$(dirname "$0")/.."
+
+# 1. Lint completo (usa cache — rápido após primeira execução)
+echo "🔍 Executando lint..."
+
+LINT_OUTPUT=$({{PM}} lint 2>&1) && LINT_STATUS=0 || LINT_STATUS=$?
+
+# 2. Se o lint reportou diretivas eslint-disable obsoletas, remove automaticamente
+if echo "$LINT_OUTPUT" | grep -q "Unused eslint-disable directive"; then
+  echo "🧹 Detectadas diretivas ESLint obsoletas. Removendo automaticamente..."
+  {{PM}} lint:fix-safe > /dev/null 2>&1 || true
+  git add -u
+  LINT_OUTPUT=$({{PM}} lint 2>&1) && LINT_STATUS=0 || LINT_STATUS=$?
+fi
+
+# 3. Avalia resultado do lint
+if [ $LINT_STATUS -eq 0 ]; then
+  echo "✅ Lint passou com sucesso!"
+else
+  echo "$LINT_OUTPUT"
+  echo "⚠️  Lint encontrou problemas. Tentando aplicar correções automáticas..."
+
+  {{PM}} lint:fix
+
+  echo "🔁 Re-adicionando arquivos corrigidos..."
+  git add -u
+
+  if {{PM}} lint; then
+    echo "✅ Problemas corrigidos automaticamente!"
+  else
+    echo "❌ Ainda existem erros de lint que precisam ser corrigidos manualmente."
+    echo "🔒 Commit abortado."
+    exit 1
+  fi
+fi
+
+# 4. Format apenas nos arquivos staged (via lint-staged)
+echo "🎨 Verificando formatação dos arquivos alterados..."
+
+if {{PM}} exec lint-staged; then
+  echo "✅ Formatação dos arquivos alterados está correta!"
+else
+  echo "❌ Problemas de formatação que precisam ser corrigidos manualmente."
+  echo "🔒 Commit abortado."
+  exit 1
+fi
+
+echo "🎉 Validações passaram! Prosseguindo com o commit..."
