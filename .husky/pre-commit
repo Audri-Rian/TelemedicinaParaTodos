@@ -17,14 +17,14 @@ fi
 # 2. Lint completo do front (usa cache — rápido após primeira execução)
 echo "🔍 Executando lint..."
 
-LINT_OUTPUT=$({{PM}} lint 2>&1) && LINT_STATUS=0 || LINT_STATUS=$?
+LINT_OUTPUT=$(npm run lint 2>&1) && LINT_STATUS=0 || LINT_STATUS=$?
 
 # 3. Se o lint reportou diretivas eslint-disable obsoletas, remove automaticamente
 if echo "$LINT_OUTPUT" | grep -q "Unused eslint-disable directive"; then
   echo "🧹 Detectadas diretivas ESLint obsoletas. Removendo automaticamente..."
-  {{PM}} lint:fix-safe > /dev/null 2>&1 || true
+  npm run lint:fix-safe > /dev/null 2>&1 || true
   git add -u
-  LINT_OUTPUT=$({{PM}} lint 2>&1) && LINT_STATUS=0 || LINT_STATUS=$?
+  LINT_OUTPUT=$(npm run lint 2>&1) && LINT_STATUS=0 || LINT_STATUS=$?
 fi
 
 # 4. Avalia resultado do lint
@@ -34,12 +34,12 @@ else
   echo "$LINT_OUTPUT"
   echo "⚠️  Lint encontrou problemas. Tentando aplicar correções automáticas..."
 
-  {{PM}} lint:fix
+  npm run lint:fix
 
   echo "🔁 Re-adicionando arquivos corrigidos..."
   git add -u
 
-  if {{PM}} lint; then
+  if npm run lint; then
     echo "✅ Problemas corrigidos automaticamente!"
   else
     echo "❌ Ainda existem erros de lint que precisam ser corrigidos manualmente."
@@ -51,7 +51,7 @@ fi
 # 5. Format apenas nos arquivos staged (via lint-staged — cobre TS/Vue/MD/JSON)
 echo "🎨 Verificando formatação dos arquivos alterados..."
 
-if {{PM}} exec lint-staged; then
+if npx lint-staged; then
   echo "✅ Formatação dos arquivos alterados está correta!"
 else
   echo "❌ Problemas de formatação que precisam ser corrigidos manualmente."

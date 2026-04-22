@@ -105,17 +105,17 @@ Use `git diff --cached --name-only` (staged) ou `git diff --name-only HEAD` quan
 ## 🚨 Critical (gargalo sério)
 
 - **<arquivo>:<linha>** — <descrição>
-  - Impacto: <estimativa: "em lista com 10k consultas, essa página responde em ~4s">
-  - Sugestão:
+    - Impacto: <estimativa: "em lista com 10k consultas, essa página responde em ~4s">
+    - Sugestão:
 
-    ```php
-    // Antes (ruim)
-    $doctors = Doctor::all();
-    foreach ($doctors as $d) { echo $d->specialization->name; }
+        ```php
+        // Antes (ruim)
+        $doctors = Doctor::all();
+        foreach ($doctors as $d) { echo $d->specialization->name; }
 
-    // Depois (bom)
-    $doctors = Doctor::with('specialization')->get();
-    ```
+        // Depois (bom)
+        $doctors = Doctor::with('specialization')->get();
+        ```
 
 ## ⚠️ High (queries ineficientes ou sem cache)
 

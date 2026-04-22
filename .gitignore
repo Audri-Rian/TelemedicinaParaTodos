@@ -28,3 +28,10 @@ yarn-error.log
 
 mediasoup-server/
 tools/mediasoup-test-client/
+
+# Claude Code — local state
+.claude/settings.local.json
+.claude/projects/
+
+# ESLint cache
+.eslintcache

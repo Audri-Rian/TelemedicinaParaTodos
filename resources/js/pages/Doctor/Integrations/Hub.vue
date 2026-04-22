@@ -1,17 +1,26 @@
 <script setup lang="ts">
-import AppLayout from '@/layouts/AppLayout.vue';
 import ComingSoonOverlay from '@/components/ComingSoonOverlay.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
+import AppLayout from '@/layouts/AppLayout.vue';
 import * as doctorRoutes from '@/routes/doctor';
 import * as integrationRoutes from '@/routes/doctor/integrations';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/vue3';
 import {
-    FlaskConical, Plus, Shield, Settings2, FileBarChart, Clock,
-    AlertCircle, CheckCircle2, RefreshCw, Wrench, CalendarClock,
-    FlaskRound, ArrowRight,
+    AlertCircle,
+    ArrowRight,
+    CalendarClock,
+    CheckCircle2,
+    FileBarChart,
+    FlaskConical,
+    FlaskRound,
+    Plus,
+    RefreshCw,
+    Settings2,
+    Shield,
+    Wrench,
 } from 'lucide-vue-next';
 import { computed } from 'vue';
 
@@ -48,7 +57,7 @@ const formatLastSync = computed(() => {
 // TODO: quando o backend expor settings.is_pilot na Laboratory, trocar a heurística
 // "primeiro lab ativo" por: props.laboratories.find(l => l.settings?.is_pilot === true).
 // Até lá, qualquer lab ativo é tratado como piloto — é uma aproximação segura no MVP.
-const pilotLab = computed(() => props.laboratories.find(l => l.status === 'active') ?? null);
+const pilotLab = computed(() => props.laboratories.find((l) => l.status === 'active') ?? null);
 const hasActiveLabs = computed(() => pilotLab.value !== null);
 const needsPilotLabSetup = computed(() => !pilotLab.value);
 </script>
@@ -60,9 +69,7 @@ const needsPilotLabSetup = computed(() => !pilotLab.value);
             <!-- 1. Cabeçalho -->
             <header class="space-y-2">
                 <h1 class="text-4xl font-bold tracking-tight text-foreground">Hub de Integrações</h1>
-                <p class="max-w-2xl text-base text-muted-foreground">
-                    Gerencie e monitore as conexões clínicas da sua rede.
-                </p>
+                <p class="max-w-2xl text-base text-muted-foreground">Gerencie e monitore as conexões clínicas da sua rede.</p>
             </header>
 
             <!-- 1b. Banner: Laboratório piloto (MVP 1) -->
@@ -85,13 +92,16 @@ const needsPilotLabSetup = computed(() => !pilotLab.value);
                         <div class="space-y-1.5">
                             <div class="flex items-center gap-2">
                                 <h2 class="text-lg font-bold text-amber-900">Defina o laboratório piloto</h2>
-                                <Badge variant="outline" class="border-amber-300 bg-amber-100 text-[10px] font-bold uppercase tracking-widest text-amber-800">
+                                <Badge
+                                    variant="outline"
+                                    class="border-amber-300 bg-amber-100 text-[10px] font-bold tracking-widest text-amber-800 uppercase"
+                                >
                                     MVP 1 · Pendente
                                 </Badge>
                             </div>
                             <p class="max-w-2xl text-sm leading-relaxed text-amber-900/80">
-                                Para validar o fluxo de integração fim-a-fim, conecte o primeiro laboratório parceiro.
-                                Após o cadastro ele poderá ser marcado como piloto do MVP 1 e usado para os testes reais.
+                                Para validar o fluxo de integração fim-a-fim, conecte o primeiro laboratório parceiro. Após o cadastro ele poderá ser
+                                marcado como piloto do MVP 1 e usado para os testes reais.
                             </p>
                         </div>
                     </div>
@@ -106,11 +116,7 @@ const needsPilotLabSetup = computed(() => !pilotLab.value);
                 </div>
             </section>
 
-            <section
-                v-else
-                class="rounded-xl border border-primary/20 bg-primary/5 px-6 py-4"
-                data-testid="pilot-lab-configured-banner"
-            >
+            <section v-else class="rounded-xl border border-primary/20 bg-primary/5 px-6 py-4" data-testid="pilot-lab-configured-banner">
                 <div class="flex items-center justify-between gap-4">
                     <div class="flex items-center gap-3">
                         <div class="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
@@ -120,13 +126,11 @@ const needsPilotLabSetup = computed(() => !pilotLab.value);
                             <div class="flex items-center gap-2">
                                 <!-- pilotLab é garantidamente não-null neste branch v-else -->
                                 <p class="font-semibold text-foreground">{{ pilotLab!.name }}</p>
-                                <Badge class="bg-primary px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-primary-foreground">
+                                <Badge class="bg-primary px-2 py-0.5 text-[10px] font-bold tracking-widest text-primary-foreground uppercase">
                                     Piloto MVP 1
                                 </Badge>
                             </div>
-                            <p class="text-xs text-muted-foreground">
-                                Laboratório piloto ativo — validação do fluxo de interoperabilidade.
-                            </p>
+                            <p class="text-xs text-muted-foreground">Laboratório piloto ativo — validação do fluxo de interoperabilidade.</p>
                         </div>
                     </div>
                     <Button variant="ghost" size="sm" as-child>
@@ -141,7 +145,7 @@ const needsPilotLabSetup = computed(() => !pilotLab.value);
                 <Card class="gap-0 py-0 shadow-sm">
                     <CardContent class="space-y-3 px-5 py-5">
                         <div class="flex items-center justify-between">
-                            <span class="text-xs font-bold uppercase tracking-widest text-muted-foreground">Integrações ativas</span>
+                            <span class="text-xs font-bold tracking-widest text-muted-foreground uppercase">Integrações ativas</span>
                             <div class="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
                                 <Settings2 class="size-4" stroke-width="2" />
                             </div>
@@ -155,7 +159,7 @@ const needsPilotLabSetup = computed(() => !pilotLab.value);
                 <Card class="gap-0 py-0 shadow-sm">
                     <CardContent class="space-y-3 px-5 py-5">
                         <div class="flex items-center justify-between">
-                            <span class="text-xs font-bold uppercase tracking-widest text-muted-foreground">Exames sincronizados</span>
+                            <span class="text-xs font-bold tracking-widest text-muted-foreground uppercase">Exames sincronizados</span>
                             <div class="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
                                 <FileBarChart class="size-4" stroke-width="2" />
                             </div>
@@ -169,7 +173,7 @@ const needsPilotLabSetup = computed(() => !pilotLab.value);
                 <Card class="gap-0 py-0 shadow-sm">
                     <CardContent class="space-y-3 px-5 py-5">
                         <div class="flex items-center justify-between">
-                            <span class="text-xs font-bold uppercase tracking-widest text-muted-foreground">Última sincronização</span>
+                            <span class="text-xs font-bold tracking-widest text-muted-foreground uppercase">Última sincronização</span>
                             <div class="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
                                 <RefreshCw class="size-4" stroke-width="2" />
                             </div>
@@ -183,8 +187,15 @@ const needsPilotLabSetup = computed(() => !pilotLab.value);
                 <Card class="gap-0 py-0 shadow-sm">
                     <CardContent class="space-y-3 px-5 py-5">
                         <div class="flex items-center justify-between">
-                            <span class="text-xs font-bold uppercase tracking-widest" :class="stats.errors24h > 0 ? 'text-red-600' : 'text-muted-foreground'">Erros (24h)</span>
-                            <div class="flex size-8 items-center justify-center rounded-lg" :class="stats.errors24h > 0 ? 'bg-red-500/10 text-red-600' : 'bg-primary/10 text-primary'">
+                            <span
+                                class="text-xs font-bold tracking-widest uppercase"
+                                :class="stats.errors24h > 0 ? 'text-red-600' : 'text-muted-foreground'"
+                                >Erros (24h)</span
+                            >
+                            <div
+                                class="flex size-8 items-center justify-center rounded-lg"
+                                :class="stats.errors24h > 0 ? 'bg-red-500/10 text-red-600' : 'bg-primary/10 text-primary'"
+                            >
                                 <AlertCircle class="size-4" stroke-width="2" />
                             </div>
                         </div>
@@ -200,14 +211,20 @@ const needsPilotLabSetup = computed(() => !pilotLab.value);
                 <Card class="gap-0 py-0 shadow-sm lg:col-span-2">
                     <CardContent class="space-y-4 px-6 py-6">
                         <div class="flex items-center gap-3">
-                            <div class="flex size-10 items-center justify-center rounded-full" :class="stats.errors24h === 0 ? 'bg-green-500/10 text-green-600' : 'bg-amber-500/10 text-amber-600'">
+                            <div
+                                class="flex size-10 items-center justify-center rounded-full"
+                                :class="stats.errors24h === 0 ? 'bg-green-500/10 text-green-600' : 'bg-amber-500/10 text-amber-600'"
+                            >
                                 <CheckCircle2 class="size-5" stroke-width="2" />
                             </div>
                             <div>
                                 <h3 class="text-lg font-bold text-foreground">Integridade do Sistema</h3>
                                 <div class="flex items-center gap-1.5">
                                     <span class="size-2 rounded-full" :class="stats.errors24h === 0 ? 'bg-green-500' : 'bg-amber-500'" />
-                                    <span class="text-xs font-semibold uppercase tracking-wide" :class="stats.errors24h === 0 ? 'text-green-700' : 'text-amber-700'">
+                                    <span
+                                        class="text-xs font-semibold tracking-wide uppercase"
+                                        :class="stats.errors24h === 0 ? 'text-green-700' : 'text-amber-700'"
+                                    >
                                         {{ stats.errors24h === 0 ? 'Operacional' : 'Atenção necessária' }}
                                     </span>
                                 </div>
@@ -240,14 +257,10 @@ const needsPilotLabSetup = computed(() => !pilotLab.value);
                             <CalendarClock class="size-32" stroke-width="1" />
                         </div>
                         <div class="relative space-y-2">
-                            <h3 class="text-lg font-bold italic text-primary">Próxima Manutenção</h3>
-                            <p class="text-sm leading-relaxed text-muted-foreground">
-                                Sincronização agendada para otimização de banco de dados.
-                            </p>
+                            <h3 class="text-lg font-bold text-primary italic">Próxima Manutenção</h3>
+                            <p class="text-sm leading-relaxed text-muted-foreground">Sincronização agendada para otimização de banco de dados.</p>
                         </div>
-                        <p class="relative mt-6 text-base font-bold tracking-wide text-primary">
-                            DOMINGO, 02:00 AM
-                        </p>
+                        <p class="relative mt-6 text-base font-bold tracking-wide text-primary">DOMINGO, 02:00 AM</p>
                     </CardContent>
                 </Card>
             </div>
@@ -258,31 +271,29 @@ const needsPilotLabSetup = computed(() => !pilotLab.value);
 
                 <!-- Laboratórios conectados -->
                 <div v-if="hasActiveLabs" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    <Card
-                        v-for="lab in laboratories.filter(l => l.status === 'active')"
-                        :key="lab.id"
-                        class="gap-0 py-0 shadow-sm"
-                    >
-                        <CardHeader class="flex flex-row items-start justify-between gap-3 border-b border-border/60 px-5 pb-4 pt-5">
+                    <Card v-for="lab in laboratories.filter((l) => l.status === 'active')" :key="lab.id" class="gap-0 py-0 shadow-sm">
+                        <CardHeader class="flex flex-row items-start justify-between gap-3 border-b border-border/60 px-5 pt-5 pb-4">
                             <div class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
                                 <FlaskConical class="size-4.5" stroke-width="2" />
                             </div>
                             <Badge
                                 variant="outline"
-                                class="border-green-200 bg-green-50 text-[10px] font-semibold uppercase tracking-wide text-green-800"
+                                class="border-green-200 bg-green-50 text-[10px] font-semibold tracking-wide text-green-800 uppercase"
                             >
                                 Ativo
                             </Badge>
                         </CardHeader>
                         <CardContent class="space-y-2 px-5 pt-4 pb-2">
                             <h3 class="text-lg font-semibold text-foreground">{{ lab.name }}</h3>
-                            <p class="text-sm leading-relaxed text-muted-foreground">
-                                Integração ativa via protocolo FHIR R4.
-                            </p>
+                            <p class="text-sm leading-relaxed text-muted-foreground">Integração ativa via protocolo FHIR R4.</p>
                         </CardContent>
                         <CardFooter class="flex flex-row items-center justify-between border-t border-border/60 px-5 py-4">
                             <span class="text-xs text-muted-foreground">
-                                {{ lab.last_sync_at ? `Última sync: ${new Date(lab.last_sync_at).toLocaleString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : 'Sem sincronização' }}
+                                {{
+                                    lab.last_sync_at
+                                        ? `Última sync: ${new Date(lab.last_sync_at).toLocaleString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
+                                        : 'Sem sincronização'
+                                }}
                             </span>
                             <Button variant="link" class="h-auto p-0 text-primary" as-child>
                                 <Link :href="`/doctor/integrations/${lab.id}`">Gerenciar</Link>
@@ -299,8 +310,7 @@ const needsPilotLabSetup = computed(() => !pilotLab.value);
                         </div>
                         <h3 class="text-lg font-semibold text-foreground">Nenhum laboratório conectado</h3>
                         <p class="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
-                            Sua clínica ainda não possui laboratórios parceiros ativos. Conecte-se agora para
-                            automatizar resultados.
+                            Sua clínica ainda não possui laboratórios parceiros ativos. Conecte-se agora para automatizar resultados.
                         </p>
                         <Button class="mt-6" variant="secondary" as-child>
                             <Link :href="integrationRoutes.connect()">Conectar laboratório</Link>
@@ -315,13 +325,13 @@ const needsPilotLabSetup = computed(() => !pilotLab.value);
                 <ComingSoonOverlay>
                     <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         <Card class="gap-0 py-0 shadow-sm">
-                            <CardHeader class="flex flex-row items-start justify-between gap-3 border-b border-border/60 px-5 pb-4 pt-5">
+                            <CardHeader class="flex flex-row items-start justify-between gap-3 border-b border-border/60 px-5 pt-5 pb-4">
                                 <div class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
                                     <Shield class="size-4.5" stroke-width="2" />
                                 </div>
                                 <Badge
                                     variant="outline"
-                                    class="border-red-200 bg-red-50 text-[10px] font-semibold uppercase tracking-wide text-red-800"
+                                    class="border-red-200 bg-red-50 text-[10px] font-semibold tracking-wide text-red-800 uppercase"
                                 >
                                     Indisponível
                                 </Badge>
@@ -339,13 +349,13 @@ const needsPilotLabSetup = computed(() => !pilotLab.value);
                         </Card>
 
                         <Card class="gap-0 py-0 shadow-sm">
-                            <CardHeader class="flex flex-row items-start justify-between gap-3 border-b border-border/60 px-5 pb-4 pt-5">
+                            <CardHeader class="flex flex-row items-start justify-between gap-3 border-b border-border/60 px-5 pt-5 pb-4">
                                 <div class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
                                     <Plus class="size-4.5" stroke-width="2" />
                                 </div>
                                 <Badge
                                     variant="outline"
-                                    class="border-border bg-muted/80 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground"
+                                    class="border-border bg-muted/80 text-[10px] font-semibold tracking-wide text-muted-foreground uppercase"
                                 >
                                     Desativado
                                 </Badge>
@@ -362,7 +372,9 @@ const needsPilotLabSetup = computed(() => !pilotLab.value);
                             </CardFooter>
                         </Card>
 
-                        <div class="flex min-h-[220px] flex-col items-center justify-center rounded-xl border-2 border-dashed border-muted-foreground/25 bg-muted/20 px-6 py-10 text-center">
+                        <div
+                            class="flex min-h-[220px] flex-col items-center justify-center rounded-xl border-2 border-dashed border-muted-foreground/25 bg-muted/20 px-6 py-10 text-center"
+                        >
                             <div class="mb-3 flex size-11 items-center justify-center rounded-full bg-muted text-muted-foreground">
                                 <Plus class="size-5" stroke-width="2" />
                             </div>
@@ -373,14 +385,11 @@ const needsPilotLabSetup = computed(() => !pilotLab.value);
             </section>
 
             <!-- 5. CTA -->
-            <section
-                class="flex flex-col gap-8 rounded-xl bg-muted/70 px-8 py-10 md:flex-row md:items-center md:justify-between md:gap-10"
-            >
+            <section class="flex flex-col gap-8 rounded-xl bg-muted/70 px-8 py-10 md:flex-row md:items-center md:justify-between md:gap-10">
                 <div class="max-w-2xl space-y-2 text-left">
                     <h2 class="text-xl font-bold text-primary md:text-2xl">Precisa de um parceiro específico?</h2>
                     <p class="text-base leading-relaxed text-muted-foreground">
-                        Nossa equipe pode desenvolver integrações customizadas para laboratórios locais ou
-                        sistemas legados da sua região.
+                        Nossa equipe pode desenvolver integrações customizadas para laboratórios locais ou sistemas legados da sua região.
                     </p>
                 </div>
                 <div class="shrink-0 md:pl-4">

@@ -124,8 +124,8 @@ Retorne um relatório Markdown estruturado:
 ## 🚨 Critical (bloqueia merge)
 
 - **<arquivo>:<linha>** — <descrição clara>
-  - Impacto: <o que pode acontecer>
-  - Sugestão: <como corrigir, com snippet quando couber>
+    - Impacto: <o que pode acontecer>
+    - Sugestão: <como corrigir, com snippet quando couber>
 
 ## ⚠️ High (corrigir antes do push)
 

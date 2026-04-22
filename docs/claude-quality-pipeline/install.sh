@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Claude Quality Pipeline — Installer
 # Copia templates de qualidade de código e Claude Code para o projeto atual.
+# Detecta Laravel (composer.json) para ativar Pint no pre-commit.
 
 set -e
 
@@ -43,7 +44,20 @@ if [ ! -f "$TARGET_DIR/package.json" ]; then
 fi
 printf "${GREEN}✓${RESET} package.json encontrado\n"
 
-# 3. Detecta package manager
+# 3. Detecta Laravel (composer.json + vendor/bin/pint)
+LARAVEL=0
+if [ -f "$TARGET_DIR/composer.json" ]; then
+  LARAVEL=1
+  printf "${GREEN}✓${RESET} composer.json detectado — modo Laravel+Vue ativado\n"
+  if [ ! -f "$TARGET_DIR/vendor/bin/pint" ]; then
+    printf "  ${YELLOW}⚠${RESET}  Laravel Pint não instalado. Rode: ${BOLD}composer require --dev laravel/pint${RESET}\n"
+    printf "     ${DIM}O hook pre-commit pula Pint silenciosamente se vendor/bin/pint não existir.${RESET}\n"
+  fi
+else
+  printf "${DIM}ℹ  composer.json ausente — modo Node puro${RESET}\n"
+fi
+
+# 4. Detecta package manager
 PM=""
 if [ -f "$TARGET_DIR/pnpm-lock.yaml" ]; then
   PM="pnpm"
@@ -52,7 +66,6 @@ elif [ -f "$TARGET_DIR/yarn.lock" ]; then
 elif [ -f "$TARGET_DIR/package-lock.json" ]; then
   PM="npm"
 else
-  # Nenhum lockfile — pergunta
   printf "\n${YELLOW}Nenhum lockfile encontrado. Qual package manager usar?${RESET}\n"
   printf "  1) pnpm ${DIM}(recomendado)${RESET}\n"
   printf "  2) npm\n"
@@ -68,10 +81,10 @@ else
 fi
 printf "${GREEN}✓${RESET} Package manager: ${BOLD}$PM${RESET}\n"
 
-# 4. Confirmação
+# 5. Confirmação
 printf "\n${YELLOW}Este script vai:${RESET}\n"
 printf "  • Instalar: husky, lint-staged, prettier, eslint, @commitlint/cli, @commitlint/config-conventional\n"
-printf "  • Copiar arquivos de config (sobrescreve se já existir)\n"
+printf "  • Copiar arquivos de config ${BOLD}(preserva .prettierrc, .editorconfig e .prettierignore existentes)${RESET}\n"
 printf "  • Copiar pasta .claude/ e .husky/\n"
 printf "  • Rodar ${BOLD}$PM exec husky init${RESET}\n\n"
 printf "Continuar? [y/N]: "
@@ -81,7 +94,7 @@ if [ "$confirm" != "y" ] && [ "$confirm" != "Y" ]; then
   exit 0
 fi
 
-# 5. Instala dependências
+# 6. Instala dependências
 printf "\n${BOLD}${CYAN}[1/4] Instalando dependências...${RESET}\n"
 case "$PM" in
   pnpm)
@@ -96,12 +109,12 @@ case "$PM" in
 esac
 printf "${GREEN}✓${RESET} Dependências instaladas\n"
 
-# 6. Inicia Husky
+# 7. Inicia Husky
 printf "\n${BOLD}${CYAN}[2/4] Inicializando Husky...${RESET}\n"
 $PM exec husky init > /dev/null 2>&1 || true
 printf "${GREEN}✓${RESET} Husky inicializado\n"
 
-# 7. Copia templates
+# 8. Copia templates
 printf "\n${BOLD}${CYAN}[3/4] Copiando arquivos...${RESET}\n"
 
 copy_file() {
@@ -112,6 +125,19 @@ copy_file() {
   printf "  ${GREEN}+${RESET} $(echo "$dest" | sed "s|$TARGET_DIR/||")\n"
 }
 
+copy_file_safe() {
+  # Não sobrescreve se o arquivo já existir
+  local src="$1"
+  local dest="$2"
+  if [ -f "$dest" ]; then
+    printf "  ${DIM}=${RESET} $(echo "$dest" | sed "s|$TARGET_DIR/||") ${DIM}(preservado)${RESET}\n"
+  else
+    mkdir -p "$(dirname "$dest")"
+    cp "$src" "$dest"
+    printf "  ${GREEN}+${RESET} $(echo "$dest" | sed "s|$TARGET_DIR/||")\n"
+  fi
+}
+
 copy_dir() {
   local src="$1"
   local dest="$2"
@@ -120,12 +146,24 @@ copy_dir() {
   printf "  ${GREEN}+${RESET} $(echo "$dest" | sed "s|$TARGET_DIR/||")/ (pasta)\n"
 }
 
-# Configs raiz
-copy_file "$TEMPLATES_DIR/.editorconfig" "$TARGET_DIR/.editorconfig"
-copy_file "$TEMPLATES_DIR/.prettierrc" "$TARGET_DIR/.prettierrc"
-copy_file "$TEMPLATES_DIR/.prettierignore" "$TARGET_DIR/.prettierignore"
+# Configs raiz — preservadas se já existirem
+copy_file_safe "$TEMPLATES_DIR/.editorconfig" "$TARGET_DIR/.editorconfig"
+copy_file_safe "$TEMPLATES_DIR/.prettierrc" "$TARGET_DIR/.prettierrc"
+copy_file_safe "$TEMPLATES_DIR/.prettierignore" "$TARGET_DIR/.prettierignore"
+
+# Configs de tooling — sobrescreve (são idempotentes e específicos do kit)
 copy_file "$TEMPLATES_DIR/.lintstagedrc.json" "$TARGET_DIR/.lintstagedrc.json"
-copy_file "$TEMPLATES_DIR/commitlint.config.js" "$TARGET_DIR/commitlint.config.js"
+
+# commitlint.config — .cjs em projetos ESM ("type": "module"), .js no resto
+if grep -q '"type"[[:space:]]*:[[:space:]]*"module"' "$TARGET_DIR/package.json" 2>/dev/null; then
+  copy_file "$TEMPLATES_DIR/commitlint.config.cjs" "$TARGET_DIR/commitlint.config.cjs"
+  # Remove .js legacy se existir, pra não conflitar
+  [ -f "$TARGET_DIR/commitlint.config.js" ] && rm "$TARGET_DIR/commitlint.config.js" && printf "  ${DIM}-${RESET} commitlint.config.js ${DIM}(removido: ESM usa .cjs)${RESET}\n"
+else
+  # Copia .cjs como .js pra projeto CommonJS (Node padrão aceita ambos)
+  cp "$TEMPLATES_DIR/commitlint.config.cjs" "$TARGET_DIR/commitlint.config.js"
+  printf "  ${GREEN}+${RESET} commitlint.config.js\n"
+fi
 
 # .vscode
 copy_dir "$TEMPLATES_DIR/.vscode" "$TARGET_DIR/.vscode"
@@ -143,7 +181,7 @@ for hook in pre-commit commit-msg pre-push post-commit; do
   printf "  ${GREEN}+${RESET} .husky/$hook ${DIM}(exec)${RESET}\n"
 done
 
-# 8. Atualiza .gitignore
+# 9. Atualiza .gitignore
 printf "\n${BOLD}${CYAN}[4/4] Atualizando .gitignore...${RESET}\n"
 touch "$TARGET_DIR/.gitignore"
 for entry in ".eslintcache" ".claude/settings.local.json" ".claude/projects/"; do
@@ -153,7 +191,7 @@ for entry in ".eslintcache" ".claude/settings.local.json" ".claude/projects/"; d
   fi
 done
 
-# 9. Sucesso
+# 10. Sucesso
 printf "\n${BOLD}${GREEN}═══════════════════════════════════════════════════════════════${RESET}\n"
 printf "${BOLD}${GREEN}  ✓ Instalação concluída${RESET}\n"
 printf "${BOLD}${GREEN}═══════════════════════════════════════════════════════════════${RESET}\n\n"
@@ -166,12 +204,16 @@ printf "   ${DIM}\"lint:fix-safe\": \"eslint . --fix --fix-type directive --cach
 printf "   ${DIM}\"format\": \"prettier --write .\",${RESET}\n"
 printf "   ${DIM}\"format:check\": \"prettier --check .\"${RESET}\n\n"
 
-printf "2. ${YELLOW}Cria o eslint.config.mjs${RESET} (ESLint 9 flat config):\n"
-printf "   ${DIM}https://eslint.org/docs/latest/use/configure/configuration-files${RESET}\n\n"
-
-printf "3. ${YELLOW}Customiza .claude/skills/development-rules/SKILL.md${RESET}\n"
-printf "   ${DIM}Abre no Claude Code e pede pra ele preencher com base no teu código:${RESET}\n"
-printf "   ${DIM}\"Lê meu código e preenche o development-rules com stack e arquitetura\"${RESET}\n\n"
+if [ "$LARAVEL" -eq 1 ]; then
+  printf "2. ${YELLOW}Confirma que Laravel Pint está instalado${RESET}:\n"
+  printf "   ${DIM}composer require --dev laravel/pint${RESET}\n\n"
+  printf "3. ${YELLOW}Customiza .claude/skills/development-rules/SKILL.md${RESET}\n"
+  printf "   ${DIM}Stack já é Laravel+Vue; preenche os placeholders com detalhes do teu projeto.${RESET}\n\n"
+else
+  printf "2. ${YELLOW}Cria o eslint.config.mjs${RESET} (ESLint 9 flat config)\n\n"
+  printf "3. ${YELLOW}Customiza .claude/skills/development-rules/SKILL.md${RESET}\n"
+  printf "   ${DIM}Abre no Claude Code e pede pra ele preencher com base no teu código.${RESET}\n\n"
+fi
 
 printf "4. ${YELLOW}Se teu projeto não tiver build${RESET}, edita ou remove ${BOLD}.husky/pre-push${RESET}\n\n"
 
