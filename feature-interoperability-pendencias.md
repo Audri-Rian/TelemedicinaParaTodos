@@ -1,4 +1,5 @@
 # Telemedicina Para Todos - Checklist Completo de Pendencias
+
 ## Branch: development (+ feature/interoperability)
 
 Gerado em: 2026-04-14
@@ -9,21 +10,26 @@ Fonte: analise completa do codigo, docs/TrueIssues.md, execute/, docs/Tasks/
 # SEGURANCA (CRITICO)
 
 ### bootstrap/app.php
+
 - [ ] Reativar middleware SecurityHeaders (linha 24 - comentado como "TEMPORARIAMENTE DESATIVADO")
-  - Sem isso: faltam CSP, HSTS, X-Frame-Options (vulneravel a XSS, clickjacking)
+    - Sem isso: faltam CSP, HSTS, X-Frame-Options (vulneravel a XSS, clickjacking)
 
 ### routes/api.php
+
 - [ ] Adicionar middleware ValidateWebhookSignature na rota POST /webhooks/lab/{partnerSlug} (linha 27)
-  - Sem isso: qualquer pessoa pode enviar webhooks falsos
+    - Sem isso: qualquer pessoa pode enviar webhooks falsos
 
 ### app/Http/Requests/Doctor/MedicalRecords/StorePrescriptionRequest.php
+
 - [ ] Implementar authorize() corretamente (atualmente retorna true sempre)
-  - Sem isso: qualquer usuario autenticado pode criar prescricoes para qualquer paciente
+    - Sem isso: qualquer usuario autenticado pode criar prescricoes para qualquer paciente
 
 ### app/Http/Controllers/AppointmentsController.php
+
 - [ ] Validar query parameters (status, etc.) antes de usar como filtro (linhas 44-62)
 
 ### routes/web.php
+
 - [ ] Validar formato de userId e filename na rota de avatars (linhas 187-201) - risco de path traversal
 
 ---
@@ -31,15 +37,17 @@ Fonte: analise completa do codigo, docs/TrueIssues.md, execute/, docs/Tasks/
 # CONFORMIDADE CFM (CRITICO - BLOQUEANTE)
 
 ### 1. Assinatura Digital ICP-Brasil (Art. 8, Res. 2.314/2022)
+
 - [ ] Contratar provedor de certificacao digital (Soluti, Certisign, Safeweb)
 - [ ] Implementar DigitalSignatureService.php
 - [ ] Adicionar campos signature_hash e verification_code no model Prescription
 - [ ] Criar migration para atualizar tabela prescriptions
 - [ ] Integrar fluxo de assinatura no frontend
 - [ ] Validar certificado antes de emissao de documentos
-  - IMPACTO: Sem isso, prescricoes e atestados NAO TEM VALIDADE LEGAL
+    - IMPACTO: Sem isso, prescricoes e atestados NAO TEM VALIDADE LEGAL
 
 ### 2. Documentacao Legal CFM
+
 - [ ] Adicionar secao "Consentimento para Telemedicina" na politica de privacidade
 - [ ] Adicionar secao "Prontuario Eletronico" (armazenamento, retencao 20 anos)
 - [ ] Adicionar secao "Gravacao de Consultas" (consentimento especifico)
@@ -66,6 +74,7 @@ Fonte: analise completa do codigo, docs/TrueIssues.md, execute/, docs/Tasks/
 # BACKEND - IMPLEMENTACOES PENDENTES
 
 ### Controllers Stub (apenas renderizam pagina vazia, sem logica)
+
 - [ ] DoctorDocumentsController.php - implementar logica de dados reais
 - [ ] DoctorHistoryController.php - implementar logica de dados reais
 - [ ] DoctorPatientsController.php - implementar logica de dados reais
@@ -73,10 +82,12 @@ Fonte: analise completa do codigo, docs/TrueIssues.md, execute/, docs/Tasks/
 - [ ] PatientDetailsController.php - implementar logica de dados reais
 
 ### Policies incompletas
+
 - [ ] MessagePolicy.php - faltam metodos view(), create(), update(), delete()
 - [ ] AppointmentPolicy - faltam metodos start(), end(), cancel() (doc: TrueIssues.md sec 5)
 
 ### Migrations pendentes (docs/TrueIssues.md sec 7.1)
+
 - [ ] Criar tabela appointment_availabilities
 - [ ] Criar tabela doctor_availability_exceptions
 - [ ] Criar tabela patient_emergency_contacts
@@ -84,34 +95,40 @@ Fonte: analise completa do codigo, docs/TrueIssues.md, execute/, docs/Tasks/
 - [ ] Adicionar colunas metadata JSON e consent flags
 
 ### Tasks de manutencao (Kernel/Scheduler)
+
 - [ ] Job para marcar no_show em appointments
 - [ ] Job para finalizar chamadas de video zumbis
 - [ ] Job para limpar locks expirados do Redis
 - [ ] Job para enviar lembretes pre-consulta
 
 ### Servicos incompletos
+
 - [ ] NotificationService.php:168 - sendPush() esta vazio (placeholder)
 - [ ] BaseAdapter.php:84 - renovacao de token OAuth2 nao implementada (TODO)
 - [ ] NotifyIntegrationFailure.php:41 - notificacao real para admins nao implementada (TODO)
 - [ ] DataAccessReportController.php:75 - exportacao PDF retorna 501 (TODO)
 
 ### CRUD de perfis (docs/TrueIssues.md sec 7.2)
+
 - [ ] CRUD completo de perfis de Doctors (biografia, CRM, especializacoes, agenda, fee)
 - [ ] CRUD completo de perfis de Patients (dados clinicos, consentimento, contatos emergencia)
 - [ ] API de busca de medicos (filtro por especializacao, preco, avaliacao, localizacao)
 - [ ] Autenticacao de dois fatores (2FA) para pacientes
 
 ### Agenda e Consultas (docs/TrueIssues.md sec 7.3)
+
 - [ ] AppointmentsController completo (listagens paginadas, POST/PUT/DELETE)
 - [ ] AppointmentService ampliado (conflito horario, bloqueio por status, motivos)
 - [ ] AppointmentsObserver (gerar access_code, preencher metadata, disparar eventos)
 - [ ] Scheduling de disponibilidades (CRUD de blocos, materializar slots livres)
 
 ### Mensageria (docs/TrueIssues.md sec 7.5)
-- [ ] Verificar se endpoints /api/messages/* e /api/notifications/* existem no backend
-  - Frontend (useMessages.ts, useNotifications.ts) referencia endpoints que podem nao existir
+
+- [ ] Verificar se endpoints /api/messages/_ e /api/notifications/_ existem no backend
+    - Frontend (useMessages.ts, useNotifications.ts) referencia endpoints que podem nao existir
 
 ### Prontuario e Prescricoes (docs/TrueIssues.md sec 7.6)
+
 - [ ] Versionamento explicito de alteracoes clinicas
 - [ ] Historico de edicoes com diff
 - [ ] Interface para visualizar historico de alteracoes
@@ -121,6 +138,7 @@ Fonte: analise completa do codigo, docs/TrueIssues.md, execute/, docs/Tasks/
 # FRONTEND - PENDENCIAS
 
 ### Dados hardcoded (mock data em paginas de producao)
+
 - [ ] Doctor/History.vue:23-78 - dados de consultas mockados com URLs do Unsplash
 - [ ] Doctor/Documents.vue:26-83 - lista de pacientes e medicamentos mockados
 - [ ] Patient/NextConsultation.vue:25-37 - dados estaticos do medico (Dr. Ricardo Almeida)
@@ -129,23 +147,28 @@ Fonte: analise completa do codigo, docs/TrueIssues.md, execute/, docs/Tasks/
 - [ ] components/modals/ChatModal.vue:44-69 - URLs de avatar hardcoded
 
 ### TODOs no frontend
+
 - [ ] BugReport.vue:160 - implementar recarregamento real do backend
 - [ ] BugReportModal.vue:74 - implementar envio real para backend (simula com setTimeout)
 
 ### console.log para remover
+
 - [ ] Doctor/Consultations.vue:73 - console.log('Dados salvos na sidebar')
 - [ ] Patient/NextConsultation.vue:57 - console.log('Consulta cancelada')
 - [ ] components/LottieAnimation.vue:100,105 - console.log de animacao
 
 ### Erros com alert() (deveria usar toast/componente)
+
 - [ ] Patient/ConsultationDetails.vue:173,206 - alert() para exibir erro
 - [ ] Patient/VideoCall.vue:76 - alert() para mensagem de erro
 
 ### Paginas de Laboratorio vazias (nao confundir com Integrations)
+
 - [ ] Doctor/Laboratories/Hub.vue - completamente vazio
 - [ ] Doctor/Laboratories/Partners.vue - completamente vazio
 
 ### Video chamada incompleta
+
 - [ ] Patient/VideoCall.vue - marcado como "P2P removida; SFU em desenvolvimento"
 - [ ] Dev/VideoTest.vue - pagina de teste, P2P removida
 
@@ -154,22 +177,25 @@ Fonte: analise completa do codigo, docs/TrueIssues.md, execute/, docs/Tasks/
 # CONFIGURACAO E AMBIENTE
 
 ### .env.example - variaveis faltando
+
 - [x] RNDS_ENABLED, RNDS_ENVIRONMENT, RNDS_BASE_URL, RNDS_CERTIFICATE_PATH
 - [x] FHIR_SYSTEM_URL
-- [x] INTEGRATION_* (timeouts, circuit breaker settings)
-- [x] RETRY_*_MAX variaveis
+- [x] INTEGRATION\_\* (timeouts, circuit breaker settings)
+- [x] RETRY\_\*\_MAX variaveis
 
 ---
 
 # TESTES (cobertura atual: 37 metodos, maioria auth/settings)
 
 ### Testes existentes
+
 - Auth (login, logout, registro, email verification, password reset) - OK
 - Settings (profile update, password update) - OK
 - AppointmentsTest (14 unit tests) - OK
 - DoctorMedicalRecordActionsTest (1 test) - OK
 
 ### Testes faltando (sem nenhum arquivo)
+
 - [ ] Testes de Doctor appointments management
 - [ ] Testes de Doctor availability/scheduling
 - [ ] Testes de Patient dashboard
@@ -181,9 +207,11 @@ Fonte: analise completa do codigo, docs/TrueIssues.md, execute/, docs/Tasks/
 - [ ] Testes de VideoCall
 
 ### Factories faltando
+
 - [ ] AppointmentsFactory (usado em testes mas criado manualmente)
 
 ### Testes placeholder para remover ou implementar
+
 - [ ] tests/Unit/ExampleTest.php - trivial
 - [ ] tests/Feature/ExampleTest.php - trivial
 - [ ] tests/Unit/VideoCallPolicyTest.php - trivial/vazio
@@ -193,6 +221,7 @@ Fonte: analise completa do codigo, docs/TrueIssues.md, execute/, docs/Tasks/
 # BRANCH feature/interoperability - PENDENCIAS ESPECIFICAS
 
 ### Testes unitarios faltando (9)
+
 - [x] PatientFhirMapperTest
 - [x] ExamOrderFhirMapperTest
 - [x] ExamResultFhirMapperTest
@@ -204,21 +233,26 @@ Fonte: analise completa do codigo, docs/TrueIssues.md, execute/, docs/Tasks/
 - [x] IntegrationQueueItemTest (shouldRetry, markAsProcessing)
 
 ### Testes feature faltando (2)
+
 - [x] PartnerHealthControllerTest
 - [x] ResilienceTest (circuit breaker E2E, retry, idempotencia)
 
 ### Seeders faltando (2)
+
 - [x] ExaminationIntegrationSeeder
 - [x] IntegrationQueueSeeder
 
 ### Resiliencia (1)
+
 - [x] Testar circuit breaker com Redis real (CircuitBreakerTest expandido: threshold, half-open->closed, limite de tentativas)
 
 ### Regulatorio (2)
+
 - [x] Implementar job SendToRnds (autenticacao e-CNPJ + envio Bundle FHIR) -- codigo pronto, SendToRndsTest (9 testes). Ativacao requer RNDS_ENABLED=true + certificado e-CNPJ real (fora do escopo do MVP atual)
 - [ ] Registrar aplicacao no Portal de Servicos DATASUS -- FORA DO ESCOPO DO MVP (validacao externa, fase futura)
 
 ### MVP 1 criterios finais (2)
+
 - [ ] Dados enviados a RNDS apos resultado -- codigo pronto (listener SendExamResultToRnds registrado); aguarda registro DATASUS + certificado
 - [ ] 1 laboratorio piloto conectado (validacao real) -- aguarda definicao do laboratorio (banner no frontend Hub indica pendencia ao usuario)
 
@@ -258,10 +292,10 @@ Realizado em: 2026-04-16
 - [ ] Corrigir links da section 2 ("Descubra por que a Telemedicina para todos...") para direcionar ao login (se nao autenticado) ou ao dashboard (se ja logado)
 - [ ] Corrigir botao "Agendar consulta agora" na penultima section para redirecionar ao login (se nao autenticado) ou a pagina de agendamentos (se ja logado)
 - [ ] Corrigir links do footer para redirecionarem corretamente (passando pelo login se nao autenticado):
-  - Especialidades -> pagina de agendamentos
-  - Como funciona -> pagina de Dashboard
-  - Sobre telemedicina -> landing page
-  - Entrar no sistema -> pagina de Dashboard
+    - Especialidades -> pagina de agendamentos
+    - Como funciona -> pagina de Dashboard
+    - Sobre telemedicina -> landing page
+    - Entrar no sistema -> pagina de Dashboard
 - [ ] Redesenhar botao "Entrar" na navbar que esta escondido/pouco visivel
 
 ### Login (`/login`)
@@ -311,39 +345,330 @@ Realizado em: 2026-04-16
 - [ ] Tour esta quebrado
 - [ ] Corrigir secao "Historico de Consultas": aponta para rota errada (search-consultations em vez de historico do paciente)
 - [ ] Corrigir acoes da "Proxima Consulta" que nao levam para a consulta especifica:
-  - "Entrar na videochamada" leva para tela generica video-call
-  - "Reagendar" leva para search-consultations
-  - "Cancelar" nao tem acao implementada
-  - Tela de video-call esta marcada como "em atualizacao"
+    - "Entrar na videochamada" leva para tela generica video-call
+    - "Reagendar" leva para search-consultations
+    - "Cancelar" nao tem acao implementada
+    - Tela de video-call esta marcada como "em atualizacao"
 - [ ] Corrigir filtro de "Convenio" na secao "Encontrar Medico": estado insuranceFilter existe mas nao participa do filteredDoctors (filtro sem efeito real)
 - [ ] Corrigir tour/welcome: comportamento incompativel com documentacao do projeto. "Explorar por conta" nao deveria iniciar tour; persistencia da decisao e fragil; fechar no X nao marca nada no backend
 - [ ] Remover payload desnecessario do controller: recentAppointments e stats sao montados no backend mas nao aparecem na tela; reminders e healthTips sao sempre arrays vazios
+
+### Agenda e Disponibilidade Medico (`/doctor/schedule` + `/doctor/availability`)
+
+- [ ] **Merge das duas paginas em uma unica rota (Opcao A - decidido)**: as duas telas mexem com a mesma entidade (`AvailabilitySlot`) e chamam os mesmos endpoints CRUD, gerando duplicidade de UX e carga cognitiva para o medico
+    - Consolidar em `/doctor/schedule` com duas abas no topo:
+        - Aba **"Configurar"** - calendario + editor de slots por data + slots recorrentes + datas bloqueadas + locais de atendimento (base: [ScheduleManagement.vue](resources/js/pages/Doctor/ScheduleManagement.vue))
+        - Aba **"Visao geral"** - timeline/lista cronologica com cards de resumo (proxima sessao, futuros, passados), filtros, edicao individual (base: [AvailabilityOverview.vue](resources/js/pages/Doctor/AvailabilityOverview.vue))
+    - Unificar sidebar de locais de servico
+    - Remover rota `/doctor/availability` ou manter como redirect para `/doctor/schedule?tab=overview`
+    - Atualizar menu lateral do medico removendo duplicidade
+    - Arquivos impactados: [DoctorScheduleController.php](app/Http/Controllers/Doctor/DoctorScheduleController.php), [DoctorAvailabilityController.php](app/Http/Controllers/Doctor/DoctorAvailabilityController.php), [routes/web/doctor.php](routes/web/doctor.php)
+
+### Pacientes Medico (`/doctor/patients`)
+
+- [ ] **Controller nao carrega dados** - [DoctorPatientsController.php](app/Http/Controllers/Doctor/DoctorPatientsController.php) apenas chama `Inertia::render('Doctor/Patients')` sem passar `upcomingPatients`, `patientHistory` nem `stats`. Tela sempre aparece vazia mesmo com consultas/pacientes no banco.
+    - Implementar queries: proximas consultas (`scheduled_at >= now()`, status `scheduled`/`in_progress`), historico (pacientes distintos com `status=completed`), stats (total de pacientes unicos, consultas no mes, etc.)
+- [ ] **Falta autorizacao (Policy)** - diferente de [DoctorPatientMedicalRecordController.php:37](app/Http/Controllers/Doctor/DoctorPatientMedicalRecordController.php#L37) que usa `authorize('view', $patient)`, aqui nao ha Policy validando se o medico pode ver aqueles pacientes. Criar `PatientPolicy` e aplicar na listagem
+- [ ] **Props com default vazio sem fallback claro** - [Patients.vue:46-61](resources/js/pages/Doctor/Patients.vue#L46-L61) define defaults vazios para `stats`, `upcomingPatients`, `patientHistory`, nunca preenchidos pelo backend
+- [ ] **Busca e filtro fake** - [Patients.vue:76-123](resources/js/pages/Doctor/Patients.vue#L76-L123) opera client-side sobre arrays vazios. Sem paginacao, sem backend search, sem ordenacao real
+- [ ] **Link "Iniciar video" quebrado** - [Patients.vue:295](resources/js/pages/Doctor/Patients.vue#L295) usa `doctorRoutes.videoCall?.()` que nao existe em [routes/doctor/index.ts](resources/js/routes/doctor/index.ts). Fallback redireciona para agenda generica, nao para a consulta especifica do paciente
+- [ ] **Empty state generico** - [Patients.vue:374-382](resources/js/pages/Doctor/Patients.vue#L374-L382) mostra "Nenhum paciente encontrado" sempre, sem diferenciar: (a) sem dados carregados, (b) filtro sem resultados, (c) realmente sem pacientes
+- [ ] **Responsividade** - grid `xl:grid-cols-3` em [Patients.vue:243](resources/js/pages/Doctor/Patients.vue#L243) pode comprimir cards em tablets; revisar breakpoints
+
+### Detalhes do Paciente (`/doctor/patients/{id}/details`)
+
+- [ ] **Controller stub sem carregar dados** - [PatientDetailsController.php](app/Http/Controllers/Doctor/PatientDetailsController.php) recebe `$patient` como string de rota e passa apenas `patientId`. Nao carrega dados reais do paciente. Usar padrao de [DoctorPatientMedicalRecordController](app/Http/Controllers/Doctor/DoctorPatientMedicalRecordController.php) (query + authorize + logging)
+- [ ] **Pagina totalmente mockada** - [PatientDetails.vue:26-72](resources/js/pages/Doctor/PatientDetails.vue#L26-L72) tem dados hardcoded ("Sofia Almeida", CPF `123.456.789-00`, avatar Unsplash). Substituir por props reais do controller
+- [ ] **Breadcrumb e botao "Voltar" com URL fixa** - [PatientDetails.vue:86](resources/js/pages/Doctor/PatientDetails.vue#L86) volta para `/doctor/history` hardcoded. Trocar por `doctorRoutes.patients().url` (ou history se fizer sentido)
+- [ ] **Impacto no fluxo** - sem `/doctor/patients` funcional, o medico so chega no prontuario via `/doctor/appointments`, `/doctor/consultations/{id}` ou URL direta `/doctor/patients/{id}/medical-record`. Fluxo principal quebrado pela raiz
+
+### Historico de Consultas Medico (`/doctor/history`)
+
+- [ ] **Refatorar design da pagina** - layout atual (busca + filtros + tabela + paginacao) precisa ser repensado. Avaliar: cards com agrupamento por data/mes, timeline, ou tabela densa com colunas adicionais (duracao, especialidade, valor, anexos). Alinhar com identidade visual do projeto e com a pagina `/doctor/appointments` para coerencia
+- [ ] **Controller stub total** - [DoctorHistoryController.php](app/Http/Controllers/Doctor/DoctorHistoryController.php) apenas chama `Inertia::render('Doctor/History')` sem props, sem query, sem authorize. Implementar listagem paginada de consultas do medico autenticado (status `completed`/`cancelled`/`no_show`), com eager loading de `patient` e filtros por periodo/status
+- [ ] **Pagina 100% mockada** - [History.vue:23-78](resources/js/pages/Doctor/History.vue#L23-L78) tem 6 consultas hardcoded (datas fixas 20-22/07/2024, nomes estaticos, avatares Unsplash, status tambem estaticos). Substituir por props vindas do controller
+- [ ] **Search bar sem efeito** - [History.vue:104-109](resources/js/pages/Doctor/History.vue#L104-L109) declara `v-model="searchQuery"` mas nao ha `computed` filtrando `consultations`. Input digita mas lista nao muda. Implementar filtro (idealmente server-side com debounce)
+- [ ] **Botoes de filtro sem funcionalidade** - [History.vue:113-121](resources/js/pages/Doctor/History.vue#L113-L121) botoes "Periodo" e "Status" nao tem `@click`, nao abrem dropdown nem aplicam filtro
+- [ ] **Botao "Nova Consulta" sem destino** - [History.vue:125](resources/js/pages/Doctor/History.vue#L125) nao tem Link nem handler. Definir se leva para agendamento ou abre modal
+- [ ] **Link do paciente aponta para rota inexistente** - [History.vue:157](resources/js/pages/Doctor/History.vue#L157) usa `/doctor/patient/${consultation.id}` (singular, sem "s") que nao existe em [routes/web/doctor.php](routes/web/doctor.php). Alem disso usa `consultation.id` (id da consulta) onde deveria usar `patient.id`. Trocar por `doctorRoutes.patient.details({ patient: consultation.patient_id }).url` ou rota do prontuario
+- [ ] **Botao "MoreHorizontal" (acoes) sem implementacao** - [History.vue:182-184](resources/js/pages/Doctor/History.vue#L182-L184) icone de 3 pontinhos sem dropdown/menu. Definir acoes (ver detalhes, ver prontuario, reagendar, exportar PDF)
+- [ ] **Paginacao fake** - [History.vue:193-205](resources/js/pages/Doctor/History.vue#L193-L205) textos estaticos "Mostrando 1 a 6 de 25 consultas" hardcoded, botoes "Anterior"/"Proximo" sem `@click` e sem logica. Integrar com Laravel paginator (links/meta do Inertia)
+- [ ] **Sem empty state, loading ou error state** - pagina nao trata casos de lista vazia, carregamento ou erro de backend
+- [ ] **Avaliar sobreposicao com `/doctor/consultations`** - verificar se `/doctor/history` e `/doctor/consultations` mostram informacoes concorrentes e se cabe unificar (semelhante ao merge schedule/availability)
+
+### Emissao de Documentos Medico (`/doctor/documents`)
+
+- [ ] **Refatorar design da pagina** - layout atual mistura catalogo, lista de selecionados e preview no mesmo fluxo vertical, ocupando espaco excessivo. Propostas: (a) split layout (formulario esquerda, preview fixo direita sticky), (b) wizard/stepper por aba, (c) mover catalogo de medicamentos para modal/autocomplete inline na tabela de selecionados. Padronizar Buttons com design system (nao usar classes soltas de cor)
+- [ ] **Controller stub total** - [DoctorDocumentsController.php](app/Http/Controllers/Doctor/DoctorDocumentsController.php) apenas chama `Inertia::render('Doctor/Documents')` sem props. Implementar props: lista de pacientes do medico autenticado (pacientes com consulta ou vinculo), dados do medico logado (nome, CRM, UF, especialidade), template inicial vazio de cada tipo de documento
+- [ ] **Falta autorizacao** - nao ha policy validando se o medico pode emitir documento ao paciente selecionado (ex: verificar vinculo via `Appointment`). Criar/aplicar policy antes do submit
+- [ ] **Pacientes mockados** - [Documents.vue:26-33](resources/js/pages/Doctor/Documents.vue#L26-L33) lista hardcoded (Ana Beatriz Silva, Carlos Mendes etc.). Substituir por props do controller
+- [ ] **Medicamentos mockados** - [Documents.vue:36-58](resources/js/pages/Doctor/Documents.vue#L36-L58) catalogo hardcoded (Ibuprofeno/Paracetamol/Amoxicilina). Implementar endpoint `GET /api/medications` (busca com debounce, paginado) ou integrar com base oficial (Anvisa, DATASUS/SIGTAP). Busca atual filtra client-side
+- [ ] **BUG: `selectedMedications` inicia preenchido** - [Documents.vue:61-83](resources/js/pages/Doctor/Documents.vue#L61-L83) ja vem com 3 medicamentos sem o medico ter adicionado nada. A prescricao deve comecar vazia. Trocar por `ref([])`
+- [ ] **Abas "Atestado" e "Pedido de Exames" sao visuais** - [Documents.vue:128-149](resources/js/pages/Doctor/Documents.vue#L128-L149) trocam `selectedTab` mas o conteudo abaixo nao reage (tabela de medicamentos fica visivel nas 3 abas). Implementar formulario proprio de Atestado (CID-10, dias de afastamento, texto livre, tipo) e Pedido de Exames (catalogo TUSS/SIGTAP, urgencia, indicacao clinica, jejum)
+- [ ] **Sem edicao dos campos do medicamento** - o medico nao consegue alterar dosagem, via nem instrucoes — apenas adiciona item do catalogo e fica preso ao texto fixo. Tornar campos editaveis na tabela de selecionados (inputs inline)
+- [ ] **Campos clinicos faltando** - nao ha campo para: indicacao clinica, validade da prescricao (dias), controle especial (antibiotico/tarja preta/vermelha), posologia personalizada, orientacoes gerais ao paciente
+- [ ] **Preview com dados hardcoded** - [Documents.vue:274](resources/js/pages/Doctor/Documents.vue#L274) fallback "Ana Beatriz Silva" quando paciente nao selecionado e [Documents.vue:299](resources/js/pages/Doctor/Documents.vue#L299) "Dr. Ricardo Almeida" fixo. Trocar por medico autenticado (nome + CRM + UF + especialidade) e nao renderizar preview sem paciente
+- [ ] **Botao "Assinar Digitalmente" sem handler** - [Documents.vue:306](resources/js/pages/Doctor/Documents.vue#L306) sem `@click`. Depende da implementacao ICP-Brasil ja listada em "Conformidade CFM" (bloqueante). Deixar desabilitado enquanto nao houver servico de assinatura
+- [ ] **Botao "Gerar e Enviar para o Paciente" sem handler** - [Documents.vue:309](resources/js/pages/Doctor/Documents.vue#L309) sem `@click`. Integrar com `POST /doctor/patients/{patient}/medical-record/prescriptions` (ou novo endpoint standalone), gerar PDF, disparar notificacao/email
+- [ ] **Sem validacao** - permite gerar com paciente vazio, sem medicamentos, sem campos obrigatorios. Implementar validacao no frontend e backend (FormRequest)
+- [ ] **Sem estados de loading/erro/sucesso** - submit nao mostra feedback (spinner, toast, validacao por campo)
+- [ ] **Breadcrumb/rota** - confirmar nomenclatura: `Documentos` (menu) vs `Emissao de Documentos` (titulo da pagina). Alinhar labels
+
+### Interoperabilidade - Hub/Parceiros/Connect (`/doctor/integrations/*`)
+
+- [ ] **Melhorar identidade visual da API Docs (logo/componente)** - criar uma logo mais profissional para a area de documentacao e refatorar o componente atual de logo (muito fraco visualmente), incluindo variantes para header e sidebar com boa legibilidade
+- [ ] **BUG CRITICO: PartnerIntegration global sem escopo multi-tenant** - tabela `partner_integrations` ([migration](database/migrations/2026_03_28_000001_create_partner_integrations_table.php)) tem apenas `connected_by` (nullable) mas nao tem `doctor_id`/`clinic_id`. Controller [index:38-47](app/Http/Controllers/Doctor/DoctorIntegrationsController.php#L38-L47) e [partners:61-118](app/Http/Controllers/Doctor/DoctorIntegrationsController.php#L61-L118) listam TODOS parceiros para qualquer medico. Usuario recem-cadastrado ja ve Hermes Pardini + Fleury (criados pelo seeder) como se fossem dele. Alem disso, `slug` e `unique` global em [StorePartnerIntegrationRequest.php:27](app/Http/Requests/Doctor/StorePartnerIntegrationRequest.php#L27), entao tentar conectar Hermes/Fleury retorna 422 "Ja existe um parceiro com esse identificador"
+- [ ] **Estudo tecnico (arquitetura multi-tenant) antes da correcao definitiva** - documentar e validar com o time as opcoes abaixo:
+    - **Opcao A (recomendada):** criar tabela-pivot `doctor_partner_integrations` (N:N) com credenciais por medico; `PartnerIntegration` vira catalogo global
+    - **Opcao B:** adicionar `doctor_id`/`tenant_id` em `partner_integrations` e remover `slug` unique global (aceita duplicacao por medico)
+    - **Opcao C:** escopar por clinica (`clinic_id`) caso o tenancy oficial seja por instituicao e nao por medico
+- [ ] **Definir estrategia de migracao de dados para o modelo escolhido** - considerar seeders atuais (Hermes/Fleury), impacto em credenciais, historico de eventos e rollback seguro
+- [ ] **BUG: sincronizacao retorna JSON cru quebrando Inertia** - [DoctorIntegrationsController.php:244-275](app/Http/Controllers/Doctor/DoctorIntegrationsController.php#L244-L275) retorna `JsonResponse` mas [Partners.vue:191](resources/js/pages/Doctor/Integrations/Partners.vue#L191) chama via `router.post()` do Inertia. Aparece modal de erro do Inertia "All Inertia requests must receive a valid Inertia response". Solucao: trocar `router.post()` por `axios.post()`/`fetch()` com toast proprio, OU fazer endpoint retornar `back()->with('success', $msg)`/Inertia response
+- [ ] **BUG: eager load com `limit(5)` em `events` nao limita por parceiro** - [DoctorIntegrationsController.php:63-65](app/Http/Controllers/Doctor/DoctorIntegrationsController.php#L63-L65) usa `with('events', fn($q) => $q->limit(5))`. Eloquent gotcha: o limit aplica no total da query, nao por parceiro. Resultado: um parceiro pode ficar com os 5 events, outros com 0; "Atividade Recente" mostra dados inconsistentes. Solucao: pacote `staudenmeir/eloquent-eager-limit`, subquery com `ROW_NUMBER()`, ou query separada por parceiro
+- [ ] **Implementar sincronizacao automatica com cron escalonado (sem pico de carga)** - unico cron em [routes/console.php:16](routes/console.php#L16) e de lembretes de consulta. `IntegrationService::syncExamResults()` so roda via botao "Sincronizar agora". Criar agendamento no `withSchedule()` do [bootstrap/app.php](bootstrap/app.php), mas com fila/separacao por parceiro (ex: dispatch individual por parceiro com delay progressivo, lock Redis, limite de concorrencia e jitter), evitando disparo simultaneo de milhares de requisicoes
+- [ ] **Conectar card "Proxima Manutencao" ao cron real de sincronizacao** - [Hub.vue:253-265](resources/js/pages/Doctor/Integrations/Hub.vue#L253-L265) tem texto fixo "DOMINGO, 02:00 AM". Tornar dinamico com base no proximo ciclo efetivo do scheduler (incluindo estrategia escalonada) ou remover o card caso nao haja previsao confiavel
+- [ ] **Titulo "Hub de Integracoes" duplicado** - [Hub.vue:71](resources/js/pages/Doctor/Integrations/Hub.vue#L71) e [Partners.vue:257](resources/js/pages/Doctor/Integrations/Partners.vue#L257) usam o mesmo `<h1>`. Trocar Partners.vue para "Gerenciar Parceiros" ou "Parceiros Conectados"
+- [ ] **Lista de parceiros no Connect e hardcoded no frontend** - [Connect.vue:93-110](resources/js/pages/Doctor/Integrations/Connect.vue#L93-L110) define `availablePartners` estatico (Hermes/Fleury/A+/Outro). Mover para backend (tabela `partner_templates` ou config), e permitir o controller `connect()` passar como prop
+- [x] **"Outro" bloqueado sem explicacao clara** - [Connect.vue:109](resources/js/pages/Doctor/Integrations/Connect.vue#L109) marca `available: false`. Item marcado como resolvido conforme validacao de QA atual
+- [ ] **Parceiro ja conectado nao tem marcacao visual no Connect** - quando o medico abre o wizard, parceiros que ja possuem conexao (ex: Hermes com seeder) aparecem como se fossem novos. Adicionar prop `connectedSlugs` no controller `connect()`, e na UI: badge "Ja conectado" + botao "Gerenciar" que leva a `/doctor/integrations/{partner}` em vez de repetir setup
+- [ ] **Checkbox "Enviar pedidos de exame" visivel em modo receive_only** - na tela de Revisao ([Connect.vue:880-893](resources/js/pages/Doctor/Integrations/Connect.vue#L880-L893)), todos os 4 checkboxes de permissao aparecem, inclusive "Enviar pedidos". Em `receive_only` [Connect.vue:212-215](resources/js/pages/Doctor/Integrations/Connect.vue#L212-L215) pre-desmarca mas o usuario pode re-habilitar, gerando configuracao inconsistente. Ocultar ou desabilitar em `receive_only`
+- [ ] **Eventos criticos 24h nao tem filtro por parceiro** - banner [Partners.vue:285-319](resources/js/pages/Doctor/Integrations/Partners.vue#L285-L319) lista eventos de todos parceiros. Aceitavel como visao geral, mas adicionar filtro por parceiro no dropdown ou link para tela de eventos completa
+- [ ] **Webhook em `/api/v1/public/webhooks/lab/{slug}` sem `ValidateWebhookSignature`** - ja listado em "Seguranca (CRITICO)" mas referenciar aqui: sem assinatura, qualquer pessoa pode enviar resultados falsos vinculados a pacientes. Bloqueante antes de fechar MVP de interoperabilidade
+- [ ] **Refatorar UX do Connect para parceiro ja existente** - fluxo atual exige re-preenchimento completo ao reconectar. Quando `slug` ja existe e pertence ao medico, abrir tela de edicao; quando pertence a outro, bloqueio informativo ou pivot compartilhada
+- [ ] **Versao FHIR como input livre - deveria ser fixada em R4** - [Connect.vue:722-724](resources/js/pages/Doctor/Integrations/Connect.vue#L722-L724) renderiza `<Input v-model="form.fhir_version" placeholder="R4">` editavel; backend so valida `string|max:10` em [StorePartnerIntegrationRequest.php:37](app/Http/Requests/Doctor/StorePartnerIntegrationRequest.php#L37). Mappers (PatientFhirMapper, etc.) so suportam R4. Solucao: remover o input e gravar `R4` como default no controller, OU exibir badge read-only "FHIR R4", OU restringir via `Rule::in(['R4'])`. Aceitar "R5"/"STU3"/string aleatoria gera parceiro impossivel de operar
+- [ ] **Wizard nao testa conexao antes de marcar parceiro como ACTIVE** - [DoctorIntegrationsController.php:142-171](app/Http/Controllers/Doctor/DoctorIntegrationsController.php#L142-L171) cria parceiro `STATUS_PENDING` e logo em seguida `update(['status' => STATUS_ACTIVE])` sem nunca chamar a API do parceiro com as credenciais informadas. Resultado: UI mostra "Latencia 24ms / Online" com credenciais invalidas. Adicionar etapa "Testar conexao" que faz `GET {base_url}/metadata` (FHIR CapabilityStatement) com a auth configurada e so ativa em caso de sucesso (`PartnerIntegration::STATUS_ACTIVE` apos 200)
+- [ ] **Auth method "Certificado Digital" sem campo de upload** - [Connect.vue:139](resources/js/pages/Doctor/Integrations/Connect.vue#L139) lista `certificate` como opcao, mas o painel de credenciais (Connect.vue:799-866) so renderiza inputs para `oauth2`/`api_key`/`bearer`. Validacao do `canProceed` cai no `default: return true` ([Connect.vue:190](resources/js/pages/Doctor/Integrations/Connect.vue#L190)) - usuario consegue avancar sem fornecer certificado e o backend salva credencial vazia. Adicionar upload de `.pfx`/`.p12` + senha (com encrypted cast ja existente em [IntegrationCredential.php:31](app/Models/IntegrationCredential.php#L31)) OU remover a opcao do wizard ate ter suporte
+- [ ] **Sem orientacao na UI sobre como obter credenciais do parceiro** - usuario medico nao sabe que precisa abrir chamado tecnico no laboratorio para receber `client_id`/`client_secret`/API key. Adicionar copy explicativo no Step 3 com link "Como obter credenciais do {parceiro}" e checklist de pre-requisitos (e-mail tecnico do parceiro, CNPJ da clinica, etc.)
+- [ ] **Tela de sucesso com dados 100% hardcoded** - [Connect.vue:383](resources/js/pages/Doctor/Integrations/Connect.vue#L383) "Latencia 24ms (Excelente)", [:399](resources/js/pages/Doctor/Integrations/Connect.vue#L399) "Certificado TLS Valido por 365 dias", [:415](resources/js/pages/Doctor/Integrations/Connect.vue#L415) "Ultima Sincronizacao Agora mesmo" - nenhum valor reflete estado real. Como nem o teste de conexao foi feito, esses cards mentem para o usuario. Substituir por dados reais apos teste de conexao OU remover cards
+- [ ] **selectMode nao reseta estado de forma simetrica** - [Connect.vue:209-221](resources/js/pages/Doctor/Integrations/Connect.vue#L209-L221) `receive_only` limpa `auth_method` e `base_url`, mas alternar `receive_only -> full` so altera `perm_send_orders=true` sem restaurar valores que o usuario pode ter visto antes. Resultado: trocar de modo varias vezes pode persistir dados sujos no form
+- [ ] **Backend aceita salvar OAuth2 sem client_id/client_secret via API direta** - [StorePartnerIntegrationRequest.php:40-42](app/Http/Requests/Doctor/StorePartnerIntegrationRequest.php#L40-L42) define `client_id`/`client_secret`/`bearer_token` todos como `nullable` independente do `auth_method`. Bloqueio so existe no frontend ([Connect.vue:185-191](resources/js/pages/Doctor/Integrations/Connect.vue#L185-L191)). Curl direto cria parceiro `STATUS_ACTIVE` sem credencial nenhuma. Adicionar `required_if:auth_method,oauth2` para `client_id`+`client_secret`, `required_if:auth_method,api_key` para `client_id`, `required_if:auth_method,bearer` para `bearer_token`
+- [ ] **Card "Outro" duplicado no Step 1** - [Connect.vue:109](resources/js/pages/Doctor/Integrations/Connect.vue#L109) ja inclui `{key: 'custom', available: false}` no array, mas [Connect.vue:598-606](resources/js/pages/Doctor/Integrations/Connect.vue#L598-L606) renderiza um segundo card "Outro" hardcoded fora do `v-for`. Remover duplicacao
+- [ ] **Sidebar usa label "Sincronizacao" para etapa que e Autenticacao** - [Connect.vue:85](resources/js/pages/Doctor/Integrations/Connect.vue#L85) define step 3 como `{label: 'Sincronizacao', icon: RefreshCw}` mas [stepTitles[3]](resources/js/pages/Doctor/Integrations/Connect.vue#L166) diz "Metodo de autenticacao". Renomear o label da sidebar para "Autenticacao" (icon `Lock`/`KeyRound`) e mover o conceito de "Sincronizacao" para um passo separado quando existir teste real de conexao
+- [ ] **Sem rate limit explicito em POST /doctor/integrations/connect** - rota nao aplica `throttle` proprio (verificar [routes/web/doctor.php](routes/web/doctor.php)). Considerar `throttle:10,1` para evitar abuso de criacao de parceiros falsos
+
+### Paciente - Pesquisar Medicos (`/patient/search-consultations`)
+
+#### Redesign (solicitado pelo usuario)
+
+- [ ] **Redesign visual completo da pagina** - layout atual ([SearchConsultations.vue](resources/js/pages/Patient/SearchConsultations.vue)) tem hierarquia plana: header centralizado + barra de busca + filtros + grade de especializacoes + cards de medicos, todos empilhados sem container/card delimitando secoes. Excesso de `bg-primary/10` (barra de busca, especializacoes) cria uniformidade tom-sobre-tom que prejudica leitura. Definir wireframe novo cobrindo: (a) sidebar de filtros sticky a esquerda + lista de medicos a direita (padrao marketplace), OU (b) hero compacto com busca + chips de filtros aplicados acima da grade, (c) ordenacao visivel ("Mais avaliados / Menor preco / Disponivel hoje"), (d) contador de resultados, (e) skeleton/loading ao trocar filtro, (f) empty state com CTA "Limpar filtros"
+
+#### Bugs e melhorias backend
+
+- [ ] **N+1 ao listar medicos com data selecionada** - [PatientSearchConsultationsController.php:59-83](app/Http/Controllers/Patient/PatientSearchConsultationsController.php#L59-L83) executa uma query `Appointments::where('doctor_id', $doctor->id)` dentro do `through()` para cada medico da pagina. Com paginacao de 6 medicos sao 6 queries extras so para descobrir slots ocupados. Substituir por single query agrupando por `doctor_id` com `whereIn`, ou eager-load via subselect/relation
+- [ ] **Filtro "Telemedicina" e placeholder no-op** - [SearchConsultations.vue:120-123](resources/js/pages/Patient/SearchConsultations.vue#L120-L123) tem comentario explicito "Placeholder para futuras implementacoes. Atualmente, todos atendem online." Checkbox aparece para o paciente como se filtrasse algo. Remover do UI ate ter modalidade presencial vs online no model `Doctor`
+- [ ] **"Especializacoes Recomendadas para Voce" nao e personalizado** - [SearchConsultations.vue:298](resources/js/pages/Patient/SearchConsultations.vue#L298) usa `specializations.slice(0, 6)` (ordem alfabetica do banco). Titulo engana o usuario. Ou implementar recomendacao real (baseada em consultas anteriores, idade, condicoes do prontuario) ou renomear para "Especialidades populares"
+- [ ] **Icones de especializacao hardcoded por nome em portugues** - [SearchConsultations.vue:95-107](resources/js/pages/Patient/SearchConsultations.vue#L95-L107) faz match por string (`'Cardiologia' => Heart`). Adicionar nova especializacao no banco mostra icone `Heart` (fallback) sempre. Mover para coluna `icon` ou `slug` na tabela `specializations` e mapear via slug
+- [ ] **Prop `appointments` carregada e nao usada** - controller envia [appointments:108-125](app/Http/Controllers/Patient/PatientSearchConsultationsController.php#L108-L125) (ate 10 consultas do paciente com eager load `doctor.user.specializations`) mas o template Vue nao consome em nenhum lugar. Remover prop e queries do controller
+- [ ] **`displayedDoctors.slice(0, 6)` no frontend duplica paginacao do backend** - [SearchConsultations.vue:138](resources/js/pages/Patient/SearchConsultations.vue#L138) corta novamente em 6, mascarando bugs futuros se backend retornar quantidade diferente. Remover slice e confiar na paginacao
+- [ ] **Filtro "Disponivel na data" so faz efeito se houver data selecionada** - [SearchConsultations.vue:125-127](resources/js/pages/Patient/SearchConsultations.vue#L125-L127) e local-only e silenciosamente ignorado quando `selectedDate` e null. Desabilitar o checkbox quando nao houver data + tooltip explicativo
+- [ ] **`replace: true` em todos os `applyFilters` quebra historico do navegador** - [SearchConsultations.vue:163](resources/js/pages/Patient/SearchConsultations.vue#L163) sobrescreve a entry atual. Usuario nao consegue voltar ao estado anterior de filtros com botao "Voltar". Remover `replace: true` para filtros nao-trivial (especialidade, data) e manter so para input de busca debounced
+- [ ] **Datepicker nativo sem `min` permite buscar em data passada** - [SearchConsultations.vue:262-266](resources/js/pages/Patient/SearchConsultations.vue#L262-L266) `<Input type="date">` aceita qualquer dia. Adicionar `:min="today"` (formato `YYYY-MM-DD`) e idealmente trocar por componente date picker UI consistente
+- [ ] **`Carbon::parse($filters['date'])` aceita strings arbitrarias do query** - [PatientSearchConsultationsController.php:45](app/Http/Controllers/Patient/PatientSearchConsultationsController.php#L45) faz parse generoso. Se passar `?date=now+1year` ou `?date=lixo`, cai no catch silencioso e ignora. Validar o formato em FormRequest com `date_format:Y-m-d` + `after_or_equal:today`
+- [ ] **`availability_schedule` (JSON) enviado integralmente para o frontend** - [PatientSearchConsultationsController.php:90](app/Http/Controllers/Patient/PatientSearchConsultationsController.php#L90) inclui o agenda completo da semana de cada medico. Aumenta peso do payload e expoe horarios de outros dias sem necessidade. Enviar so `available_slots_for_day` quando ha data, ou um indicador "tem agenda na data"
+- [ ] **Confirmar fonte de verdade da disponibilidade** - controller usa `availability_schedule` JSON em `Doctor`, mas existe tambem tabela `availability_slots` (vista no contexto da feature de Agenda). Validar qual e a oficial e remover o caminho redundante para evitar dados divergentes
+- [ ] **`bySpecialization` scope sem checagem multi-tenant nao se aplica aqui (intencional)** - busca de medicos e cross-tenant por design (paciente pode ver qualquer medico ativo da plataforma). Apenas registrar como decisao de produto para nao ser confundido com bug futuro
+- [ ] **Sem indicador de loading entre filtros** - troca de especialidade/data nao mostra skeleton enquanto request esta em voo (Inertia partial). Adicionar `processing` state e skeleton nos cards
+- [ ] **Sem total de resultados visivel** - paginacao traz `total` em [PaginatedDoctors](resources/js/pages/Patient/SearchConsultations.vue#L65) mas template nao exibe. Mostrar "X medicos encontrados" acima da grade
+- [ ] **Sem chips dos filtros aplicados** - depois de aplicar filtros, usuario nao tem feedback visual do que esta filtrando alem dos selects. Exibir chips dismissable ("Cardiologia x", "25/04 x") acima da lista
+- [ ] **Sem ordenacao** - lista vem `orderByDesc('created_at')` fixo. Adicionar select "Ordenar por: Mais recentes / Menor preco / Mais avaliados / Disponibilidade"
+- [ ] **`consultation_fee` exposto na prop mas nao exibido** - [PatientSearchConsultationsController.php:89](app/Http/Controllers/Patient/PatientSearchConsultationsController.php#L89) envia mas o `DoctorCard` precisa renderizar (verificar). Se nao usado, remover do payload
+- [ ] **Paginacao usa `v-html` para `link.label`** - [SearchConsultations.vue:356](resources/js/pages/Patient/SearchConsultations.vue#L356) renderiza HTML cru do label da paginacao Laravel (`&laquo;` etc.). Substituir por icones lucide (`ChevronLeft`/`ChevronRight`) ao detectar prev/next, evitando `v-html` mesmo que origem seja confiavel
+- [ ] **Botao "Agendar Consulta" usa `text-gray-900` sobre `bg-primary`** - [SearchConsultations.vue:325](resources/js/pages/Patient/SearchConsultations.vue#L325) depende da cor primaria ser clara o suficiente. Validar contraste WCAG AA (>= 4.5:1) com a paleta atual ou trocar para `text-primary-foreground`
+- [ ] **Sem cache de `specializations`** - lista buscada do banco a cada request ([PatientSearchConsultationsController.php:104-106](app/Http/Controllers/Patient/PatientSearchConsultationsController.php#L104-L106)). Como muda raramente, aplicar `Cache::remember('specializations.list', 3600, ...)` com invalidacao em CRUD de especializacao
+- [ ] **Filtros locais (`telemedicineOnly`, `availableNow`) nao persistem entre paginacoes** - mudar de pagina pelo `changePage` recarrega a query do backend e o estado local volta ao default. Mover esses filtros para query string e backend, ou removelos enquanto sao no-op
+
+### Paciente - Agendar Consulta (`/patient/schedule-consultation?doctor_id=...`)
+
+#### Decisoes de produto (registradas para implementacao)
+
+- [ ] **Redesign visual completo** - layout atual ([ScheduleConsultation.vue](resources/js/pages/Patient/ScheduleConsultation.vue)) tem header pequeno (`text-2xl`), barra de progresso de 3 passos enganosa (mostra "Informacoes" e "Horario" preenchidos sempre, "Pagamento" cinza fixo), secoes sem container/card delimitando, e CTA "Confirmar Agendamento" com `text-gray-900` sobre `bg-primary` (contraste depende da paleta). Definir wireframe: (a) lateral esquerda fixa com card do medico (sem botao de trocar), (b) coluna principal com fluxo linear "Modalidade -> Data -> Horario -> Resumo+Confirmar", (c) progresso real refletindo estado (`Selecionar horario -> Pagar -> Confirmar`)
+- [ ] **Remover toggle "Consulta Presencial"** - [ScheduleConsultation.vue:50](resources/js/pages/Patient/ScheduleConsultation.vue#L50) e [:237-258](resources/js/pages/Patient/ScheduleConsultation.vue#L237-L258) renderizam botao "Consulta Presencial" sem suporte completo (sem endereco, sem fluxo diferenciado, sem ServiceLocation linkado ao appointment). Decisao: MVP e telemedicina-only. Remover o botao, fixar `consultationType = 'online'`, e exibir frase informativa: **"Esta consulta sera realizada por video. Voce recebera o link de acesso 30 minutos antes do horario."** Manter modelo `ServiceLocation` no banco para futuro feature flag
+- [ ] **Remover botao "Trocar medico"** - [ScheduleConsultation.vue:201-205](resources/js/pages/Patient/ScheduleConsultation.vue#L201-L205) renderiza CTA dentro do `DoctorCard` que volta para search. Breadcrumb e botao "Voltar" ([:289-292](resources/js/pages/Patient/ScheduleConsultation.vue#L289-L292)) ja cumprem essa funcao. Remover o slot de actions do DoctorCard nesta tela
+- [ ] **Adicionar modal de revisao antes do submit** - hoje [confirmAppointment()](resources/js/pages/Patient/ScheduleConsultation.vue#L66-L121) envia direto para `appointments.store`. Adicionar modal que exibe: medico (nome, CRM, especialidades), data/hora formatada, modalidade (video), valor da consulta (`consultation_fee`), politica de cancelamento, link para termo de telemedicina, checkbox de consentimento. Botao "Confirmar e pagar" so habilita com checkbox marcado
+- [ ] **Implementar fluxo Agenda -> Paga -> Confirma** - decisao tomada: pagamento ANTES da confirmacao. Atualmente a pagina termina em "Confirmar Agendamento" sem pagamento ([ScheduleConsultation.vue:294-301](resources/js/pages/Patient/ScheduleConsultation.vue#L294-L301)) embora a barra de progresso ja insinue um passo "Pagamento" ([:186-189](resources/js/pages/Patient/ScheduleConsultation.vue#L186-L189)). Tarefas: (a) escolher gateway (Stripe/Pagar.me/Mercado Pago/Asaas), (b) criar tabela `payments` (`appointment_id`, `gateway`, `gateway_id`, `amount`, `status`, `paid_at`, `refunded_at`), (c) novo `STATUS_PENDING_PAYMENT` em `Appointments` (consulta criada mas reservada por X minutos), (d) job que libera o slot se nao pagar em 15min, (e) webhook do gateway atualiza para `STATUS_SCHEDULED` apos confirmacao, (f) tela `/patient/appointments/{id}/payment` ou step interno
+- [ ] **Politica de cancelamento visivel antes do confirm** - exibir copy fixo no resumo: **"Cancelamento gratuito ate 24h antes da consulta. Cancelamentos com menos de 24h: reembolso de 50%. Apos o horario marcado: sem reembolso."** Implementar tambem regra para **consulta no mesmo dia**: definir politica especifica (sugestao: "Para consultas marcadas para hoje, cancelamento gratuito ate 1h antes do horario") - validar com produto/juridico antes de fechar texto. Persistir as regras em `config/telemedicine.php` para alterar sem deploy
+- [ ] **Checkbox obrigatorio de consentimento de telemedicina (CFM Res. 2.314/2022)** - exigencia regulatoria. Antes de habilitar o "Confirmar e pagar", paciente precisa marcar: **"Li e concordo com o Termo de Consentimento Informado para Telemedicina"** com link para o termo completo (modal ou pagina dedicada). Persistir na criacao do `Appointment`: novo campo `telemedicine_consent_at` (timestamp) + `telemedicine_consent_version` (string, ex: "v1.0") para rastrear qual versao do termo foi aceita. Bloqueio backend: `FormRequest` deve recusar se nao houver consent. Conecta com pendencia ja listada em "Conformidade CFM"
+
+#### Bugs e melhorias backend
+
+- [ ] **Loop de 30 dias chamando `ScheduleService->getAvailabilityForDate()` por dia** - [ScheduleConsultationController.php:84-123](app/Http/Controllers/Patient/ScheduleConsultationController.php#L84-L123) executa 30 chamadas ao service para montar `availableDates`. Dependendo do que o service faz internamente (queries em `availability_slots`, `blocked_dates`, `appointments`), pode ser ate 90+ queries por carregamento da pagina. Refatorar para single query agrupada por data: `AvailabilitySlot::whereBetween + BlockedDate + Appointments` em 3 queries totais e processar em memoria
+- [ ] **`doctor_id` da query string sem validacao de formato** - [ScheduleConsultationController.php:21](app/Http/Controllers/Patient/ScheduleConsultationController.php#L21) usa `$request->get('doctor_id')` direto em `findOrFail`. Se vier string nao-UUID dispara excecao no driver do banco (alguns drivers retornam 500 em vez de 404). Adicionar validacao `Rule::uuid` ou `Str::isUuid` com 404 amigavel
+- [ ] **Sem FormRequest/validacao no `index`** - filtros e identificadores aceitos sem regras explicitas. Criar `ShowScheduleConsultationRequest` com `doctor_id: required|uuid|exists:doctors,id`
+- [ ] **`payload.notes` enviado em portugues hardcoded do frontend** - [ScheduleConsultation.vue:83](resources/js/pages/Patient/ScheduleConsultation.vue#L83) gera string "Consulta online"/"Consulta presencial" e manda como `notes`. Anti-pattern: o campo `notes` do `Appointment` e para anotacoes do paciente/medico, nao para tipo. Trocar por campo dedicado `modality` (`enum: online,presential`) na tabela `appointments` e remover essa "documentacao" textual
+- [ ] **`metadata.type` redundante com `notes`** - [ScheduleConsultation.vue:84-86](resources/js/pages/Patient/ScheduleConsultation.vue#L84-L86) envia `metadata.type` mas o backend ja recebe `notes` cobrindo a mesma info. Apos criar campo `modality`, remover ambos
+- [ ] **`consultation_fee` enviado para o frontend sem validacao server-side no submit** - paciente pode ver `consultation_fee` na prop, mas a confirmacao do appointment nao trava o valor. Quando implementar pagamento, garantir que o valor cobrado seja sempre lido do `Doctor::consultation_fee` no backend, nunca do payload do cliente
+
+#### Bugs e melhorias frontend/UX
+
+- [ ] **Barra de progresso mostra estados estaticos** - [ScheduleConsultation.vue:177-190](resources/js/pages/Patient/ScheduleConsultation.vue#L177-L190) renderiza "Informacoes" e "Horario" sempre preenchidos em primary, "Pagamento" sempre cinza, sem refletir estado real. Substituir por componente `Stepper` que avance conforme: (1) modalidade selecionada, (2) data/hora selecionados, (3) revisao + consentimento, (4) pagamento, (5) confirmacao
+- [ ] **Erro de validacao client-side `errors.datetime` nao e exibido** - [ScheduleConsultation.vue:68](resources/js/pages/Patient/ScheduleConsultation.vue#L68) seta `errors.value.datetime` mas o template so renderiza `errors.general` ([:172](resources/js/pages/Patient/ScheduleConsultation.vue#L172)) e o loop generico ([:304-308](resources/js/pages/Patient/ScheduleConsultation.vue#L304-L308)). Mensagem fica visivel mas distante dos campos. Mover a exibicao para perto do `ScheduleSelector`
+- [ ] **`isSubmitting = true` mas erro nao reseta com `onError`** - se a request falhar antes do `onFinish`, `isSubmitting` continua `true` ate `onFinish` rodar (ok), mas a UI nao mostra feedback claro. Garantir que loader desligue em qualquer cenario e adicionar toast de erro
+- [ ] **Sem exibicao do valor da consulta** - `consultation_fee` esta na prop mas o template nao mostra em lugar nenhum, mesmo o usuario tendo direito de saber antes de confirmar. Exibir no card do medico e no modal de revisao
+- [ ] **Sem fallback quando `availableDates` esta vazio** - se o medico nao tem slots em 30 dias, `ScheduleSelector` provavelmente exibe vazio sem orientacao. Adicionar empty state: "Este medico nao tem horarios disponiveis nos proximos 30 dias. [Ver outros medicos]"
+- [ ] **`scheduledAt` montado como string sem timezone** - [ScheduleConsultation.vue:76](resources/js/pages/Patient/ScheduleConsultation.vue#L76) faz `${selectedDate}T${selectedTime}:00` sem indicar timezone. Backend interpreta no `app.timezone` (provavel `America/Sao_Paulo`), mas paciente em outro fuso ve horario diferente do agendado. Padronizar: enviar com offset (`-03:00`) e armazenar UTC; exibir sempre no fuso do usuario
+- [ ] **Modal `IncompleteProfileModal` acionado por string-matching no erro** - [ScheduleConsultation.vue:106-112](resources/js/pages/Patient/ScheduleConsultation.vue#L106-L112) detecta perfil incompleto procurando substrings "cadastro completo"/"segunda etapa"/"contato de emergencia" na mensagem. Fragil: qualquer mudanca de copy quebra. Backend deve retornar erro estruturado (`error_code: PROFILE_INCOMPLETE`) e o frontend testar contra esse codigo
+- [ ] **Botao "Voltar" e botao "Confirmar" lado a lado sem diferencial visual forte** - [ScheduleConsultation.vue:288-301](resources/js/pages/Patient/ScheduleConsultation.vue#L288-L301) usam mesma altura (`h-9`) e mesmo padding, diferindo so por cor. CTA principal deveria ter peso visual maior (size lg, sombra, posicionamento)
+- [ ] **Bloco de erros geral abaixo dos botoes** - [ScheduleConsultation.vue:303-308](resources/js/pages/Patient/ScheduleConsultation.vue#L303-L308) coloca `<div class="w-full">` dentro do `flex justify-end` - quebra layout em mobile e exibe erros longe dos campos relacionados. Mover erros para perto do componente que falhou ou para um toast
+- [ ] **BUG: datas e horarios anteriores ao momento atual aparecem disponiveis** - reportado em QA. Backend tem filtro em [AvailabilityService.php:70-78](app/Services/AvailabilityService.php#L70-L78) que remove slots `<= now+5min` SOMENTE quando `$date->isToday()`. Hipotese principal: timezone mismatch - se `config('app.timezone')` for `UTC` (default do Laravel) e o paciente estiver em America/Sao_Paulo, apos 21h BRT o servidor ja considera o dia seguinte, fazendo `isToday()` retornar false para o "hoje" do usuario e exibindo todos os horarios passados do dia. Acoes: (a) garantir `'timezone' => 'America/Sao_Paulo'` em [config/app.php](config/app.php) ou normalizar via `Carbon::now()->setTimezone(...)` baseado em `User::timezone` (se existir), (b) revisar [ScheduleConsultationController.php:86-95](app/Http/Controllers/Patient/ScheduleConsultationController.php#L86-L95) para iniciar de `Carbon::now($userTz)->startOfDay()`, (c) verificar tambem que `whereDate('scheduled_at', $date->toDateString())` em [AvailabilityService.php:42](app/Services/AvailabilityService.php#L42) compara na mesma TZ
+- [ ] **Defesa em profundidade no frontend: `ScheduleSelector` aceita qualquer data/horario do backend** - [ScheduleSelector.vue:28-47](resources/js/components/ScheduleSelector.vue#L28-L47) e [:148-164](resources/js/components/ScheduleSelector.vue#L148-L164) renderizam tudo que vem na prop sem validar `item.date >= today` nem `slot > now` quando a data e hoje. Adicionar filtro client-side como rede de seguranca: descartar datas anteriores ao `new Date().toISOString().slice(0,10)` e, se a data for hoje, descartar slots cujo `HH:mm` ja passou (com margem de seguranca de 5 min, igual ao backend)
+
+### Paciente - Mensagens (`/patient/messages`)
+
+#### Bugs criticos
+
+- [ ] **PERFORMANCE CRITICA: `getConversations` carrega todas as mensagens do usuario em memoria** - [MessageService.php:146-156](app/Services/MessageService.php#L146-L156) faz `Message::where(sender_id|receiver_id)->get()->groupBy(...)` sem `limit`, so para extrair a ultima de cada conversa. Para usuario com 10 conversas e 5k mensagens carrega 5k registros so para mostrar 10 previews. Refatorar para subquery com `MAX(created_at)` agrupada por `LEAST/GREATEST(sender_id, receiver_id)`, ou usar uma single query com `ROW_NUMBER() OVER (PARTITION BY conversation_pair ORDER BY created_at DESC)`
+- [ ] **N+1: `unreadCount` em loop por conversa** - [MessageService.php:167-170](app/Services/MessageService.php#L167-L170) executa um `Message::unreadFor()->count()` dentro do `foreach` sobre `$conversationsMap`. Substituir por single query com `selectRaw('sender_id, COUNT(*) FILTER (WHERE read_at IS NULL) as unread')` agrupada
+- [ ] **`try/catch` no controller engole qualquer erro silenciosamente** - [PatientMessagesController.php:28-33](app/Http/Controllers/Patient/PatientMessagesController.php#L28-L33) retorna `conversations: []` em qualquer excecao, mascarando bugs reais (DB down, schema invalido). Remover `try/catch` e deixar o handler global do Laravel responder, ou pelo menos `Log::error($e)` antes do retorno
+- [ ] **BUG: link "ver perfil do medico" provavelmente quebrado** - [Messages.vue:130-137](resources/js/pages/Patient/Messages.vue#L130-L137) navega para `patientRoutes.doctorPerfil()?doctorId={conversation.id}`. Dois problemas: (a) `conversation.id` e o `User.id` do medico ([MessageService.php:172-181](app/Services/MessageService.php#L172-L181)), nao `Doctor.id` que a tela DoctorPerfil espera; (b) o param vai como `doctorId` (camelCase) mas as outras navegacoes do projeto usam `doctor_id` snake_case (ex: [SearchConsultations.vue:331](resources/js/pages/Patient/SearchConsultations.vue#L331)). Verificar `DoctorPerfilController` para confirmar nome aceito e ajustar ID para `Doctor.id`. O QA deve testar clicando em avatar/nome no header e na lista
+- [ ] **Conversa permanece habilitada para sempre apos qualquer appointment** - [MessageService.php:244-251](app/Services/MessageService.php#L244-L251) so checa `Appointments::where(doctor_id, patient_id)->exists()` sem janela temporal nem filtro de status. Paciente que teve uma unica consulta cancelada ha 2 anos consegue mandar mensagem indefinidamente. Decidir politica: (a) so permitir chat com appointments `STATUS_SCHEDULED|IN_PROGRESS|COMPLETED` em janela de X dias pos-consulta, ou (b) medico precisa habilitar chat ativamente
+
+#### Bugs frontend
+
+- [ ] **Status "Online" hardcoded** - [Messages.vue:250](resources/js/pages/Patient/Messages.vue#L250) renderiza `<p class="text-sm text-gray-500">Online</p>` sempre, mesmo quando o medico esta offline. Implementar presence channel via Reverb ou remover o indicador
+- [ ] **`<input type="text">` para mensagens (sem multilinha)** - [Messages.vue:315-322](resources/js/pages/Patient/Messages.vue#L315-L322) e single-line. Trocar por `<textarea>` com auto-resize + `Shift+Enter` quebra linha, `Enter` envia. Mensagem de telemedicina geralmente exige texto longo (sintomas, contexto)
+- [ ] **`<input>` sem `maxlength` no frontend e sem validacao de tamanho no backend** - [MessageService.php:29-35](app/Services/MessageService.php#L29-L35) cria a Message sem validar `content`. Adicionar `Rule::string|max:5000` num FormRequest e `maxlength` no input para evitar abuso
+- [ ] **`scrollToBottom` usa `getElementById` em vez de template ref** - [Messages.vue:117-122](resources/js/pages/Patient/Messages.vue#L117-L122). Anti-pattern em Vue: ID hardcoded `messages-container` quebra se duas instancias do componente coexistirem. Trocar por `ref` reativa
+- [ ] **Click em `<div>` em vez de `<button>` para selecionar conversa** - [Messages.vue:175-217](resources/js/pages/Patient/Messages.vue#L175-L217). Sem suporte a teclado (Enter/Space) nem semantica para screen reader. Trocar por `<button>` ou adicionar `role="button" tabindex="0" @keyup.enter`
+- [ ] **`isLoading` compartilhado entre lista de conversas e mensagens** - [Messages.vue:164](resources/js/pages/Patient/Messages.vue#L164) e [:259](resources/js/pages/Patient/Messages.vue#L259) leem o mesmo `isLoading` do composable. Carregar mensagens de uma conversa pode redesenhar a lista de conversas em estado "Carregando conversas...". Separar em `isLoadingConversations` e `isLoadingMessages` no composable
+- [ ] **Conversa sem mensagens mostra timestamp do appointment** - [MessageService.php:177-179](app/Services/MessageService.php#L177-L179) usa `appointment->created_at` quando nao ha mensagens, com texto "Nenhuma mensagem ainda". Visualmente parece atividade recente. Diferenciar visualmente (ex: italic, sem timestamp, ou texto "Conversa nao iniciada")
+- [ ] **Busca filtra so por nome, nao pelo conteudo da ultima mensagem** - [Messages.vue:77-86](resources/js/pages/Patient/Messages.vue#L77-L86). Padrao de mercado (WhatsApp, Slack) tambem busca em mensagens. Adicionar filtro local sobre `lastMessage` ou ir ao backend para busca completa
+- [ ] **Botao Send com `p-2` (area de toque pequena em mobile)** - [Messages.vue:323-329](resources/js/pages/Patient/Messages.vue#L323-L329). WCAG/Apple HIG recomendam minimo 44x44px. Aumentar para `p-3` ou `min-h-[44px] min-w-[44px]`
+- [ ] **Layout `w-1/3 + flex-1` quebra em mobile** - [Messages.vue:147-219](resources/js/pages/Patient/Messages.vue#L147-L219). Em telas <640px, lista de conversas vira coluna estreita demais e a area de chat fica espremida. Implementar comportamento "drill-down": mobile mostra so a lista, ao clicar abre chat fullscreen com botao de voltar; desktop mantem split
+
+#### Funcionalidades faltando (importantes para telemedicina)
+
+- [ ] **Sem upload de imagens/anexos** - paciente nao consegue enviar foto de exame, receita, atestado, lesao na pele. E exigencia basica em telemedicina. Implementar upload com validacao de tipo (`image/*`, `application/pdf`), tamanho maximo configurado, scan de antivirus se possivel, e armazenamento em S3/disk privado com URL assinada
+- [ ] **Sem agrupamento de mensagens por data** - [Messages.vue:268-309](resources/js/pages/Patient/Messages.vue#L268-L309) renderiza lista plana. Adicionar separadores "Hoje", "Ontem", "12 de abril" entre grupos de mensagens
+- [ ] **Sem indicador "digitando..."** - via presence channel/whisper do Reverb
+- [ ] **Sem notificacoes desktop nem audio** - se paciente sai da aba, nao percebe nova mensagem. Implementar `Notification.requestPermission()` + audio de alerta opcional
+- [ ] **Sem paginacao/infinite-scroll de historico** - composable carrega so primeira pagina (50 mensagens). Em conversas longas o historico fica truncado. Implementar load-more no scroll-up usando o `beforeMessageId` que o backend ja suporta ([MessageService.php:58-68](app/Services/MessageService.php#L58-L68))
+- [ ] **Sem botao "marcar todas como lidas"** - paciente com 50 conversas precisa abrir uma a uma para zerar contadores
+- [ ] **Sem busca dentro de uma conversa especifica** - so existe filtro na lista. Adicionar busca inline na area de mensagens (atalho Ctrl+F que abre overlay)
+
+#### Conformidade e seguranca
+
+- [ ] **Sem disclaimer de emergencia visivel** - exigencia regulatoria/etica para telemedicina. Banner fixo: **"Em caso de emergencia, ligue 192 (SAMU) ou procure o pronto-socorro mais proximo. Mensagens nao sao monitoradas 24/7."** Posicionar acima do input ou no topo do chat
+- [ ] **Sem aviso sobre limite do canal de mensageria** - texto explicito: **"Este canal nao substitui consulta. Para diagnosticos e prescricoes, agende uma teleconsulta."** Conecta com regras CFM
+- [ ] **Mensagens nao tem retencao/expurgo definidos** - LGPD exige politica de retencao para dados de saude. Definir prazo (ex: 5 anos pos-ultima consulta), automatizar expurgo via job, e exibir politica para o paciente
+- [ ] **Sem audit log de acesso a conversas** - quem acessou, quando. Critico para investigacao de vazamento. Tabela `message_access_logs` com `user_id`, `conversation_with`, `accessed_at`, `ip`
+- [ ] **Sem rate limit no envio** - paciente pode spammar medico. Aplicar `throttle:30,1` (30 msgs/min) na rota POST `/api/messages`
+- [ ] **`message.content` exibido com `{{ }}` (Vue escapa por padrao) - validar que nao ha `v-html` em nenhum descendente** - confirmar que componentes filhos nao injetam HTML cru, especialmente se houver markdown/emoji rendering futuramente
+
+### Paciente - Historico de Consultas (`/patient/history-consultations`)
+
+#### Redesign (solicitado pelo usuario)
+
+- [ ] **Redesign visual completo da pagina** - layout atual ([HistoryConsultations.vue](resources/js/pages/Patient/HistoryConsultations.vue)) tem hierarquia plana: header + grid de 4 cards de stats + barra de tabs + lista + banner CTA, com Stats e Tabs visualmente desconectados (paciente ve "3 Proximas" mas precisa procurar o botao "Proximas" em outro bloco). Definir wireframe novo cobrindo: (a) **renomear pagina** - "Meu Historico" colide com tab "Proximas" e card "Proximas" (historico e passado); sugestao: trocar para "Minhas Consultas" e dividir visualmente em "Proximas" (cards expandidos com CTA de cancelar/reagendar/entrar na sala) e "Anteriores" (lista compacta com avaliar/baixar prescricao/ver detalhes); (b) **stats cards clicaveis** que aplicam o filtro correspondente (eliminando a barra de tabs duplicada); (c) **filtros adicionais visiveis**: data range, busca por nome de medico/especialidade, ordenacao (mais recente/mais antiga); (d) **acoes contextuais por status** no card da consulta em vez de botao "Ver detalhes" generico; (e) **empty state diferenciado por filtro** com CTA especifico
+
+#### Bugs criticos
+
+- [ ] **BUG: CTA "Agendar Nova Consulta" leva a tela de erro** - [HistoryConsultations.vue:346-350](resources/js/pages/Patient/HistoryConsultations.vue#L346-L350) chama `patientRoutes.scheduleConsultation()` sem `doctor_id` no query. [ScheduleConsultationController.php:23-27](app/Http/Controllers/Patient/ScheduleConsultationController.php#L23-L27) redireciona para `/patient/search-consultations` com mensagem "Selecione um medico para agendar." Trocar o destino do CTA para `patientRoutes.searchConsultations()` (passo correto do funil) ou implementar tela intermediaria de selecao
+- [ ] **BUG: pagina atual fica invisivel na paginacao** - [HistoryConsultations.vue:315](resources/js/pages/Patient/HistoryConsultations.vue#L315) usa `data-current:bg-white` num fundo `bg-white` da pagina. Sem cor de destaque, paciente nao identifica em que pagina esta. Trocar para `data-current:bg-primary data-current:text-white` ou similar
+- [ ] **Botao kebab (`MoreVertical`) renderizado mas sem handler** - [HistoryConsultations.vue:281-283](resources/js/pages/Patient/HistoryConsultations.vue#L281-L283) e um `<button>` solto sem `@click`, sem dropdown, sem aria-label. Implementar menu de acoes contextuais (cancelar, reagendar, baixar comprovante, avaliar atendimento) ou remover
+
+#### Bugs e melhorias backend
+
+- [ ] **4 queries `count()` redundantes para stats** - [PatientHistoryConsultationsController.php:73-78](app/Http/Controllers/Patient/PatientHistoryConsultationsController.php#L73-L78) executa 4 selects no mesmo `where(patient_id)`. Refatorar para single query com `selectRaw`: `COUNT(*) as total, COUNT(*) FILTER (WHERE status = 'completed') as completed, ...` (Postgres) ou `SUM(CASE WHEN ... THEN 1 ELSE 0 END)` (MySQL). Reduz 4 queries -> 1
+- [ ] **Filtros `rescheduled` e `no_show` aceitos no backend mas sem botao no UI** - [PatientHistoryConsultationsController.php:38-42](app/Http/Controllers/Patient/PatientHistoryConsultationsController.php#L38-L42) aceita esses status, mas [HistoryConsultations.vue:201-247](resources/js/pages/Patient/HistoryConsultations.vue#L201-L247) so renderiza 4 botoes (upcoming/completed/cancelled/all). Decidir: (a) adicionar botoes "Reagendadas" e "Faltei" na UI, ou (b) restringir o backend para os 4 valores oficiais via `Rule::in([...])`
+- [ ] **Sem validacao do query param `status`** - [PatientHistoryConsultationsController.php:30](app/Http/Controllers/Patient/PatientHistoryConsultationsController.php#L30) usa `$request->get('status')` sem validar via FormRequest. Valor invalido cai silenciosamente em "all" sem indicar erro. Validar com `Rule::in(['upcoming','completed','cancelled','rescheduled','no_show','all'])`
+- [ ] **Payload nao inclui informacoes uteis para a tela**: `consultation_fee`, modalidade (online/presencial), local da consulta, motivo de cancelamento. Se redesign exigir exibir esses dados, expandir o `through()` em [PatientHistoryConsultationsController.php:48-71](app/Http/Controllers/Patient/PatientHistoryConsultationsController.php#L48-L71)
+- [ ] **`orderBy('scheduled_at', 'desc')` aplicado para todos os filtros** - para `upcoming`, ordem cronologica reversa e contraintuitiva (proxima do final primeiro). Quando filtro for `upcoming`, ordenar `asc`; demais `desc`
+
+#### Bugs e melhorias frontend/UX
+
+- [ ] **Tipo TypeScript `activeFilter` desalinhado com backend** - [HistoryConsultations.vue:79](resources/js/pages/Patient/HistoryConsultations.vue#L79) declara `'upcoming' | 'completed' | 'cancelled' | 'all'` mas backend aceita `rescheduled` e `no_show`. Se URL chegar com `?status=rescheduled`, `props.filters.status` cai no cast `as any` ([:81](resources/js/pages/Patient/HistoryConsultations.vue#L81)) e nenhum botao fica destacado. Alinhar tipos
+- [ ] **Texto do header promete o que a pagina nao entrega** - [HistoryConsultations.vue:152-154](resources/js/pages/Patient/HistoryConsultations.vue#L152-L154) diz "Acesse detalhes, **avalie atendimentos** e **gerencie seus acompanhamentos**." Mas so existe botao "Ver detalhes" - nao tem avaliar nem gerenciar. Implementar avaliacao pos-consulta (modal de rating + comentario com persistencia em tabela `appointment_ratings`) ou ajustar o copy
+- [ ] **Cards de stats nao sao clicaveis** - [HistoryConsultations.vue:158-198](resources/js/pages/Patient/HistoryConsultations.vue#L158-L198) sao `<div>` estaticos. Padrao moderno: card clicavel que aplica o filtro correspondente, eliminando a barra de tabs separada
+- [ ] **Empty state generico** - [HistoryConsultations.vue:288-290](resources/js/pages/Patient/HistoryConsultations.vue#L288-L290) mostra so texto "Nenhuma consulta encontrada para o filtro selecionado." Adicionar CTA contextual: filtro `upcoming` -> "Agendar agora"; filtro `completed` -> "Voce ainda nao concluiu nenhuma consulta"; filtro `all` -> "Ainda nao ha consultas registradas. [Agendar primeira]"
+- [ ] **Paginacao usa `&lt;&lt;`/`&gt;&gt;` como texto** - [HistoryConsultations.vue:304-331](resources/js/pages/Patient/HistoryConsultations.vue#L304-L331) renderiza `<<` `<` `>` `>>` cru. Trocar por icones lucide (`ChevronsLeft`, `ChevronLeft`, `ChevronRight`, `ChevronsRight`) com `aria-label`
+- [ ] **Sem confirmacao em filtros de URL nao listados** - se paciente acessa `/patient/history-consultations?status=foo`, backend devolve "all" silenciosamente mas a URL continua com o param invalido. Limpar via redirect ou exibir aviso
+- [ ] **Banner CTA fixo no rodape independente do estado** - [HistoryConsultations.vue:336-351](resources/js/pages/Patient/HistoryConsultations.vue#L336-L351) sempre aparece. Considerar esconder quando `activeFilter === 'upcoming'` e ja ha agendamentos futuros (CTA fica redundante)
+- [ ] **Sem ordenacao configuravel** - lista vem ordenada por `scheduled_at desc`. Adicionar select "Ordenar por: Mais recente / Mais antiga / Status"
+- [ ] **Sem filtro de data** - paciente nao consegue achar consulta de "abril/2025". Adicionar date range picker ou filtros pre-definidos ("Ultimos 30 dias", "Ano passado", etc.)
+- [ ] **Sem busca por nome do medico** - util quando o paciente tem muitas consultas
+- [ ] **Filtros aplicam `preserveState: true`** mas como `router.get` recarrega props, o estado preservado e so o de scroll. Validar comportamento esperado vs o que esta acontecendo
+- [ ] **Avatar do medico carregado na prop mas nao usado no template** - [PatientHistoryConsultationsController.php:61](app/Http/Controllers/Patient/PatientHistoryConsultationsController.php#L61) envia `avatar` mas o template passa para `AppointmentSummary` so id/name/specializations ([HistoryConsultations.vue:259-263](resources/js/pages/Patient/HistoryConsultations.vue#L259-L263)). Verificar se `AppointmentSummary` consome avatar; se nao, remover do payload ou estender o componente
+
+### Paciente - Prontuario Medico (`/patient/medical-records`)
+
+#### Bugs criticos de seguranca/privacidade
+
+- [ ] **CRITICO LGPD: documentos do prontuario expostos via URL direta sem auth** - [MedicalRecord.vue:688](resources/js/pages/Patient/MedicalRecord.vue#L688) `getDocumentUrl(path) => '/storage/${path}'` aponta para o symlink publico do disk `public`. Combinado com [PatientMedicalRecordController.php:74](app/Http/Controllers/Patient/PatientMedicalRecordController.php#L74) `Storage::disk('public')->download`, qualquer arquivo de prontuario fica acessivel a qualquer um que descubra o path (UUID nao e segredo, vaza em logs/headers). Acoes: (a) migrar todos os arquivos para `Storage::disk('private')` ou S3 com bucket privado, (b) substituir links por **rotas assinadas** (`URL::signedRoute`) com expiracao curta, (c) Policy validando que o usuario solicitando e o paciente dono OU medico autorizado, (d) audit log de cada download
+- [ ] **Visibility "Apenas medico" disponivel no upload do paciente** - [MedicalRecord.vue:682-686](resources/js/pages/Patient/MedicalRecord.vue#L682-L686) lista `{id: 'doctor', label: 'Medico'}` como opcao; paciente que sobe documento e marca essa visibilidade nao consegue mais ver o proprio arquivo. Se a intencao for "compartilhado com o medico" o label esta errado; se for visibilidade exclusiva do medico, paciente nao deveria poder selecionar. Restringir options no frontend conforme `context.mode`
+- [ ] **`extractFilters` aceita filtros backend que o frontend nao expoe** - [PatientMedicalRecordController.php:80-100](app/Http/Controllers/Patient/PatientMedicalRecordController.php#L80-L100) processa `appointment_status, prescription_status, examination_status, examination_type, document_category, vitals_limit` mas a UI so envia `search/date_from/date_to`. Sem validacao via FormRequest, qualquer string passa. Adicionar `MedicalRecordIndexRequest` com regras explicitas para evitar SQL injection via valores nao previstos chegando ao service
+- [ ] **`logAccess` so e disparado no view do paciente, nao em download de documentos individuais** - [PatientMedicalRecordController.php:36](app/Http/Controllers/Patient/PatientMedicalRecordController.php#L36) registra acesso ao prontuario completo, mas o download direto via `/storage/...` (link no template) nao passa por nenhum controller, entao nao gera log. LGPD/CFM exigem trilha de auditoria para acesso individual a cada documento do prontuario
+- [ ] **Sem assinatura digital ICP-Brasil no PDF exportado** - ja listado em "Conformidade CFM" mas referenciar aqui: o `generatePdfDocument` do `MedicalRecordService` precisa assinar com e-CNPJ A1 antes de servir. Sem isso, exportacao tem valor legal limitado
+
+#### Bugs criticos de funcionamento
+
+- [ ] **BUG: export PDF quebra fluxo Inertia** - [PatientMedicalRecordController.php:74](app/Http/Controllers/Patient/PatientMedicalRecordController.php#L74) retorna `Storage::disk('public')->download(...)` (BinaryFileResponse), mas [MedicalRecord.vue:352-357](resources/js/pages/Patient/MedicalRecord.vue#L352-L357) chama via `exportForm.post` (Inertia useForm). Inertia exige resposta `Inertia::render` ou redirect; binary response dispara modal "All Inertia requests must receive a valid Inertia response" ou falha silenciosamente. Mesma classe de bug do `/doctor/integrations/sync`. Solucao: usar `axios.post` que recebe blob + `URL.createObjectURL` para download, OU fazer o controller dispatchar job e devolver `back()->with('status', 'PDF sendo gerado, voce recebera por e-mail')`
+- [ ] **Rate limit do export e excessivamente restritivo** - [PatientMedicalRecordController.php:56-63](app/Http/Controllers/Patient/PatientMedicalRecordController.php#L56-L63) limita 1 export por hora por paciente. Caso de uso legitimo (paciente precisa do PDF para entregar a outro medico/empregador, deu erro no download anterior) fica bloqueado. Aumentar para `RateLimiter::tooManyAttempts($key, 5)` em janela de 1h e exibir tempo restante ao usuario
+- [ ] **Payload completo carregado em um unico request** - [MedicalRecordService::getPatientMedicalRecord](app/Services/MedicalRecordService.php#L30) retorna timeline, consultations, prescriptions, examinations, documents, vital_signs, diagnoses, clinical_notes, medical_certificates, upcoming_appointments e metrics. Para paciente com historico longo e prop gigante (centenas de KB ate MB) em todo carregamento. Implementar carregamento sob demanda por tab via `router.reload({ only: ['prescriptions'] })` quando o paciente clica na tab correspondente
+- [ ] **Filtros aplicados via `replace: true`** - [MedicalRecord.vue:325](resources/js/pages/Patient/MedicalRecord.vue#L325) sobrescreve historico do navegador. Mesma critica de outras paginas. Manter so na busca debounced
+- [ ] **Sem watcher em `filtersState`** - [MedicalRecord.vue:290-294](resources/js/pages/Patient/MedicalRecord.vue#L290-L294) reativo, mas `applyFilters` so dispara em click manual. Se houver botao "Aplicar" sem ele, nao testei, mas se o usuario alterar e mudar de tab, perde
+
+#### Bugs e melhorias frontend/UX
+
+- [ ] **God-component de 1659 linhas dual-mode (paciente/medico)** - [MedicalRecord.vue](resources/js/pages/Patient/MedicalRecord.vue) tem `isDoctorViewer` ramificado em todo lugar, com forms de medico (diagnosis, prescription, examination, note, certificate, vital_signs) que nunca sao usados quando `mode === 'patient'` mas estao no bundle. Separar em dois componentes (`Patient/MedicalRecord.vue` e `Doctor/PatientMedicalRecord.vue`) compartilhando subcomponentes por tab (`<MedicalTimeline/>`, `<PrescriptionList/>`, etc.). Reduz bundle do paciente em ~70% e elimina branching
+- [ ] **Badge "Privada/Compartilhada" em anotacoes para o paciente nao faz sentido** - [MedicalRecord.vue:1564-1569](resources/js/pages/Patient/MedicalRecord.vue#L1564-L1569). Backend ja filtra `is_private=false` para o paciente em [MedicalRecordService.php:355-360](app/Services/MedicalRecordService.php#L355-L360), entao o badge sempre mostra "Compartilhada". Remover o badge da visao do paciente
+- [ ] **10 tabs e navegacao excessiva** - paciente comum usa 2-3 secoes (consultas, prescricoes, exames). Avaliar consolidacao: agrupar em "Resumo / Consultas / Documentos & Exames" ou usar barra lateral com agrupamentos
+- [ ] **Texto "Historial medico" no header (typo e exposicao)** - [MedicalRecord.vue:721](resources/js/pages/Patient/MedicalRecord.vue#L721) usa "Historial" (espanhol/incomum em PT-BR). Trocar para "Historico medico" ou "Antecedentes". Alem disso, exibir o conteudo completo no header expoe info sensivel (browser cache, print, screen share). Truncar com "Ver mais" toggle
+- [ ] **`patient.allergies` e `current_medications` carregados na prop mas nao exibidos** - [MedicalRecord.vue:170-174](resources/js/pages/Patient/MedicalRecord.vue#L170-L174) tem campos cruciais de seguranca clinica (alergias, medicacao continua) que nao aparecem em lugar nenhum no template. Adicionar destaque visual no header (banner amarelo de alerta para alergias, lista de medicacoes em uso)
+- [ ] **`patient.height/weight/bmi` carregados e nao usados** - mesmas linhas. Ou exibir junto dos sinais vitais ou remover do payload
+- [ ] **Empty states extremamente genericos** - "Nenhuma prescricao disponivel", "Nenhum exame encontrado", "Nenhuma anotacao..." em todas as tabs sem CTA. Adicionar contexto util ("Suas prescricoes aparecerao aqui apos a consulta") e CTAs onde fizer sentido (ex: "Agendar consulta")
+- [ ] **`accept=".pdf,.jpg,.jpeg,.png"`** - [MedicalRecord.vue:1477](resources/js/pages/Patient/MedicalRecord.vue#L1477) limita no front, mas backend tem que validar tambem (mime real, nao extensao). Verificar `MedicalRecordDocumentController` para garantir validacao server-side com `Rule::file()->types(['pdf','jpg','png'])` + scan opcional
+- [ ] **Tab "Evolucao" so mostra sinais vitais** - nome sugere evolucao clinica/temporal mas so renderiza VitalSigns. Renomear para "Sinais vitais" ou expandir para incluir grafico de evolucao temporal (peso/PA/glicemia)
+- [ ] **Tab "Consultas Futuras" duplica funcionalidade do Historico de Consultas** - paciente ja tem `/patient/history-consultations`. Avaliar remocao da tab daqui ou manter so como visao rapida com link "Ver todas"
+- [ ] **`flashStatus` lido de `page.props.flash?.status`** - [MedicalRecord.vue:690](resources/js/pages/Patient/MedicalRecord.vue#L690) sem typing de `page.props.flash`. Se o middleware nao setar a struct esperada, undefined silencioso. Tipar via interface
+- [ ] **`expandedItems = new Set()` recriado a cada toggle** - [MedicalRecord.vue:655-663](resources/js/pages/Patient/MedicalRecord.vue#L655-L663) cria novo Set para forcar reatividade. Em Vue 3 o ref de Set ja e reativo nativamente; substituir por `expandedItems.value.add/delete` direto
+- [ ] **`docs/MedicalRecord` usa cores azuis hardcoded (`bg-blue-600`, `text-blue-700`)** - inconsistente com `bg-primary` (paleta turquesa do projeto). Padronizar
+- [ ] **Botao "Atualizar resultados" so aparece para medico** - [MedicalRecord.vue:1371-1382](resources/js/pages/Patient/MedicalRecord.vue#L1371-L1382). Paciente tambem se beneficiaria de pull manual quando exame esta "Aguardando resultado". Avaliar liberar com rate limit
+- [ ] **Sinais vitais em grid 2x4 sem unidades grandes/destaques** - [MedicalRecord.vue:1626-1634](resources/js/pages/Patient/MedicalRecord.vue#L1626-L1634) listagem plana sem comparacao temporal nem highlight de valores fora da normalidade (ex: PA > 140/90 em vermelho). Util para o paciente entender evolucao
+- [ ] **`exam.results?.summary`** - [MedicalRecord.vue:1403](resources/js/pages/Patient/MedicalRecord.vue#L1403) so mostra `summary`. Resultados FHIR completos vem em `results` mas paciente nao consegue ver detalhes. Considerar modal "Ver resultado completo" com renderizacao do bundle
+- [ ] **`prescription.medications` renderizado como lista simples** - [MedicalRecord.vue:1352-1357](resources/js/pages/Patient/MedicalRecord.vue#L1352-L1357) sem destaque para horarios, duracao, alertas de interacao. Padrao moderno: cards individuais por medicamento com timeline ("tomar agora", "proximo as 14h")
+
+#### Conformidade
+
+- [ ] **Sem aviso/aceite de visualizacao do prontuario** - LGPD recomenda que paciente reconheca que esta acessando dados sensiveis. Banner informativo no primeiro acesso ou consentimento documentado de quem mais pode acessar (responsavel legal de menor, etc.)
+- [ ] **Sem versionamento/imutabilidade do prontuario** - exigencia CFM Resolucao 1.821/2007: prontuario nao pode ser alterado, so anexado. Validar que registros tem `created_at` e nao podem ser editados (apenas anotacoes adicionais com `parent_id`). Documentos uploadados pelo paciente: sem politica de delete (paciente nao deveria conseguir apagar documento medico apos upload)
+- [ ] **Documentos uploadados pelo paciente sem trilha de proveniencia** - hash do arquivo, IP de upload, timestamp imutavel. Necessario para validade clinica/legal
 
 ---
 
 # RESUMO
 
-| Categoria                        | Pendente |
-|----------------------------------|----------|
-| Seguranca (critico)              | 5        |
-| Conformidade CFM (bloqueante)    | 13       |
-| Videoconferencia                 | 8        |
-| Backend - controllers/policies   | 7        |
-| Backend - migrations             | 5        |
-| Backend - tasks/scheduler        | 4        |
-| Backend - servicos incompletos   | 4        |
-| Backend - CRUDs e features       | 10       |
-| Frontend - dados hardcoded       | 6        |
-| Frontend - TODOs e bugs          | 8        |
-| Config e ambiente                | 0        |
-| Testes gerais                    | 12       |
-| Interoperabilidade (branch)      | 3        |
-| Gravacao de sessao               | 6        |
-| Observabilidade                  | 5        |
-| **QA Manual - Landing Page**     | **8**    |
-| **QA Manual - Login**            | **3**    |
-| **QA Manual - Registro Paciente**| **6**    |
-| **QA Manual - Registro Medico**  | **3**    |
-| **QA Manual - Dashboard Medico** | **17**   |
-| **QA Manual - Dashboard Paciente**| **7**   |
-| **TOTAL**                        | **~140** |
+| Categoria                                    | Pendente |
+| -------------------------------------------- | -------- |
+| Seguranca (critico)                          | 5        |
+| Conformidade CFM (bloqueante)                | 13       |
+| Videoconferencia                             | 8        |
+| Backend - controllers/policies               | 7        |
+| Backend - migrations                         | 5        |
+| Backend - tasks/scheduler                    | 4        |
+| Backend - servicos incompletos               | 4        |
+| Backend - CRUDs e features                   | 10       |
+| Frontend - dados hardcoded                   | 6        |
+| Frontend - TODOs e bugs                      | 8        |
+| Config e ambiente                            | 0        |
+| Testes gerais                                | 12       |
+| Interoperabilidade (branch)                  | 3        |
+| Gravacao de sessao                           | 6        |
+| Observabilidade                              | 5        |
+| **QA Manual - Landing Page**                 | **8**    |
+| **QA Manual - Login**                        | **3**    |
+| **QA Manual - Registro Paciente**            | **6**    |
+| **QA Manual - Registro Medico**              | **3**    |
+| **QA Manual - Dashboard Medico**             | **17**   |
+| **QA Manual - Dashboard Paciente**           | **7**    |
+| **QA Manual - Agenda/Disponibilidade**       | **1**    |
+| **QA Manual - Pacientes Medico**             | **7**    |
+| **QA Manual - Detalhes do Paciente**         | **4**    |
+| **QA Manual - Historico Medico**             | **11**   |
+| **QA Manual - Emissao Documentos**           | **15**   |
+| **QA Manual - Interoperabilidade**           | **24**   |
+| **QA Manual - Pesquisar Medicos (Paciente)** | **23**   |
+| **QA Manual - Agendar Consulta (Paciente)**  | **23**   |
+| **QA Manual - Mensagens (Paciente)**         | **24**   |
+| **QA Manual - Historico (Paciente)**         | **18**   |
+| **QA Manual - Prontuario (Paciente)**        | **27**   |
+| **TOTAL**                                    | **~317** |

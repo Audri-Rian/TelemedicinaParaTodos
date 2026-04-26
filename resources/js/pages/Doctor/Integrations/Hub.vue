@@ -11,6 +11,7 @@ import { Head, Link } from '@inertiajs/vue3';
 import {
     AlertCircle,
     ArrowRight,
+    BookOpenText,
     CalendarClock,
     CheckCircle2,
     FileBarChart,
@@ -60,6 +61,7 @@ const formatLastSync = computed(() => {
 const pilotLab = computed(() => props.laboratories.find((l) => l.status === 'active') ?? null);
 const hasActiveLabs = computed(() => pilotLab.value !== null);
 const needsPilotLabSetup = computed(() => !pilotLab.value);
+const docsUrl = '/docs/interoperabilidade';
 </script>
 
 <template>
@@ -70,6 +72,12 @@ const needsPilotLabSetup = computed(() => !pilotLab.value);
             <header class="space-y-2">
                 <h1 class="text-4xl font-bold tracking-tight text-foreground">Hub de Integrações</h1>
                 <p class="max-w-2xl text-base text-muted-foreground">Gerencie e monitore as conexões clínicas da sua rede.</p>
+                <Button variant="link" class="h-auto p-0 text-primary" as-child>
+                    <Link :href="docsUrl">
+                        <BookOpenText class="mr-2 size-4" />
+                        Ver documentação de interoperabilidade
+                    </Link>
+                </Button>
             </header>
 
             <!-- 1b. Banner: Laboratório piloto (MVP 1) -->
@@ -245,6 +253,12 @@ const needsPilotLabSetup = computed(() => !pilotLab.value);
                                     Gerenciar Parceiros
                                 </Link>
                             </Button>
+                            <Button variant="outline" size="sm" as-child>
+                                <Link :href="docsUrl">
+                                    <BookOpenText class="mr-2 size-4" />
+                                    Documentação
+                                </Link>
+                            </Button>
                         </div>
                     </CardContent>
                 </Card>
@@ -299,6 +313,14 @@ const needsPilotLabSetup = computed(() => !pilotLab.value);
                                 <Link :href="`/doctor/integrations/${lab.id}`">Gerenciar</Link>
                             </Button>
                         </CardFooter>
+                        <CardFooter class="border-t border-border/60 px-5 pt-0 pb-4">
+                            <Button variant="ghost" size="sm" class="h-auto p-0 text-xs text-muted-foreground hover:text-primary" as-child>
+                                <Link :href="docsUrl">
+                                    <BookOpenText class="mr-1.5 size-3.5" />
+                                    Ver docs de integração
+                                </Link>
+                            </Button>
+                        </CardFooter>
                     </Card>
                 </div>
 
@@ -314,6 +336,12 @@ const needsPilotLabSetup = computed(() => !pilotLab.value);
                         </p>
                         <Button class="mt-6" variant="secondary" as-child>
                             <Link :href="integrationRoutes.connect()">Conectar laboratório</Link>
+                        </Button>
+                        <Button class="mt-3" variant="link" as-child>
+                            <Link :href="docsUrl">
+                                <BookOpenText class="mr-2 size-4" />
+                                Ler documentação
+                            </Link>
                         </Button>
                     </CardContent>
                 </Card>

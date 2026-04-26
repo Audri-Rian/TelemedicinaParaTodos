@@ -12,13 +12,13 @@ class PatientFhirMapper
     /**
      * Converte Patient do modelo interno para FHIR Patient.
      */
-    public function toFhir(Patient $patient): array
+    public function toFhir(Patient $patient): array /** Função para mapear e montar o playload FHIR */
     {
         $patient->loadMissing('user');
 
         $identifiers = [
             [
-                'system' => config('integrations.fhir.system_url') . '/patient-id',
+                'system' => config('integrations.fhir.system_url').'/patient-id',
                 'value' => $patient->id,
             ],
         ];

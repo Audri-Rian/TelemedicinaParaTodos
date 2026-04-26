@@ -18,6 +18,9 @@ Route::middleware(['auth', 'verified'])->get('/dashboard', DashboardRedirectCont
 // Termos de Serviço e Política de Privacidade
 Route::get('terms', [TermsOfServiceController::class, 'index'])->name('terms');
 Route::get('privacy', [PrivacyPolicyController::class, 'index'])->name('privacy');
+Route::get('docs/interoperabilidade', function () {
+    return Inertia::render('Docs/Interoperability');
+})->name('docs.interoperability');
 
 // Servir avatars do storage
 Route::get('storage/avatars/{userId}/{filename}', [AvatarFileController::class, 'show'])

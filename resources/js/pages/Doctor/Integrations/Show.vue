@@ -11,6 +11,7 @@ import {
     ArrowDownLeft,
     ArrowLeft,
     ArrowUpRight,
+    BookOpenText,
     Building2,
     Calendar,
     CheckCheck,
@@ -168,6 +169,7 @@ const healthUrl = computed(() => `${window.location.origin}/api/v1/public/health
 
 const syncing = ref(false);
 const syncError = ref<string | null>(null);
+const docsUrl = '/docs/interoperabilidade';
 
 const handleSync = () => {
     syncing.value = true;
@@ -221,11 +223,19 @@ const handleSync = () => {
                         <p class="mt-0.5 text-sm text-muted-foreground">{{ partner.slug }} · FHIR {{ partner.fhir_version }}</p>
                     </div>
                 </div>
-                <Button v-if="partner.status === 'active'" :disabled="syncing" @click="handleSync" class="gap-2">
-                    <Loader2 v-if="syncing" class="size-4 animate-spin" />
-                    <RefreshCw v-else class="size-4" />
-                    {{ syncing ? 'Sincronizando...' : 'Sincronizar agora' }}
-                </Button>
+                <div class="flex flex-wrap items-center gap-2">
+                    <Button variant="outline" as-child>
+                        <Link :href="docsUrl">
+                            <BookOpenText class="mr-2 size-4" />
+                            Documentação
+                        </Link>
+                    </Button>
+                    <Button v-if="partner.status === 'active'" :disabled="syncing" @click="handleSync" class="gap-2">
+                        <Loader2 v-if="syncing" class="size-4 animate-spin" />
+                        <RefreshCw v-else class="size-4" />
+                        {{ syncing ? 'Sincronizando...' : 'Sincronizar agora' }}
+                    </Button>
+                </div>
             </div>
 
             <!-- Sync error banner -->
@@ -309,7 +319,12 @@ const handleSync = () => {
 
                         <!-- Endpoints para o parceiro -->
                         <div class="space-y-3 border-t border-border/60 pt-4">
-                            <p class="text-xs font-bold tracking-widest text-muted-foreground uppercase">Endpoints</p>
+                            <div class="flex items-center justify-between">
+                                <p class="text-xs font-bold tracking-widest text-muted-foreground uppercase">Endpoints</p>
+                                <Button variant="ghost" size="sm" class="h-auto px-2 py-1 text-xs text-primary" as-child>
+                                    <Link :href="docsUrl">Guia dos endpoints</Link>
+                                </Button>
+                            </div>
 
                             <!-- Webhook URL -->
                             <div class="rounded-lg border border-border bg-muted/30 px-3 py-2.5">
