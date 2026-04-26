@@ -25,9 +25,11 @@ class DoctorIntegrationsController extends Controller
 
         $syncedExams = Examination::where('source', Examination::SOURCE_INTEGRATION)->count();
 
-        $lastSync = PartnerIntegration::active()
+        $lastSyncRaw = PartnerIntegration::active()
             ->whereNotNull('last_sync_at')
             ->max('last_sync_at');
+
+        $lastSync = $lastSyncRaw ? \Illuminate\Support\Carbon::parse($lastSyncRaw) : null;
 
         $errors24h = IntegrationEvent::where('status', IntegrationEvent::STATUS_FAILED)
             ->where('created_at', '>=', now()->subDay())

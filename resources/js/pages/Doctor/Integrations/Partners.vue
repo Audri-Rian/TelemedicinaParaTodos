@@ -3,28 +3,14 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import * as doctorRoutes from '@/routes/doctor';
 import * as integrationRoutes from '@/routes/doctor/integrations';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { ref, computed } from 'vue';
-import {
-    FlaskConical, Shield, Building2, Plus, MoreVertical,
-    ChevronDown, Sparkles, Info, RefreshCw, Loader2,
-} from 'lucide-vue-next';
+import { FlaskConical, Shield, Building2, Plus, MoreVertical, ChevronDown, Sparkles, Info, RefreshCw, Loader2, BookOpenText } from 'lucide-vue-next';
 
 interface PartnerEvent {
     id: number;
@@ -83,9 +69,9 @@ const activeTab = ref<TabOption>('all');
 const filteredPartners = computed(() => {
     switch (activeTab.value) {
         case 'critical':
-            return props.partners.filter(p => p.status === 'error' || p.stats.errors > 0);
+            return props.partners.filter((p) => p.status === 'error' || p.stats.errors > 0);
         case 'pending':
-            return props.partners.filter(p => p.status === 'pending');
+            return props.partners.filter((p) => p.status === 'pending');
         default:
             return props.partners;
     }
@@ -94,22 +80,32 @@ const filteredPartners = computed(() => {
 // Ícone por tipo
 const getPartnerIcon = (type: string) => {
     switch (type) {
-        case 'laboratory': return FlaskConical;
-        case 'pharmacy': return Building2;
-        case 'insurance': return Shield;
-        default: return Building2;
+        case 'laboratory':
+            return FlaskConical;
+        case 'pharmacy':
+            return Building2;
+        case 'insurance':
+            return Shield;
+        default:
+            return Building2;
     }
 };
 
 // Status display
 const getStatusDisplay = (status: string) => {
     switch (status) {
-        case 'active': return { label: 'CONEXÃO ATIVA', class: 'text-green-700' };
-        case 'pending': return { label: 'PENDENTE', class: 'text-amber-600' };
-        case 'error': return { label: 'AÇÃO NECESSÁRIA', class: 'text-red-600' };
-        case 'inactive': return { label: 'INATIVO', class: 'text-muted-foreground' };
-        case 'suspended': return { label: 'SUSPENSO', class: 'text-red-600' };
-        default: return { label: status.toUpperCase(), class: 'text-muted-foreground' };
+        case 'active':
+            return { label: 'CONEXÃO ATIVA', class: 'text-green-700' };
+        case 'pending':
+            return { label: 'PENDENTE', class: 'text-amber-600' };
+        case 'error':
+            return { label: 'AÇÃO NECESSÁRIA', class: 'text-red-600' };
+        case 'inactive':
+            return { label: 'INATIVO', class: 'text-muted-foreground' };
+        case 'suspended':
+            return { label: 'SUSPENSO', class: 'text-red-600' };
+        default:
+            return { label: status.toUpperCase(), class: 'text-muted-foreground' };
     }
 };
 
@@ -149,10 +145,10 @@ const formatRelativeTime = (dateStr: string) => {
 // Format event type
 const formatEventType = (type: string) => {
     const map: Record<string, string> = {
-        'exam_order_sent': 'Pedido de exame enviado',
-        'exam_result_received': 'Resultado de exame recebido',
-        'prescription_sent': 'Receita enviada',
-        'webhook_received': 'Webhook recebido',
+        exam_order_sent: 'Pedido de exame enviado',
+        exam_result_received: 'Resultado de exame recebido',
+        prescription_sent: 'Receita enviada',
+        webhook_received: 'Webhook recebido',
     };
     return map[type] ?? type;
 };
@@ -188,15 +184,19 @@ const syncingPartners = ref<Set<number>>(new Set());
 const handleSync = async (partnerId: number) => {
     syncingPartners.value = new Set([...syncingPartners.value, partnerId]);
 
-    router.post(`/doctor/integrations/${partnerId}/sync`, {}, {
-        preserveScroll: true,
-        onFinish: () => {
-            syncingPartners.value = new Set([...syncingPartners.value].filter(id => id !== partnerId));
+    router.post(
+        `/doctor/integrations/${partnerId}/sync`,
+        {},
+        {
+            preserveScroll: true,
+            onFinish: () => {
+                syncingPartners.value = new Set([...syncingPartners.value].filter((id) => id !== partnerId));
+            },
+            onError: () => {
+                syncingPartners.value = new Set([...syncingPartners.value].filter((id) => id !== partnerId));
+            },
         },
-        onError: () => {
-            syncingPartners.value = new Set([...syncingPartners.value].filter(id => id !== partnerId));
-        },
-    });
+    );
 };
 
 // Traffic data from real events
@@ -234,7 +234,7 @@ const trafficDays = computed(() => {
     return result;
 });
 
-const maxTraffic = computed(() => Math.max(1, ...trafficDays.value.flatMap(d => [d.inbound, d.outbound])));
+const maxTraffic = computed(() => Math.max(1, ...trafficDays.value.flatMap((d) => [d.inbound, d.outbound])));
 
 // Insights
 const totalSent = computed(() => props.partners.reduce((sum, p) => sum + p.stats.sent, 0));
@@ -245,6 +245,8 @@ const overallHealthPercent = computed(() => {
     const totalErrors = props.partners.reduce((sum, p) => sum + p.stats.errors, 0);
     return Math.max(0, Math.round((1 - totalErrors / total) * 100));
 });
+
+const docsUrl = '/docs/interoperabilidade';
 </script>
 
 <template>
@@ -259,25 +261,33 @@ const overallHealthPercent = computed(() => {
                         Gerencie e monitore o fluxo de dados clínicos entre {{ partners.length }} parceiro(s).
                     </p>
                 </div>
-                <div class="flex items-center gap-1 rounded-lg border border-border bg-card p-1">
-                    <button
-                        v-for="tab in ([
-                            { key: 'all', label: 'Todos' },
-                            { key: 'critical', label: 'Críticos' },
-                            { key: 'pending', label: 'Pendentes' },
-                        ] as { key: TabOption; label: string }[])"
-                        :key="tab.key"
-                        type="button"
-                        @click="activeTab = tab.key"
-                        :class="[
-                            'rounded-md px-4 py-1.5 text-sm font-medium transition-all duration-200',
-                            activeTab === tab.key
-                                ? 'bg-foreground text-background shadow-sm'
-                                : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-                        ]"
-                    >
-                        {{ tab.label }}
-                    </button>
+                <div class="flex flex-wrap items-center gap-2">
+                    <Button variant="outline" size="sm" as-child>
+                        <Link :href="docsUrl">
+                            <BookOpenText class="mr-2 size-4" />
+                            Documentação
+                        </Link>
+                    </Button>
+                    <div class="flex items-center gap-1 rounded-lg border border-border bg-card p-1">
+                        <button
+                            v-for="tab in [
+                                { key: 'all', label: 'Todos' },
+                                { key: 'critical', label: 'Críticos' },
+                                { key: 'pending', label: 'Pendentes' },
+                            ] as { key: TabOption; label: string }[]"
+                            :key="tab.key"
+                            type="button"
+                            @click="activeTab = tab.key"
+                            :class="[
+                                'rounded-md px-4 py-1.5 text-sm font-medium transition-all duration-200',
+                                activeTab === tab.key
+                                    ? 'bg-foreground text-background shadow-sm'
+                                    : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                            ]"
+                        >
+                            {{ tab.label }}
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -291,7 +301,7 @@ const overallHealthPercent = computed(() => {
                                 <img src="/images/icons/exclamation.svg" alt="" class="size-5" />
                                 <span class="text-sm font-bold text-foreground">Eventos Críticos ({{ criticalEvents.length }})</span>
                             </div>
-                            <span class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-red-600">
+                            <span class="flex items-center gap-1.5 text-[10px] font-bold tracking-widest text-red-600 uppercase">
                                 <span class="size-1.5 animate-pulse rounded-full bg-red-500" />
                                 Últimas 24h
                             </span>
@@ -304,7 +314,7 @@ const overallHealthPercent = computed(() => {
                                 style="background: rgba(186, 26, 26, 0.05)"
                             >
                                 <div class="flex items-center gap-3">
-                                    <Badge class="rounded bg-red-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
+                                    <Badge class="rounded bg-red-600 px-2 py-0.5 text-[10px] font-bold tracking-wider text-white uppercase">
                                         FALHA
                                     </Badge>
                                     <span class="text-sm text-foreground/80">
@@ -334,7 +344,7 @@ const overallHealthPercent = computed(() => {
                                 </div>
                                 <div>
                                     <h3 class="text-base font-bold text-foreground">{{ partner.name }}</h3>
-                                    <span :class="getStatusDisplay(partner.status).class" class="text-[10px] font-bold uppercase tracking-widest">
+                                    <span :class="getStatusDisplay(partner.status).class" class="text-[10px] font-bold tracking-widest uppercase">
                                         {{ getStatusDisplay(partner.status).label }}
                                     </span>
                                 </div>
@@ -351,10 +361,7 @@ const overallHealthPercent = computed(() => {
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end" class="w-44">
-                                    <DropdownMenuItem
-                                        class="cursor-pointer gap-2"
-                                        @select="openPartnerDetails(partner)"
-                                    >
+                                    <DropdownMenuItem class="cursor-pointer gap-2" @select="openPartnerDetails(partner)">
                                         <Info class="size-4" />
                                         Detalhes
                                     </DropdownMenuItem>
@@ -373,16 +380,22 @@ const overallHealthPercent = computed(() => {
 
                         <!-- Stats: ENVIADOS / RECEBIDOS / ERROS -->
                         <div class="grid grid-cols-3 gap-3">
-                            <div class="flex flex-col items-center gap-1 rounded bg-[#F2F4F5] px-3 pb-3.5 pt-3">
-                                <p class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Enviados</p>
+                            <div class="flex flex-col items-center gap-1 rounded bg-[#F2F4F5] px-3 pt-3 pb-3.5">
+                                <p class="text-[10px] font-bold tracking-widest text-muted-foreground uppercase">Enviados</p>
                                 <p class="text-2xl font-bold text-foreground">{{ formatCount(partner.stats.sent) }}</p>
                             </div>
-                            <div class="flex flex-col items-center gap-1 rounded bg-[#F2F4F5] px-3 pb-3.5 pt-3">
-                                <p class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Recebidos</p>
+                            <div class="flex flex-col items-center gap-1 rounded bg-[#F2F4F5] px-3 pt-3 pb-3.5">
+                                <p class="text-[10px] font-bold tracking-widest text-muted-foreground uppercase">Recebidos</p>
                                 <p class="text-2xl font-bold text-foreground">{{ formatCount(partner.stats.received) }}</p>
                             </div>
-                            <div class="flex flex-col items-center gap-1 rounded px-3 pb-3.5 pt-3" :class="partner.stats.errors > 0 ? 'bg-red-50' : 'bg-[#F2F4F5]'">
-                                <p class="text-[10px] font-bold uppercase tracking-widest" :class="partner.stats.errors > 0 ? 'text-red-600' : 'text-muted-foreground'">
+                            <div
+                                class="flex flex-col items-center gap-1 rounded px-3 pt-3 pb-3.5"
+                                :class="partner.stats.errors > 0 ? 'bg-red-50' : 'bg-[#F2F4F5]'"
+                            >
+                                <p
+                                    class="text-[10px] font-bold tracking-widest uppercase"
+                                    :class="partner.stats.errors > 0 ? 'text-red-600' : 'text-muted-foreground'"
+                                >
                                     Erros
                                 </p>
                                 <p class="text-2xl font-bold" :class="partner.stats.errors > 0 ? 'text-red-600' : 'text-foreground'">
@@ -419,12 +432,18 @@ const overallHealthPercent = computed(() => {
                             <RefreshCw v-else class="size-4" />
                             {{ syncingPartners.has(partner.id) ? 'Sincronizando...' : 'Sincronizar agora' }}
                         </Button>
+                        <Button variant="ghost" size="sm" class="w-full gap-2 text-muted-foreground hover:text-primary" as-child>
+                            <Link :href="docsUrl">
+                                <BookOpenText class="size-4" />
+                                Ver docs
+                            </Link>
+                        </Button>
 
                         <!-- Atividade Recente (collapsible com animação) -->
                         <div v-if="partner.recentEvents.length">
                             <button
                                 @click="toggleActivity(partner.id)"
-                                class="flex w-full items-center justify-between rounded-md px-1 py-1 text-xs font-bold uppercase tracking-widest text-foreground transition-colors duration-150 hover:bg-muted hover:text-primary"
+                                class="flex w-full items-center justify-between rounded-md px-1 py-1 text-xs font-bold tracking-widest text-foreground uppercase transition-colors duration-150 hover:bg-muted hover:text-primary"
                             >
                                 Atividade Recente
                                 <ChevronDown
@@ -440,17 +459,14 @@ const overallHealthPercent = computed(() => {
                                 leave-from-class="max-h-40 opacity-100"
                                 leave-to-class="max-h-0 opacity-0"
                             >
-                                <div
-                                    v-show="isActivityOpen(partner.id)"
-                                    class="overflow-hidden"
-                                >
+                                <div v-show="isActivityOpen(partner.id)" class="overflow-hidden">
                                     <div class="mt-2 space-y-1.5">
                                         <div
                                             v-for="event in partner.recentEvents"
                                             :key="event.id"
                                             class="flex items-center justify-between rounded px-1 py-1 text-xs transition-colors duration-150 hover:bg-muted/50"
                                         >
-                                            <span class="italic text-muted-foreground">{{ formatEventType(event.type) }}</span>
+                                            <span class="text-muted-foreground italic">{{ formatEventType(event.type) }}</span>
                                             <span class="shrink-0 text-muted-foreground/70">{{ formatRelativeTime(event.created_at) }}</span>
                                         </div>
                                     </div>
@@ -465,7 +481,9 @@ const overallHealthPercent = computed(() => {
                     :href="integrationRoutes.connect()"
                     class="flex min-h-[280px] flex-col items-center justify-center rounded-xl border-2 border-dashed border-muted-foreground/20 bg-card px-6 py-10 text-center transition-all duration-300 hover:border-primary/40 hover:bg-muted/20 hover:shadow-lg"
                 >
-                    <div class="mb-4 flex size-12 items-center justify-center rounded-xl border border-border bg-background text-muted-foreground shadow-sm transition-transform duration-300 hover:scale-110">
+                    <div
+                        class="mb-4 flex size-12 items-center justify-center rounded-xl border border-border bg-background text-muted-foreground shadow-sm transition-transform duration-300 hover:scale-110"
+                    >
                         <Plus class="size-5" stroke-width="2" />
                     </div>
                     <span class="text-base font-bold text-foreground">Nova Integração</span>
@@ -486,6 +504,12 @@ const overallHealthPercent = computed(() => {
                 </p>
                 <Button class="mt-6" as-child>
                     <Link :href="integrationRoutes.connect()">Conectar primeiro parceiro</Link>
+                </Button>
+                <Button class="mt-3" variant="link" as-child>
+                    <Link :href="docsUrl">
+                        <BookOpenText class="mr-2 size-4" />
+                        Ver documentação
+                    </Link>
                 </Button>
             </div>
 
@@ -510,32 +534,34 @@ const overallHealthPercent = computed(() => {
 
                         <!-- Gráfico de barras -->
                         <div class="flex items-end justify-between gap-3 pt-2" style="height: 180px">
-                            <div
-                                v-for="day in trafficDays"
-                                :key="day.day"
-                                class="group flex flex-1 flex-col items-center gap-1"
-                            >
+                            <div v-for="day in trafficDays" :key="day.day" class="group flex flex-1 flex-col items-center gap-1">
                                 <div class="flex w-full items-end justify-center gap-1" style="height: 150px">
                                     <div
                                         class="w-[40%] rounded-t-sm bg-primary transition-all duration-500 group-hover:brightness-110"
-                                        :style="{ height: (day.inbound / maxTraffic * 100) + '%' }"
+                                        :style="{ height: (day.inbound / maxTraffic) * 100 + '%' }"
                                     />
                                     <div
                                         class="w-[40%] rounded-t-sm bg-primary/35 transition-all duration-500 group-hover:brightness-110"
-                                        :style="{ height: (day.outbound / maxTraffic * 100) + '%' }"
+                                        :style="{ height: (day.outbound / maxTraffic) * 100 + '%' }"
                                     />
                                 </div>
-                                <span class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground transition-colors duration-150 group-hover:text-foreground">{{ day.day }}</span>
+                                <span
+                                    class="text-[10px] font-bold tracking-widest text-muted-foreground uppercase transition-colors duration-150 group-hover:text-foreground"
+                                    >{{ day.day }}</span
+                                >
                             </div>
                         </div>
                     </CardContent>
                 </Card>
 
                 <!-- Insights de Integração -->
-                <Card class="gap-0 overflow-hidden border-0 py-0 shadow-sm transition-shadow duration-300 hover:shadow-lg" style="background-color: #1a6b5a">
+                <Card
+                    class="gap-0 overflow-hidden border-0 py-0 shadow-sm transition-shadow duration-300 hover:shadow-lg"
+                    style="background-color: #1a6b5a"
+                >
                     <CardContent class="relative flex h-full flex-col justify-between px-6 py-6">
                         <!-- Ícone decorativo -->
-                        <div class="absolute -right-3 -top-3 text-white/5">
+                        <div class="absolute -top-3 -right-3 text-white/5">
                             <Sparkles class="size-28" stroke-width="1" />
                         </div>
 
@@ -549,15 +575,11 @@ const overallHealthPercent = computed(() => {
                         <div class="relative mt-6 space-y-3">
                             <div class="rounded-lg bg-white/10 px-4 py-3 backdrop-blur-sm transition-colors duration-200 hover:bg-white/15">
                                 <span class="text-2xl font-bold text-white">{{ overallHealthPercent }}%</span>
-                                <div class="mt-0.5 text-[10px] font-bold uppercase tracking-widest text-white/60">
-                                    Taxa de Sucesso Global
-                                </div>
+                                <div class="mt-0.5 text-[10px] font-bold tracking-widest text-white/60 uppercase">Taxa de Sucesso Global</div>
                             </div>
                             <div class="rounded-lg bg-white/10 px-4 py-3 backdrop-blur-sm transition-colors duration-200 hover:bg-white/15">
                                 <span class="text-2xl font-bold text-white">{{ formatCount(totalReceived) }}</span>
-                                <div class="mt-0.5 text-[10px] font-bold uppercase tracking-widest text-white/60">
-                                    Resultados Recebidos
-                                </div>
+                                <div class="mt-0.5 text-[10px] font-bold tracking-widest text-white/60 uppercase">Resultados Recebidos</div>
                             </div>
                         </div>
                     </CardContent>
@@ -565,29 +587,19 @@ const overallHealthPercent = computed(() => {
             </div>
         </div>
 
-        <Dialog
-            :open="partnerForDetails !== null"
-            @update:open="onDetailsOpenChange"
-        >
-            <DialogContent
-                v-if="partnerForDetails"
-                class="sm:max-w-md"
-            >
+        <Dialog :open="partnerForDetails !== null" @update:open="onDetailsOpenChange">
+            <DialogContent v-if="partnerForDetails" class="sm:max-w-md">
                 <DialogHeader>
                     <div class="flex items-center gap-3">
                         <div class="flex size-10 items-center justify-center rounded-lg bg-muted text-foreground">
-                            <component
-                                :is="getPartnerIcon(partnerForDetails.type)"
-                                class="size-5"
-                                stroke-width="1.75"
-                            />
+                            <component :is="getPartnerIcon(partnerForDetails.type)" class="size-5" stroke-width="1.75" />
                         </div>
                         <div>
                             <DialogTitle class="text-left">{{ partnerForDetails.name }}</DialogTitle>
                             <DialogDescription class="text-left">
                                 <span
                                     :class="getStatusDisplay(partnerForDetails.status).class"
-                                    class="text-[10px] font-bold uppercase tracking-widest"
+                                    class="text-[10px] font-bold tracking-widest uppercase"
                                 >
                                     {{ getStatusDisplay(partnerForDetails.status).label }}
                                 </span>
@@ -599,11 +611,11 @@ const overallHealthPercent = computed(() => {
                 <div class="space-y-4 pt-2">
                     <div class="grid grid-cols-3 gap-3">
                         <div class="flex flex-col items-center gap-1 rounded bg-muted/60 px-2 py-3">
-                            <p class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Enviados</p>
+                            <p class="text-[10px] font-bold tracking-widest text-muted-foreground uppercase">Enviados</p>
                             <p class="text-xl font-bold text-foreground">{{ formatCount(partnerForDetails.stats.sent) }}</p>
                         </div>
                         <div class="flex flex-col items-center gap-1 rounded bg-muted/60 px-2 py-3">
-                            <p class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Recebidos</p>
+                            <p class="text-[10px] font-bold tracking-widest text-muted-foreground uppercase">Recebidos</p>
                             <p class="text-xl font-bold text-foreground">{{ formatCount(partnerForDetails.stats.received) }}</p>
                         </div>
                         <div
@@ -611,15 +623,12 @@ const overallHealthPercent = computed(() => {
                             :class="partnerForDetails.stats.errors > 0 ? 'bg-red-50' : 'bg-muted/60'"
                         >
                             <p
-                                class="text-[10px] font-bold uppercase tracking-widest"
+                                class="text-[10px] font-bold tracking-widest uppercase"
                                 :class="partnerForDetails.stats.errors > 0 ? 'text-red-600' : 'text-muted-foreground'"
                             >
                                 Erros
                             </p>
-                            <p
-                                class="text-xl font-bold"
-                                :class="partnerForDetails.stats.errors > 0 ? 'text-red-600' : 'text-foreground'"
-                            >
+                            <p class="text-xl font-bold" :class="partnerForDetails.stats.errors > 0 ? 'text-red-600' : 'text-foreground'">
                                 {{ formatCount(partnerForDetails.stats.errors) }}
                             </p>
                         </div>
@@ -655,9 +664,7 @@ const overallHealthPercent = computed(() => {
                     </div>
 
                     <div v-if="partnerForDetails.recentEvents.length">
-                        <p class="mb-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                            Atividade recente
-                        </p>
+                        <p class="mb-2 text-[10px] font-bold tracking-widest text-muted-foreground uppercase">Atividade recente</p>
                         <ul class="space-y-2">
                             <li
                                 v-for="event in partnerForDetails.recentEvents"

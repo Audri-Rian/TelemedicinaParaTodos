@@ -1,7 +1,7 @@
-import sharp from 'sharp';
 import { readFileSync, writeFileSync } from 'fs';
-import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import sharp from 'sharp';
+import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -29,12 +29,12 @@ async function generateFavicons() {
         // Gerar favicon.ico (32x32) - múltiplos tamanhos para melhor compatibilidade
         const icoSizes = [16, 32, 48];
         await Promise.all(
-            icoSizes.map(size =>
+            icoSizes.map((size) =>
                 sharp(imageBuffer)
                     .resize(size, size, { fit: 'contain', background: { r: 255, g: 255, b: 255, alpha: 0 } })
                     .png()
-                    .toBuffer()
-            )
+                    .toBuffer(),
+            ),
         );
 
         // Para ICO, vamos usar o tamanho 32x32 (formato mais comum)
@@ -71,4 +71,3 @@ async function generateFavicons() {
 }
 
 generateFavicons();
-

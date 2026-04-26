@@ -13,6 +13,7 @@ import { Head, Link, useForm } from '@inertiajs/vue3';
 import {
     ArrowLeft,
     ArrowRight,
+    BookOpenText,
     Check,
     CheckCheck,
     CheckCircle2,
@@ -270,6 +271,7 @@ const webhookUrl = computed(() => {
     if (!selectedPartner.value) return '';
     return `${window.location.origin}/api/v1/public/webhooks/lab/${selectedPartner.value}`;
 });
+const docsUrl = '/docs/interoperabilidade';
 </script>
 
 <template>
@@ -491,6 +493,13 @@ const webhookUrl = computed(() => {
                         </nav>
 
                         <div class="mt-12 border-t border-border px-8 pt-8">
+                            <Link
+                                :href="docsUrl"
+                                class="mb-4 flex items-center gap-3 text-sm font-semibold text-muted-foreground transition-colors duration-150 hover:text-primary"
+                            >
+                                <BookOpenText class="size-5" stroke-width="1.75" />
+                                Documentação
+                            </Link>
                             <button
                                 class="flex items-center gap-3 text-sm font-semibold text-muted-foreground transition-colors duration-150 hover:text-primary"
                             >
@@ -536,6 +545,12 @@ const webhookUrl = computed(() => {
                         <div class="mb-10">
                             <h1 class="text-3xl font-extrabold tracking-tight text-foreground">{{ stepTitles[currentStep].title }}</h1>
                             <p class="mt-2 max-w-lg text-muted-foreground">{{ stepTitles[currentStep].subtitle }}</p>
+                            <Button variant="link" class="mt-3 h-auto px-0 text-primary" as-child>
+                                <Link :href="docsUrl">
+                                    <BookOpenText class="mr-2 size-4" />
+                                    Ver documentação de integração
+                                </Link>
+                            </Button>
                         </div>
 
                         <!-- Erros de validação -->

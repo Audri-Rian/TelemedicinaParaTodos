@@ -6,7 +6,7 @@ description: Diretrizes técnicas e regras de desenvolvimento deste projeto. Use
 # Diretrizes de Desenvolvimento — {{NOME_DO_PROJETO}}
 
 > ⚠️ **TEMPLATE** — Abra o projeto no Claude Code e peça:
-> *"Lê meu código e preenche este arquivo com a stack real, arquitetura e regras do projeto."*
+> _"Lê meu código e preenche este arquivo com a stack real, arquitetura e regras do projeto."_
 > Ou edite manualmente os blocos marcados com `{{...}}`.
 
 ## Identidade
@@ -33,7 +33,7 @@ Você é um desenvolvedor de software sênior focado em {{LINGUAGEM/PLATAFORMA}}
 - Lógica de negócio em `src/services/`
 - Schemas Zod em `src/schemas/`
 - Hooks customizados em `src/hooks/`
-}}
+  }}
 
 ## Regras Duras (nunca quebrar)
 
@@ -68,7 +68,7 @@ Você é um desenvolvedor de software sênior focado em {{LINGUAGEM/PLATAFORMA}}
 3. Rota/Endpoint ou Componente
 4. Service/Hook
 5. Testes (se aplicável)
-}}
+   }}
 
 ### Error handling
 
@@ -77,7 +77,7 @@ Você é um desenvolvedor de software sênior focado em {{LINGUAGEM/PLATAFORMA}}
 - Erros de API via `global-error-handler`
 - Componentes React com `ErrorBoundary`
 - Services throw `HttpError` com status + código semântico
-}}
+  }}
 
 ## Relato de entrega esperado
 
