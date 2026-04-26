@@ -48,7 +48,7 @@ class SecurityHeaders
         // Permissions-Policy - controla features do navegador
         $response->headers->set(
             'Permissions-Policy',
-            'geolocation=(), microphone=(), camera=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=()'
+            'geolocation=(self), microphone=(self), camera=(self), display-capture=(self), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=()'
         );
 
         // Remove informações sensíveis do servidor
@@ -64,10 +64,10 @@ class SecurityHeaders
     private function buildCSP(): string
     {
         $isDevelopment = app()->environment('local', 'development');
-        
+
         // Domínios do Vite para desenvolvimento
         // Nota: localhost resolve para IPv4 e IPv6, então não precisamos especificar [::1] separadamente
-        $viteDevSources = $isDevelopment 
+        $viteDevSources = $isDevelopment
             ? ' http://localhost:5173 http://127.0.0.1:5173 ws://localhost:5173 ws://127.0.0.1:5173'
             : '';
 
@@ -91,11 +91,10 @@ class SecurityHeaders
         ];
 
         // upgrade-insecure-requests apenas em produção
-        if (!$isDevelopment) {
-            $directives[] = "upgrade-insecure-requests";
+        if (! $isDevelopment) {
+            $directives[] = 'upgrade-insecure-requests';
         }
 
         return implode('; ', $directives);
     }
 }
-

@@ -40,88 +40,13 @@ type DayGroup = {
     appointments: Appointment[];
 };
 
-const dayGroups: DayGroup[] = [
-    {
-        id: 'today',
-        label: 'Hoje',
-        dateLabel: '26 abr',
-        summary: '9 agendadas · 3 concluídas · 1 falta',
-        appointments: [
-            {
-                id: 1,
-                time: '08:30',
-                patient: 'Marina Albuquerque Souza',
-                detail: 'Retorno · Hipertensão',
-                duration: '20 min',
-                age: '34a',
-                gender: 'F',
-                initials: 'MA',
-                status: 'concluded',
-                statusLabel: 'Concluída',
-            },
-            {
-                id: 2,
-                time: '09:15',
-                patient: 'Henrique Tavares Lima',
-                detail: 'Avaliação de exames',
-                duration: '30 min',
-                age: '58a',
-                gender: 'M',
-                initials: 'HT',
-                status: 'concluded',
-                statusLabel: 'Concluída',
-            },
-            {
-                id: 3,
-                time: '10:00',
-                patient: 'Beatriz Carvalho Reis',
-                detail: 'Saúde mental · Ansiedade',
-                duration: '25 min',
-                age: '27a',
-                gender: 'F',
-                initials: 'BC',
-                status: 'concluded',
-                statusLabel: 'Concluída',
-            },
-            {
-                id: 4,
-                time: '11:00',
-                patient: 'Diego Nogueira Pinto',
-                detail: 'Renovação de receita',
-                duration: '20 min',
-                age: '41a',
-                gender: 'M',
-                initials: 'DN',
-                status: 'missed',
-                statusLabel: 'Não compareceu',
-            },
-            {
-                id: 5,
-                time: '14:00',
-                patient: 'Sofia Mendes Caetano',
-                detail: 'Pediatria · Tosse persistente',
-                duration: '30 min',
-                age: '9a',
-                gender: 'F',
-                initials: 'SM',
-                status: 'in_progress',
-                statusLabel: 'Em andamento',
-            },
-            {
-                id: 6,
-                time: '14:45',
-                patient: 'Ricardo Andrade Vidal',
-                detail: 'Acompanhamento pós-cirúrgico',
-                duration: '20 min',
-                age: '67a',
-                gender: 'M',
-                initials: 'RA',
-                status: 'confirmed',
-                statusLabel: 'Confirmada',
-            },
-        ],
-    },
-];
+interface Props {
+    dayGroups?: DayGroup[];
+}
+
+const props = withDefaults(defineProps<Props>(), {
+    dayGroups: () => [],
+});
 
 const statusClassMap: Record<AppointmentStatus, string> = {
     confirmed: 'border-emerald-200 bg-emerald-50/80 text-emerald-700',
@@ -144,7 +69,7 @@ const initialsClassMap: Record<AppointmentStatus, string> = {
     in_progress: 'bg-cyan-100 text-cyan-700',
 };
 
-const hasAppointments = computed(() => dayGroups.some((group) => group.appointments.length > 0));
+const hasAppointments = computed(() => props.dayGroups.some((group) => group.appointments.length > 0));
 </script>
 
 <template>
@@ -228,7 +153,7 @@ const hasAppointments = computed(() => dayGroups.some((group) => group.appointme
 
             <div v-if="hasAppointments" class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
                 <section class="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-                    <div v-for="dayGroup in dayGroups" :key="dayGroup.id" class="rounded-2xl border border-zinc-100 bg-zinc-50/70 p-3">
+                    <div v-for="dayGroup in props.dayGroups" :key="dayGroup.id" class="rounded-2xl border border-zinc-100 bg-zinc-50/70 p-3">
                         <div class="mb-3 flex items-center justify-between">
                             <div class="flex items-center gap-2">
                                 <span class="text-sm font-semibold text-cyan-700">{{ dayGroup.label }}</span>

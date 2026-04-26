@@ -1,315 +1,674 @@
 <script setup lang="ts">
-import AppLayout from '@/layouts/AppLayout.vue';
+import AppShell from '@/components/AppShell.vue';
+import DocumentA4Preview from '@/components/Doctor/DocumentA4Preview.vue';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import * as doctorRoutes from '@/routes/doctor';
-import { type BreadcrumbItem } from '@/types';
-import { Head } from '@inertiajs/vue3';
-import { ChevronDown, Search, Plus } from 'lucide-vue-next';
-import { ref } from 'vue';
+import { Head, Link } from '@inertiajs/vue3';
+import { AlertCircle, ArrowLeft, ChevronRight, Pill, Plus, Stethoscope, TestTube2, Trash2, UserRoundSearch, X } from 'lucide-vue-next';
+import { computed, ref, watch } from 'vue';
 
-const breadcrumbs: BreadcrumbItem[] = [
-    {
-        title: 'Dashboard',
-        href: doctorRoutes.dashboard().url,
-    },
-    {
-        title: 'Documentos',
-        href: '/doctor/documents',
-    },
+type DocumentKind = 'rx' | 'cert' | 'exams';
+
+type Patient = {
+    id: number;
+    name: string;
+    cpf: string;
+    age: number;
+    sex: 'F' | 'M';
+};
+
+type DrugCatalogItem = {
+    id: number;
+    name: string;
+    strength: string;
+    form: string;
+    controlled?: boolean;
+    ctrl?: string;
+};
+
+type RxLine = DrugCatalogItem & {
+    dose: string;
+    via: string;
+    freq: string;
+    dur: string;
+    extra: string;
+};
+
+type ExamCatalogItem = { code: string; name: string };
+
+type CertForm = {
+    type: string;
+    days: string;
+    startDate: string;
+    startTime: string;
+    endTime: string;
+    cid: string;
+    body: string;
+};
+
+interface Props {
+    patients?: Patient[];
+}
+
+const props = withDefaults(defineProps<Props>(), {
+    patients: () => [],
+});
+
+const patientsCatalog = computed<Patient[]>(() => props.patients);
+
+const drugCatalog: DrugCatalogItem[] = [
+    { id: 1, name: 'Losartana potássica', strength: '50 mg', form: 'Comprimido', controlled: false },
+    { id: 2, name: 'Atorvastatina cálcica', strength: '20 mg', form: 'Comprimido', controlled: false },
+    { id: 3, name: 'Metformina', strength: '850 mg', form: 'Comprimido', controlled: false },
+    { id: 4, name: 'Clonazepam', strength: '2 mg', form: 'Comprimido', controlled: true, ctrl: 'B1' },
+    { id: 5, name: 'Omeprazol', strength: '20 mg', form: 'Cápsula', controlled: false },
+    { id: 6, name: 'Amitriptilina', strength: '25 mg', form: 'Comprimido', controlled: true, ctrl: 'C1' },
 ];
 
-// Dados reativos
-const selectedTab = ref('prescricao');
-const selectedPatient = ref('');
-const medicationSearch = ref('');
+const examCatalog: ExamCatalogItem[] = [
+    { code: '40304361', name: 'Hemograma completo' },
+    { code: '40302580', name: 'Glicemia de jejum' },
+    { code: '40301630', name: 'Creatinina' },
+    { code: '40304370', name: 'Perfil lipídico' },
+    { code: '40308391', name: 'TSH' },
+    { code: '40316521', name: 'TGO / TGP' },
+];
 
-// Lista de pacientes mock
-const patients = ref([
-    'Ana Beatriz Silva',
-    'Carlos Mendes',
-    'Sofia Almeida',
-    'João Silva',
-    'Mariana Costa',
-    'Ricardo Santos'
+const docType = ref<DocumentKind>('rx');
+const patient = ref<Patient | null>(patientsCatalog.value[0] ?? null);
+const showSearchModal = ref(false);
+const drugSearchOpen = ref(false);
+const examSearchOpen = ref(false);
+const showSuccess = ref(false);
+const showError = ref(false);
+const signEnabled = ref(false);
+const showDraftWarn = ref(false);
+const pendingDocType = ref<DocumentKind | null>(null);
+const patientSearch = ref('');
+const drugQuery = ref('');
+const examQuery = ref('');
+
+const rxItems = ref<RxLine[]>([
+    {
+        ...drugCatalog[0],
+        dose: '1 comprimido',
+        via: 'Oral',
+        freq: 'A cada 24 horas, pela manhã',
+        dur: 'Uso contínuo · 90 dias',
+        extra: '',
+    },
+    {
+        ...drugCatalog[1],
+        dose: '1 comprimido',
+        via: 'Oral',
+        freq: 'A cada 24 horas, à noite',
+        dur: '90 dias',
+        extra: 'Reavaliar perfil lipídico em 60 dias',
+    },
+    {
+        ...drugCatalog[5],
+        dose: '1 comprimido',
+        via: 'Oral',
+        freq: 'A cada 24 horas, ao deitar',
+        dur: '30 dias',
+        extra: 'Não interromper abruptamente',
+    },
 ]);
 
-// Lista de medicamentos mock
-const medications = ref([
-    {
-        id: 1,
-        name: 'Ibuprofeno',
-        dosage: '200mg',
-        route: 'Oral',
-        instructions: 'Tomar 1 comp. a cada 6 horas'
-    },
-    {
-        id: 2,
-        name: 'Paracetamol',
-        dosage: '500mg',
-        route: 'Oral',
-        instructions: 'Tomar 1 comp. a cada 8 horas'
-    },
-    {
-        id: 3,
-        name: 'Amoxicilina',
-        dosage: '500mg',
-        route: 'Oral',
-        instructions: 'Tomar 1 cápsula a cada 12 horas'
+const certData = ref<CertForm>({
+    type: 'afastamento',
+    days: '3',
+    startDate: new Date().toISOString().slice(0, 10),
+    startTime: '',
+    endTime: '',
+    cid: 'J11.1',
+    body: 'Necessitando de repouso domiciliar e afastamento de suas atividades laborais habituais.',
+});
+
+const examItems = ref<ExamCatalogItem[]>([examCatalog[0], examCatalog[1], examCatalog[2], examCatalog[3], examCatalog[5]]);
+
+const urgency = ref<'rotina' | 'prioritario' | 'urgente'>('rotina');
+const indication = ref('Acompanhamento de hipertensão arterial sistêmica e dislipidemia. Avaliação metabólica.');
+const fasting = ref('Jejum de 12 horas. Levar a primeira urina da manhã.');
+
+const filteredPatients = computed(() => {
+    const q = patientSearch.value.trim().toLowerCase();
+    if (!q) {
+        return patientsCatalog.value;
     }
-]);
+    return patientsCatalog.value.filter((p) => p.name.toLowerCase().includes(q) || p.cpf.includes(q));
+});
 
-// Medicamentos selecionados para a prescrição
-const selectedMedications = ref([
-    {
-        id: 1,
-        name: 'Ibuprofeno',
-        dosage: '200mg',
-        route: 'Oral',
-        instructions: 'Tomar 1 comp. a cada 6 horas'
-    },
-    {
-        id: 2,
-        name: 'Paracetamol',
-        dosage: '500mg',
-        route: 'Oral',
-        instructions: 'Tomar 1 comp. a cada 8 horas'
-    },
-    {
-        id: 3,
-        name: 'Amoxicilina',
-        dosage: '500mg',
-        route: 'Oral',
-        instructions: 'Tomar 1 cápsula a cada 12 horas'
+const filteredDrugs = computed(() => {
+    const q = drugQuery.value.trim().toLowerCase();
+    if (!q) {
+        return drugCatalog;
     }
-]);
+    return drugCatalog.filter((d) => d.name.toLowerCase().includes(q));
+});
 
-// Funções
-const addMedication = (medication: any) => {
-    if (!selectedMedications.value.find(m => m.id === medication.id)) {
-        selectedMedications.value.push(medication);
+const filteredExams = computed(() => {
+    const q = examQuery.value.trim().toLowerCase();
+    if (!q) {
+        return examCatalog;
     }
-};
+    return examCatalog.filter((e) => e.name.toLowerCase().includes(q) || e.code.includes(q));
+});
 
-const removeMedication = (id: number) => {
-    selectedMedications.value = selectedMedications.value.filter(m => m.id !== id);
-};
+const hasDraftChanges = computed(() => {
+    if (docType.value === 'rx') {
+        return rxItems.value.length > 0;
+    }
+    if (docType.value === 'cert') {
+        return certData.value.body.trim().length > 0 || certData.value.days.trim().length > 0 || certData.value.cid.trim().length > 0;
+    }
+    return examItems.value.length > 0;
+});
 
-const getCurrentDate = () => {
-    return new Date().toLocaleDateString('pt-BR', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric'
+function requestDocType(next: DocumentKind) {
+    if (next === docType.value) {
+        return;
+    }
+    if (hasDraftChanges.value) {
+        pendingDocType.value = next;
+        showDraftWarn.value = true;
+        return;
+    }
+    docType.value = next;
+}
+
+function confirmDiscardDraft() {
+    if (pendingDocType.value) {
+        docType.value = pendingDocType.value;
+        pendingDocType.value = null;
+    }
+    showDraftWarn.value = false;
+}
+
+function cancelTabSwitch() {
+    pendingDocType.value = null;
+    showDraftWarn.value = false;
+}
+
+function saveDraftAndSwitch() {
+    showDraftWarn.value = false;
+    if (pendingDocType.value) {
+        docType.value = pendingDocType.value;
+        pendingDocType.value = null;
+    }
+}
+
+function addDrugFromCatalog(d: DrugCatalogItem) {
+    rxItems.value.push({
+        ...d,
+        dose: '1 comprimido',
+        via: 'Oral',
+        freq: 'Conforme orientação médica',
+        dur: '30 dias',
+        extra: '',
     });
-};
+    drugQuery.value = '';
+}
+
+function removeRx(i: number) {
+    rxItems.value = rxItems.value.filter((_, idx) => idx !== i);
+}
+
+function addExam(e: ExamCatalogItem) {
+    if (examItems.value.some((x) => x.code === e.code)) {
+        return;
+    }
+    examItems.value.push(e);
+    examQuery.value = '';
+}
+
+function removeExam(i: number) {
+    examItems.value = examItems.value.filter((_, idx) => idx !== i);
+}
+
+function selectPatient(p: Patient) {
+    patient.value = p;
+    showSearchModal.value = false;
+    patientSearch.value = '';
+}
+
+const canSubmit = computed(() => !!patient.value);
+
+watch(showSearchModal, (open) => {
+    if (open) {
+        patientSearch.value = '';
+    }
+});
 </script>
 
 <template>
-    <Head title="Emissão de Documentos" />
+    <Head title="Emissão de documentos — Telemedicina Para Todos" />
 
-    <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-6 bg-gray-50">
-            <!-- Header -->
-            <div class="flex flex-col gap-1">
-                <h1 class="text-3xl font-bold text-gray-900">Emissão de Documentos</h1>
-            </div>
-
-            <!-- Navigation Tabs -->
-            <div class="flex gap-8 border-b border-gray-200">
-                <button 
-                    @click="selectedTab = 'prescricao'"
-                    :class="[
-                        'pb-3 text-lg font-medium transition-colors',
-                        selectedTab === 'prescricao' 
-                            ? 'text-primary border-b-2 border-primary' 
-                            : 'text-gray-600 hover:text-gray-900'
-                    ]"
-                >
-                    Prescrição
-                </button>
-                <button 
-                    @click="selectedTab = 'atestado'"
-                    :class="[
-                        'pb-3 text-lg font-medium transition-colors',
-                        selectedTab === 'atestado' 
-                            ? 'text-primary border-b-2 border-primary' 
-                            : 'text-gray-600 hover:text-gray-900'
-                    ]"
-                >
-                    Atestado
-                </button>
-                <button 
-                    @click="selectedTab = 'exames'"
-                    :class="[
-                        'pb-3 text-lg font-medium transition-colors',
-                        selectedTab === 'exames' 
-                            ? 'text-primary border-b-2 border-primary' 
-                            : 'text-gray-600 hover:text-gray-900'
-                    ]"
-                >
-                    Pedido de Exames
-                </button>
-            </div>
-
-            <!-- Form Section -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <!-- Patient Selection -->
-                <div class="space-y-2">
-                    <label class="text-sm font-medium text-gray-700">Paciente</label>
-                    <div class="relative">
-                        <select 
-                            v-model="selectedPatient"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent appearance-none bg-white"
+    <AppShell variant="header">
+        <div class="min-h-svh w-full bg-[#f5f5f0] text-zinc-900 antialiased">
+            <header class="sticky top-0 z-20 border-b border-zinc-200/80 bg-[#f5f5f0]/95 backdrop-blur">
+                <div class="mx-auto flex max-w-[1280px] flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
+                    <div class="flex min-w-0 flex-1 items-center gap-3">
+                        <Link
+                            :href="doctorRoutes.dashboard().url"
+                            class="inline-flex size-9 shrink-0 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-600 transition hover:bg-zinc-50"
                         >
-                            <option value="">Selecione o paciente</option>
-                            <option v-for="patient in patients" :key="patient" :value="patient">
-                                {{ patient }}
-                            </option>
-                        </select>
-                        <ChevronDown class="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                    </div>
-                </div>
-
-                <!-- Medication Search -->
-                <div class="space-y-2">
-                    <label class="text-sm font-medium text-gray-700">Buscar medicamento</label>
-                    <div class="relative">
-                        <Search class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                        <input
-                            v-model="medicationSearch"
-                            type="text"
-                            placeholder="Ex: Ibuprofeno"
-                            class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                        />
-                    </div>
-                </div>
-            </div>
-
-            <!-- Medication List Table -->
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-                <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-primary/10">
-                            <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    MEDICAMENTO
-                                </th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    DOSAGEM
-                                </th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    VIA
-                                </th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    INSTRUÇÕES
-                                </th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    AÇÃO
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody class="bg-white divide-y divide-gray-200">
-                            <tr v-for="medication in selectedMedications" :key="medication.id" class="hover:bg-gray-50">
-                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                    {{ medication.name }}
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {{ medication.dosage }}
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {{ medication.route }}
-                                </td>
-                                <td class="px-6 py-4 text-sm text-gray-500">
-                                    {{ medication.instructions }}
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-red-600">
-                                    <button 
-                                        @click="removeMedication(medication.id)"
-                                        class="hover:text-red-800 transition-colors"
-                                    >
-                                        Remover
-                                    </button>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Available Medications (for adding) -->
-            <div v-if="medicationSearch" class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                <h3 class="text-sm font-medium text-gray-700 mb-3">Medicamentos encontrados:</h3>
-                <div class="space-y-2">
-                    <div 
-                        v-for="medication in medications.filter(m => 
-                            m.name.toLowerCase().includes(medicationSearch.toLowerCase())
-                        )" 
-                        :key="medication.id"
-                        class="flex items-center justify-between p-3 border border-gray-200 rounded-lg"
-                    >
-                        <div>
-                            <span class="font-medium">{{ medication.name }}</span>
-                            <span class="text-gray-500 ml-2">{{ medication.dosage }} - {{ medication.route }}</span>
+                            <ArrowLeft class="size-4" />
+                            <span class="sr-only">Voltar ao painel</span>
+                        </Link>
+                        <div class="min-w-0">
+                            <h1 class="truncate text-base font-bold tracking-tight sm:text-lg">Emissão de documentos</h1>
+                            <p class="hidden text-xs text-zinc-500 sm:block">
+                                Receituário, atestado e pedido de exames com pré-visualização em tempo real.
+                            </p>
                         </div>
-                        <button 
-                            @click="addMedication(medication)"
-                            class="flex items-center gap-1 bg-primary hover:bg-primary/90 text-gray-900 px-3 py-1 rounded-lg text-sm font-medium transition-colors"
+                    </div>
+
+                    <div class="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
+                        <div
+                            v-if="patient"
+                            class="flex max-w-full min-w-0 items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 py-1.5 text-sm"
                         >
-                            <Plus class="w-3 h-3" />
-                            Adicionar
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Preview Section -->
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Pré-visualização</h3>
-                
-                <div class="bg-white border border-gray-300 rounded-lg p-6 max-w-2xl">
-                    <h4 class="text-xl font-bold text-gray-900 mb-4">Prescrição Médica</h4>
-                    
-                    <div class="space-y-2 mb-6">
-                        <p class="text-gray-700">
-                            <span class="font-medium">Paciente:</span> 
-                            <span class="bg-primary/20 px-2 py-1 rounded text-gray-900 font-medium">
-                                {{ selectedPatient || 'Ana Beatriz Silva' }}
-                            </span>
-                        </p>
-                        <p class="text-gray-700">
-                            <span class="font-medium">Data:</span> 
-                            <span class="bg-primary/20 px-2 py-1 rounded text-gray-900 font-medium">
-                                {{ getCurrentDate() }}
-                            </span>
-                        </p>
-                    </div>
-
-                    <div class="space-y-2 mb-6">
-                        <p class="font-medium text-gray-900">Medicamentos prescritos:</p>
-                        <ul class="space-y-1">
-                            <li 
-                                v-for="medication in selectedMedications" 
-                                :key="medication.id"
-                                class="text-gray-700"
+                            <span class="truncate font-medium text-zinc-800">{{ patient.name }}</span>
+                            <button
+                                type="button"
+                                class="shrink-0 text-xs font-semibold text-teal-700 underline-offset-2 hover:underline"
+                                @click="showSearchModal = true"
                             >
-                                - {{ medication.name }} {{ medication.dosage }}: {{ medication.instructions }}
-                            </li>
-                        </ul>
-                    </div>
+                                Trocar
+                            </button>
+                        </div>
+                        <Button v-else type="button" variant="outline" size="sm" class="gap-1.5" @click="showSearchModal = true">
+                            <UserRoundSearch class="size-4" />
+                            Selecionar paciente
+                        </Button>
 
-                    <div class="border-t border-gray-200 pt-4">
-                        <p class="text-gray-900 font-medium">Dr. Ricardo Almeida</p>
+                        <div class="flex rounded-xl border border-zinc-200 bg-white p-0.5">
+                            <button
+                                type="button"
+                                class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold sm:text-sm"
+                                :class="docType === 'rx' ? 'bg-zinc-900 text-white' : 'text-zinc-600 hover:bg-zinc-50'"
+                                @click="requestDocType('rx')"
+                            >
+                                <Pill class="size-3.5 sm:size-4" />
+                                Receita
+                            </button>
+                            <button
+                                type="button"
+                                class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold sm:text-sm"
+                                :class="docType === 'cert' ? 'bg-zinc-900 text-white' : 'text-zinc-600 hover:bg-zinc-50'"
+                                @click="requestDocType('cert')"
+                            >
+                                <Stethoscope class="size-3.5 sm:size-4" />
+                                Atestado
+                            </button>
+                            <button
+                                type="button"
+                                class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold sm:text-sm"
+                                :class="docType === 'exams' ? 'bg-zinc-900 text-white' : 'text-zinc-600 hover:bg-zinc-50'"
+                                @click="requestDocType('exams')"
+                            >
+                                <TestTube2 class="size-3.5 sm:size-4" />
+                                Exames
+                            </button>
+                        </div>
                     </div>
                 </div>
-            </div>
+            </header>
 
-            <!-- Action Buttons -->
-            <div class="flex justify-end gap-3">
-                <button class="bg-primary/20 hover:bg-primary/30 text-gray-900 font-semibold px-6 py-2 rounded-lg transition-colors">
-                    Assinar Digitalmente
-                </button>
-                <button class="bg-primary hover:bg-primary/90 text-gray-900 font-semibold px-6 py-2 rounded-lg transition-colors">
-                    Gerar e Enviar para o Paciente
-                </button>
+            <div class="mx-auto max-w-[1280px] px-4 py-5 sm:px-6">
+                <div v-if="showError" class="mb-4 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
+                    <AlertCircle class="mt-0.5 size-4 shrink-0" />
+                    <div class="min-w-0 flex-1">
+                        <p class="font-semibold">Não foi possível salvar o documento</p>
+                        <p class="text-red-800/90">Verifique sua conexão e tente novamente.</p>
+                    </div>
+                    <button type="button" class="shrink-0 rounded-lg p-1 text-red-700 hover:bg-red-100" @click="showError = false">
+                        <X class="size-4" />
+                    </button>
+                </div>
+
+                <div class="grid items-start gap-7 lg:grid-cols-[minmax(0,1fr)_minmax(0,580px)]">
+                    <section class="flex min-w-0 flex-col gap-4">
+                        <template>
+                            <!-- Receita -->
+                            <div v-if="docType === 'rx'" class="space-y-4 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-5">
+                                <div class="flex flex-wrap items-center justify-between gap-2">
+                                    <h2 class="text-sm font-bold text-zinc-900">Medicamentos</h2>
+                                    <Button type="button" variant="outline" size="sm" class="gap-1" @click="drugSearchOpen = !drugSearchOpen">
+                                        <Plus class="size-4" />
+                                        {{ drugSearchOpen ? 'Fechar catálogo' : 'Adicionar do catálogo' }}
+                                    </Button>
+                                </div>
+
+                                <div v-if="drugSearchOpen" class="rounded-xl border border-zinc-200 bg-zinc-50/80 p-3">
+                                    <input
+                                        v-model="drugQuery"
+                                        type="search"
+                                        placeholder="Buscar por nome…"
+                                        class="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm ring-teal-500/30 outline-none placeholder:text-zinc-400 focus:ring-2"
+                                    />
+                                    <ul class="mt-2 max-h-48 space-y-1 overflow-y-auto text-sm">
+                                        <li
+                                            v-for="d in filteredDrugs"
+                                            :key="d.id"
+                                            class="flex items-center justify-between gap-2 rounded-lg border border-transparent px-2 py-1.5 hover:border-zinc-200 hover:bg-white"
+                                        >
+                                            <span class="min-w-0 font-medium text-zinc-800">{{ d.name }} · {{ d.strength }}</span>
+                                            <Button type="button" size="sm" variant="secondary" class="shrink-0" @click="addDrugFromCatalog(d)">
+                                                Adicionar
+                                            </Button>
+                                        </li>
+                                    </ul>
+                                </div>
+
+                                <div class="space-y-3">
+                                    <div
+                                        v-for="(it, i) in rxItems"
+                                        :key="`${it.id}-${i}`"
+                                        class="rounded-xl border border-zinc-200 bg-zinc-50/50 p-3"
+                                    >
+                                        <div class="mb-2 flex flex-wrap items-start justify-between gap-2">
+                                            <div>
+                                                <p class="text-sm font-bold text-zinc-900">{{ it.name }} · {{ it.strength }} · {{ it.form }}</p>
+                                                <span
+                                                    v-if="it.controlled"
+                                                    class="mt-1 inline-block rounded bg-[#fbeeda] px-1.5 py-px text-[10px] font-extrabold text-amber-900"
+                                                >
+                                                    LISTA {{ it.ctrl }}
+                                                </span>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                class="rounded-lg p-1.5 text-zinc-500 hover:bg-red-50 hover:text-red-600"
+                                                @click="removeRx(i)"
+                                            >
+                                                <Trash2 class="size-4" />
+                                            </button>
+                                        </div>
+                                        <div class="grid gap-2 sm:grid-cols-2">
+                                            <label class="block text-xs font-medium text-zinc-600">
+                                                Dose
+                                                <input
+                                                    v-model="it.dose"
+                                                    type="text"
+                                                    class="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-2 py-1.5 text-sm ring-teal-500/30 outline-none focus:ring-2"
+                                                />
+                                            </label>
+                                            <label class="block text-xs font-medium text-zinc-600">
+                                                Via
+                                                <input
+                                                    v-model="it.via"
+                                                    type="text"
+                                                    class="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-2 py-1.5 text-sm ring-teal-500/30 outline-none focus:ring-2"
+                                                />
+                                            </label>
+                                            <label class="block text-xs font-medium text-zinc-600 sm:col-span-2">
+                                                Frequência
+                                                <input
+                                                    v-model="it.freq"
+                                                    type="text"
+                                                    class="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-2 py-1.5 text-sm ring-teal-500/30 outline-none focus:ring-2"
+                                                />
+                                            </label>
+                                            <label class="block text-xs font-medium text-zinc-600 sm:col-span-2">
+                                                Duração
+                                                <input
+                                                    v-model="it.dur"
+                                                    type="text"
+                                                    class="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-2 py-1.5 text-sm ring-teal-500/30 outline-none focus:ring-2"
+                                                />
+                                            </label>
+                                            <label class="block text-xs font-medium text-zinc-600 sm:col-span-2">
+                                                Observações
+                                                <input
+                                                    v-model="it.extra"
+                                                    type="text"
+                                                    class="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-2 py-1.5 text-sm ring-teal-500/30 outline-none focus:ring-2"
+                                                />
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <p
+                                        v-if="!rxItems.length"
+                                        class="rounded-xl border border-dashed border-zinc-300 py-8 text-center text-sm text-zinc-500"
+                                    >
+                                        Nenhum medicamento. Use o catálogo para adicionar.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <!-- Atestado -->
+                            <div v-else-if="docType === 'cert'" class="space-y-4 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-5">
+                                <h2 class="text-sm font-bold text-zinc-900">Conteúdo do atestado</h2>
+                                <div class="grid gap-3 sm:grid-cols-2">
+                                    <label class="block text-xs font-medium text-zinc-600">
+                                        Tipo
+                                        <select
+                                            v-model="certData.type"
+                                            class="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-2 py-2 text-sm ring-teal-500/30 outline-none focus:ring-2"
+                                        >
+                                            <option value="afastamento">Afastamento</option>
+                                            <option value="comparecimento">Comparecimento</option>
+                                            <option value="aptidao">Aptidão</option>
+                                        </select>
+                                    </label>
+                                    <label class="block text-xs font-medium text-zinc-600">
+                                        Dias
+                                        <input
+                                            v-model="certData.days"
+                                            type="text"
+                                            inputmode="numeric"
+                                            class="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-2 py-2 text-sm ring-teal-500/30 outline-none focus:ring-2"
+                                        />
+                                    </label>
+                                    <label class="block text-xs font-medium text-zinc-600">
+                                        Início (data)
+                                        <input
+                                            v-model="certData.startDate"
+                                            type="date"
+                                            class="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-2 py-2 text-sm ring-teal-500/30 outline-none focus:ring-2"
+                                        />
+                                    </label>
+                                    <label class="block text-xs font-medium text-zinc-600">
+                                        CID-10
+                                        <input
+                                            v-model="certData.cid"
+                                            type="text"
+                                            class="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-2 py-2 font-mono text-sm ring-teal-500/30 outline-none focus:ring-2"
+                                        />
+                                    </label>
+                                </div>
+                                <label class="block text-xs font-medium text-zinc-600">
+                                    Texto livre
+                                    <textarea
+                                        v-model="certData.body"
+                                        rows="5"
+                                        class="mt-1 w-full resize-y rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm ring-teal-500/30 outline-none placeholder:text-zinc-400 focus:ring-2"
+                                    />
+                                </label>
+                            </div>
+
+                            <!-- Exames -->
+                            <div v-else class="space-y-4 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-5">
+                                <div class="flex flex-wrap items-center justify-between gap-2">
+                                    <h2 class="text-sm font-bold text-zinc-900">Exames solicitados</h2>
+                                    <Button type="button" variant="outline" size="sm" class="gap-1" @click="examSearchOpen = !examSearchOpen">
+                                        <Plus class="size-4" />
+                                        {{ examSearchOpen ? 'Fechar catálogo' : 'Adicionar do catálogo' }}
+                                    </Button>
+                                </div>
+
+                                <div v-if="examSearchOpen" class="rounded-xl border border-zinc-200 bg-zinc-50/80 p-3">
+                                    <input
+                                        v-model="examQuery"
+                                        type="search"
+                                        placeholder="Código ou nome…"
+                                        class="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm ring-teal-500/30 outline-none placeholder:text-zinc-400 focus:ring-2"
+                                    />
+                                    <ul class="mt-2 max-h-48 space-y-1 overflow-y-auto text-sm">
+                                        <li
+                                            v-for="e in filteredExams"
+                                            :key="e.code"
+                                            class="flex items-center justify-between gap-2 rounded-lg border border-transparent px-2 py-1.5 hover:border-zinc-200 hover:bg-white"
+                                        >
+                                            <span class="font-mono text-xs text-zinc-500">{{ e.code }}</span>
+                                            <span class="min-w-0 flex-1 font-medium text-zinc-800">{{ e.name }}</span>
+                                            <Button type="button" size="sm" variant="secondary" class="shrink-0" @click="addExam(e)">
+                                                Adicionar
+                                            </Button>
+                                        </li>
+                                    </ul>
+                                </div>
+
+                                <ul class="space-y-2">
+                                    <li
+                                        v-for="(e, i) in examItems"
+                                        :key="e.code"
+                                        class="flex items-center justify-between gap-2 rounded-xl border border-zinc-200 bg-zinc-50/50 px-3 py-2 text-sm"
+                                    >
+                                        <span
+                                            ><span class="font-mono text-xs text-zinc-500">{{ e.code }}</span> {{ e.name }}</span
+                                        >
+                                        <button
+                                            type="button"
+                                            class="rounded-lg p-1.5 text-zinc-500 hover:bg-red-50 hover:text-red-600"
+                                            @click="removeExam(i)"
+                                        >
+                                            <Trash2 class="size-4" />
+                                        </button>
+                                    </li>
+                                </ul>
+                                <p
+                                    v-if="!examItems.length"
+                                    class="rounded-xl border border-dashed border-zinc-300 py-6 text-center text-sm text-zinc-500"
+                                >
+                                    Nenhum exame na lista.
+                                </p>
+
+                                <fieldset class="space-y-2">
+                                    <legend class="text-xs font-semibold text-zinc-600">Urgência</legend>
+                                    <div class="flex flex-wrap gap-2">
+                                        <label
+                                            v-for="u in ['rotina', 'prioritario', 'urgente'] as const"
+                                            :key="u"
+                                            class="inline-flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition"
+                                            :class="
+                                                urgency === u
+                                                    ? 'border-zinc-900 bg-zinc-900 text-white'
+                                                    : 'border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50'
+                                            "
+                                        >
+                                            <input v-model="urgency" type="radio" class="sr-only" :value="u" />
+                                            {{ u === 'rotina' ? 'Rotina' : u === 'prioritario' ? 'Prioritário' : 'Urgente' }}
+                                        </label>
+                                    </div>
+                                </fieldset>
+
+                                <label class="block text-xs font-medium text-zinc-600">
+                                    Indicação clínica
+                                    <textarea
+                                        v-model="indication"
+                                        rows="3"
+                                        class="mt-1 w-full resize-y rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm ring-teal-500/30 outline-none focus:ring-2"
+                                    />
+                                </label>
+                                <label class="block text-xs font-medium text-zinc-600">
+                                    Preparo / jejum
+                                    <textarea
+                                        v-model="fasting"
+                                        rows="2"
+                                        class="mt-1 w-full resize-y rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm ring-teal-500/30 outline-none focus:ring-2"
+                                    />
+                                </label>
+                            </div>
+                        </template>
+
+                        <div
+                            class="sticky bottom-4 z-10 flex flex-col gap-3 rounded-2xl border border-zinc-200 bg-white/95 p-4 shadow-lg backdrop-blur sm:flex-row sm:items-center sm:justify-between"
+                        >
+                            <label class="flex cursor-pointer items-center gap-2 text-sm text-zinc-700">
+                                <input v-model="signEnabled" type="checkbox" class="size-4 rounded border-zinc-300 text-teal-600" />
+                                Assinar digitalmente (ICP-Brasil)
+                            </label>
+                            <div class="flex flex-wrap gap-2">
+                                <Button type="button" variant="outline" :disabled="!signEnabled || !canSubmit"> Assinar </Button>
+                                <Button type="button" :disabled="!canSubmit" @click="showSuccess = true"> Gerar e enviar </Button>
+                            </div>
+                        </div>
+                    </section>
+
+                    <aside class="min-w-0 lg:sticky lg:top-20 lg:self-start">
+                        <DocumentA4Preview
+                            :doc-type="docType"
+                            :patient="patient"
+                            :rx-items="rxItems"
+                            :cert-data="certData"
+                            :exam-items="examItems"
+                            :urgency="urgency"
+                            :indication="indication"
+                            :fasting="fasting"
+                        />
+                    </aside>
+                </div>
             </div>
         </div>
-    </AppLayout>
+
+        <Dialog v-model:open="showSearchModal">
+            <DialogContent class="sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Buscar paciente</DialogTitle>
+                    <DialogDescription>Selecione quem receberá o documento.</DialogDescription>
+                </DialogHeader>
+                <input
+                    v-model="patientSearch"
+                    type="search"
+                    placeholder="Nome ou CPF…"
+                    class="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm ring-teal-500/30 outline-none focus:ring-2"
+                />
+                <ul class="max-h-64 space-y-1 overflow-y-auto py-2">
+                    <li v-for="p in filteredPatients" :key="p.id">
+                        <button
+                            type="button"
+                            class="flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm hover:bg-zinc-100"
+                            @click="selectPatient(p)"
+                        >
+                            <span class="font-medium text-zinc-900">{{ p.name }}</span>
+                            <ChevronRight class="size-4 shrink-0 text-zinc-400" />
+                        </button>
+                    </li>
+                </ul>
+                <DialogFooter>
+                    <Button type="button" variant="outline" @click="showSearchModal = false">Fechar</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        <Dialog v-model:open="showDraftWarn">
+            <DialogContent class="sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Rascunho não salvo</DialogTitle>
+                    <DialogDescription> Você tem alterações neste documento. Deseja continuar trocando o tipo? </DialogDescription>
+                </DialogHeader>
+                <DialogFooter class="gap-2 sm:justify-end">
+                    <Button type="button" variant="outline" @click="cancelTabSwitch">Cancelar</Button>
+                    <Button type="button" variant="secondary" @click="saveDraftAndSwitch">Salvar rascunho e continuar</Button>
+                    <Button type="button" variant="destructive" @click="confirmDiscardDraft">Descartar alterações</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        <Dialog v-model:open="showSuccess">
+            <DialogContent class="text-center sm:max-w-sm">
+                <DialogHeader>
+                    <DialogTitle>Documento gerado</DialogTitle>
+                    <DialogDescription v-if="patient"> {{ patient.name }} receberá o arquivo na área do paciente. </DialogDescription>
+                </DialogHeader>
+                <DialogFooter class="sm:justify-center">
+                    <Button type="button" @click="showSuccess = false">Fechar</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    </AppShell>
 </template>

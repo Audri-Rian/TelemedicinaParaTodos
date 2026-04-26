@@ -71,24 +71,25 @@ Fonte: analise completa do codigo, docs/TrueIssues.md, execute/, docs/Tasks/
 
 ### Controllers Stub (apenas renderizam pagina vazia, sem logica)
 
-[ ] DoctorDocumentsController.php - implementar logica de dados reais
-[ ] DoctorHistoryController.php - implementar logica de dados reais
-[ ] DoctorPatientsController.php - implementar logica de dados reais
+[x] DoctorDocumentsController.php - lista real de pacientes do medico (Documents.vue atualizado para receber prop patients).
+PENDENCIAS desta pagina (nao bloqueantes para uso interno, mas obrigatorias antes de validade legal): - Catalogo de medicamentos (drugCatalog) ainda mockado - sem tabela/API de drogas no projeto - Catalogo de exames TUSS (examCatalog) ainda mockado - sem tabela TUSS no projeto - Assinatura digital ICP-Brasil nao implementada - documentos emitidos por aqui NAO TEM VALIDADE LEGAL ate parte 3 (CFM) ser concluida - Persistencia do formulario reusa endpoints existentes em DoctorPatientMedicalRecordController
+[x] DoctorHistoryController.php - dados reais (ultimos 30 dias agrupados por dia, com summary, status e detalhes do paciente). History.vue atualizado para receber prop dayGroups; mock antigo removido
+[x] DoctorPatientsController.php - dados reais (stats agregadas, upcoming patients, patient history) com queries otimizadas (sem N+1)
 [ ] DoctorLaboratoriesController.php - **arquivo nao existe** (verificar se ainda faz sentido apos modulo Integrations; talvez remover do checklist)
-[ ] PatientDetailsController.php - implementar logica de dados reais
+[x] PatientDetailsController.php - dados reais (perfil resumido do paciente + ultimas 10 consultas), autorizado via MedicalRecordPolicy::view. PatientDetails.vue atualizado para receber props (patient, consultations)
 
 ### Policies incompletas
 
-[ ] MessagePolicy.php - faltam metodos view(), create(), update(), delete()
+[x] MessagePolicy.php - implementados view, create, update, delete, markAsRead (alem do markAsDelivered ja existente)
 [x] AppointmentPolicy - metodos start(), end(), cancel() implementados (app/Policies/AppointmentPolicy.php:114,139,153)
 
-### Migrations pendentes (docs/TrueIssues.md sec 7.1)
+### Migrations pendentes (docs/TrueIssues.md sec 7.1) - TODOS OBSOLETOS
 
-[ ] Criar tabela appointment_availabilities
-[ ] Criar tabela doctor_availability_exceptions
-[ ] Criar tabela patient_emergency_contacts
-[ ] Adicionar indices em status e scheduled_at
-[ ] Adicionar colunas metadata JSON e consent flags
+[x] Criar tabela appointment_availabilities - existe como `doctor_availability_slots` (2025_11_11_000002)
+[x] Criar tabela doctor_availability_exceptions - existe como `doctor_blocked_dates` (2025_11_11_000003)
+[x] Criar tabela patient_emergency_contacts - campos `emergency_contact` e `emergency_phone` em `patients`
+[x] Adicionar indices em status e scheduled_at - ja existem em appointments (doctor_id+scheduled_at, patient_id+scheduled_at, status+scheduled_at, access_code)
+[x] Adicionar colunas metadata JSON e consent flags - `appointments.metadata` jsonb existe; tabela `consents` dedicada (2025_11_30_145555); `patients.consent_telemedicine` boolean
 
 ### Tasks de manutencao (Kernel/Scheduler)
 
@@ -115,7 +116,7 @@ Fonte: analise completa do codigo, docs/TrueIssues.md, execute/, docs/Tasks/
 
 [ ] AppointmentsController completo (listagens paginadas, POST/PUT/DELETE)
 [ ] AppointmentService ampliado (conflito horario, bloqueio por status, motivos)
-[ ] AppointmentsObserver (gerar access_code, preencher metadata, disparar eventos)
+[x] AppointmentsObserver implementado (app/Observers/AppointmentsObserver.php) - access_code unico, default status, dispara AppointmentCreated/Cancelled/Rescheduled/StatusChanged, logs em AppointmentLog
 [ ] Scheduling de disponibilidades (CRUD de blocos, materializar slots livres)
 
 ### Mensageria (docs/TrueIssues.md sec 7.5)
