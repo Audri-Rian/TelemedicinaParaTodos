@@ -24,7 +24,10 @@ Route::get('docs/interoperabilidade', function () {
 
 // Servir avatars do storage
 Route::get('storage/avatars/{userId}/{filename}', [AvatarFileController::class, 'show'])
-    ->where(['userId' => '[^/]+', 'filename' => '[^/]+'])
+    ->where([
+        'userId' => '[0-9]+',
+        'filename' => '(thumb_)?[a-f0-9-]{36}\.jpg',
+    ])
     ->name('storage.avatar');
 
 // API pública de especializações e disponibilidade

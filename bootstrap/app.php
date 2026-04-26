@@ -21,7 +21,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
-            // \App\Http\Middleware\SecurityHeaders::class, // TEMPORARIAMENTE DESATIVADO
+            \App\Http\Middleware\SecurityHeaders::class,
             \App\Http\Middleware\SanitizeInput::class,
         ]);
 
@@ -56,21 +56,21 @@ return Application::configure(basePath: dirname(__DIR__))
                 ])->toResponse($request)->setStatusCode($e->getStatusCode());
             }
         });
-        
+
         // Capturar todas as exceções não tratadas para rotas de API (apenas se não for HttpException)
         $exceptions->render(function (\Throwable $e, \Illuminate\Http\Request $request) {
             // Se for uma rota de API e não for uma HttpException (já tratada acima)
-            if ($request->is('api/*') && !($e instanceof \Symfony\Component\HttpKernel\Exception\HttpExceptionInterface)) {
-                \Log::error('Erro não tratado em API: ' . $e->getMessage(), [
+            if ($request->is('api/*') && ! ($e instanceof \Symfony\Component\HttpKernel\Exception\HttpExceptionInterface)) {
+                \Log::error('Erro não tratado em API: '.$e->getMessage(), [
                     'trace' => $e->getTraceAsString(),
                     'url' => $request->url(),
                     'file' => $e->getFile(),
                     'line' => $e->getLine(),
                 ]);
-                
+
                 return response()->json([
-                    'message' => app()->environment('production') 
-                        ? 'Erro interno do servidor' 
+                    'message' => app()->environment('production')
+                        ? 'Erro interno do servidor'
                         : $e->getMessage(),
                     'status' => 500,
                 ], 500);

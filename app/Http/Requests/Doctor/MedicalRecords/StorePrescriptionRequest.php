@@ -8,7 +8,7 @@ class StorePrescriptionRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        return $this->user()?->doctor !== null;
     }
 
     public function rules(): array
@@ -24,5 +24,3 @@ class StorePrescriptionRequest extends FormRequest
         ];
     }
 }
-
-
