@@ -2,33 +2,44 @@
 import NavFooter from '@/components/NavFooter.vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
-import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarInput, SidebarGroup, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
-import { type NavItem } from '@/types';
-import { Link } from '@inertiajs/vue3';
 import {
-    Calendar,
-    CalendarClock,
-    Home,
-    Activity,
-    Monitor,
-    Users,
-    History,
-    FileText,
-    MessageCircle,
-    Search,
-    Video,
-    Stethoscope,
-    Bug,
-    LayoutGrid,
-    Building2,
-    Plug2,
-} from 'lucide-vue-next';
-import AppLogo from './AppLogo.vue';
+    Sidebar,
+    SidebarContent,
+    SidebarFooter,
+    SidebarGroup,
+    SidebarHeader,
+    SidebarInput,
+    SidebarMenu,
+    SidebarMenuButton,
+    SidebarMenuItem,
+} from '@/components/ui/sidebar';
 import { useAuth } from '@/composables/auth';
-import { computed, ref } from 'vue';
 import * as doctorRoutes from '@/routes/doctor';
 import * as integrationRoutes from '@/routes/doctor/integrations';
 import * as patientRoutes from '@/routes/patient';
+import { type NavItem } from '@/types';
+import { Link } from '@inertiajs/vue3';
+import {
+    Activity,
+    Bug,
+    Building2,
+    Calendar,
+    CalendarClock,
+    FileClock,
+    FileText,
+    History,
+    Home,
+    LayoutGrid,
+    MessageCircle,
+    Monitor,
+    Plug2,
+    Search,
+    Stethoscope,
+    Users,
+    Video,
+} from 'lucide-vue-next';
+import { computed, ref } from 'vue';
+import AppLogo from './AppLogo.vue';
 
 const { isDoctor, isPatient } = useAuth();
 
@@ -76,6 +87,19 @@ const doctorNavItems = computed<NavItem[]>(() => [
         title: 'Documentos',
         href: '/doctor/documents',
         icon: FileText,
+        activePathPrefix: '/doctor/documents',
+        children: [
+            {
+                title: 'Emissão',
+                href: '/doctor/documents',
+                icon: FileText,
+            },
+            {
+                title: 'Histórico',
+                href: '/doctor/documents/history',
+                icon: FileClock,
+            },
+        ],
     },
     {
         title: 'Integrações',
@@ -184,12 +208,8 @@ const dashboardLink = computed(() => {
         <SidebarContent>
             <SidebarGroup>
                 <div class="relative">
-                    <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                    <SidebarInput 
-                        v-model="searchQuery"
-                        placeholder="Buscar..."
-                        class="pl-9"
-                    />
+                    <Search class="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <SidebarInput v-model="searchQuery" placeholder="Buscar..." class="pl-9" />
                 </div>
             </SidebarGroup>
             <NavMain :items="mainNavItems" />

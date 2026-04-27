@@ -9,8 +9,8 @@ use App\Models\MedicalDocument;
 use App\Models\Patient;
 use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -18,7 +18,40 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class DoctorDocumentsController extends Controller
 {
-    public function index(DoctorDocumentsIndexRequest $request): Response
+    public function index(Request $request): Response
+    {
+        $doctor = $request->user()->doctor;
+
+        if (! $doctor) {
+            abort(403, 'Apenas médicos podem acessar esta página.');
+        }
+
+        $patientIds = Appointments::query()
+            ->where('doctor_id', $doctor->id)
+            ->distinct()
+            ->pluck('patient_id');
+
+        $patients = Patient::query()
+            ->select(['id', 'user_id', 'cpf', 'date_of_birth', 'gender'])
+            ->with('user:id,name')
+            ->whereIn('id', $patientIds)
+            ->get()
+            ->map(fn (Patient $p) => [
+                'id' => $p->id,
+                'name' => $p->user->name ?? '',
+                'cpf' => $this->safePatientCpf($p),
+                'age' => $p->age,
+                'sex' => $this->sexLabel($p->gender),
+            ])
+            ->values()
+            ->all();
+
+        return Inertia::render('Doctor/Documents', [
+            'patients' => $patients,
+        ]);
+    }
+
+    public function history(DoctorDocumentsIndexRequest $request): Response
     {
         $doctor = $request->user()->doctor;
 
@@ -40,14 +73,11 @@ class DoctorDocumentsController extends Controller
             ->map(fn (Patient $p) => [
                 'id' => $p->id,
                 'name' => $p->user->name ?? '',
-                'cpf' => $this->safePatientCpf($p),
-                'age' => $p->age,
-                'sex' => $this->sexLabel($p->gender),
             ])
             ->values()
             ->all();
 
-        $recentDocuments = MedicalDocument::query()
+        $documents = MedicalDocument::query()
             ->with(['patient.user'])
             ->where('doctor_id', $doctor->id)
             ->when(
@@ -63,7 +93,7 @@ class DoctorDocumentsController extends Controller
                 fn (Builder $query) => $query->where('created_at', '>=', now()->subDays((int) $validated['period_days']))
             )
             ->latest()
-            ->limit(20)
+            ->limit(80)
             ->get()
             ->map(fn (MedicalDocument $document) => [
                 'id' => $document->id,
@@ -85,13 +115,13 @@ class DoctorDocumentsController extends Controller
             ->values()
             ->all();
 
-        return Inertia::render('Doctor/Documents', [
+        return Inertia::render('Doctor/DocumentsHistory', [
             'patients' => $patients,
-            'recentDocuments' => $recentDocuments,
+            'documents' => $documents,
             'filters' => [
                 'patient_id' => $validated['patient_id'] ?? null,
                 'category' => $validated['category'] ?? null,
-                'period_days' => $validated['period_days'] ?? null,
+                'period_days' => $validated['period_days'] ?? 30,
             ],
         ]);
     }
@@ -108,9 +138,9 @@ class DoctorDocumentsController extends Controller
             abort(403);
         }
 
-        $disk = Storage::disk('local')->exists($document->file_path) ? 'local' : 'public';
+        $disk = \Storage::disk('local')->exists($document->file_path) ? 'local' : 'public';
 
-        return Storage::disk($disk)->download($document->file_path, $document->name);
+        return \Storage::disk($disk)->download($document->file_path, $document->name);
     }
 
     private function sexLabel(?string $gender): ?string

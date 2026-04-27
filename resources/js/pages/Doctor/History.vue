@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import DoctorHistorySkeleton from '@/components/doctor/DoctorHistorySkeleton.vue';
+import DataGridSkeleton from '@/components/skeletons/DataGridSkeleton.vue';
+import { useLoadState } from '@/composables/useLoadState';
 import AppLayout from '@/layouts/AppLayout.vue';
 import * as doctorRoutes from '@/routes/doctor';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router } from '@inertiajs/vue3';
 import { CalendarClock, ChevronDown, Eye, FileClock, FileText, Plus, RefreshCw, Search, SlidersHorizontal, StickyNote } from 'lucide-vue-next';
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onMounted } from 'vue';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -82,70 +83,27 @@ const initialsClassMap: Record<AppointmentStatus, string> = {
     in_progress: 'bg-cyan-100 text-cyan-700',
 };
 
-type ViewStatus = 'idle' | 'loading' | 'success' | 'error';
-
-const status = ref<ViewStatus>(props.dayGroups ? 'success' : 'idle');
-const showSkeleton = ref(false);
-const hasResolvedInitialLoad = ref(Boolean(props.dayGroups));
-const errorMessage = ref('Não foi possível carregar o histórico de consultas.');
-
-let skeletonDelayTimer: ReturnType<typeof setTimeout> | null = null;
-let loadingVisitOngoing = false;
-
 const dayGroups = computed(() => props.dayGroups ?? []);
 const documentsSummary = computed<DocumentsSummary>(() => props.documentsSummary ?? { count30Days: 0, latest: [] });
 const hasAppointments = computed(() => dayGroups.value.some((group) => group.appointments.length > 0));
 
-const documentsHistoryUrl = computed(() => `${doctorRoutes.documents().url}?period_days=30`);
+const documentsHistoryUrl = computed(() => '/doctor/documents/history?period_days=30');
 
-const clearSkeletonDelay = () => {
-    if (skeletonDelayTimer) {
-        clearTimeout(skeletonDelayTimer);
-        skeletonDelayTimer = null;
-    }
-};
+const { status, showSkeleton, errorMessage, startLoading, completeSuccess, completeError, isLoading } = useLoadState({
+    hasInitialData: Boolean(props.dayGroups),
+    defaultErrorMessage: 'Não foi possível carregar o histórico de consultas.',
+});
 
-const beginLoading = () => {
-    status.value = 'loading';
-    loadingVisitOngoing = true;
-    clearSkeletonDelay();
-
-    // Skeleton só na primeira carga, e com delay para evitar flicker em respostas muito rápidas.
-    if (!hasResolvedInitialLoad.value) {
-        skeletonDelayTimer = setTimeout(() => {
-            if (loadingVisitOngoing && status.value === 'loading') {
-                showSkeleton.value = true;
-            }
-        }, 150);
-    } else {
-        showSkeleton.value = false;
-    }
-};
-
-const resolveLoading = (nextStatus: Exclude<ViewStatus, 'idle' | 'loading'>, nextErrorMessage?: string) => {
-    loadingVisitOngoing = false;
-    clearSkeletonDelay();
-    showSkeleton.value = false;
-    status.value = nextStatus;
-
-    if (nextStatus === 'success') {
-        hasResolvedInitialLoad.value = true;
-        return;
-    }
-
-    errorMessage.value = nextErrorMessage ?? 'Não foi possível carregar o histórico de consultas.';
-};
-
-const reloadHistory = () => {
-    beginLoading();
+const reloadHistory = (options?: { forceSkeleton?: boolean; minLoadingMs?: number }) => {
+    startLoading(options);
 
     router.reload({
         only: ['dayGroups'],
         preserveScroll: true,
         preserveState: true,
-        onSuccess: () => resolveLoading('success'),
-        onError: () => resolveLoading('error'),
-        onCancel: () => resolveLoading('success'),
+        onSuccess: () => completeSuccess(),
+        onError: () => completeError(),
+        onCancel: () => completeSuccess(),
     });
 };
 
@@ -153,10 +111,6 @@ onMounted(() => {
     if (!props.dayGroups) {
         reloadHistory();
     }
-});
-
-onBeforeUnmount(() => {
-    clearSkeletonDelay();
 });
 
 const formatDate = (date?: string | null) => {
@@ -193,11 +147,11 @@ const formatDate = (date?: string | null) => {
                     <div class="flex items-center gap-2">
                         <button
                             type="button"
-                            :disabled="status === 'loading'"
+                            :disabled="isLoading"
                             @click="reloadHistory"
                             class="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-500 transition hover:bg-zinc-50"
                         >
-                            <RefreshCw :class="status === 'loading' ? 'size-4 animate-spin' : 'size-4'" />
+                            <RefreshCw :class="isLoading ? 'size-4 animate-spin' : 'size-4'" />
                         </button>
                         <button
                             type="button"
@@ -257,7 +211,7 @@ const formatDate = (date?: string | null) => {
                 </div>
             </div>
 
-            <DoctorHistorySkeleton v-if="showSkeleton" />
+            <DataGridSkeleton v-if="showSkeleton" :row-count="5" :show-sidebar="true" :sidebar-stats-cards="4" :sidebar-lines="3" />
 
             <section
                 v-else-if="status === 'error'"

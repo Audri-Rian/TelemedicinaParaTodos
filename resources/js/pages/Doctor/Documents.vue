@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import DocumentA4Preview from '@/components/Doctor/DocumentA4Preview.vue';
+import PatientSearchDialog from '@/components/Doctor/PatientSearchDialog.vue';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import AppLayout from '@/layouts/AppLayout.vue';
 import * as doctorRoutes from '@/routes/doctor';
 import { type BreadcrumbItem } from '@/types';
-import { Head, router } from '@inertiajs/vue3';
-import { AlertCircle, ChevronRight, Clock3, FileClock, Pill, Plus, Stethoscope, TestTube2, Trash2, UserRoundSearch, X } from 'lucide-vue-next';
-import { computed, ref, watch } from 'vue';
+import { Head } from '@inertiajs/vue3';
+import { AlertCircle, Pill, Plus, Stethoscope, TestTube2, Trash2, UserRoundSearch, X } from 'lucide-vue-next';
+import { computed, ref } from 'vue';
 
 type DocumentKind = 'rx' | 'cert' | 'exams';
 
@@ -17,26 +18,6 @@ type Patient = {
     cpf?: string | null;
     age?: number | null;
     sex?: 'F' | 'M' | null;
-};
-
-type RecentDocument = {
-    id: string;
-    name: string;
-    category: string;
-    categoryLabel: string;
-    patient: {
-        id: string | number | null;
-        name: string;
-    };
-    uploadedAt?: string | null;
-    visibility?: string | null;
-    fileUrl?: string | null;
-};
-
-type DocumentsFilters = {
-    patient_id?: string | null;
-    category?: string | null;
-    period_days?: number | null;
 };
 
 type DrugCatalogItem = {
@@ -70,14 +51,10 @@ type CertForm = {
 
 interface Props {
     patients?: Patient[];
-    recentDocuments?: RecentDocument[];
-    filters?: DocumentsFilters;
 }
 
 const props = withDefaults(defineProps<Props>(), {
     patients: () => [],
-    recentDocuments: () => [],
-    filters: () => ({}),
 });
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -121,12 +98,8 @@ const showError = ref(false);
 const signEnabled = ref(false);
 const showDraftWarn = ref(false);
 const pendingDocType = ref<DocumentKind | null>(null);
-const patientSearch = ref('');
 const drugQuery = ref('');
 const examQuery = ref('');
-const historyPatientFilter = ref(props.filters.patient_id ?? '');
-const historyCategoryFilter = ref(props.filters.category ?? '');
-const historyPeriodFilter = ref(String(props.filters.period_days ?? 30));
 
 const rxItems = ref<RxLine[]>([
     {
@@ -171,14 +144,6 @@ const urgency = ref<'rotina' | 'prioritario' | 'urgente'>('rotina');
 const indication = ref('Acompanhamento de hipertensão arterial sistêmica e dislipidemia. Avaliação metabólica.');
 const fasting = ref('Jejum de 12 horas. Levar a primeira urina da manhã.');
 
-const filteredPatients = computed(() => {
-    const q = patientSearch.value.trim().toLowerCase();
-    if (!q) {
-        return patientsCatalog.value;
-    }
-    return patientsCatalog.value.filter((p) => p.name.toLowerCase().includes(q) || (p.cpf ?? '').includes(q));
-});
-
 const filteredDrugs = computed(() => {
     const q = drugQuery.value.trim().toLowerCase();
     if (!q) {
@@ -193,34 +158,6 @@ const filteredExams = computed(() => {
         return examCatalog;
     }
     return examCatalog.filter((e) => e.name.toLowerCase().includes(q) || e.code.includes(q));
-});
-
-const filteredRecentDocuments = computed(() => {
-    return props.recentDocuments.filter((doc) => {
-        const byPatient = !historyPatientFilter.value || String(doc.patient.id ?? '') === String(historyPatientFilter.value);
-        const byCategory = !historyCategoryFilter.value || doc.category === historyCategoryFilter.value;
-
-        if (!byPatient || !byCategory) {
-            return false;
-        }
-
-        const periodDays = Number(historyPeriodFilter.value);
-        if (!Number.isFinite(periodDays) || periodDays <= 0) {
-            return true;
-        }
-
-        if (!doc.uploadedAt) {
-            return false;
-        }
-
-        const uploadedAt = new Date(doc.uploadedAt).getTime();
-        if (Number.isNaN(uploadedAt)) {
-            return false;
-        }
-
-        const cutoff = Date.now() - periodDays * 24 * 60 * 60 * 1000;
-        return uploadedAt >= cutoff;
-    });
 });
 
 const hasDraftChanges = computed(() => {
@@ -297,58 +234,9 @@ function removeExam(i: number) {
 function selectPatient(p: Patient) {
     patient.value = p;
     showSearchModal.value = false;
-    patientSearch.value = '';
-}
-
-function openPatientMedicalRecord(patientId: string | number | null) {
-    if (!patientId) {
-        return;
-    }
-
-    window.location.href = `/doctor/patients/${patientId}/medical-record`;
-}
-
-function goToDocumentsWithCurrentFilters() {
-    const query = {
-        patient_id: historyPatientFilter.value || undefined,
-        category: historyCategoryFilter.value || undefined,
-        period_days: Number(historyPeriodFilter.value) || undefined,
-    };
-
-    router.get(doctorRoutes.documents().url, query, {
-        preserveState: true,
-        preserveScroll: true,
-        replace: true,
-        only: ['recentDocuments', 'filters'],
-    });
-}
-
-function formatDateTime(date?: string | null) {
-    if (!date) {
-        return 'Data indisponível';
-    }
-
-    const parsed = new Date(date);
-    if (Number.isNaN(parsed.getTime())) {
-        return 'Data indisponível';
-    }
-
-    return parsed.toLocaleString('pt-BR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-    });
 }
 
 const canSubmit = computed(() => !!patient.value);
-
-watch(showSearchModal, (open) => {
-    if (open) {
-        patientSearch.value = '';
-    }
-});
 </script>
 
 <template>
@@ -385,6 +273,12 @@ watch(showSearchModal, (open) => {
                             <UserRoundSearch class="size-4" />
                             Selecionar paciente
                         </Button>
+                        <a
+                            href="/doctor/documents/history"
+                            class="inline-flex items-center rounded-xl border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 sm:text-sm"
+                        >
+                            Histórico de documentos
+                        </a>
 
                         <div class="flex rounded-xl border border-zinc-200 bg-white p-0.5">
                             <button
@@ -431,7 +325,7 @@ watch(showSearchModal, (open) => {
                     </button>
                 </div>
 
-                <div class="grid items-start gap-7 lg:grid-cols-[minmax(0,1fr)_minmax(0,360px)_minmax(0,580px)]">
+                <div class="grid items-start gap-7 lg:grid-cols-[minmax(0,1fr)_minmax(0,580px)]">
                     <section class="flex min-w-0 flex-col gap-4">
                         <template>
                             <!-- Receita -->
@@ -702,88 +596,6 @@ watch(showSearchModal, (open) => {
                     </section>
 
                     <aside class="min-w-0 lg:sticky lg:top-20 lg:self-start">
-                        <div class="space-y-3 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-                            <div class="flex items-center justify-between gap-2">
-                                <div>
-                                    <h2 class="text-sm font-bold text-zinc-900">Histórico recente</h2>
-                                    <p class="text-xs text-zinc-500">Documentos emitidos recentemente</p>
-                                </div>
-                                <FileClock class="size-4 text-zinc-400" />
-                            </div>
-
-                            <div class="grid gap-2">
-                                <select
-                                    v-model="historyPatientFilter"
-                                    class="w-full rounded-lg border border-zinc-200 bg-white px-2 py-2 text-xs ring-teal-500/30 outline-none focus:ring-2"
-                                >
-                                    <option value="">Todos os pacientes</option>
-                                    <option v-for="p in patientsCatalog" :key="p.id" :value="String(p.id)">
-                                        {{ p.name }}
-                                    </option>
-                                </select>
-
-                                <select
-                                    v-model="historyCategoryFilter"
-                                    class="w-full rounded-lg border border-zinc-200 bg-white px-2 py-2 text-xs ring-teal-500/30 outline-none focus:ring-2"
-                                >
-                                    <option value="">Todas as categorias</option>
-                                    <option value="prescription">Prescrição</option>
-                                    <option value="report">Relatório</option>
-                                    <option value="exam">Exame</option>
-                                    <option value="other">Outro</option>
-                                </select>
-
-                                <select
-                                    v-model="historyPeriodFilter"
-                                    class="w-full rounded-lg border border-zinc-200 bg-white px-2 py-2 text-xs ring-teal-500/30 outline-none focus:ring-2"
-                                >
-                                    <option value="7">Últimos 7 dias</option>
-                                    <option value="30">Últimos 30 dias</option>
-                                    <option value="90">Últimos 90 dias</option>
-                                </select>
-
-                                <Button type="button" size="sm" variant="outline" @click="goToDocumentsWithCurrentFilters">Aplicar filtros</Button>
-                            </div>
-
-                            <ul v-if="filteredRecentDocuments.length" class="max-h-[420px] space-y-2 overflow-y-auto">
-                                <li
-                                    v-for="doc in filteredRecentDocuments"
-                                    :key="doc.id"
-                                    class="rounded-xl border border-zinc-200 bg-zinc-50/70 p-2.5"
-                                >
-                                    <p class="truncate text-xs font-semibold text-zinc-900">{{ doc.name }}</p>
-                                    <p class="text-[11px] text-zinc-500">{{ doc.categoryLabel }} · {{ doc.patient.name }}</p>
-                                    <p class="mt-1 inline-flex items-center gap-1 text-[11px] text-zinc-500">
-                                        <Clock3 class="size-3" />
-                                        {{ formatDateTime(doc.uploadedAt) }}
-                                    </p>
-                                    <div class="mt-2 flex flex-wrap gap-1.5">
-                                        <a
-                                            v-if="doc.fileUrl"
-                                            :href="doc.fileUrl"
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            class="rounded-lg border border-zinc-200 bg-white px-2 py-1 text-[11px] font-medium text-zinc-700 hover:bg-zinc-100"
-                                        >
-                                            Visualizar
-                                        </a>
-                                        <button
-                                            type="button"
-                                            class="rounded-lg border border-zinc-200 bg-white px-2 py-1 text-[11px] font-medium text-zinc-700 hover:bg-zinc-100"
-                                            @click="openPatientMedicalRecord(doc.patient.id)"
-                                        >
-                                            Prontuário
-                                        </button>
-                                    </div>
-                                </li>
-                            </ul>
-                            <p v-else class="rounded-xl border border-dashed border-zinc-300 py-8 text-center text-xs text-zinc-500">
-                                Nenhum documento no período/filtro selecionado.
-                            </p>
-                        </div>
-                    </aside>
-
-                    <aside class="min-w-0 lg:sticky lg:top-20 lg:self-start">
                         <DocumentA4Preview
                             :doc-type="docType"
                             :patient="patient"
@@ -799,35 +611,12 @@ watch(showSearchModal, (open) => {
             </div>
         </div>
 
-        <Dialog v-model:open="showSearchModal">
-            <DialogContent class="sm:max-w-md">
-                <DialogHeader>
-                    <DialogTitle>Buscar paciente</DialogTitle>
-                    <DialogDescription>Selecione quem receberá o documento.</DialogDescription>
-                </DialogHeader>
-                <input
-                    v-model="patientSearch"
-                    type="search"
-                    placeholder="Nome ou CPF…"
-                    class="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm ring-teal-500/30 outline-none focus:ring-2"
-                />
-                <ul class="max-h-64 space-y-1 overflow-y-auto py-2">
-                    <li v-for="p in filteredPatients" :key="p.id">
-                        <button
-                            type="button"
-                            class="flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm hover:bg-zinc-100"
-                            @click="selectPatient(p)"
-                        >
-                            <span class="font-medium text-zinc-900">{{ p.name }}</span>
-                            <ChevronRight class="size-4 shrink-0 text-zinc-400" />
-                        </button>
-                    </li>
-                </ul>
-                <DialogFooter>
-                    <Button type="button" variant="outline" @click="showSearchModal = false">Fechar</Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
+        <PatientSearchDialog
+            v-model:open="showSearchModal"
+            :patients="patientsCatalog"
+            :selected-patient-id="patient?.id ?? null"
+            @select="selectPatient"
+        />
 
         <Dialog v-model:open="showDraftWarn">
             <DialogContent class="sm:max-w-md">
