@@ -2,18 +2,21 @@
 
 namespace App\Services;
 
+use App\Jobs\SignAndGenerateCertificatePdfJob;
+use App\Jobs\SignPrescriptionJob;
 use App\Models\Appointments;
 use App\Models\ClinicalNote;
 use App\Models\Diagnosis;
 use App\Models\Doctor;
 use App\Models\Examination;
+use App\Models\MedicalCertificate;
 use App\Models\MedicalDocument;
 use App\Models\MedicalRecordAuditLog;
-use App\Models\MedicalCertificate;
 use App\Models\Patient;
 use App\Models\Prescription;
 use App\Models\User;
 use App\Models\VitalSign;
+use App\Services\Signatures\DigitalSignatureService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
@@ -24,6 +27,10 @@ use Illuminate\Support\Str;
 
 class MedicalRecordService
 {
+    public function __construct(
+        protected ?DigitalSignatureService $signatureService = null,
+    ) {}
+
     /**
      * Retorna o payload completo para o prontuário do paciente.
      */
@@ -61,7 +68,7 @@ class MedicalRecordService
             ])
             ->where('doctor_id', $doctor->id);
 
-        if (!empty($filters['search'])) {
+        if (! empty($filters['search'])) {
             $search = $filters['search'];
             $query->whereHas('patient.user', function (Builder $builder) use ($search) {
                 $builder->where('name', 'like', "%{$search}%")
@@ -69,15 +76,15 @@ class MedicalRecordService
             });
         }
 
-        if (!empty($filters['date_from'])) {
+        if (! empty($filters['date_from'])) {
             $query->whereDate('scheduled_at', '>=', $filters['date_from']);
         }
 
-        if (!empty($filters['date_to'])) {
+        if (! empty($filters['date_to'])) {
             $query->whereDate('scheduled_at', '<=', $filters['date_to']);
         }
 
-        if (!empty($filters['diagnosis'])) {
+        if (! empty($filters['diagnosis'])) {
             $diagnosis = $filters['diagnosis'];
             $query->where('metadata->diagnosis', 'like', "%{$diagnosis}%");
         }
@@ -133,6 +140,7 @@ class MedicalRecordService
         $record['documents'] = collect($record['documents'])
             ->filter(function ($document) use ($doctor) {
                 $visibility = $document['visibility'] ?? MedicalDocument::VISIBILITY_SHARED;
+
                 return $visibility !== MedicalDocument::VISIBILITY_PATIENT
                     || ($document['doctor']['id'] ?? null) === $doctor->id;
             })
@@ -175,11 +183,11 @@ class MedicalRecordService
         $query = Prescription::with(['doctor.user'])
             ->where('patient_id', $patient->id);
 
-        if (!empty($filters['doctor_id'])) {
+        if (! empty($filters['doctor_id'])) {
             $query->where('doctor_id', $filters['doctor_id']);
         }
 
-        if (!empty($filters['search'])) {
+        if (! empty($filters['search'])) {
             $search = $filters['search'];
             $query->where(function (Builder $builder) use ($search) {
                 $builder->where('instructions', 'like', "%{$search}%")
@@ -187,15 +195,15 @@ class MedicalRecordService
             });
         }
 
-        if (!empty($filters['prescription_status'])) {
+        if (! empty($filters['prescription_status'])) {
             $query->whereIn('status', (array) $filters['prescription_status']);
         }
 
-        if (!empty($filters['date_from'])) {
+        if (! empty($filters['date_from'])) {
             $query->whereDate('issued_at', '>=', $filters['date_from']);
         }
 
-        if (!empty($filters['date_to'])) {
+        if (! empty($filters['date_to'])) {
             $query->whereDate('issued_at', '<=', $filters['date_to']);
         }
 
@@ -213,27 +221,27 @@ class MedicalRecordService
         $query = Examination::with(['doctor.user', 'appointment', 'partnerIntegration'])
             ->where('patient_id', $patient->id);
 
-        if (!empty($filters['doctor_id'])) {
+        if (! empty($filters['doctor_id'])) {
             $query->where('doctor_id', $filters['doctor_id']);
         }
 
-        if (!empty($filters['examination_type'])) {
+        if (! empty($filters['examination_type'])) {
             $query->where('type', $filters['examination_type']);
         }
 
-        if (!empty($filters['examination_status'])) {
+        if (! empty($filters['examination_status'])) {
             $query->whereIn('status', (array) $filters['examination_status']);
         }
 
-        if (!empty($filters['date_from'])) {
+        if (! empty($filters['date_from'])) {
             $query->whereDate('requested_at', '>=', $filters['date_from']);
         }
 
-        if (!empty($filters['date_to'])) {
+        if (! empty($filters['date_to'])) {
             $query->whereDate('requested_at', '<=', $filters['date_to']);
         }
 
-        if (!empty($filters['search'])) {
+        if (! empty($filters['search'])) {
             $search = $filters['search'];
             $query->where(function (Builder $builder) use ($search) {
                 $builder->where('name', 'like', "%{$search}%")
@@ -255,15 +263,15 @@ class MedicalRecordService
         $query = MedicalDocument::with(['doctor.user', 'uploader'])
             ->where('patient_id', $patient->id);
 
-        if (!empty($filters['document_category'])) {
+        if (! empty($filters['document_category'])) {
             $query->where('category', $filters['document_category']);
         }
 
-        if (!empty($filters['doctor_id'])) {
+        if (! empty($filters['doctor_id'])) {
             $query->where('doctor_id', $filters['doctor_id']);
         }
 
-        if (!empty($filters['search'])) {
+        if (! empty($filters['search'])) {
             $search = $filters['search'];
             $query->where(function (Builder $builder) use ($search) {
                 $builder->where('name', 'like', "%{$search}%")
@@ -271,11 +279,11 @@ class MedicalRecordService
             });
         }
 
-        if (!empty($filters['date_from'])) {
+        if (! empty($filters['date_from'])) {
             $query->whereDate('created_at', '>=', $filters['date_from']);
         }
 
-        if (!empty($filters['date_to'])) {
+        if (! empty($filters['date_to'])) {
             $query->whereDate('created_at', '<=', $filters['date_to']);
         }
 
@@ -293,11 +301,11 @@ class MedicalRecordService
         $query = VitalSign::with(['doctor.user'])
             ->where('patient_id', $patient->id);
 
-        if (!empty($filters['date_from'])) {
+        if (! empty($filters['date_from'])) {
             $query->whereDate('recorded_at', '>=', $filters['date_from']);
         }
 
-        if (!empty($filters['date_to'])) {
+        if (! empty($filters['date_to'])) {
             $query->whereDate('recorded_at', '<=', $filters['date_to']);
         }
 
@@ -320,15 +328,15 @@ class MedicalRecordService
             $query->where('doctor_id', $doctor->id);
         }
 
-        if (!empty($filters['date_from'])) {
+        if (! empty($filters['date_from'])) {
             $query->whereDate('created_at', '>=', $filters['date_from']);
         }
 
-        if (!empty($filters['date_to'])) {
+        if (! empty($filters['date_to'])) {
             $query->whereDate('created_at', '<=', $filters['date_to']);
         }
 
-        if (!empty($filters['search'])) {
+        if (! empty($filters['search'])) {
             $search = $filters['search'];
             $query->where(function (Builder $builder) use ($search) {
                 $builder->where('cid10_code', 'like', "%{$search}%")
@@ -351,7 +359,7 @@ class MedicalRecordService
         $query = ClinicalNote::with(['doctor.user', 'appointment'])
             ->where('patient_id', $patient->id);
 
-        if (!$doctor) {
+        if (! $doctor) {
             $query->where('is_private', false);
         }
 
@@ -362,11 +370,11 @@ class MedicalRecordService
             });
         }
 
-        if (!empty($filters['note_category'])) {
+        if (! empty($filters['note_category'])) {
             $query->where('category', $filters['note_category']);
         }
 
-        if (!empty($filters['search'])) {
+        if (! empty($filters['search'])) {
             $search = $filters['search'];
             $query->where(function (Builder $builder) use ($search) {
                 $builder->where('title', 'like', "%{$search}%")
@@ -393,15 +401,15 @@ class MedicalRecordService
             $query->where('doctor_id', $doctor->id);
         }
 
-        if (!empty($filters['certificate_status'])) {
+        if (! empty($filters['certificate_status'])) {
             $query->whereIn('status', (array) $filters['certificate_status']);
         }
 
-        if (!empty($filters['date_from'])) {
+        if (! empty($filters['date_from'])) {
             $query->whereDate('start_date', '>=', $filters['date_from']);
         }
 
-        if (!empty($filters['date_to'])) {
+        if (! empty($filters['date_to'])) {
             $query->whereDate('start_date', '<=', $filters['date_to']);
         }
 
@@ -476,7 +484,7 @@ class MedicalRecordService
         $dateKeys = ['date_from', 'date_to'];
 
         foreach ($dateKeys as $key) {
-            if (!empty($filters[$key])) {
+            if (! empty($filters[$key])) {
                 $filters[$key] = Carbon::parse($filters[$key])->startOfDay();
             }
         }
@@ -491,23 +499,23 @@ class MedicalRecordService
     {
         $statuses = $filters['appointment_status'] ?? [Appointments::STATUS_COMPLETED];
 
-        if (!empty($statuses)) {
+        if (! empty($statuses)) {
             $query->whereIn('status', (array) $statuses);
         }
 
-        if (!empty($filters['doctor_id'])) {
+        if (! empty($filters['doctor_id'])) {
             $query->where('doctor_id', $filters['doctor_id']);
         }
 
-        if (!empty($filters['date_from'])) {
+        if (! empty($filters['date_from'])) {
             $query->whereDate('scheduled_at', '>=', $filters['date_from']);
         }
 
-        if (!empty($filters['date_to'])) {
+        if (! empty($filters['date_to'])) {
             $query->whereDate('scheduled_at', '<=', $filters['date_to']);
         }
 
-        if (!empty($filters['search'])) {
+        if (! empty($filters['search'])) {
             $search = $filters['search'];
             $query->where(function (Builder $builder) use ($search) {
                 $builder->where('notes', 'like', "%{$search}%")
@@ -788,13 +796,17 @@ class MedicalRecordService
             'patient_id' => $patient->id,
             'medications' => $payload['medications'],
             'instructions' => $payload['instructions'] ?? null,
-            'valid_until' => !empty($payload['valid_until'])
+            'valid_until' => ! empty($payload['valid_until'])
                 ? Carbon::parse($payload['valid_until'])
                 : now()->addDays(config('telemedicine.medical_records.prescription_default_validity_days', 30)),
             'status' => Prescription::STATUS_ACTIVE,
             'metadata' => $payload['metadata'] ?? null,
             'issued_at' => now(),
         ]);
+
+        if ($this->signatureService) {
+            SignPrescriptionJob::dispatch($prescription->id);
+        }
 
         $this->logAccess(
             $this->resolveDoctorUser($doctor),
@@ -837,7 +849,7 @@ class MedicalRecordService
     public function createClinicalNote(Doctor $doctor, Patient $patient, Appointments $appointment, array $payload): ClinicalNote
     {
         $version = 1;
-        if (!empty($payload['parent_id'])) {
+        if (! empty($payload['parent_id'])) {
             $parent = ClinicalNote::findOrFail($payload['parent_id']);
             $version = ($parent->version ?? 1) + 1;
         }
@@ -876,7 +888,7 @@ class MedicalRecordService
             'patient_id' => $patient->id,
             'type' => $payload['type'] ?? MedicalCertificate::TYPE_ATTENDANCE,
             'start_date' => Carbon::parse($payload['start_date']),
-            'end_date' => !empty($payload['end_date']) ? Carbon::parse($payload['end_date']) : null,
+            'end_date' => ! empty($payload['end_date']) ? Carbon::parse($payload['end_date']) : null,
             'days' => $payload['days'] ?? 1,
             'reason' => $payload['reason'],
             'restrictions' => $payload['restrictions'] ?? null,
@@ -887,9 +899,13 @@ class MedicalRecordService
             'metadata' => $payload['metadata'] ?? null,
         ]);
 
-        $pdf = $this->buildMedicalCertificatePdf($certificate);
-        if ($pdf) {
-            $certificate->forceFill(['pdf_url' => $pdf['public_path']])->save();
+        if ($this->signatureService) {
+            SignAndGenerateCertificatePdfJob::dispatch($certificate->id);
+        } else {
+            $pdf = $this->buildMedicalCertificatePdf($certificate);
+            if ($pdf) {
+                $certificate->forceFill(['pdf_url' => $pdf['public_path']])->save();
+            }
         }
 
         $this->logAccess(
@@ -908,7 +924,7 @@ class MedicalRecordService
             'appointment_id' => $appointment->id,
             'patient_id' => $appointment->patient_id,
             'doctor_id' => $doctor->id,
-            'recorded_at' => !empty($payload['recorded_at']) ? Carbon::parse($payload['recorded_at']) : now(),
+            'recorded_at' => ! empty($payload['recorded_at']) ? Carbon::parse($payload['recorded_at']) : now(),
             'blood_pressure_systolic' => $payload['blood_pressure_systolic'] ?? null,
             'blood_pressure_diastolic' => $payload['blood_pressure_diastolic'] ?? null,
             'temperature' => $payload['temperature'] ?? null,
@@ -1026,7 +1042,7 @@ class MedicalRecordService
         ];
     }
 
-    protected function buildMedicalCertificatePdf(MedicalCertificate $certificate): ?array
+    public function buildMedicalCertificatePdf(MedicalCertificate $certificate): ?array
     {
         $certificate->loadMissing(['doctor.user', 'patient.user', 'appointment']);
 
@@ -1076,11 +1092,11 @@ class MedicalRecordService
     {
         $user = $doctor->user;
 
-        if (!$user) {
+        if (! $user) {
             $user = $doctor->load('user')->user;
         }
 
-        if (!$user) {
+        if (! $user) {
             throw new \RuntimeException('Usuário do médico não encontrado.');
         }
 
@@ -1097,4 +1113,3 @@ class MedicalRecordService
         return $code;
     }
 }
-

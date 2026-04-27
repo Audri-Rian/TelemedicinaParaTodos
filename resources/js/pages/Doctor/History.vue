@@ -1,10 +1,11 @@
 <script setup lang="ts">
+import DoctorHistorySkeleton from '@/components/doctor/DoctorHistorySkeleton.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import * as doctorRoutes from '@/routes/doctor';
 import { type BreadcrumbItem } from '@/types';
-import { Head } from '@inertiajs/vue3';
-import { CalendarClock, ChevronDown, Eye, FileText, Plus, RefreshCw, Search, SlidersHorizontal, StickyNote } from 'lucide-vue-next';
-import { computed } from 'vue';
+import { Head, router } from '@inertiajs/vue3';
+import { CalendarClock, ChevronDown, Eye, FileClock, FileText, Plus, RefreshCw, Search, SlidersHorizontal, StickyNote } from 'lucide-vue-next';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -40,13 +41,25 @@ type DayGroup = {
     appointments: Appointment[];
 };
 
+type DocumentItem = {
+    id: string;
+    name: string;
+    category: string;
+    patient_name: string;
+    created_at?: string | null;
+};
+
+type DocumentsSummary = {
+    count30Days: number;
+    latest: DocumentItem[];
+};
+
 interface Props {
     dayGroups?: DayGroup[];
+    documentsSummary?: DocumentsSummary;
 }
 
-const props = withDefaults(defineProps<Props>(), {
-    dayGroups: () => [],
-});
+const props = defineProps<Props>();
 
 const statusClassMap: Record<AppointmentStatus, string> = {
     confirmed: 'border-emerald-200 bg-emerald-50/80 text-emerald-700',
@@ -69,7 +82,98 @@ const initialsClassMap: Record<AppointmentStatus, string> = {
     in_progress: 'bg-cyan-100 text-cyan-700',
 };
 
-const hasAppointments = computed(() => props.dayGroups.some((group) => group.appointments.length > 0));
+type ViewStatus = 'idle' | 'loading' | 'success' | 'error';
+
+const status = ref<ViewStatus>(props.dayGroups ? 'success' : 'idle');
+const showSkeleton = ref(false);
+const hasResolvedInitialLoad = ref(Boolean(props.dayGroups));
+const errorMessage = ref('Não foi possível carregar o histórico de consultas.');
+
+let skeletonDelayTimer: ReturnType<typeof setTimeout> | null = null;
+let loadingVisitOngoing = false;
+
+const dayGroups = computed(() => props.dayGroups ?? []);
+const documentsSummary = computed<DocumentsSummary>(() => props.documentsSummary ?? { count30Days: 0, latest: [] });
+const hasAppointments = computed(() => dayGroups.value.some((group) => group.appointments.length > 0));
+
+const documentsHistoryUrl = computed(() => `${doctorRoutes.documents().url}?period_days=30`);
+
+const clearSkeletonDelay = () => {
+    if (skeletonDelayTimer) {
+        clearTimeout(skeletonDelayTimer);
+        skeletonDelayTimer = null;
+    }
+};
+
+const beginLoading = () => {
+    status.value = 'loading';
+    loadingVisitOngoing = true;
+    clearSkeletonDelay();
+
+    // Skeleton só na primeira carga, e com delay para evitar flicker em respostas muito rápidas.
+    if (!hasResolvedInitialLoad.value) {
+        skeletonDelayTimer = setTimeout(() => {
+            if (loadingVisitOngoing && status.value === 'loading') {
+                showSkeleton.value = true;
+            }
+        }, 150);
+    } else {
+        showSkeleton.value = false;
+    }
+};
+
+const resolveLoading = (nextStatus: Exclude<ViewStatus, 'idle' | 'loading'>, nextErrorMessage?: string) => {
+    loadingVisitOngoing = false;
+    clearSkeletonDelay();
+    showSkeleton.value = false;
+    status.value = nextStatus;
+
+    if (nextStatus === 'success') {
+        hasResolvedInitialLoad.value = true;
+        return;
+    }
+
+    errorMessage.value = nextErrorMessage ?? 'Não foi possível carregar o histórico de consultas.';
+};
+
+const reloadHistory = () => {
+    beginLoading();
+
+    router.reload({
+        only: ['dayGroups'],
+        preserveScroll: true,
+        preserveState: true,
+        onSuccess: () => resolveLoading('success'),
+        onError: () => resolveLoading('error'),
+        onCancel: () => resolveLoading('success'),
+    });
+};
+
+onMounted(() => {
+    if (!props.dayGroups) {
+        reloadHistory();
+    }
+});
+
+onBeforeUnmount(() => {
+    clearSkeletonDelay();
+});
+
+const formatDate = (date?: string | null) => {
+    if (!date) {
+        return 'Data indisponível';
+    }
+
+    const parsed = new Date(date);
+    if (Number.isNaN(parsed.getTime())) {
+        return 'Data indisponível';
+    }
+
+    return parsed.toLocaleDateString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+    });
+};
 </script>
 
 <template>
@@ -89,9 +193,11 @@ const hasAppointments = computed(() => props.dayGroups.some((group) => group.app
                     <div class="flex items-center gap-2">
                         <button
                             type="button"
+                            :disabled="status === 'loading'"
+                            @click="reloadHistory"
                             class="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-500 transition hover:bg-zinc-50"
                         >
-                            <RefreshCw class="size-4" />
+                            <RefreshCw :class="status === 'loading' ? 'size-4 animate-spin' : 'size-4'" />
                         </button>
                         <button
                             type="button"
@@ -151,9 +257,29 @@ const hasAppointments = computed(() => props.dayGroups.some((group) => group.app
                 </div>
             </div>
 
-            <div v-if="hasAppointments" class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+            <DoctorHistorySkeleton v-if="showSkeleton" />
+
+            <section
+                v-else-if="status === 'error'"
+                class="flex min-h-[520px] items-center justify-center rounded-2xl border border-zinc-200 bg-white px-6 py-12 text-center shadow-sm"
+            >
+                <div class="max-w-md space-y-3">
+                    <h2 class="text-xl font-semibold text-zinc-900">Falha ao carregar histórico</h2>
+                    <p class="text-sm text-zinc-500">{{ errorMessage }}</p>
+                    <button
+                        type="button"
+                        @click="reloadHistory"
+                        class="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-zinc-900 transition hover:bg-primary/90"
+                    >
+                        <RefreshCw class="size-4" />
+                        Tentar novamente
+                    </button>
+                </div>
+            </section>
+
+            <div v-else-if="hasAppointments" class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
                 <section class="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-                    <div v-for="dayGroup in props.dayGroups" :key="dayGroup.id" class="rounded-2xl border border-zinc-100 bg-zinc-50/70 p-3">
+                    <div v-for="dayGroup in dayGroups" :key="dayGroup.id" class="rounded-2xl border border-zinc-100 bg-zinc-50/70 p-3">
                         <div class="mb-3 flex items-center justify-between">
                             <div class="flex items-center gap-2">
                                 <span class="text-sm font-semibold text-cyan-700">{{ dayGroup.label }}</span>
@@ -236,6 +362,33 @@ const hasAppointments = computed(() => props.dayGroups.some((group) => group.app
                                 <p class="text-xs text-zinc-500">Tempo médio</p>
                             </div>
                         </div>
+                    </section>
+
+                    <section class="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+                        <div class="flex items-center justify-between gap-2">
+                            <h2 class="text-xs font-semibold tracking-wider text-zinc-500 uppercase">Documentos emitidos</h2>
+                            <FileClock class="size-4 text-zinc-400" />
+                        </div>
+                        <p class="mt-2 text-3xl font-bold text-zinc-900">{{ documentsSummary.count30Days }}</p>
+                        <p class="text-xs text-zinc-500">Últimos 30 dias</p>
+
+                        <ul class="mt-3 space-y-2">
+                            <li
+                                v-for="document in documentsSummary.latest"
+                                :key="document.id"
+                                class="rounded-xl border border-zinc-100 bg-zinc-50 px-3 py-2"
+                            >
+                                <p class="truncate text-xs font-semibold text-zinc-900">{{ document.name }}</p>
+                                <p class="text-[11px] text-zinc-500">{{ document.patient_name }} · {{ formatDate(document.created_at) }}</p>
+                            </li>
+                        </ul>
+
+                        <a
+                            :href="documentsHistoryUrl"
+                            class="mt-3 inline-flex items-center justify-center rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-50"
+                        >
+                            Ver histórico completo
+                        </a>
                     </section>
 
                     <section class="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">

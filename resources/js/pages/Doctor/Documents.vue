@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import AppShell from '@/components/AppShell.vue';
 import DocumentA4Preview from '@/components/Doctor/DocumentA4Preview.vue';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import AppLayout from '@/layouts/AppLayout.vue';
 import * as doctorRoutes from '@/routes/doctor';
-import { Head, Link } from '@inertiajs/vue3';
-import { AlertCircle, ArrowLeft, ChevronRight, Pill, Plus, Stethoscope, TestTube2, Trash2, UserRoundSearch, X } from 'lucide-vue-next';
+import { type BreadcrumbItem } from '@/types';
+import { Head, router } from '@inertiajs/vue3';
+import { AlertCircle, ChevronRight, Clock3, FileClock, Pill, Plus, Stethoscope, TestTube2, Trash2, UserRoundSearch, X } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 
 type DocumentKind = 'rx' | 'cert' | 'exams';
@@ -13,9 +14,29 @@ type DocumentKind = 'rx' | 'cert' | 'exams';
 type Patient = {
     id: number;
     name: string;
-    cpf: string;
-    age: number;
-    sex: 'F' | 'M';
+    cpf?: string | null;
+    age?: number | null;
+    sex?: 'F' | 'M' | null;
+};
+
+type RecentDocument = {
+    id: string;
+    name: string;
+    category: string;
+    categoryLabel: string;
+    patient: {
+        id: string | number | null;
+        name: string;
+    };
+    uploadedAt?: string | null;
+    visibility?: string | null;
+    fileUrl?: string | null;
+};
+
+type DocumentsFilters = {
+    patient_id?: string | null;
+    category?: string | null;
+    period_days?: number | null;
 };
 
 type DrugCatalogItem = {
@@ -49,11 +70,26 @@ type CertForm = {
 
 interface Props {
     patients?: Patient[];
+    recentDocuments?: RecentDocument[];
+    filters?: DocumentsFilters;
 }
 
 const props = withDefaults(defineProps<Props>(), {
     patients: () => [],
+    recentDocuments: () => [],
+    filters: () => ({}),
 });
+
+const breadcrumbs: BreadcrumbItem[] = [
+    {
+        title: 'Dashboard',
+        href: doctorRoutes.dashboard().url,
+    },
+    {
+        title: 'Documentos',
+        href: doctorRoutes.documents().url,
+    },
+];
 
 const patientsCatalog = computed<Patient[]>(() => props.patients);
 
@@ -88,6 +124,9 @@ const pendingDocType = ref<DocumentKind | null>(null);
 const patientSearch = ref('');
 const drugQuery = ref('');
 const examQuery = ref('');
+const historyPatientFilter = ref(props.filters.patient_id ?? '');
+const historyCategoryFilter = ref(props.filters.category ?? '');
+const historyPeriodFilter = ref(String(props.filters.period_days ?? 30));
 
 const rxItems = ref<RxLine[]>([
     {
@@ -137,7 +176,7 @@ const filteredPatients = computed(() => {
     if (!q) {
         return patientsCatalog.value;
     }
-    return patientsCatalog.value.filter((p) => p.name.toLowerCase().includes(q) || p.cpf.includes(q));
+    return patientsCatalog.value.filter((p) => p.name.toLowerCase().includes(q) || (p.cpf ?? '').includes(q));
 });
 
 const filteredDrugs = computed(() => {
@@ -154,6 +193,34 @@ const filteredExams = computed(() => {
         return examCatalog;
     }
     return examCatalog.filter((e) => e.name.toLowerCase().includes(q) || e.code.includes(q));
+});
+
+const filteredRecentDocuments = computed(() => {
+    return props.recentDocuments.filter((doc) => {
+        const byPatient = !historyPatientFilter.value || String(doc.patient.id ?? '') === String(historyPatientFilter.value);
+        const byCategory = !historyCategoryFilter.value || doc.category === historyCategoryFilter.value;
+
+        if (!byPatient || !byCategory) {
+            return false;
+        }
+
+        const periodDays = Number(historyPeriodFilter.value);
+        if (!Number.isFinite(periodDays) || periodDays <= 0) {
+            return true;
+        }
+
+        if (!doc.uploadedAt) {
+            return false;
+        }
+
+        const uploadedAt = new Date(doc.uploadedAt).getTime();
+        if (Number.isNaN(uploadedAt)) {
+            return false;
+        }
+
+        const cutoff = Date.now() - periodDays * 24 * 60 * 60 * 1000;
+        return uploadedAt >= cutoff;
+    });
 });
 
 const hasDraftChanges = computed(() => {
@@ -233,6 +300,48 @@ function selectPatient(p: Patient) {
     patientSearch.value = '';
 }
 
+function openPatientMedicalRecord(patientId: string | number | null) {
+    if (!patientId) {
+        return;
+    }
+
+    window.location.href = `/doctor/patients/${patientId}/medical-record`;
+}
+
+function goToDocumentsWithCurrentFilters() {
+    const query = {
+        patient_id: historyPatientFilter.value || undefined,
+        category: historyCategoryFilter.value || undefined,
+        period_days: Number(historyPeriodFilter.value) || undefined,
+    };
+
+    router.get(doctorRoutes.documents().url, query, {
+        preserveState: true,
+        preserveScroll: true,
+        replace: true,
+        only: ['recentDocuments', 'filters'],
+    });
+}
+
+function formatDateTime(date?: string | null) {
+    if (!date) {
+        return 'Data indisponível';
+    }
+
+    const parsed = new Date(date);
+    if (Number.isNaN(parsed.getTime())) {
+        return 'Data indisponível';
+    }
+
+    return parsed.toLocaleString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+    });
+}
+
 const canSubmit = computed(() => !!patient.value);
 
 watch(showSearchModal, (open) => {
@@ -245,18 +354,11 @@ watch(showSearchModal, (open) => {
 <template>
     <Head title="Emissão de documentos — Telemedicina Para Todos" />
 
-    <AppShell variant="header">
+    <AppLayout :breadcrumbs="breadcrumbs">
         <div class="min-h-svh w-full bg-[#f5f5f0] text-zinc-900 antialiased">
             <header class="sticky top-0 z-20 border-b border-zinc-200/80 bg-[#f5f5f0]/95 backdrop-blur">
-                <div class="mx-auto flex max-w-[1280px] flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
+                <div class="flex w-full flex-wrap items-center justify-between gap-3 px-3 py-3 sm:px-4 lg:px-6">
                     <div class="flex min-w-0 flex-1 items-center gap-3">
-                        <Link
-                            :href="doctorRoutes.dashboard().url"
-                            class="inline-flex size-9 shrink-0 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-600 transition hover:bg-zinc-50"
-                        >
-                            <ArrowLeft class="size-4" />
-                            <span class="sr-only">Voltar ao painel</span>
-                        </Link>
                         <div class="min-w-0">
                             <h1 class="truncate text-base font-bold tracking-tight sm:text-lg">Emissão de documentos</h1>
                             <p class="hidden text-xs text-zinc-500 sm:block">
@@ -317,7 +419,7 @@ watch(showSearchModal, (open) => {
                 </div>
             </header>
 
-            <div class="mx-auto max-w-[1280px] px-4 py-5 sm:px-6">
+            <div class="w-full px-3 py-5 sm:px-4 lg:px-6">
                 <div v-if="showError" class="mb-4 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
                     <AlertCircle class="mt-0.5 size-4 shrink-0" />
                     <div class="min-w-0 flex-1">
@@ -329,7 +431,7 @@ watch(showSearchModal, (open) => {
                     </button>
                 </div>
 
-                <div class="grid items-start gap-7 lg:grid-cols-[minmax(0,1fr)_minmax(0,580px)]">
+                <div class="grid items-start gap-7 lg:grid-cols-[minmax(0,1fr)_minmax(0,360px)_minmax(0,580px)]">
                     <section class="flex min-w-0 flex-col gap-4">
                         <template>
                             <!-- Receita -->
@@ -600,6 +702,88 @@ watch(showSearchModal, (open) => {
                     </section>
 
                     <aside class="min-w-0 lg:sticky lg:top-20 lg:self-start">
+                        <div class="space-y-3 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+                            <div class="flex items-center justify-between gap-2">
+                                <div>
+                                    <h2 class="text-sm font-bold text-zinc-900">Histórico recente</h2>
+                                    <p class="text-xs text-zinc-500">Documentos emitidos recentemente</p>
+                                </div>
+                                <FileClock class="size-4 text-zinc-400" />
+                            </div>
+
+                            <div class="grid gap-2">
+                                <select
+                                    v-model="historyPatientFilter"
+                                    class="w-full rounded-lg border border-zinc-200 bg-white px-2 py-2 text-xs ring-teal-500/30 outline-none focus:ring-2"
+                                >
+                                    <option value="">Todos os pacientes</option>
+                                    <option v-for="p in patientsCatalog" :key="p.id" :value="String(p.id)">
+                                        {{ p.name }}
+                                    </option>
+                                </select>
+
+                                <select
+                                    v-model="historyCategoryFilter"
+                                    class="w-full rounded-lg border border-zinc-200 bg-white px-2 py-2 text-xs ring-teal-500/30 outline-none focus:ring-2"
+                                >
+                                    <option value="">Todas as categorias</option>
+                                    <option value="prescription">Prescrição</option>
+                                    <option value="report">Relatório</option>
+                                    <option value="exam">Exame</option>
+                                    <option value="other">Outro</option>
+                                </select>
+
+                                <select
+                                    v-model="historyPeriodFilter"
+                                    class="w-full rounded-lg border border-zinc-200 bg-white px-2 py-2 text-xs ring-teal-500/30 outline-none focus:ring-2"
+                                >
+                                    <option value="7">Últimos 7 dias</option>
+                                    <option value="30">Últimos 30 dias</option>
+                                    <option value="90">Últimos 90 dias</option>
+                                </select>
+
+                                <Button type="button" size="sm" variant="outline" @click="goToDocumentsWithCurrentFilters">Aplicar filtros</Button>
+                            </div>
+
+                            <ul v-if="filteredRecentDocuments.length" class="max-h-[420px] space-y-2 overflow-y-auto">
+                                <li
+                                    v-for="doc in filteredRecentDocuments"
+                                    :key="doc.id"
+                                    class="rounded-xl border border-zinc-200 bg-zinc-50/70 p-2.5"
+                                >
+                                    <p class="truncate text-xs font-semibold text-zinc-900">{{ doc.name }}</p>
+                                    <p class="text-[11px] text-zinc-500">{{ doc.categoryLabel }} · {{ doc.patient.name }}</p>
+                                    <p class="mt-1 inline-flex items-center gap-1 text-[11px] text-zinc-500">
+                                        <Clock3 class="size-3" />
+                                        {{ formatDateTime(doc.uploadedAt) }}
+                                    </p>
+                                    <div class="mt-2 flex flex-wrap gap-1.5">
+                                        <a
+                                            v-if="doc.fileUrl"
+                                            :href="doc.fileUrl"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            class="rounded-lg border border-zinc-200 bg-white px-2 py-1 text-[11px] font-medium text-zinc-700 hover:bg-zinc-100"
+                                        >
+                                            Visualizar
+                                        </a>
+                                        <button
+                                            type="button"
+                                            class="rounded-lg border border-zinc-200 bg-white px-2 py-1 text-[11px] font-medium text-zinc-700 hover:bg-zinc-100"
+                                            @click="openPatientMedicalRecord(doc.patient.id)"
+                                        >
+                                            Prontuário
+                                        </button>
+                                    </div>
+                                </li>
+                            </ul>
+                            <p v-else class="rounded-xl border border-dashed border-zinc-300 py-8 text-center text-xs text-zinc-500">
+                                Nenhum documento no período/filtro selecionado.
+                            </p>
+                        </div>
+                    </aside>
+
+                    <aside class="min-w-0 lg:sticky lg:top-20 lg:self-start">
                         <DocumentA4Preview
                             :doc-type="docType"
                             :patient="patient"
@@ -670,5 +854,5 @@ watch(showSearchModal, (open) => {
                 </DialogFooter>
             </DialogContent>
         </Dialog>
-    </AppShell>
+    </AppLayout>
 </template>

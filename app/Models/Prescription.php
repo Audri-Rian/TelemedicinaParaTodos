@@ -12,6 +12,7 @@ class Prescription extends Model
 {
     /** @use HasFactory<\Database\Factories\PrescriptionFactory> */
     use HasFactory;
+
     use HasUuids;
     use SoftDeletes;
 
@@ -27,6 +28,9 @@ class Prescription extends Model
         'issued_at',
         'partner_integration_id',
         'external_id',
+    ];
+
+    protected $guarded = [
         'signature_status',
         'verification_code',
         'signed_at',
@@ -41,12 +45,17 @@ class Prescription extends Model
     ];
 
     public const STATUS_ACTIVE = 'active';
+
     public const STATUS_EXPIRED = 'expired';
+
     public const STATUS_CANCELLED = 'cancelled';
 
     public const SIGNATURE_UNSIGNED = 'unsigned';
+
     public const SIGNATURE_SIGNED = 'signed';
+
     public const SIGNATURE_VERIFIED = 'verified';
+
     public const SIGNATURE_INVALID = 'invalid';
 
     public function appointment(): BelongsTo

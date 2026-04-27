@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Doctor;
 
 use App\Http\Controllers\Controller;
 use App\Models\Appointments;
+use App\Models\MedicalDocument;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -20,7 +21,18 @@ class DoctorHistoryController extends Controller
             abort(403, 'Apenas médicos podem acessar esta página.');
         }
 
-        $appointments = Appointments::with(['patient.user'])
+        $appointments = Appointments::query()
+            ->select([
+                'id',
+                'doctor_id',
+                'patient_id',
+                'scheduled_at',
+                'started_at',
+                'ended_at',
+                'status',
+                'notes',
+            ])
+            ->with(['patient:id,user_id,date_of_birth,gender', 'patient.user:id,name'])
             ->where('doctor_id', $doctor->id)
             ->whereBetween('scheduled_at', [
                 now()->subDays(30)->startOfDay(),
@@ -29,8 +41,37 @@ class DoctorHistoryController extends Controller
             ->orderByDesc('scheduled_at')
             ->get();
 
+        $documents = MedicalDocument::query()
+            ->select(['id', 'patient_id', 'name', 'category', 'created_at'])
+            ->with('patient.user:id,name')
+            ->where('doctor_id', $doctor->id)
+            ->whereBetween('created_at', [
+                now()->subDays(30)->startOfDay(),
+                now()->endOfDay(),
+            ])
+            ->latest()
+            ->get()
+            ->values();
+
+        $documentsCount = $documents->count();
+        $latestDocuments = $documents
+            ->take(3)
+            ->map(fn (MedicalDocument $document) => [
+                'id' => $document->id,
+                'name' => $document->name,
+                'category' => $document->category,
+                'patient_name' => $document->patient?->user?->name ?? 'Paciente',
+                'created_at' => $document->created_at?->toISOString(),
+            ])
+            ->values()
+            ->all();
+
         return Inertia::render('Doctor/History', [
             'dayGroups' => $this->groupByDay($appointments),
+            'documentsSummary' => [
+                'count30Days' => $documentsCount,
+                'latest' => $latestDocuments,
+            ],
         ]);
     }
 

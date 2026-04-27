@@ -35,12 +35,26 @@ Fonte: analise completa do codigo, docs/TrueIssues.md, execute/, docs/Tasks/
 
 ### 1. Assinatura Digital ICP-Brasil (Art. 8, Res. 2.314/2022)
 
-[ ] Contratar provedor de certificacao digital (Soluti, Certisign, Safeweb)
-[ ] Implementar DigitalSignatureService.php
-[ ] Adicionar campos signature_hash e verification_code no model Prescription
-[ ] Criar migration para atualizar tabela prescriptions
-[ ] Integrar fluxo de assinatura no frontend
-[ ] Validar certificado antes de emissao de documentos - IMPACTO: Sem isso, prescricoes e atestados NAO TEM VALIDADE LEGAL
+ESQUELETO PRONTO (2026-04-27): driver pattern (Null/IcpBrasil), service, hash canonico, verification code, rota publica /verify/{code}, paginas Verify/Show + Verify/NotFound. Driver atual: `null` (sem validade legal). Configurar SIGNATURE*DRIVER=icp_brasil + ICP*\* vars apos contrato.
+
+[ ] Contratar provedor de certificacao digital (Soluti, Certisign, Safeweb) - DECISAO DE NEGOCIO
+[x] Implementar DigitalSignatureService.php - app/Services/Signatures/DigitalSignatureService.php
+[x] Contract DigitalSignatureDriver - app/Contracts/DigitalSignatureDriver.php
+[x] Driver NullSignatureDriver (dev/staging) - app/Services/Signatures/NullSignatureDriver.php
+[x] Driver IcpBrasilSignatureDriver (stub - throw RuntimeException ate provedor) - app/Services/Signatures/IcpBrasilSignatureDriver.php
+[x] CanonicalPayloadBuilder (hash determinístico) - app/Support/Signatures/CanonicalPayloadBuilder.php
+[x] SignatureResult value object - app/Support/Signatures/SignatureResult.php
+[x] Adicionar campos signature_hash e verification_code no model Prescription - ja existiam (migration 2026_03_28_000010)
+[x] Adicionar signature_status + signed_at em medical_certificates - migration 2026_04_27_120000 + atualizacao do model
+[x] Bind no AppServiceProvider via config('telemedicine.signature.driver')
+[x] Config telemedicine.signature (driver, icp_brasil credentials, verification_url_template)
+[x] Wiring em MedicalRecordService::issuePrescription e issueCertificate (assinam apos create se service injetado)
+[x] Rota publica de verificacao GET /verify/{code} (throttle 30/min, regex [A-Z0-9]{6,32})
+[x] DocumentVerificationController + paginas Verify/Show.vue + Verify/NotFound.vue
+[ ] Implementar IcpBrasilSignatureDriver::sign/verify com SDK do provedor (apos contrato)
+[ ] Integrar fluxo de assinatura no frontend Documents.vue (badge de status + link de verificacao)
+[ ] Embutir verification_code + QR code no PDF do atestado/prescricao
+[ ] Validar certificado antes de emissao de documentos - IMPACTO: documentos emitidos com driver `null` NAO TEM VALIDADE LEGAL ate trocar para `icp_brasil`
 
 ### 2. Documentacao Legal CFM
 

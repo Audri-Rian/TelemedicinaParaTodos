@@ -2,12 +2,16 @@
 
 namespace App\Providers;
 
+use App\Contracts\DigitalSignatureDriver;
 use App\Contracts\MediaGatewayInterface;
-use App\Services\MediaGatewayHttp;
-use App\Services\MediaGatewayStub;
-use Illuminate\Support\ServiceProvider;
 use App\Models\Appointments;
 use App\Observers\AppointmentsObserver;
+use App\Services\MediaGatewayHttp;
+use App\Services\MediaGatewayStub;
+use App\Services\Signatures\DigitalSignatureService;
+use App\Services\Signatures\IcpBrasilSignatureDriver;
+use App\Services\Signatures\NullSignatureDriver;
+use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -24,6 +28,17 @@ class AppServiceProvider extends ServiceProvider
         } else {
             $this->app->bind(MediaGatewayInterface::class, MediaGatewayStub::class);
         }
+
+        $this->app->bind(DigitalSignatureDriver::class, function () {
+            return match (config('telemedicine.signature.driver', 'null')) {
+                'icp_brasil' => new IcpBrasilSignatureDriver,
+                default => new NullSignatureDriver,
+            };
+        });
+
+        $this->app->singleton(DigitalSignatureService::class, function ($app) {
+            return new DigitalSignatureService($app->make(DigitalSignatureDriver::class));
+        });
     }
 
     /**

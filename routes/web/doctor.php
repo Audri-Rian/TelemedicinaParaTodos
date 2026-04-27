@@ -18,6 +18,9 @@ Route::middleware(['auth', 'verified', 'doctor'])->prefix('doctor')->name('docto
     Route::get('history', [App\Http\Controllers\Doctor\DoctorHistoryController::class, 'index'])->name('history');
     Route::get('patients', [App\Http\Controllers\Doctor\DoctorPatientsController::class, 'index'])->name('patients');
     Route::get('documents', [App\Http\Controllers\Doctor\DoctorDocumentsController::class, 'index'])->name('documents');
+    Route::get('documents/{document}/download', [App\Http\Controllers\Doctor\DoctorDocumentsController::class, 'download'])
+        ->middleware('signed')
+        ->name('documents.download');
 
     // Integrações (index antes do wildcard {partner})
     Route::get('integrations', [App\Http\Controllers\Doctor\DoctorIntegrationsController::class, 'index'])->name('integrations');

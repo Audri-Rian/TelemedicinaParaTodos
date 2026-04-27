@@ -431,4 +431,39 @@ return [
         // Usado em: DataAccessReportController.
         'report_window_days' => (int) env('LGPD_REPORT_WINDOW_DAYS', 30),
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Digital Signature (CFM Res. 2.314/2022 — Art. 8, ICP-Brasil)
+    |--------------------------------------------------------------------------
+    |
+    | Driver de assinatura digital de prescrições e atestados.
+    |
+    | - 'null': dev/staging. Hash SHA-256 + verification_code aleatório.
+    |           NÃO TEM VALIDADE LEGAL CFM/ICP-Brasil.
+    | - 'icp_brasil': produção. Requer contrato com provedor (Soluti, Certisign,
+    |                 Safeweb) e implementação completa de IcpBrasilSignatureDriver.
+    |
+    | Ver: app/Services/Signatures/, app/Contracts/DigitalSignatureDriver.php
+    |
+    */
+
+    'signature' => [
+        'driver' => env('SIGNATURE_DRIVER', 'null'),
+
+        'icp_brasil' => [
+            'provider' => env('ICP_PROVIDER'),
+            'certificate_path' => env('ICP_CERT_PATH'),
+            'certificate_password' => env('ICP_CERT_PASSWORD'),
+            'api_endpoint' => env('ICP_API_ENDPOINT'),
+            'api_key' => env('ICP_API_KEY'),
+        ],
+
+        // URL base para link de verificação pública impresso/incluído no PDF.
+        // Ex.: https://app.example/verify/{code}
+        'verification_url_template' => env(
+            'SIGNATURE_VERIFICATION_URL_TEMPLATE',
+            '/verify/{code}',
+        ),
+    ],
 ];

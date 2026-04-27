@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AvatarFileController;
 use App\Http\Controllers\DashboardRedirectController;
+use App\Http\Controllers\DocumentVerificationController;
 use App\Http\Controllers\PrivacyPolicyController;
 use App\Http\Controllers\SpecializationController;
 use App\Http\Controllers\TermsOfServiceController;
@@ -29,6 +30,12 @@ Route::get('storage/avatars/{userId}/{filename}', [AvatarFileController::class, 
         'filename' => '(thumb_)?[a-f0-9-]{36}\.jpg',
     ])
     ->name('storage.avatar');
+
+// Verificação pública de documentos médicos assinados (CFM Res. 2.314/2022)
+Route::get('verify/{code}', DocumentVerificationController::class)
+    ->where('code', '[A-Z0-9]{10,32}')
+    ->middleware('throttle:10,1')
+    ->name('documents.verify');
 
 // API pública de especializações e disponibilidade
 Route::prefix('api')->middleware('throttle:60,1')->group(function () {

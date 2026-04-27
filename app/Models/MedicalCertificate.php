@@ -12,6 +12,7 @@ class MedicalCertificate extends Model
 {
     /** @use HasFactory<\Database\Factories\MedicalCertificateFactory> */
     use HasFactory;
+
     use HasUuids;
     use SoftDeletes;
 
@@ -26,6 +27,8 @@ class MedicalCertificate extends Model
         'reason',
         'restrictions',
         'signature_hash',
+        'signature_status',
+        'signed_at',
         'crm_number',
         'verification_code',
         'pdf_url',
@@ -36,17 +39,36 @@ class MedicalCertificate extends Model
     protected $casts = [
         'start_date' => 'date',
         'end_date' => 'date',
+        'signed_at' => 'datetime',
         'metadata' => 'array',
     ];
 
     public const TYPE_ABSENCE = 'absence';
+
     public const TYPE_ATTENDANCE = 'attendance';
+
     public const TYPE_DISABILITY = 'disability';
+
     public const TYPE_OTHER = 'other';
 
     public const STATUS_ACTIVE = 'active';
+
     public const STATUS_EXPIRED = 'expired';
+
     public const STATUS_CANCELLED = 'cancelled';
+
+    public const SIGNATURE_UNSIGNED = 'unsigned';
+
+    public const SIGNATURE_SIGNED = 'signed';
+
+    public const SIGNATURE_VERIFIED = 'verified';
+
+    public const SIGNATURE_INVALID = 'invalid';
+
+    public function isSigned(): bool
+    {
+        return in_array($this->signature_status, [self::SIGNATURE_SIGNED, self::SIGNATURE_VERIFIED], true);
+    }
 
     public function appointment(): BelongsTo
     {
@@ -63,5 +85,3 @@ class MedicalCertificate extends Model
         return $this->belongsTo(Patient::class);
     }
 }
-
-
