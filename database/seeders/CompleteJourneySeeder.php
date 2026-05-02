@@ -34,11 +34,15 @@ class CompleteJourneySeeder extends Seeder
             return;
         }
 
+        $primaryLogin = 'full.user@telemedicina.test';
+        $counterpartLogin = 'counterpart.user@telemedicina.test';
+        $generatedPassword = Str::random(12);
+
         $mainUser = User::updateOrCreate(
-            ['email' => 'full.user@telemedicina.test'],
+            ['email' => $primaryLogin],
             [
                 'name' => 'Usuario Completo Demo',
-                'password' => 'password',
+                'password' => $generatedPassword,
                 'email_verified_at' => now(),
             ]
         );
@@ -96,10 +100,10 @@ class CompleteJourneySeeder extends Seeder
         );
 
         $counterpartUser = User::updateOrCreate(
-            ['email' => 'counterpart.user@telemedicina.test'],
+            ['email' => $counterpartLogin],
             [
                 'name' => 'Usuario Contato Demo',
-                'password' => 'password',
+                'password' => $generatedPassword,
                 'email_verified_at' => now(),
             ]
         );
@@ -270,9 +274,21 @@ class CompleteJourneySeeder extends Seeder
                 'contact_email' => 'integracao.demo@telemedicina.test',
                 'connected_at' => now()->subDays(7),
                 'last_sync_at' => now()->subHour(),
-                'connected_by' => $mainUser->id,
+                'connected_by' => $doctor->user_id,
             ]
         );
+
+        $integration->doctors()->syncWithoutDetaching([
+            $doctor->id => [
+                'integration_mode' => 'full',
+                'perm_send_orders' => true,
+                'perm_receive_results' => true,
+                'perm_webhook' => true,
+                'perm_patient_data' => false,
+                'connected_by' => $doctor->user_id,
+                'connected_at' => now()->subDays(7),
+            ],
+        ]);
 
         $integration->credential()->updateOrCreate(
             ['partner_integration_id' => $integration->id],
@@ -297,6 +313,7 @@ class CompleteJourneySeeder extends Seeder
             ['external_id' => 'demo-event-'.$completedAppointment->id],
             [
                 'partner_integration_id' => $integration->id,
+                'doctor_id' => $doctor->id,
                 'direction' => IntegrationEvent::DIRECTION_OUTBOUND,
                 'event_type' => IntegrationEvent::EVENT_EXAM_ORDER_SENT,
                 'status' => IntegrationEvent::STATUS_SUCCESS,
@@ -351,5 +368,12 @@ class CompleteJourneySeeder extends Seeder
                 'synced_at' => now()->subMinutes(40),
             ]
         );
+
+        $this->command?->newLine();
+        $this->command?->info('Credenciais do CompleteJourneySeeder:');
+        $this->command?->line('  Login principal: '.$primaryLogin);
+        $this->command?->line('  Login contato: '.$counterpartLogin);
+        $this->command?->line('  Senha gerada: '.$generatedPassword);
+        $this->command?->newLine();
     }
 }

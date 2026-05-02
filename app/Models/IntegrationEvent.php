@@ -2,11 +2,11 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Builder;
 
 class IntegrationEvent extends Model
 {
@@ -14,6 +14,7 @@ class IntegrationEvent extends Model
 
     protected $fillable = [
         'partner_integration_id',
+        'doctor_id',
         'direction',
         'event_type',
         'status',
@@ -38,20 +39,29 @@ class IntegrationEvent extends Model
 
     // Constantes de direção
     public const DIRECTION_OUTBOUND = 'outbound';
+
     public const DIRECTION_INBOUND = 'inbound';
 
     // Constantes de status
     public const STATUS_PENDING = 'pending';
+
     public const STATUS_PROCESSING = 'processing';
+
     public const STATUS_SUCCESS = 'success';
+
     public const STATUS_FAILED = 'failed';
+
     public const STATUS_RETRYING = 'retrying';
 
     // Constantes de event_type
     public const EVENT_EXAM_ORDER_SENT = 'exam_order_sent';
+
     public const EVENT_EXAM_RESULT_RECEIVED = 'exam_result_received';
+
     public const EVENT_PRESCRIPTION_SENT = 'prescription_sent';
+
     public const EVENT_PRESCRIPTION_VERIFIED = 'prescription_verified';
+
     public const EVENT_RNDS_SUBMITTED = 'rnds_submitted';
 
     // Relacionamentos
@@ -59,6 +69,11 @@ class IntegrationEvent extends Model
     public function partnerIntegration(): BelongsTo
     {
         return $this->belongsTo(PartnerIntegration::class);
+    }
+
+    public function doctor(): BelongsTo
+    {
+        return $this->belongsTo(Doctor::class);
     }
 
     // Scopes
@@ -86,6 +101,11 @@ class IntegrationEvent extends Model
     public function scopeForResource(Builder $query, string $type, string $id): void
     {
         $query->where('resource_type', $type)->where('resource_id', $id);
+    }
+
+    public function scopeForDoctor(Builder $query, string $doctorId): void
+    {
+        $query->where('doctor_id', $doctorId);
     }
 
     // Métodos

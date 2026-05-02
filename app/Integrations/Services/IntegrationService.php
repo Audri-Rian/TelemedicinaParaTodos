@@ -39,6 +39,7 @@ class IntegrationService
             Log::channel('integration')->info('Nenhum laboratório parceiro ativo para enviar pedido', [
                 'examination_id' => $examination->id,
             ]);
+
             return;
         }
 
@@ -48,6 +49,7 @@ class IntegrationService
                 'examination_id' => $examination->id,
                 'partner_id' => $partner->id,
             ]);
+
             return;
         }
 
@@ -56,6 +58,7 @@ class IntegrationService
             $this->enqueue($partner, IntegrationQueueItem::OP_SEND_EXAM_ORDER, [
                 'examination_id' => $examination->id,
             ]);
+
             return;
         }
 
@@ -63,6 +66,7 @@ class IntegrationService
 
         $event = IntegrationEvent::create([
             'partner_integration_id' => $partner->id,
+            'doctor_id' => $examination->doctor_id,
             'direction' => IntegrationEvent::DIRECTION_OUTBOUND,
             'event_type' => IntegrationEvent::EVENT_EXAM_ORDER_SENT,
             'status' => IntegrationEvent::STATUS_PROCESSING,
@@ -141,62 +145,76 @@ class IntegrationService
             Log::channel('integration')->info('Circuit open, pulando sync', [
                 'partner_id' => $partner->id,
             ]);
+
             return 0;
         }
 
-        $pendingExams = Examination::where('partner_integration_id', $partner->id)
+        $received = 0;
+        $processed = 0;
+        $maxPerRun = (int) config('integrations.sync.max_exams_per_run', 200);
+        $batchSize = (int) config('integrations.sync.batch_size', 50);
+
+        Examination::query()
+            ->where('partner_integration_id', $partner->id)
             ->whereIn('status', [Examination::STATUS_REQUESTED, Examination::STATUS_IN_PROGRESS])
             ->whereNotNull('external_id')
-            ->get();
+            ->orderBy('id')
+            ->chunkById($batchSize, function ($pendingExams) use ($partner, &$received, &$processed, $maxPerRun) {
+                foreach ($pendingExams as $examination) {
+                    if ($processed >= $maxPerRun) {
+                        return false;
+                    }
 
-        $received = 0;
+                    $processed++;
 
-        foreach ($pendingExams as $examination) {
-            try {
-                $result = $this->labAdapter->fetchResult($partner, $examination->external_id);
+                    try {
+                        $result = $this->labAdapter->fetchResult($partner, $examination->external_id);
 
-                if (! $result) {
-                    continue;
+                        if (! $result) {
+                            continue;
+                        }
+
+                        $updateData = [
+                            'status' => Examination::STATUS_COMPLETED,
+                            'results' => $result->results,
+                            'completed_at' => $result->completedAt ? now()->parse($result->completedAt) : now(),
+                            'source' => Examination::SOURCE_INTEGRATION,
+                            'received_from_partner_at' => now(),
+                            'external_accession' => $result->accessionNumber,
+                        ];
+
+                        if ($result->attachmentUrl) {
+                            $updateData['attachment_url'] = $result->attachmentUrl;
+                        }
+
+                        $examination->update($updateData);
+
+                        IntegrationEvent::create([
+                            'partner_integration_id' => $partner->id,
+                            'doctor_id' => $examination->doctor_id,
+                            'direction' => IntegrationEvent::DIRECTION_INBOUND,
+                            'event_type' => IntegrationEvent::EVENT_EXAM_RESULT_RECEIVED,
+                            'status' => IntegrationEvent::STATUS_SUCCESS,
+                            'resource_type' => 'examination',
+                            'resource_id' => $examination->id,
+                            'external_id' => $examination->external_id,
+                            'fhir_resource_type' => 'DiagnosticReport',
+                        ]);
+
+                        $this->circuitBreaker->recordSuccess($partner->id);
+                        $received++;
+
+                        \App\Integrations\Events\ExamResultReceived::dispatch($examination->fresh(), $partner);
+                    } catch (\Throwable $e) {
+                        Log::channel('integration')->warning('Falha ao buscar resultado', [
+                            'examination_id' => $examination->id,
+                            'error' => $e->getMessage(),
+                        ]);
+
+                        $this->circuitBreaker->recordFailure($partner->id);
+                    }
                 }
-
-                $examination->update([
-                    'status' => Examination::STATUS_COMPLETED,
-                    'results' => $result->results,
-                    'completed_at' => $result->completedAt ? now()->parse($result->completedAt) : now(),
-                    'source' => Examination::SOURCE_INTEGRATION,
-                    'received_from_partner_at' => now(),
-                    'external_accession' => $result->accessionNumber,
-                ]);
-
-                if ($result->attachmentUrl) {
-                    $examination->update(['attachment_url' => $result->attachmentUrl]);
-                }
-
-                IntegrationEvent::create([
-                    'partner_integration_id' => $partner->id,
-                    'direction' => IntegrationEvent::DIRECTION_INBOUND,
-                    'event_type' => IntegrationEvent::EVENT_EXAM_RESULT_RECEIVED,
-                    'status' => IntegrationEvent::STATUS_SUCCESS,
-                    'resource_type' => 'examination',
-                    'resource_id' => $examination->id,
-                    'external_id' => $examination->external_id,
-                    'fhir_resource_type' => 'DiagnosticReport',
-                ]);
-
-                $this->circuitBreaker->recordSuccess($partner->id);
-                $received++;
-
-                \App\Integrations\Events\ExamResultReceived::dispatch($examination->fresh(), $partner);
-
-            } catch (\Throwable $e) {
-                Log::channel('integration')->warning('Falha ao buscar resultado', [
-                    'examination_id' => $examination->id,
-                    'error' => $e->getMessage(),
-                ]);
-
-                $this->circuitBreaker->recordFailure($partner->id);
-            }
-        }
+            });
 
         if ($received > 0) {
             $partner->update(['last_sync_at' => now()]);
@@ -254,11 +272,17 @@ class IntegrationService
             return PartnerIntegration::find($examination->partner_integration_id);
         }
 
-        // Buscar primeiro laboratório ativo com capability de receber pedidos
-        return PartnerIntegration::active()
-            ->laboratories()
+        $doctor = $examination->doctor;
+        if (! $doctor) {
+            return null;
+        }
+
+        // Buscar primeiro laboratório ativo conectado ao médico solicitante
+        return $doctor->partnerIntegrations()
+            ->where('partner_integrations.status', PartnerIntegration::STATUS_ACTIVE)
+            ->where('partner_integrations.type', PartnerIntegration::TYPE_LABORATORY)
             ->get()
-            ->first(fn ($p) => $p->hasCapability('send_exam_order'));
+            ->first(fn (PartnerIntegration $partner) => $partner->hasCapability('send_exam_order'));
     }
 
     /**

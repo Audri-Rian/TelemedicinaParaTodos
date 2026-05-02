@@ -46,13 +46,15 @@ class ExaminationIntegrationSeeder extends Seeder
             // 2. Exames enviados ao lab, aguardando resultado
             for ($i = 0; $i < 3; $i++) {
                 $partner = $i % 2 === 0 ? $hermes : $fleury;
-                $externalId = 'EXT-' . strtoupper(Str::random(10));
+                $externalId = 'EXT-'.strtoupper(Str::random(10));
+                $doctorId = $this->resolveDoctorIdForPartner($partner);
 
                 $examination = Examination::factory()->create([
                     'type' => Examination::TYPE_LAB,
                     'name' => $this->randomExamName(),
                     'status' => Examination::STATUS_IN_PROGRESS,
                     'source' => Examination::SOURCE_INTERNAL,
+                    'doctor_id' => $doctorId,
                     'partner_integration_id' => $partner->id,
                     'external_id' => $externalId,
                     'results' => null,
@@ -70,6 +72,7 @@ class ExaminationIntegrationSeeder extends Seeder
 
                 IntegrationEvent::factory()->outbound()->successful()->create([
                     'partner_integration_id' => $partner->id,
+                    'doctor_id' => $doctorId,
                     'event_type' => IntegrationEvent::EVENT_EXAM_ORDER_SENT,
                     'resource_type' => 'examination',
                     'resource_id' => $examination->id,
@@ -81,16 +84,18 @@ class ExaminationIntegrationSeeder extends Seeder
             // 3. Exames com resultados recebidos via integração
             for ($i = 0; $i < 2; $i++) {
                 $partner = $i === 0 ? $hermes : $fleury;
-                $externalId = 'EXT-' . strtoupper(Str::random(10));
+                $externalId = 'EXT-'.strtoupper(Str::random(10));
+                $doctorId = $this->resolveDoctorIdForPartner($partner);
 
                 $examination = Examination::factory()->create([
                     'type' => Examination::TYPE_LAB,
                     'name' => $this->randomExamName(),
                     'status' => Examination::STATUS_COMPLETED,
                     'source' => Examination::SOURCE_INTEGRATION,
+                    'doctor_id' => $doctorId,
                     'partner_integration_id' => $partner->id,
                     'external_id' => $externalId,
-                    'external_accession' => 'ACC-' . strtoupper(Str::random(8)),
+                    'external_accession' => 'ACC-'.strtoupper(Str::random(8)),
                     'received_from_partner_at' => now()->subMinutes(30),
                     'completed_at' => now()->subMinutes(30),
                     'results' => [
@@ -110,6 +115,7 @@ class ExaminationIntegrationSeeder extends Seeder
 
                 IntegrationEvent::factory()->inbound()->successful()->create([
                     'partner_integration_id' => $partner->id,
+                    'doctor_id' => $doctorId,
                     'event_type' => IntegrationEvent::EVENT_EXAM_RESULT_RECEIVED,
                     'resource_type' => 'examination',
                     'resource_id' => $examination->id,
@@ -130,5 +136,15 @@ class ExaminationIntegrationSeeder extends Seeder
             'Urina tipo I',
             'Creatinina',
         ]);
+    }
+
+    private function resolveDoctorIdForPartner(PartnerIntegration $partner): string
+    {
+        return $partner
+            ->doctors()
+            ->orderByPivot('created_at')
+            ->value('doctors.id') ?? throw new \RuntimeException(
+                "PartnerIntegration '{$partner->slug}' sem vínculo em doctor_partner_integrations."
+            );
     }
 }

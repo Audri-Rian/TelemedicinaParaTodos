@@ -41,6 +41,7 @@ class DoctorIntegrationsControllerTest extends TestCase
 
         IntegrationEvent::factory()->count(3)->failed()->create([
             'partner_integration_id' => $partner->id,
+            'doctor_id' => $this->doctor->id,
         ]);
 
         $response = $this->actingAs($this->user)->get('/doctor/integrations');
@@ -69,6 +70,7 @@ class DoctorIntegrationsControllerTest extends TestCase
 
         IntegrationEvent::factory()->count(2)->outbound()->create([
             'partner_integration_id' => $partner->id,
+            'doctor_id' => $this->doctor->id,
         ]);
 
         $response = $this->actingAs($this->user)->get('/doctor/integrations/partners');

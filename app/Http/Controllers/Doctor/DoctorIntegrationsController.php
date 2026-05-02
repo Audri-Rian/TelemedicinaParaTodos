@@ -11,6 +11,7 @@ use App\Models\IntegrationCredential;
 use App\Models\IntegrationEvent;
 use App\Models\PartnerIntegration;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -28,17 +29,19 @@ class DoctorIntegrationsController extends Controller
 
         $doctorPartnerIds = $this->doctorPartnerIdsSubquery($doctor);
         $syncedExams = Examination::where('source', Examination::SOURCE_INTEGRATION)
+            ->where('doctor_id', $doctor->id)
             ->whereIn('partner_integration_id', $doctorPartnerIds)
             ->count();
 
-        $lastSyncRaw = $doctor->partnerIntegrations()
-            ->where('partner_integrations.status', PartnerIntegration::STATUS_ACTIVE)
-            ->whereNotNull('last_sync_at')
-            ->max('partner_integrations.last_sync_at');
+        $lastSyncRaw = IntegrationEvent::query()
+            ->forDoctor($doctor->id)
+            ->whereIn('partner_integration_id', $this->doctorPartnerIdsSubquery($doctor))
+            ->max('created_at');
 
         $lastSync = $lastSyncRaw ? \Illuminate\Support\Carbon::parse($lastSyncRaw) : null;
 
         $errors24h = IntegrationEvent::query()
+            ->forDoctor($doctor->id)
             ->whereIn('partner_integration_id', $this->doctorPartnerIdsSubquery($doctor))
             ->where('status', IntegrationEvent::STATUS_FAILED)
             ->where('created_at', '>=', now()->subDay())
@@ -48,13 +51,21 @@ class DoctorIntegrationsController extends Controller
             ->where('partner_integrations.type', PartnerIntegration::TYPE_LABORATORY)
             ->with('credential')
             ->get()
-            ->map(fn (PartnerIntegration $p) => [
-                'id' => $p->id,
-                'name' => $p->name,
-                'slug' => $p->slug,
-                'status' => $p->status,
-                'last_sync_at' => $p->last_sync_at?->toIso8601String(),
-            ]);
+            ->values();
+
+        $lastEventByPartner = $this->recentEventsByPartner(
+            doctorId: $doctor->id,
+            partnerIds: $laboratories->pluck('id'),
+            limitPerPartner: 1,
+        );
+
+        $laboratories = $laboratories->map(fn (PartnerIntegration $p) => [
+            'id' => $p->id,
+            'name' => $p->name,
+            'slug' => $p->slug,
+            'status' => $p->status,
+            'last_sync_at' => $lastEventByPartner[$p->id][0]['created_at'] ?? null,
+        ]);
 
         return Inertia::render('Doctor/Integrations/Hub', [
             'stats' => [
@@ -73,16 +84,30 @@ class DoctorIntegrationsController extends Controller
         $doctor = $this->resolveDoctor();
 
         $partners = $doctor->partnerIntegrations()
-            ->with(['credential', 'events' => function ($q) {
-                $q->orderByDesc('created_at')->limit(5);
-            }])
+            ->with('credential')
             ->withCount([
-                'events as sent_count' => fn ($q) => $q->where('direction', IntegrationEvent::DIRECTION_OUTBOUND),
-                'events as received_count' => fn ($q) => $q->where('direction', IntegrationEvent::DIRECTION_INBOUND),
-                'events as errors_count' => fn ($q) => $q->where('status', IntegrationEvent::STATUS_FAILED),
+                'events as sent_count' => fn ($q) => $q
+                    ->where('doctor_id', $doctor->id)
+                    ->where('direction', IntegrationEvent::DIRECTION_OUTBOUND),
+                'events as received_count' => fn ($q) => $q
+                    ->where('doctor_id', $doctor->id)
+                    ->where('direction', IntegrationEvent::DIRECTION_INBOUND),
+                'events as errors_count' => fn ($q) => $q
+                    ->where('doctor_id', $doctor->id)
+                    ->where('status', IntegrationEvent::STATUS_FAILED),
             ])
-            ->get()
-            ->map(function (PartnerIntegration $p) {
+            ->get();
+
+        $recentEventsByPartner = $this->recentEventsByPartner(
+            doctorId: $doctor->id,
+            partnerIds: $partners->pluck('id'),
+            limitPerPartner: 5,
+        );
+
+        $partners = $partners
+            ->map(function (PartnerIntegration $p) use ($recentEventsByPartner) {
+                $recentEvents = $recentEventsByPartner[$p->id] ?? [];
+
                 return [
                     'id' => $p->id,
                     'name' => $p->name,
@@ -92,7 +117,7 @@ class DoctorIntegrationsController extends Controller
                     'base_url' => $p->base_url,
                     'capabilities' => $p->capabilities,
                     'fhir_version' => $p->fhir_version,
-                    'last_sync_at' => $p->last_sync_at?->toIso8601String(),
+                    'last_sync_at' => $recentEvents[0]['created_at'] ?? null,
                     'contact_email' => $p->contact_email,
                     'integration_mode' => $p->pivot?->integration_mode,
                     'stats' => [
@@ -100,18 +125,12 @@ class DoctorIntegrationsController extends Controller
                         'received' => $p->received_count,
                         'errors' => $p->errors_count,
                     ],
-                    'recentEvents' => $p->events->map(fn (IntegrationEvent $e) => [
-                        'id' => $e->id,
-                        'type' => $e->event_type,
-                        'status' => $e->status,
-                        'direction' => $e->direction,
-                        'created_at' => $e->created_at->toIso8601String(),
-                        'error_message' => $e->error_message,
-                    ]),
+                    'recentEvents' => $recentEvents,
                 ];
             });
 
         $criticalEvents = IntegrationEvent::query()
+            ->forDoctor($doctor->id)
             ->whereIn('partner_integration_id', $this->doctorPartnerIdsSubquery($doctor))
             ->where('status', IntegrationEvent::STATUS_FAILED)
             ->where('created_at', '>=', now()->subDay())
@@ -252,10 +271,11 @@ class DoctorIntegrationsController extends Controller
     /** Detalhes de um parceiro — queries consolidadas. */
     public function show(PartnerIntegration $partner): Response
     {
-        $this->ensureDoctorHasPartner($partner);
+        $doctor = $this->ensureDoctorHasPartner($partner);
         $partner->load('credential');
 
         $events = IntegrationEvent::where('partner_integration_id', $partner->id)
+            ->forDoctor($doctor->id)
             ->orderByDesc('created_at')
             ->limit(50)
             ->get()
@@ -274,6 +294,7 @@ class DoctorIntegrationsController extends Controller
 
         // Consolidado: 1 query para todos os stats
         $aggregated = IntegrationEvent::where('partner_integration_id', $partner->id)
+            ->forDoctor($doctor->id)
             ->selectRaw('
                 COUNT(CASE WHEN direction = ? THEN 1 END) as sent,
                 COUNT(CASE WHEN direction = ? THEN 1 END) as received,
@@ -302,7 +323,7 @@ class DoctorIntegrationsController extends Controller
                 'base_url' => $partner->base_url,
                 'capabilities' => $partner->capabilities,
                 'fhir_version' => $partner->fhir_version,
-                'last_sync_at' => $partner->last_sync_at?->toIso8601String(),
+                'last_sync_at' => $events->first()['created_at'] ?? null,
                 'contact_email' => $partner->contact_email,
                 'created_at' => $partner->created_at->toIso8601String(),
             ],
@@ -341,7 +362,7 @@ class DoctorIntegrationsController extends Controller
         return $doctor;
     }
 
-    private function ensureDoctorHasPartner(PartnerIntegration $partner): void
+    private function ensureDoctorHasPartner(PartnerIntegration $partner): Doctor
     {
         $doctor = $this->resolveDoctor();
         $isConnected = $doctor->partnerIntegrations()
@@ -351,10 +372,58 @@ class DoctorIntegrationsController extends Controller
         if (! $isConnected) {
             abort(404);
         }
+
+        return $doctor;
     }
 
     private function doctorPartnerIdsSubquery(Doctor $doctor)
     {
         return $doctor->partnerIntegrations()->select('partner_integrations.id');
+    }
+
+    /**
+     * @param  Collection<int, string>  $partnerIds
+     * @return array<string, array<int, array<string, mixed>>>
+     */
+    private function recentEventsByPartner(string $doctorId, Collection $partnerIds, int $limitPerPartner): array
+    {
+        if ($partnerIds->isEmpty()) {
+            return [];
+        }
+
+        $ranked = IntegrationEvent::query()
+            ->selectRaw('
+                integration_events.id,
+                integration_events.partner_integration_id,
+                integration_events.event_type,
+                integration_events.status,
+                integration_events.direction,
+                integration_events.error_message,
+                integration_events.created_at,
+                ROW_NUMBER() OVER (
+                    PARTITION BY integration_events.partner_integration_id
+                    ORDER BY integration_events.created_at DESC
+                ) as row_num
+            ')
+            ->where('doctor_id', $doctorId)
+            ->whereIn('partner_integration_id', $partnerIds)
+            ->orderByDesc('created_at');
+
+        return DB::query()
+            ->fromSub($ranked, 'ranked_events')
+            ->where('row_num', '<=', $limitPerPartner)
+            ->orderBy('partner_integration_id')
+            ->orderByDesc('created_at')
+            ->get()
+            ->groupBy('partner_integration_id')
+            ->map(fn ($events) => $events->map(static fn ($event) => [
+                'id' => $event->id,
+                'type' => $event->event_type,
+                'status' => $event->status,
+                'direction' => $event->direction,
+                'created_at' => \Illuminate\Support\Carbon::parse($event->created_at)->toIso8601String(),
+                'error_message' => $event->error_message,
+            ])->values()->all())
+            ->toArray();
     }
 }

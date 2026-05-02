@@ -27,9 +27,7 @@ class DatabaseSeeder extends Seeder
             PartnerIntegrationSeeder::class,
             ExaminationIntegrationSeeder::class,
             IntegrationQueueSeeder::class,
-            // CompleteJourneySeeder cria contas demo conhecidas (full.user@telemedicina.test, CRM-999999).
-            // Não roda automaticamente: invocar com `php artisan db:seed --class=CompleteJourneySeeder`
-            // apenas em ambientes de dev/teste. Backdoor risk em prod.
+            CompleteJourneySeeder::class,
         ]);
     }
 }

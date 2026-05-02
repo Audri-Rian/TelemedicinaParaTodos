@@ -42,6 +42,13 @@ class StorePartnerIntegrationRequest extends FormRequest
                         return;
                     }
 
+                    $scheme = parse_url($value, PHP_URL_SCHEME);
+                    if (! is_string($scheme) || strtolower($scheme) !== 'https') {
+                        $fail('A URL base deve usar HTTPS.');
+
+                        return;
+                    }
+
                     $host = parse_url($value, PHP_URL_HOST);
                     if (! is_string($host) || $host === '') {
                         $fail('A URL base deve conter um host válido.');

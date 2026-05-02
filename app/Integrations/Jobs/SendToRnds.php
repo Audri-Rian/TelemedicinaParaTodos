@@ -16,6 +16,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -43,7 +44,6 @@ use Illuminate\Support\Str;
  * TODO (fase pós-MVP):
  *  - Aplicar perfis BR Core (meta.profile) nos recursos quando RNDS exigir
  *  - Implementar verificação de conformidade com validador RNDS antes do envio
- *  - Cache do access_token OAuth2 (atualmente emite novo token por execução)
  *  - Extensões brasileiras (raça/cor, município IBGE) no Patient
  */
 class SendToRnds implements ShouldQueue
@@ -119,6 +119,7 @@ class SendToRnds implements ShouldQueue
 
         $event = IntegrationEvent::create([
             'partner_integration_id' => $rndsPartner->id,
+            'doctor_id' => $examination->doctor_id,
             'direction' => IntegrationEvent::DIRECTION_OUTBOUND,
             'event_type' => IntegrationEvent::EVENT_RNDS_SUBMITTED,
             'status' => IntegrationEvent::STATUS_PROCESSING,
@@ -291,7 +292,7 @@ class SendToRnds implements ShouldQueue
      */
     private function buildDiagnosticReportAndObservations(Examination $examination): array
     {
-        $reportId = 'report-' . $examination->id;
+        $reportId = 'report-'.$examination->id;
         $observations = [];
         $observationRefs = [];
 
@@ -357,6 +358,12 @@ class SendToRnds implements ShouldQueue
      */
     private function obtainAccessToken(): string
     {
+        $cacheKey = 'integrations:rnds:oauth_access_token';
+        $cachedToken = Cache::get($cacheKey);
+        if (is_string($cachedToken) && $cachedToken !== '') {
+            return $cachedToken;
+        }
+
         $certPath = config('integrations.rnds.certificate_path');
         $certPassword = config('integrations.rnds.certificate_password');
         $authUrl = config('integrations.rnds.auth_url');
@@ -374,13 +381,17 @@ class SendToRnds implements ShouldQueue
             ->timeout($timeouts['response'])
             ->connectTimeout($timeouts['connect'])
             ->asForm()
-            ->post(rtrim($authUrl, '/') . '/token', [
+            ->post(rtrim($authUrl, '/').'/token', [
                 'grant_type' => 'client_credentials',
             ]);
 
         if (! $response->successful()) {
+            Log::channel('integration')->warning('RNDS auth falhou', [
+                'http_status' => $response->status(),
+            ]);
+
             throw new \RuntimeException(
-                "RNDS auth falhou: HTTP {$response->status()} — " . $response->body(),
+                "RNDS auth falhou: HTTP {$response->status()}",
                 $response->status(),
             );
         }
@@ -390,6 +401,9 @@ class SendToRnds implements ShouldQueue
         if (! $token) {
             throw new \RuntimeException('RNDS: resposta de auth sem access_token.');
         }
+
+        $expiresIn = max(60, ((int) $response->json('expires_in', 300)) - 30);
+        Cache::put($cacheKey, $token, now()->addSeconds($expiresIn));
 
         return $token;
     }
@@ -421,7 +435,7 @@ class SendToRnds implements ShouldQueue
             ->withHeaders($headers)
             ->timeout($timeouts['response'])
             ->connectTimeout($timeouts['connect'])
-            ->post(rtrim($baseUrl, '/') . '/Bundle', $bundle->toFhirJson())
+            ->post(rtrim($baseUrl, '/').'/Bundle', $bundle->toFhirJson())
             ->throw();
     }
 

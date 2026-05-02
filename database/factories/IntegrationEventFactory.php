@@ -14,6 +14,7 @@ class IntegrationEventFactory extends Factory
     {
         return [
             'partner_integration_id' => PartnerIntegration::factory(),
+            'doctor_id' => null,
             'direction' => fake()->randomElement([IntegrationEvent::DIRECTION_OUTBOUND, IntegrationEvent::DIRECTION_INBOUND]),
             'event_type' => fake()->randomElement([
                 IntegrationEvent::EVENT_EXAM_ORDER_SENT,
@@ -22,7 +23,7 @@ class IntegrationEventFactory extends Factory
             'status' => IntegrationEvent::STATUS_SUCCESS,
             'resource_type' => 'examination',
             'resource_id' => fake()->uuid(),
-            'external_id' => 'ext-' . fake()->uuid(),
+            'external_id' => 'ext-'.fake()->uuid(),
             'fhir_resource_type' => 'ServiceRequest',
             'duration_ms' => fake()->numberBetween(50, 2000),
             'error_message' => null,

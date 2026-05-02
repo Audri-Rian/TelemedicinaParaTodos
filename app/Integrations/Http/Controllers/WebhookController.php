@@ -8,10 +8,10 @@ use App\Models\Examination;
 use App\Models\FhirResourceMapping;
 use App\Models\IntegrationEvent;
 use App\Models\PartnerIntegration;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
-use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 
 class WebhookController extends Controller
@@ -26,6 +26,8 @@ class WebhookController extends Controller
         string $partnerSlug,
         LabIntegrationInterface $labAdapter,
     ): JsonResponse {
+        $rawPayload = $request->all();
+
         $partner = PartnerIntegration::where('slug', $partnerSlug)
             ->where('type', PartnerIntegration::TYPE_LABORATORY)
             ->active()
@@ -37,7 +39,7 @@ class WebhookController extends Controller
 
         // Verificar idempotência
         $idempotencyKey = $request->header('X-Idempotency-Key')
-            ?? $this->extractExternalId($request->all());
+            ?? $this->extractExternalId($rawPayload);
 
         if ($idempotencyKey) {
             $alreadyProcessed = IntegrationEvent::where([
@@ -59,11 +61,11 @@ class WebhookController extends Controller
             'event_type' => IntegrationEvent::EVENT_EXAM_RESULT_RECEIVED,
             'status' => IntegrationEvent::STATUS_PROCESSING,
             'external_id' => $idempotencyKey,
-            'request_payload' => $request->all(),
+            'request_payload' => $this->sanitizePayloadForAudit($rawPayload),
         ]);
 
         try {
-            $resultDto = $labAdapter->parseWebhookPayload($request->all());
+            $resultDto = $labAdapter->parseWebhookPayload($rawPayload);
 
             // Encontrar exame no sistema pelo mapeamento FHIR ou external_id
             $examination = $this->findExamination($resultDto->externalId, $partner->id);
@@ -87,7 +89,7 @@ class WebhookController extends Controller
                 'external_accession' => $resultDto->accessionNumber,
             ];
 
-            if ($resultDto->attachmentUrl) {
+            if ($resultDto->attachmentUrl && $this->isSafeAttachmentUrl($resultDto->attachmentUrl)) {
                 $updateData['attachment_url'] = $resultDto->attachmentUrl;
             }
 
@@ -95,6 +97,7 @@ class WebhookController extends Controller
 
             $event->update([
                 'status' => IntegrationEvent::STATUS_SUCCESS,
+                'doctor_id' => $examination->doctor_id,
                 'resource_type' => 'examination',
                 'resource_id' => $examination->id,
                 'fhir_resource_type' => 'DiagnosticReport',
@@ -158,5 +161,31 @@ class WebhookController extends Controller
         }
 
         return null;
+    }
+
+    private function sanitizePayloadForAudit(array $payload): array
+    {
+        $entryCount = is_array($payload['entry'] ?? null) ? count($payload['entry']) : 0;
+
+        return array_filter([
+            'resource_type' => $payload['resourceType'] ?? null,
+            'bundle_type' => $payload['type'] ?? null,
+            'id' => $payload['id'] ?? null,
+            'entry_count' => $entryCount,
+        ], static fn ($value) => $value !== null);
+    }
+
+    private function isSafeAttachmentUrl(string $url): bool
+    {
+        if (filter_var($url, FILTER_VALIDATE_URL) === false) {
+            return false;
+        }
+
+        $parsedScheme = parse_url($url, PHP_URL_SCHEME);
+        if (! is_string($parsedScheme) || strtolower($parsedScheme) !== 'https') {
+            return false;
+        }
+
+        return true;
     }
 }
