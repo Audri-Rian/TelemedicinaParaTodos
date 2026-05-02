@@ -41,6 +41,14 @@ import {
 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 
+interface Props {
+    connectedSlugs?: string[];
+}
+
+const props = withDefaults(defineProps<Props>(), {
+    connectedSlugs: () => [],
+});
+
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: doctorRoutes.dashboard().url },
     { title: 'Integrações', href: doctorRoutes.integrations().url },
@@ -131,6 +139,8 @@ const form = useForm({
 
 const selectedPartner = ref<string | null>(null);
 const selectedPartnerName = computed(() => availablePartners.find((p) => p.key === selectedPartner.value)?.name ?? '—');
+const isAlreadyConnected = (slug: string) => props.connectedSlugs.includes(slug);
+const isApiKeyAuth = computed(() => form.auth_method === 'api_key');
 
 // Step 3
 const authMethods = [
@@ -198,6 +208,8 @@ const canProceed = computed(() => {
 });
 
 const selectPartner = (key: string) => {
+    if (isAlreadyConnected(key)) return;
+
     selectedPartner.value = key;
     const partner = availablePartners.find((p) => p.key === key);
     if (partner) {
@@ -234,7 +246,7 @@ const isLastStep = computed(() => currentStep.value === totalSteps.value);
 const handleConnect = () => {
     form.fhir_version = 'R4';
 
-    form.post('/doctor/integrations/connect', {
+    form.post(integrationRoutes.store().url, {
         onSuccess: () => {
             isConnected.value = true;
             connectionError.value = false;
@@ -344,6 +356,7 @@ const docsUrl = '/docs/interoperabilidade';
                                     {{ form.auth_method === 'api_key' ? 'Chave de API' : 'Client ID' }}
                                 </p>
                                 <button
+                                    v-if="!isApiKeyAuth"
                                     type="button"
                                     class="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                                     @click="copyToClipboard(form.client_id, 'success-client-id')"
@@ -353,7 +366,10 @@ const docsUrl = '/docs/interoperabilidade';
                                     {{ copiedField === 'success-client-id' ? 'Copiado!' : 'Copiar' }}
                                 </button>
                             </div>
-                            <p class="mt-1 font-mono text-sm text-foreground">{{ form.client_id }}</p>
+                            <p v-if="isApiKeyAuth" class="mt-1 text-sm text-muted-foreground">
+                                A chave de API foi armazenada com segurança e não é exibida novamente.
+                            </p>
+                            <p v-else class="mt-1 font-mono text-sm text-foreground">{{ form.client_id }}</p>
                         </div>
 
                         <!-- Auth Method -->
@@ -587,11 +603,13 @@ const docsUrl = '/docs/interoperabilidade';
                                             :key="partner.key"
                                             type="button"
                                             @click="selectPartner(partner.key)"
+                                            :disabled="isAlreadyConnected(partner.key)"
                                             :class="[
                                                 'group relative flex flex-col items-center rounded-xl border bg-card p-6 text-center transition-all duration-200',
                                                 selectedPartner === partner.key
                                                     ? 'border-primary/40 shadow-lg ring-2 ring-primary/20'
                                                     : 'border-border/60 hover:border-primary/20 hover:shadow-lg',
+                                                isAlreadyConnected(partner.key) ? 'cursor-not-allowed opacity-60 grayscale' : '',
                                             ]"
                                         >
                                             <div class="mb-4 flex size-16 items-center justify-center rounded-lg bg-muted">
@@ -601,9 +619,16 @@ const docsUrl = '/docs/interoperabilidade';
                                             <p class="mt-1 text-xs text-muted-foreground">{{ partner.description }}</p>
                                             <div
                                                 class="mt-4 flex items-center gap-1 text-xs font-bold text-primary opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+                                                v-if="!isAlreadyConnected(partner.key)"
                                             >
                                                 Selecionar <ChevronRight class="size-3.5" />
                                             </div>
+                                            <Badge
+                                                v-if="isAlreadyConnected(partner.key)"
+                                                class="mt-4 rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-bold tracking-wider text-emerald-700 uppercase"
+                                            >
+                                                Já conectado
+                                            </Badge>
                                             <div
                                                 v-if="selectedPartner === partner.key"
                                                 class="absolute top-3 right-3 flex size-6 items-center justify-center rounded-full bg-primary text-primary-foreground"

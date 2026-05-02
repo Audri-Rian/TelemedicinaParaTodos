@@ -14,8 +14,7 @@ class PatientMedicalRecordController extends Controller
 {
     public function __construct(
         private readonly MedicalRecordService $medicalRecordService,
-    ) {
-    }
+    ) {}
 
     /**
      * Exibe a página de prontuário médico do paciente.
@@ -24,7 +23,7 @@ class PatientMedicalRecordController extends Controller
     {
         $patient = $request->user()?->patient;
 
-        if (!$patient) {
+        if (! $patient) {
             abort(403, 'Perfil de paciente não encontrado.');
         }
 
@@ -45,7 +44,7 @@ class PatientMedicalRecordController extends Controller
     {
         $patient = $request->user()?->patient;
 
-        if (!$patient) {
+        if (! $patient) {
             abort(403, 'Perfil de paciente não encontrado.');
         }
 
@@ -71,7 +70,7 @@ class PatientMedicalRecordController extends Controller
             ['filters' => $filters]
         );
 
-        return Storage::disk('public')->download($document['path'], $document['filename']);
+        return Storage::disk('local')->download($document['path'], $document['filename']);
     }
 
     /**

@@ -25,6 +25,7 @@ class IntegrationCredential extends Model
     ];
 
     protected $casts = [
+        'client_id' => 'encrypted',
         'client_secret' => 'encrypted',
         'access_token' => 'encrypted',
         'refresh_token' => 'encrypted',
@@ -34,6 +35,7 @@ class IntegrationCredential extends Model
     ];
 
     protected $hidden = [
+        'client_id',
         'client_secret',
         'access_token',
         'refresh_token',
@@ -42,10 +44,15 @@ class IntegrationCredential extends Model
 
     // Constantes de tipo de autenticação
     public const AUTH_API_KEY = 'api_key';
+
     public const AUTH_OAUTH2_CLIENT_CREDENTIALS = 'oauth2_client_credentials';
+
     public const AUTH_OAUTH2_AUTHORIZATION_CODE = 'oauth2_authorization_code';
+
     public const AUTH_CERTIFICATE = 'certificate';
+
     public const AUTH_BASIC = 'basic_auth';
+
     public const AUTH_BEARER = 'bearer_token';
 
     // Relacionamentos

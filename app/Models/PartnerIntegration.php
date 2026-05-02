@@ -2,14 +2,15 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Database\Eloquent\Builder;
 
 class PartnerIntegration extends Model
 {
@@ -41,17 +42,26 @@ class PartnerIntegration extends Model
 
     // Constantes de tipo
     public const TYPE_LABORATORY = 'laboratory';
+
     public const TYPE_PHARMACY = 'pharmacy';
+
     public const TYPE_HOSPITAL = 'hospital';
+
     public const TYPE_INSURANCE = 'insurance';
+
     public const TYPE_RNDS = 'rnds';
+
     public const TYPE_OTHER = 'other';
 
     // Constantes de status
     public const STATUS_ACTIVE = 'active';
+
     public const STATUS_INACTIVE = 'inactive';
+
     public const STATUS_PENDING = 'pending';
+
     public const STATUS_ERROR = 'error';
+
     public const STATUS_SUSPENDED = 'suspended';
 
     // Relacionamentos
@@ -59,6 +69,21 @@ class PartnerIntegration extends Model
     public function connectedByUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'connected_by');
+    }
+
+    public function doctors(): BelongsToMany
+    {
+        return $this->belongsToMany(Doctor::class, 'doctor_partner_integrations')
+            ->withPivot([
+                'integration_mode',
+                'perm_send_orders',
+                'perm_receive_results',
+                'perm_webhook',
+                'perm_patient_data',
+                'connected_by',
+                'connected_at',
+            ])
+            ->withTimestamps();
     }
 
     public function credential(): HasOne
@@ -111,6 +136,16 @@ class PartnerIntegration extends Model
     public function scopeLaboratories(Builder $query): void
     {
         $query->where('type', self::TYPE_LABORATORY);
+    }
+
+    public function scopeForDoctor(Builder $query, string $doctorId): void
+    {
+        $query->whereIn('partner_integrations.id', function ($subQuery) use ($doctorId) {
+            $subQuery
+                ->select('partner_integration_id')
+                ->from('doctor_partner_integrations')
+                ->where('doctor_id', $doctorId);
+        });
     }
 
     public function scopePharmacies(Builder $query): void

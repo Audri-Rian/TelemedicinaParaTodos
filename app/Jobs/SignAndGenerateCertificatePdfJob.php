@@ -55,7 +55,7 @@ class SignAndGenerateCertificatePdfJob implements ShouldQueue
 
         $pdf = $service->buildMedicalCertificatePdf($certificate);
         if ($pdf) {
-            $certificate->forceFill(['pdf_url' => $pdf['public_path']])->save();
+            $certificate->forceFill(['pdf_url' => null])->save();
         }
     }
 

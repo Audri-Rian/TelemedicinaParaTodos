@@ -14,6 +14,7 @@ use App\Models\PartnerIntegration;
 use App\Models\Patient;
 use App\Services\MedicalRecordService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
@@ -23,14 +24,13 @@ class DoctorPatientMedicalRecordController extends Controller
 {
     public function __construct(
         private readonly MedicalRecordService $medicalRecordService,
-    ) {
-    }
+    ) {}
 
     public function show(Request $request, Patient $patient): Response
     {
         $user = $request->user();
 
-        if (!$user?->doctor) {
+        if (! $user?->doctor) {
             abort(403, 'Apenas médicos podem visualizar prontuários de pacientes.');
         }
 
@@ -52,10 +52,15 @@ class DoctorPatientMedicalRecordController extends Controller
             'mode' => 'doctor',
         ];
 
-        $payload['lab_partners'] = PartnerIntegration::active()
-            ->laboratories()
-            ->get(['id', 'name', 'slug'])
-            ->toArray();
+        $payload['lab_partners'] = Cache::remember(
+            "doctor:{$user->doctor->id}:lab-partners",
+            now()->addMinutes(5),
+            fn () => $user->doctor->partnerIntegrations()
+                ->where('partner_integrations.status', PartnerIntegration::STATUS_ACTIVE)
+                ->where('partner_integrations.type', PartnerIntegration::TYPE_LABORATORY)
+                ->get(['id', 'name', 'slug'])
+                ->toArray()
+        );
 
         return Inertia::render('Doctor/PatientMedicalRecord', $payload);
     }
@@ -64,7 +69,7 @@ class DoctorPatientMedicalRecordController extends Controller
     {
         $user = $request->user();
 
-        if (!$user?->doctor) {
+        if (! $user?->doctor) {
             abort(403, 'Apenas médicos podem exportar prontuários de pacientes.');
         }
 
@@ -89,7 +94,7 @@ class DoctorPatientMedicalRecordController extends Controller
             'filters' => $filters,
         ]);
 
-        return Storage::disk('public')->download($document['path'], $document['filename']);
+        return Storage::disk('local')->download($document['path'], $document['filename']);
     }
 
     public function storeDiagnosis(StoreDiagnosisRequest $request, Patient $patient)
@@ -181,7 +186,7 @@ class DoctorPatientMedicalRecordController extends Controller
 
         $document = $this->medicalRecordService->generateConsultationPdf($appointment, $request->user());
 
-        return Storage::disk('public')->download($document['path'], $document['filename']);
+        return Storage::disk('local')->download($document['path'], $document['filename']);
     }
 
     private function extractFilters(Request $request): array
@@ -215,4 +220,3 @@ class DoctorPatientMedicalRecordController extends Controller
             ->firstOrFail();
     }
 }
-

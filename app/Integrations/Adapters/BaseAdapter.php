@@ -20,6 +20,8 @@ abstract class BaseAdapter
      */
     protected function httpClient(PartnerIntegration $partner): PendingRequest
     {
+        $this->assertSafeBaseUrl($partner);
+
         $timeouts = config("integrations.timeouts.{$partner->type}", [
             'connect' => 5,
             'response' => 15,
@@ -109,7 +111,7 @@ abstract class BaseAdapter
         // TODO: Implementar renovação real (ver bloco de TODO acima)
         throw new \RuntimeException(
             "Token OAuth2 expirado ou prestes a expirar para partner_integration_id={$credential->partner_integration_id}. "
-            . 'Implementação de refresh pendente — será habilitada quando houver parceiro OAuth2 real integrado.'
+            .'Implementação de refresh pendente — será habilitada quando houver parceiro OAuth2 real integrado.'
         );
     }
 
@@ -119,5 +121,30 @@ abstract class BaseAdapter
     protected function log(string $level, string $message, array $context = []): void
     {
         Log::channel('integration')->log($level, $message, $context);
+    }
+
+    protected function assertSafeBaseUrl(PartnerIntegration $partner): void
+    {
+        $host = parse_url((string) $partner->base_url, PHP_URL_HOST);
+        if (! is_string($host) || $host === '') {
+            throw new \RuntimeException('Host inválido na configuração da integração.');
+        }
+
+        $normalizedHost = strtolower($host);
+        if (in_array($normalizedHost, ['localhost', '127.0.0.1', '::1'], true)) {
+            throw new \RuntimeException('Host local não é permitido para integrações.');
+        }
+
+        if (filter_var($normalizedHost, FILTER_VALIDATE_IP)) {
+            $isPublicIp = filter_var(
+                $normalizedHost,
+                FILTER_VALIDATE_IP,
+                FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE
+            ) !== false;
+
+            if (! $isPublicIp) {
+                throw new \RuntimeException('Faixas IP privadas e reservadas não são permitidas para integrações.');
+            }
+        }
     }
 }
