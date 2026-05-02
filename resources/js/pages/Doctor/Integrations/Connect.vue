@@ -232,6 +232,8 @@ const prevStep = () => {
 const isLastStep = computed(() => currentStep.value === totalSteps.value);
 
 const handleConnect = () => {
+    form.fhir_version = 'R4';
+
     form.post('/doctor/integrations/connect', {
         onSuccess: () => {
             isConnected.value = true;
@@ -735,7 +737,8 @@ const docsUrl = '/docs/interoperabilidade';
                                         <div class="grid gap-6 sm:grid-cols-2">
                                             <div class="space-y-2">
                                                 <Label for="fhir-version" class="text-sm font-semibold">Versão FHIR</Label>
-                                                <Input id="fhir-version" v-model="form.fhir_version" placeholder="R4" />
+                                                <Input id="fhir-version" :model-value="form.fhir_version" readonly />
+                                                <p class="text-[11px] text-muted-foreground">Versão fixa suportada pela integração: R4.</p>
                                             </div>
                                             <div class="space-y-2">
                                                 <Label for="contact-email" class="text-sm font-semibold">E-mail de contato técnico</Label>

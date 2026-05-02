@@ -9,9 +9,7 @@ use App\Models\Examination;
 use App\Models\IntegrationCredential;
 use App\Models\IntegrationEvent;
 use App\Models\PartnerIntegration;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -145,7 +143,7 @@ class DoctorIntegrationsController extends Controller
             'type' => $validated['partner_type'] ?? PartnerIntegration::TYPE_LABORATORY,
             'status' => PartnerIntegration::STATUS_PENDING,
             'base_url' => $validated['base_url'] ?? null,
-            'fhir_version' => $validated['fhir_version'] ?? 'R4',
+            'fhir_version' => 'R4',
             'capabilities' => $capabilities,
             'contact_email' => $validated['contact_email'] ?? null,
         ]);
@@ -198,13 +196,13 @@ class DoctorIntegrationsController extends Controller
 
         // Consolidado: 1 query para todos os stats
         $aggregated = IntegrationEvent::where('partner_integration_id', $partner->id)
-            ->selectRaw("
+            ->selectRaw('
                 COUNT(CASE WHEN direction = ? THEN 1 END) as sent,
                 COUNT(CASE WHEN direction = ? THEN 1 END) as received,
                 COUNT(CASE WHEN status = ? THEN 1 END) as errors,
                 COUNT(CASE WHEN status = ? THEN 1 END) as successes,
                 COUNT(*) as total
-            ", [
+            ', [
                 IntegrationEvent::DIRECTION_OUTBOUND,
                 IntegrationEvent::DIRECTION_INBOUND,
                 IntegrationEvent::STATUS_FAILED,
@@ -240,26 +238,22 @@ class DoctorIntegrationsController extends Controller
         ]);
     }
 
-    /** Dispara sync sob demanda — com try/catch. */
-    public function sync(PartnerIntegration $partner): JsonResponse
+    /** Dispara sync sob demanda com resposta compatível com Inertia. */
+    public function sync(PartnerIntegration $partner): RedirectResponse
     {
         if (! $partner->isActive()) {
-            return response()->json([
-                'message' => 'Parceiro não está ativo.',
-            ], 422);
+            return back()->with('error', 'Parceiro não está ativo.');
         }
 
         try {
             $service = app(IntegrationService::class);
             $received = $service->syncExamResults($partner);
 
-            return response()->json([
-                'message' => $received > 0
+            $message = $received > 0
                     ? "{$received} resultado(s) sincronizado(s)."
-                    : 'Nenhum resultado novo encontrado.',
-                'received' => $received,
-                'last_sync_at' => $partner->fresh()->last_sync_at?->toIso8601String(),
-            ]);
+                    : 'Nenhum resultado novo encontrado.';
+
+            return back()->with('success', $message);
         } catch (\Throwable $e) {
             Log::channel('integration')->error('Falha na sincronização sob demanda', [
                 'partner_id' => $partner->id,
@@ -268,9 +262,7 @@ class DoctorIntegrationsController extends Controller
 
             report($e);
 
-            return response()->json([
-                'message' => 'Falha ao sincronizar. Tente novamente em alguns instantes.',
-            ], 500);
+            return back()->with('error', 'Falha ao sincronizar. Tente novamente em alguns instantes.');
         }
     }
 }
