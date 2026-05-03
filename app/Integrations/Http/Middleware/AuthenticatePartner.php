@@ -11,11 +11,8 @@ use Symfony\Component\HttpFoundation\Response;
 /**
  * Autentica parceiro via Bearer token OAuth2.
  *
- * Valida o token, verifica se não expirou e injeta o parceiro no request.
- *
- * Nota: access_token tem cast 'encrypted' no model, então não é possível
- * fazer WHERE direto. Iteramos sobre credenciais com token ativo e
- * comparamos o hash SHA-256.
+ * Lookup via access_token_hash (SHA-256 indexado) — O(1), sem scan de tabela.
+ * Expiry verificado no WHERE; parceiro injetado em $request->attributes.
  */
 class AuthenticatePartner
 {
@@ -32,13 +29,12 @@ class AuthenticatePartner
 
         $hashedToken = hash('sha256', $token);
 
-        // Buscar credenciais com token ativo (encrypted at rest, decryptado pelo Eloquent)
-        $credential = IntegrationCredential::whereNotNull('access_token')
+        $credential = IntegrationCredential::where('access_token_hash', $hashedToken)
+            ->where('auth_type', IntegrationCredential::AUTH_OAUTH2_CLIENT_CREDENTIALS)
             ->whereNotNull('token_expires_at')
             ->where('token_expires_at', '>', now())
             ->with('partnerIntegration')
-            ->get()
-            ->first(fn (IntegrationCredential $c) => hash_equals((string) $c->access_token, $hashedToken));
+            ->first();
 
         if (! $credential) {
             Log::channel('integration')->warning('Invalid bearer token', [
@@ -48,13 +44,6 @@ class AuthenticatePartner
             return response()->json([
                 'error' => 'invalid_token',
                 'error_description' => 'The access token is invalid.',
-            ], 401);
-        }
-
-        if ($credential->isTokenExpired()) {
-            return response()->json([
-                'error' => 'invalid_token',
-                'error_description' => 'The access token has expired.',
             ], 401);
         }
 

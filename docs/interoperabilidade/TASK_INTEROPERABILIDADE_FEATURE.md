@@ -10,7 +10,7 @@ Este documento descreve **apenas o propósito** da nova feature de interoperabil
 
 Implementar **interoperabilidade** no projeto Telemedicina para Todos, no sentido definido pela validação corporativa:
 
-> *Capacidade de consumir e expor serviços para sistemas legados ou parceiros externos via protocolos padronizados.*
+> _Capacidade de consumir e expor serviços para sistemas legados ou parceiros externos via protocolos padronizados._
 
 Ou seja:
 
@@ -43,8 +43,30 @@ Detalhes de como isso será feito (tecnologia, UX de gestão de integrações, f
 
 ## Status
 
-- **Estado**: Feature definida em nível de intenção; implementação **não iniciada**.
-- **Próximos passos**: Estudo e definição de implementação completa, UX e roadmap.
+- **Estado**: MVP 1 (laboratório) implementado e funcional. Nível 1→2 de maturidade atingido.
+
+### O que está implementado
+
+| Escopo                                                       | Status          |
+| ------------------------------------------------------------ | --------------- |
+| API pública separada do frontend (`/api/v1/public/`)         | ✅ Implementado |
+| Autenticação OAuth2 Client Credentials para parceiros        | ✅ Implementado |
+| Documentação OpenAPI dos endpoints públicos                  | ✅ Implementado |
+| Fluxo laboratório: pedido de exame → resultado no prontuário | ✅ Implementado |
+| Adapter FHIR R4 genérico para laboratórios                   | ✅ Implementado |
+| Webhook de resultado (inbound) com validação HMAC            | ✅ Implementado |
+| Pull de resultados via cron (sync)                           | ✅ Implementado |
+| Circuit breaker + fila de retry                              | ✅ Implementado |
+| Padrão FHIR (mappers, DTOs, Bundle)                          | ✅ Implementado |
+
+### O que ainda falta
+
+| Escopo                                                     | Status                                              |
+| ---------------------------------------------------------- | --------------------------------------------------- |
+| MVP 2 — Integração com farmácia (receita digital)          | ⏳ Não iniciado                                     |
+| MVP 3 — Exportação de dados para hospital                  | ⏳ Não iniciado                                     |
+| Hub de integrações (catálogo, admin "só clica conectar")   | ⏳ Não iniciado — Nível 3                           |
+| Integração com RNDS (listener registrado, envio não ativo) | ⏳ Aguarda `RNDS_ENABLED=true` e certificado e-CNPJ |
 
 ---
 
@@ -59,4 +81,4 @@ Detalhes de como isso será feito (tecnologia, UX de gestão de integrações, f
 
 ---
 
-*Documento criado para registrar a intenção da feature. Última atualização: março/2025.*
+_Última atualização: maio/2026._

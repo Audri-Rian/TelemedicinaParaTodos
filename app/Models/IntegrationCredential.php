@@ -36,8 +36,10 @@ class IntegrationCredential extends Model
 
     protected $hidden = [
         'client_id',
+        'client_id_hash',
         'client_secret',
         'access_token',
+        'access_token_hash',
         'refresh_token',
         'certificate_password',
     ];
@@ -63,6 +65,25 @@ class IntegrationCredential extends Model
     }
 
     // Métodos
+
+    protected static function booted(): void
+    {
+        static::saving(function (self $credential) {
+            // client_id e access_token têm cast 'encrypted' — o valor em $credential->client_id
+            // já está decriptado pelo Eloquent. Usamos ele diretamente para o hash.
+            if ($credential->isDirty('client_id')) {
+                $credential->client_id_hash = $credential->client_id !== null
+                    ? hash('sha256', $credential->client_id)
+                    : null;
+            }
+
+            if ($credential->isDirty('access_token')) {
+                $credential->access_token_hash = $credential->access_token !== null
+                    ? hash('sha256', $credential->access_token)
+                    : null;
+            }
+        });
+    }
 
     public function isTokenExpired(): bool
     {

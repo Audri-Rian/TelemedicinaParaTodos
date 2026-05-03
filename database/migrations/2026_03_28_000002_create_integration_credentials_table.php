@@ -14,14 +14,16 @@ return new class extends Migration
         Schema::create('integration_credentials', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->foreignUuid('partner_integration_id')
-                  ->constrained('partner_integrations')->cascadeOnDelete();
+                ->constrained('partner_integrations')->cascadeOnDelete();
             $table->enum('auth_type', [
                 'api_key', 'oauth2_client_credentials', 'oauth2_authorization_code',
                 'certificate', 'basic_auth', 'bearer_token',
             ]);
             $table->text('client_id')->nullable();
+            $table->string('client_id_hash', 64)->nullable();
             $table->text('client_secret')->nullable();
             $table->text('access_token')->nullable();
+            $table->string('access_token_hash', 64)->nullable();
             $table->text('refresh_token')->nullable();
             $table->text('certificate_path')->nullable();
             $table->text('certificate_password')->nullable();
@@ -31,6 +33,8 @@ return new class extends Migration
 
             $table->index('partner_integration_id');
             $table->index('token_expires_at');
+            $table->index('client_id_hash');
+            $table->index('access_token_hash');
         });
     }
 

@@ -7,7 +7,6 @@ use App\Models\PartnerIntegration;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 
 /**
  * OAuth2 Client Credentials — emite tokens para parceiros externos.
@@ -28,14 +27,16 @@ class OAuthTokenController
             'scope' => ['nullable', 'string'],
         ]);
 
-        $credential = IntegrationCredential::where('client_id', $request->input('client_id'))
+        $clientIdHash = hash('sha256', $request->input('client_id'));
+
+        $credential = IntegrationCredential::where('client_id_hash', $clientIdHash)
             ->where('auth_type', IntegrationCredential::AUTH_OAUTH2_CLIENT_CREDENTIALS)
             ->with('partnerIntegration')
             ->first();
 
-        // client_secret tem cast 'encrypted' no model — Eloquent decripta automaticamente.
-        // Comparação timing-safe com o valor decriptado (já protegido at rest).
-        if (! $credential || ! hash_equals((string) $credential->client_secret, $request->input('client_secret'))) {
+        // Tempo constante independente de $credential existir — evita enumeração de client_id por timing.
+        $secret = $credential?->client_secret ?? '';
+        if (! $credential || ! hash_equals((string) $secret, $request->input('client_secret'))) {
             Log::channel('integration')->warning('OAuth2 token request failed: invalid credentials', [
                 'client_id' => $request->input('client_id'),
                 'ip' => $request->ip(),
@@ -69,7 +70,7 @@ class OAuthTokenController
             if (! empty($invalidScopes)) {
                 return response()->json([
                     'error' => 'invalid_scope',
-                    'error_description' => 'The requested scope is invalid: ' . implode(', ', $invalidScopes),
+                    'error_description' => 'The requested scope is invalid: '.implode(', ', $invalidScopes),
                 ], 400);
             }
             $grantedScopes = $requestedScopes;
@@ -81,8 +82,9 @@ class OAuthTokenController
         $token = bin2hex(random_bytes(32));
         $expiresIn = 3600; // 1 hora
 
+        // access_token armazenado encriptado (cast); booted() calcula access_token_hash automaticamente
         $credential->update([
-            'access_token' => hash('sha256', $token),
+            'access_token' => $token,
             'token_expires_at' => now()->addSeconds($expiresIn),
             'scopes' => array_values($grantedScopes),
         ]);
