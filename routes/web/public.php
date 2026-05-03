@@ -5,6 +5,7 @@ use App\Http\Controllers\DashboardRedirectController;
 use App\Http\Controllers\DocumentVerificationController;
 use App\Http\Controllers\PrivacyPolicyController;
 use App\Http\Controllers\SpecializationController;
+use App\Http\Controllers\TcleController;
 use App\Http\Controllers\TermsOfServiceController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -19,6 +20,7 @@ Route::middleware(['auth', 'verified'])->get('/dashboard', DashboardRedirectCont
 // Termos de Serviço e Política de Privacidade
 Route::get('terms', [TermsOfServiceController::class, 'index'])->name('terms');
 Route::get('privacy', [PrivacyPolicyController::class, 'index'])->name('privacy');
+Route::get('tcle', [TcleController::class, 'index'])->name('tcle');
 Route::get('docs/interoperabilidade', function () {
     return Inertia::render('Docs/Interoperability');
 })->name('docs.interoperability');

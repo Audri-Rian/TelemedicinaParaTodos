@@ -58,13 +58,13 @@ ESQUELETO PRONTO (2026-04-27): driver pattern (Null/IcpBrasil), service, hash ca
 
 ### 2. Documentacao Legal CFM
 
-[ ] Adicionar secao "Consentimento para Telemedicina" na politica de privacidade
-[ ] Adicionar secao "Prontuario Eletronico" (armazenamento, retencao 20 anos)
-[ ] Adicionar secao "Gravacao de Consultas" (consentimento especifico)
-[ ] Adicionar secao "Documentos Medicos Digitais" (validade legal, ICP-Brasil)
-[ ] Expandir secao "Protocolo de Emergencias" (SAMU 192, Bombeiros 193)
-[ ] Adicionar secao "Responsabilidades do Medico" (CRM + UF)
-[ ] Implementar Termo de Consentimento Livre e Esclarecido (Art. 4 e 5)
+[x] Adicionar secao "Consentimento para Telemedicina" na politica de privacidade
+[x] Adicionar secao "Prontuario Eletronico" (armazenamento, retencao 20 anos)
+[x] Adicionar secao "Gravacao de Consultas" (consentimento especifico)
+[x] Adicionar secao "Documentos Medicos Digitais" (validade legal, ICP-Brasil)
+[x] Expandir secao "Protocolo de Emergencias" (SAMU 192, Bombeiros 193)
+[x] Adicionar secao "Responsabilidades do Medico" (CRM + UF)
+[x] Implementar Termo de Consentimento Livre e Esclarecido (Art. 4 e 5)
 
 ---
 
