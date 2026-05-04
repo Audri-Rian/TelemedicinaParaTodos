@@ -194,6 +194,37 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Partner Catalog
+    |--------------------------------------------------------------------------
+    |
+    | Lista de parceiros disponíveis para conexão pelo wizard Connect.
+    | Adicionar novos parceiros aqui para que apareçam no frontend sem deploy.
+    |
+    */
+
+    'partner_catalog' => [
+        [
+            'key' => 'hermes-pardini',
+            'name' => 'Hermes Pardini',
+            'description' => 'Líder em medicina diagnóstica e preventiva no Brasil.',
+            'type' => 'laboratory',
+        ],
+        [
+            'key' => 'fleury',
+            'name' => 'Fleury',
+            'description' => 'Excelência médica e técnica em análises clínicas.',
+            'type' => 'laboratory',
+        ],
+        [
+            'key' => 'a-plus-medicina',
+            'name' => 'A+ Medicina',
+            'description' => 'Atendimento humanizado e resultados precisos.',
+            'type' => 'laboratory',
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Sync Schedule
     |--------------------------------------------------------------------------
     |

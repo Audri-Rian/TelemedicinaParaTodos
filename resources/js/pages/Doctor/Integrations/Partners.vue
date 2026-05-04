@@ -153,6 +153,13 @@ const formatEventType = (type: string) => {
     return map[type] ?? type;
 };
 
+// Filtro de eventos críticos por parceiro
+const criticalEventPartnerFilter = ref<string | null>(null);
+const criticalEventPartnerNames = computed(() => [...new Set(props.criticalEvents.map((e) => e.partner_name))].sort());
+const filteredCriticalEvents = computed(() =>
+    criticalEventPartnerFilter.value ? props.criticalEvents.filter((e) => e.partner_name === criticalEventPartnerFilter.value) : props.criticalEvents,
+);
+
 // Toggle de atividade recente por parceiro (objeto plano: Set em ref tem reatividade frágil com .has() no template)
 const openActivities = ref<Record<number, boolean>>({});
 
@@ -256,7 +263,7 @@ const docsUrl = '/docs/interoperabilidade';
             <!-- 1. Cabeçalho + Tabs -->
             <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                    <h1 class="text-3xl font-bold tracking-tight text-foreground">Hub de Integrações</h1>
+                    <h1 class="text-3xl font-bold tracking-tight text-foreground">Gerenciar Parceiros</h1>
                     <p class="mt-1 text-sm text-muted-foreground">
                         Gerencie e monitore o fluxo de dados clínicos entre {{ partners.length }} parceiro(s).
                     </p>
@@ -296,19 +303,32 @@ const docsUrl = '/docs/interoperabilidade';
                 <div class="flex">
                     <div class="w-1.5 shrink-0 rounded-l-xl bg-red-600" />
                     <div class="flex-1 space-y-3 px-5 py-4">
-                        <div class="flex items-center justify-between">
+                        <div class="flex items-center justify-between gap-3">
                             <div class="flex items-center gap-2.5">
                                 <img src="/images/icons/exclamation.svg" alt="" class="size-5" />
-                                <span class="text-sm font-bold text-foreground">Eventos Críticos ({{ criticalEvents.length }})</span>
+                                <span class="text-sm font-bold text-foreground">
+                                    Eventos Críticos ({{ filteredCriticalEvents.length
+                                    }}<template v-if="criticalEventPartnerFilter">/{{ criticalEvents.length }}</template
+                                    >)
+                                </span>
                             </div>
-                            <span class="flex items-center gap-1.5 text-[10px] font-bold tracking-widest text-red-600 uppercase">
-                                <span class="size-1.5 animate-pulse rounded-full bg-red-500" />
-                                Últimas 24h
-                            </span>
+                            <div class="flex items-center gap-3">
+                                <select
+                                    v-model="criticalEventPartnerFilter"
+                                    class="rounded border border-red-200 bg-white px-2 py-1 text-xs text-foreground focus:ring-1 focus:ring-red-400 focus:outline-none"
+                                >
+                                    <option :value="null">Todos os parceiros</option>
+                                    <option v-for="name in criticalEventPartnerNames" :key="name" :value="name">{{ name }}</option>
+                                </select>
+                                <span class="flex items-center gap-1.5 text-[10px] font-bold tracking-widest text-red-600 uppercase">
+                                    <span class="size-1.5 animate-pulse rounded-full bg-red-500" />
+                                    Últimas 24h
+                                </span>
+                            </div>
                         </div>
                         <div class="space-y-2">
                             <div
-                                v-for="event in criticalEvents"
+                                v-for="event in filteredCriticalEvents"
                                 :key="event.id"
                                 class="flex items-center justify-between rounded px-3 py-2.5 transition-colors duration-150 hover:brightness-95"
                                 style="background: rgba(186, 26, 26, 0.05)"
@@ -323,6 +343,9 @@ const docsUrl = '/docs/interoperabilidade';
                                 </div>
                                 <span class="shrink-0 text-sm text-muted-foreground">{{ formatRelativeTime(event.created_at) }}</span>
                             </div>
+                            <p v-if="filteredCriticalEvents.length === 0" class="py-2 text-center text-xs text-muted-foreground">
+                                Nenhum evento crítico para este parceiro nas últimas 24h.
+                            </p>
                         </div>
                     </div>
                 </div>

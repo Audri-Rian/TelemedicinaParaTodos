@@ -5,11 +5,13 @@ namespace App\Http\Controllers\Doctor;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Doctor\StorePartnerIntegrationRequest;
 use App\Jobs\SyncPartnerExamResultsJob;
+use App\Jobs\VerifyPartnerConnectionJob;
 use App\Models\Doctor;
 use App\Models\Examination;
 use App\Models\IntegrationCredential;
 use App\Models\IntegrationEvent;
 use App\Models\PartnerIntegration;
+use Cron\CronExpression;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -35,14 +37,14 @@ class DoctorIntegrationsController extends Controller
 
         $lastSyncRaw = IntegrationEvent::query()
             ->forDoctor($doctor->id)
-            ->whereIn('partner_integration_id', $this->doctorPartnerIdsSubquery($doctor))
+            ->whereIn('partner_integration_id', $doctorPartnerIds)
             ->max('created_at');
 
         $lastSync = $lastSyncRaw ? \Illuminate\Support\Carbon::parse($lastSyncRaw) : null;
 
         $errors24h = IntegrationEvent::query()
             ->forDoctor($doctor->id)
-            ->whereIn('partner_integration_id', $this->doctorPartnerIdsSubquery($doctor))
+            ->whereIn('partner_integration_id', $doctorPartnerIds)
             ->where('status', IntegrationEvent::STATUS_FAILED)
             ->where('created_at', '>=', now()->subDay())
             ->count();
@@ -67,6 +69,9 @@ class DoctorIntegrationsController extends Controller
             'last_sync_at' => $lastEventByPartner[$p->id][0]['created_at'] ?? null,
         ]);
 
+        $syncCron = config('integrations.sync.exam_results_cron', '*/15 * * * *');
+        $nextSyncAt = (new CronExpression($syncCron))->getNextRunDate()->toIso8601String();
+
         return Inertia::render('Doctor/Integrations/Hub', [
             'stats' => [
                 'activeIntegrations' => $activeCount,
@@ -75,6 +80,7 @@ class DoctorIntegrationsController extends Controller
                 'errors24h' => $errors24h,
             ],
             'laboratories' => $laboratories,
+            'nextSyncAt' => $nextSyncAt,
         ]);
     }
 
@@ -129,9 +135,10 @@ class DoctorIntegrationsController extends Controller
                 ];
             });
 
+        $doctorPartnerIds = $this->doctorPartnerIdsSubquery($doctor);
         $criticalEvents = IntegrationEvent::query()
             ->forDoctor($doctor->id)
-            ->whereIn('partner_integration_id', $this->doctorPartnerIdsSubquery($doctor))
+            ->whereIn('partner_integration_id', $doctorPartnerIds)
             ->where('status', IntegrationEvent::STATUS_FAILED)
             ->where('created_at', '>=', now()->subDay())
             ->with('partnerIntegration')
@@ -156,10 +163,15 @@ class DoctorIntegrationsController extends Controller
     {
         $doctor = $this->resolveDoctor();
 
+        $connectedPartners = $doctor->partnerIntegrations()
+            ->get(['partner_integrations.id', 'partner_integrations.slug'])
+            ->map(fn (PartnerIntegration $p) => ['id' => $p->id, 'slug' => $p->slug])
+            ->values()
+            ->toArray();
+
         return Inertia::render('Doctor/Integrations/Connect', [
-            'connectedSlugs' => $doctor->partnerIntegrations()
-                ->pluck('partner_integrations.slug')
-                ->toArray(),
+            'availablePartners' => config('integrations.partner_catalog', []),
+            'connectedPartners' => $connectedPartners,
         ]);
     }
 
@@ -169,6 +181,16 @@ class DoctorIntegrationsController extends Controller
         $doctor = $this->resolveDoctor();
         $validated = $request->validated();
         $isReceiveOnly = ($validated['integration_mode'] ?? '') === 'receive_only';
+        $partnerCatalogEntry = collect(config('integrations.partner_catalog', []))
+            ->firstWhere('key', $validated['partner_slug']);
+
+        if (! is_array($partnerCatalogEntry)) {
+            return back()
+                ->withInput()
+                ->withErrors([
+                    'partner_slug' => 'Selecione um parceiro válido do catálogo disponível.',
+                ]);
+        }
 
         $capabilities = [];
         if ($validated['perm_send_orders'] ?? false) {
@@ -193,16 +215,16 @@ class DoctorIntegrationsController extends Controller
                 ]);
         }
 
-        $operation = DB::transaction(function () use ($validated, $doctor, $request, $capabilities, $isReceiveOnly) {
+        $operation = DB::transaction(function () use ($validated, $doctor, $request, $capabilities, $isReceiveOnly, $partnerCatalogEntry) {
             $partner = PartnerIntegration::query()
                 ->where('slug', $validated['partner_slug'])
                 ->first();
 
             if (! $partner) {
                 $partner = PartnerIntegration::create([
-                    'name' => $validated['partner_name'],
+                    'name' => $partnerCatalogEntry['name'] ?? $validated['partner_name'],
                     'slug' => $validated['partner_slug'],
-                    'type' => $validated['partner_type'] ?? PartnerIntegration::TYPE_LABORATORY,
+                    'type' => $partnerCatalogEntry['type'] ?? ($validated['partner_type'] ?? PartnerIntegration::TYPE_LABORATORY),
                     'status' => PartnerIntegration::STATUS_PENDING,
                     'base_url' => $validated['base_url'] ?? null,
                     'fhir_version' => 'R4',
@@ -241,7 +263,6 @@ class DoctorIntegrationsController extends Controller
                     'oauth2' => IntegrationCredential::AUTH_OAUTH2_CLIENT_CREDENTIALS,
                     'api_key' => IntegrationCredential::AUTH_API_KEY,
                     'bearer' => IntegrationCredential::AUTH_BEARER,
-                    'certificate' => IntegrationCredential::AUTH_CERTIFICATE,
                     default => IntegrationCredential::AUTH_API_KEY,
                 };
 
@@ -253,19 +274,36 @@ class DoctorIntegrationsController extends Controller
                 ]);
             }
 
-            $partner->update(['status' => PartnerIntegration::STATUS_ACTIVE]);
-
             return [
+                'partner' => $partner,
                 'partner_name' => $partner->name,
                 'already_connected' => $alreadyConnected,
             ];
         });
 
-        return redirect()->route('doctor.integrations.partners')
-            ->with('success', $operation['already_connected']
-                ? "Parceiro {$operation['partner_name']} já estava conectado para este médico."
-                : "Parceiro {$operation['partner_name']} conectado com sucesso!"
+        $baseUrl = $validated['base_url'] ?? null;
+        $shouldQueueConnectionCheck = ! $isReceiveOnly
+            && ! empty($baseUrl)
+            && ! $operation['partner']->isActive();
+
+        if ($shouldQueueConnectionCheck) {
+            VerifyPartnerConnectionJob::dispatch(
+                partnerId: $operation['partner']->id,
+                baseUrl: $baseUrl,
             );
+        }
+
+        if ($operation['already_connected']) {
+            $flash = ['success' => "Parceiro {$operation['partner_name']} já estava conectado para este médico."];
+        } elseif ($isReceiveOnly) {
+            $flash = ['warning' => "Parceiro {$operation['partner_name']} salvo em modo pendente. Ative a integração após validar o endpoint do parceiro."];
+        } elseif ($shouldQueueConnectionCheck) {
+            $flash = ['success' => "Parceiro {$operation['partner_name']} salvo com sucesso. A verificação da conexão foi enfileirada e o status será atualizado automaticamente."];
+        } else {
+            $flash = ['success' => "Parceiro {$operation['partner_name']} conectado com sucesso!"];
+        }
+
+        return redirect()->route('doctor.integrations.partners')->with($flash);
     }
 
     /** Detalhes de um parceiro — queries consolidadas. */

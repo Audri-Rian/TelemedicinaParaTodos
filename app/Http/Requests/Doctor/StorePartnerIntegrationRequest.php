@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests\Doctor;
 
-use App\Models\PartnerIntegration;
 use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -17,21 +16,21 @@ class StorePartnerIntegrationRequest extends FormRequest
     public function rules(): array
     {
         $isReceiveOnly = $this->input('integration_mode') === 'receive_only';
+        $partnerCatalog = collect(config('integrations.partner_catalog', []));
+        $catalogKeys = $partnerCatalog->pluck('key')->filter()->values()->all();
+        $catalogNames = $partnerCatalog->pluck('name')->filter()->values()->all();
+        $catalogTypes = $partnerCatalog->pluck('type')->filter()->values()->all();
 
         return [
-            'partner_name' => ['required', 'string', 'max:255'],
+            'partner_name' => ['required', 'string', 'max:255', Rule::in($catalogNames)],
             'partner_slug' => [
                 'required',
                 'string',
                 'max:100',
                 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/',
+                Rule::in($catalogKeys),
             ],
-            'partner_type' => ['sometimes', 'string', Rule::in([
-                PartnerIntegration::TYPE_LABORATORY,
-                PartnerIntegration::TYPE_PHARMACY,
-                PartnerIntegration::TYPE_HOSPITAL,
-                PartnerIntegration::TYPE_INSURANCE,
-            ])],
+            'partner_type' => ['sometimes', 'string', Rule::in($catalogTypes)],
             'integration_mode' => ['required', 'string', Rule::in(['full', 'receive_only'])],
             'base_url' => [
                 $isReceiveOnly ? 'nullable' : 'required',
@@ -95,6 +94,9 @@ class StorePartnerIntegrationRequest extends FormRequest
     {
         return [
             'partner_slug.regex' => 'O slug deve conter apenas letras minúsculas, números e hífens.',
+            'partner_slug.in' => 'Selecione um parceiro válido do catálogo disponível.',
+            'partner_name.in' => 'O nome do parceiro deve corresponder ao catálogo disponível.',
+            'partner_type.in' => 'O tipo do parceiro deve corresponder ao catálogo disponível.',
             'base_url.url' => 'A URL base deve ser uma URL válida.',
             'base_url.required' => 'A URL base é obrigatória para integrações completas.',
             'fhir_version.in' => 'A versão FHIR suportada no momento é somente R4.',

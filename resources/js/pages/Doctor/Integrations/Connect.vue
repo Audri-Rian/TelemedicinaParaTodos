@@ -9,7 +9,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import * as doctorRoutes from '@/routes/doctor';
 import * as integrationRoutes from '@/routes/doctor/integrations';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import {
     ArrowLeft,
     ArrowRight,
@@ -30,23 +30,34 @@ import {
     Loader2,
     Lock,
     Plug2,
-    PlusCircle,
     RefreshCw,
     ScanEye,
-    Server,
     Settings,
     ShieldCheck,
     Sparkles,
-    Wifi,
 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 
+interface AvailablePartner {
+    key: string;
+    name: string;
+    description: string;
+    type: string;
+}
+
+interface ConnectedPartner {
+    id: string;
+    slug: string;
+}
+
 interface Props {
-    connectedSlugs?: string[];
+    availablePartners: AvailablePartner[];
+    connectedPartners: ConnectedPartner[];
 }
 
 const props = withDefaults(defineProps<Props>(), {
-    connectedSlugs: () => [],
+    availablePartners: () => [],
+    connectedPartners: () => [],
 });
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -91,32 +102,12 @@ const steps = computed(() => {
     return [
         { num: 1, label: 'Configuração', icon: Settings },
         { num: 2, label: 'Mapeamento', icon: GitBranch },
-        { num: 3, label: 'Sincronização', icon: RefreshCw },
+        { num: 3, label: 'Autenticação', icon: Lock },
         { num: 4, label: 'Revisão', icon: ClipboardCheck },
     ];
 });
 
 const totalSteps = computed(() => steps.value.length);
-
-// Step 1: Parceiros
-const availablePartners = [
-    {
-        key: 'hermes-pardini',
-        name: 'Hermes Pardini',
-        description: 'Líder em medicina diagnóstica e preventiva no Brasil.',
-        type: 'laboratory',
-        available: true,
-    },
-    { key: 'fleury', name: 'Fleury', description: 'Excelência médica e técnica em análises clínicas.', type: 'laboratory', available: true },
-    {
-        key: 'a-plus-medicina',
-        name: 'A+ Medicina',
-        description: 'Atendimento humanizado e resultados precisos.',
-        type: 'laboratory',
-        available: true,
-    },
-    { key: 'custom', name: 'Outro', description: '(em breve)', type: 'other', available: false },
-];
 
 // Inertia form
 const form = useForm({
@@ -138,16 +129,25 @@ const form = useForm({
 });
 
 const selectedPartner = ref<string | null>(null);
-const selectedPartnerName = computed(() => availablePartners.find((p) => p.key === selectedPartner.value)?.name ?? '—');
-const isAlreadyConnected = (slug: string) => props.connectedSlugs.includes(slug);
+const selectedPartnerName = computed(() => props.availablePartners.find((p) => p.key === selectedPartner.value)?.name ?? '—');
+const isAlreadyConnected = (slug: string) => props.connectedPartners.some((p) => p.slug === slug);
+const connectedPartnerId = (slug: string) => props.connectedPartners.find((p) => p.slug === slug)?.id ?? null;
 const isApiKeyAuth = computed(() => form.auth_method === 'api_key');
+
+const handlePartnerCardClick = (key: string) => {
+    if (isAlreadyConnected(key)) {
+        const partnerId = connectedPartnerId(key);
+        if (partnerId) router.visit(integrationRoutes.show({ partner: partnerId }).url);
+        return;
+    }
+    selectPartner(key);
+};
 
 // Step 3
 const authMethods = [
     { key: 'oauth2', label: 'OAuth2 Client Credentials', description: 'Autenticação máquina-a-máquina. Recomendado.', icon: Lock },
     { key: 'api_key', label: 'Chave de API', description: 'Chave fornecida pelo parceiro.', icon: FileKey },
     { key: 'bearer', label: 'Bearer Token', description: 'Token de acesso direto.', icon: KeyRound },
-    { key: 'certificate', label: 'Certificado Digital', description: 'Via certificado ICP-Brasil (e-CNPJ).', icon: Server },
 ];
 
 // Navegação
@@ -174,7 +174,7 @@ const stepTitles = computed<Record<number, { label: string; title: string; subti
             title: 'Configurar conexão',
             subtitle: 'Defina os parâmetros de comunicação e mapeamento de dados com o parceiro.',
         },
-        3: { label: 'SINCRONIZAÇÃO', title: 'Método de autenticação', subtitle: 'Como o parceiro vai se autenticar com o nosso sistema?' },
+        3: { label: 'AUTENTICAÇÃO', title: 'Método de autenticação', subtitle: 'Como o parceiro vai se autenticar com o nosso sistema?' },
         4: { label: 'REVISÃO', title: 'Revisar e confirmar', subtitle: 'Verifique todas as configurações antes de ativar a integração.' },
     };
 });
@@ -198,7 +198,7 @@ const canProceed = computed(() => {
             if (form.auth_method === 'oauth2') return form.client_id.trim() !== '' && form.client_secret.trim() !== '';
             if (form.auth_method === 'api_key') return form.client_id.trim() !== '';
             if (form.auth_method === 'bearer') return form.bearer_token.trim() !== '';
-            return true;
+            return false;
         }
         case 4:
             return true;
@@ -211,7 +211,7 @@ const selectPartner = (key: string) => {
     if (isAlreadyConnected(key)) return;
 
     selectedPartner.value = key;
-    const partner = availablePartners.find((p) => p.key === key);
+    const partner = props.availablePartners.find((p) => p.key === key);
     if (partner) {
         form.partner_name = partner.name;
         form.partner_slug = partner.key;
@@ -228,8 +228,18 @@ const selectMode = (mode: IntegrationMode) => {
         form.perm_webhook = true;
         form.auth_method = '';
         form.base_url = '';
+        form.client_id = '';
+        form.client_secret = '';
+        form.bearer_token = '';
     } else {
         form.perm_send_orders = true;
+        form.perm_receive_results = true;
+        form.perm_webhook = true;
+        form.auth_method = '';
+        form.base_url = '';
+        form.client_id = '';
+        form.client_secret = '';
+        form.bearer_token = '';
     }
 };
 
@@ -386,57 +396,6 @@ const docsUrl = '/docs/interoperabilidade';
                         </div>
                     </CardContent>
                 </Card>
-
-                <!-- Bento Grid de status -->
-                <div class="mt-20 grid w-full grid-cols-1 gap-6 md:grid-cols-3">
-                    <!-- Latência -->
-                    <Card class="gap-0 py-0 text-left shadow-sm">
-                        <CardContent class="flex flex-col gap-4 px-6 py-6">
-                            <div class="flex items-center justify-between">
-                                <Wifi class="size-5 text-primary" stroke-width="2" />
-                                <Badge class="rounded-full bg-green-600 px-2.5 py-0.5 text-[10px] font-bold tracking-wider text-white uppercase">
-                                    Online
-                                </Badge>
-                            </div>
-                            <div>
-                                <h3 class="font-bold text-foreground">Latência</h3>
-                                <p class="text-sm text-muted-foreground">24ms (Excelente)</p>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <!-- Certificado -->
-                    <Card class="gap-0 py-0 text-left shadow-sm">
-                        <CardContent class="flex flex-col gap-4 px-6 py-6">
-                            <div class="flex items-center justify-between">
-                                <ShieldCheck class="size-5 text-primary" stroke-width="2" />
-                                <Badge class="rounded-full bg-green-600 px-2.5 py-0.5 text-[10px] font-bold tracking-wider text-white uppercase">
-                                    Criptografado
-                                </Badge>
-                            </div>
-                            <div>
-                                <h3 class="font-bold text-foreground">Certificado TLS</h3>
-                                <p class="text-sm text-muted-foreground">Válido por 365 dias</p>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <!-- Sync -->
-                    <Card class="gap-0 py-0 text-left shadow-sm">
-                        <CardContent class="flex flex-col gap-4 px-6 py-6">
-                            <div class="flex items-center justify-between">
-                                <RefreshCw class="size-5 text-primary" stroke-width="2" />
-                                <Badge class="rounded-full bg-green-600 px-2.5 py-0.5 text-[10px] font-bold tracking-wider text-white uppercase">
-                                    Ativo
-                                </Badge>
-                            </div>
-                            <div>
-                                <h3 class="font-bold text-foreground">Última Sincronização</h3>
-                                <p class="text-sm text-muted-foreground">Agora mesmo</p>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
 
                 <!-- Seção informativa: Processamento Seguro -->
                 <div class="mt-20 grid w-full grid-cols-1 items-center gap-12 text-left md:grid-cols-2">
@@ -599,17 +558,16 @@ const docsUrl = '/docs/interoperabilidade';
                                     <p class="mb-3 text-sm font-semibold text-foreground">Parceiro</p>
                                     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                                         <button
-                                            v-for="partner in availablePartners.filter((p) => p.available)"
+                                            v-for="partner in props.availablePartners"
                                             :key="partner.key"
                                             type="button"
-                                            @click="selectPartner(partner.key)"
-                                            :disabled="isAlreadyConnected(partner.key)"
+                                            @click="handlePartnerCardClick(partner.key)"
                                             :class="[
                                                 'group relative flex flex-col items-center rounded-xl border bg-card p-6 text-center transition-all duration-200',
                                                 selectedPartner === partner.key
                                                     ? 'border-primary/40 shadow-lg ring-2 ring-primary/20'
                                                     : 'border-border/60 hover:border-primary/20 hover:shadow-lg',
-                                                isAlreadyConnected(partner.key) ? 'cursor-not-allowed opacity-60 grayscale' : '',
+                                                isAlreadyConnected(partner.key) ? 'cursor-pointer opacity-70' : '',
                                             ]"
                                         >
                                             <div class="mb-4 flex size-16 items-center justify-center rounded-lg bg-muted">
@@ -623,12 +581,14 @@ const docsUrl = '/docs/interoperabilidade';
                                             >
                                                 Selecionar <ChevronRight class="size-3.5" />
                                             </div>
-                                            <Badge
-                                                v-if="isAlreadyConnected(partner.key)"
-                                                class="mt-4 rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-bold tracking-wider text-emerald-700 uppercase"
-                                            >
-                                                Já conectado
-                                            </Badge>
+                                            <div v-if="isAlreadyConnected(partner.key)" class="mt-4 flex flex-col items-center gap-1">
+                                                <Badge
+                                                    class="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-bold tracking-wider text-emerald-700 uppercase"
+                                                >
+                                                    Já conectado
+                                                </Badge>
+                                                <span class="text-[10px] text-primary underline">Ver configuração →</span>
+                                            </div>
                                             <div
                                                 v-if="selectedPartner === partner.key"
                                                 class="absolute top-3 right-3 flex size-6 items-center justify-center rounded-full bg-primary text-primary-foreground"
@@ -636,16 +596,6 @@ const docsUrl = '/docs/interoperabilidade';
                                                 <Check class="size-3.5" stroke-width="3" />
                                             </div>
                                         </button>
-
-                                        <div
-                                            class="flex cursor-not-allowed flex-col items-center rounded-xl border border-dashed border-border bg-muted/20 p-6 text-center opacity-50 grayscale"
-                                        >
-                                            <div class="mb-4 flex size-16 items-center justify-center rounded-lg bg-muted">
-                                                <PlusCircle class="size-7 text-muted-foreground" stroke-width="1.5" />
-                                            </div>
-                                            <h3 class="font-bold text-muted-foreground">Outro</h3>
-                                            <p class="mt-1 text-xs text-muted-foreground">(em breve)</p>
-                                        </div>
                                     </div>
                                 </div>
 
@@ -828,6 +778,27 @@ const docsUrl = '/docs/interoperabilidade';
                                         </div>
                                     </button>
                                 </div>
+                                <!-- Orientação sobre obtenção de credenciais -->
+                                <div class="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
+                                    <div class="flex items-start gap-2">
+                                        <HelpCircle class="mt-0.5 size-4 shrink-0 text-blue-600" stroke-width="2" />
+                                        <div class="space-y-1">
+                                            <p class="text-sm font-semibold text-blue-900">
+                                                Como obter credenciais de <strong>{{ selectedPartnerName }}</strong>
+                                            </p>
+                                            <ol class="mt-1 list-inside list-decimal space-y-0.5 text-xs text-blue-800">
+                                                <li>Entre em contato com o suporte técnico do parceiro</li>
+                                                <li>Informe o CNPJ da clínica e solicite acesso de integração FHIR R4</li>
+                                                <li>
+                                                    Você receberá o <code class="font-mono">client_id</code> /
+                                                    <code class="font-mono">client_secret</code> ou API key por e-mail
+                                                </li>
+                                                <li>Use o e-mail de contato técnico preenchido no passo anterior para agilizar o processo</li>
+                                            </ol>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <Transition
                                     enter-active-class="transition-all duration-300 ease-out"
                                     enter-from-class="max-h-0 opacity-0"
@@ -921,6 +892,7 @@ const docsUrl = '/docs/interoperabilidade';
                                 <Card class="gap-0 py-0 shadow-sm">
                                     <CardContent class="divide-y divide-border/60 px-0 py-0">
                                         <label
+                                            v-if="!isReceiveOnly"
                                             class="flex cursor-pointer items-center justify-between px-6 py-4 transition-colors duration-150 hover:bg-muted/30"
                                         >
                                             <div class="flex items-center gap-4">

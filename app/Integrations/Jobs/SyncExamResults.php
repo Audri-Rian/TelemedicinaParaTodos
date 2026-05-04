@@ -35,9 +35,15 @@ class SyncExamResults implements ShouldQueue
     public function handle(): void
     {
         $partners = PartnerIntegration::active()->laboratories()->get();
-        $partners->each(fn (PartnerIntegration $partner) => SyncPartnerExamResultsJob::dispatch($partner->id));
 
-        Log::channel('integration')->info('Sync em lote enfileirado para parceiros ativos', [
+        // Dispatch escalonado: 10s entre parceiros + jitter de até 5s para evitar pico simultâneo.
+        $partners->each(function (PartnerIntegration $partner, int $index) {
+            $delaySeconds = $index * 10 + random_int(0, 5);
+            SyncPartnerExamResultsJob::dispatch($partner->id)
+                ->delay(now()->addSeconds($delaySeconds));
+        });
+
+        Log::channel('integration')->info('Sync em lote escalonado para parceiros ativos', [
             'partners_count' => $partners->count(),
         ]);
     }

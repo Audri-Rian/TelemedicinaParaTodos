@@ -9,6 +9,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 class SyncPartnerExamResultsJob implements ShouldQueue
@@ -18,6 +19,8 @@ class SyncPartnerExamResultsJob implements ShouldQueue
     public int $tries = 3;
 
     public int $timeout = 180;
+
+    public int $backoff = 60;
 
     public function __construct(
         public readonly string $partnerId,
@@ -32,11 +35,25 @@ class SyncPartnerExamResultsJob implements ShouldQueue
             return;
         }
 
-        $received = $service->syncExamResults($partner);
+        $lock = Cache::lock("sync_partner_{$this->partnerId}", 600);
 
-        Log::channel('integration')->info('Sync sob demanda processado em background', [
-            'partner_id' => $partner->id,
-            'received' => $received,
-        ]);
+        if (! $lock->get()) {
+            Log::channel('integration')->info('Sync ignorado: execução anterior ainda em progresso', [
+                'partner_id' => $this->partnerId,
+            ]);
+
+            return;
+        }
+
+        try {
+            $received = $service->syncExamResults($partner);
+
+            Log::channel('integration')->info('Sync processado', [
+                'partner_id' => $partner->id,
+                'received' => $received,
+            ]);
+        } finally {
+            $lock->release();
+        }
     }
 }

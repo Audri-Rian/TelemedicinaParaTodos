@@ -39,6 +39,7 @@ interface Props {
         status: string;
         last_sync_at: string | null;
     }>;
+    nextSyncAt: string | null;
 }
 
 const props = defineProps<Props>();
@@ -59,6 +60,18 @@ const formatLastSync = computed(() => {
 // "primeiro lab ativo" por: props.laboratories.find(l => l.settings?.is_pilot === true).
 // Até lá, qualquer lab ativo é tratado como piloto — é uma aproximação segura no MVP.
 const pilotLab = computed(() => props.laboratories.find((l) => l.status === 'active') ?? null);
+
+const formatNextSync = computed(() => {
+    if (!props.nextSyncAt) return null;
+    const date = new Date(props.nextSyncAt);
+    if (isNaN(date.getTime())) return null;
+    return date.toLocaleString('pt-BR', {
+        weekday: 'long',
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZoneName: 'short',
+    });
+});
 const hasActiveLabs = computed(() => pilotLab.value !== null);
 const needsPilotLabSetup = computed(() => !pilotLab.value);
 const docsUrl = '/docs/interoperabilidade';
@@ -271,10 +284,12 @@ const docsUrl = '/docs/interoperabilidade';
                             <CalendarClock class="size-32" stroke-width="1" />
                         </div>
                         <div class="relative space-y-2">
-                            <h3 class="text-lg font-bold text-primary italic">Próxima Manutenção</h3>
-                            <p class="text-sm leading-relaxed text-muted-foreground">Sincronização agendada para otimização de banco de dados.</p>
+                            <h3 class="text-lg font-bold text-primary italic">Próxima Sincronização</h3>
+                            <p class="text-sm leading-relaxed text-muted-foreground">Próxima execução automática de pull de resultados de exames.</p>
                         </div>
-                        <p class="relative mt-6 text-base font-bold tracking-wide text-primary">DOMINGO, 02:00 AM</p>
+                        <p class="relative mt-6 text-base font-bold tracking-wide text-primary uppercase">
+                            {{ formatNextSync ?? '—' }}
+                        </p>
                     </CardContent>
                 </Card>
             </div>
