@@ -5,18 +5,14 @@ namespace App\Http\Controllers\Doctor;
 use App\Http\Controllers\Controller;
 use App\Models\Appointments;
 use App\Services\MedicalRecordService;
-use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
-use Inertia\Response;
 
 class DoctorConsultationDetailController extends Controller
 {
     public function __construct(
         private readonly MedicalRecordService $medicalRecordService,
-    ) {
-    }
+    ) {}
 
     public function show(Request $request, Appointments $appointment)
     {
@@ -142,12 +138,19 @@ class DoctorConsultationDetailController extends Controller
             ]),
         ];
 
+        $this->medicalRecordService->logAccess(
+            $user,
+            $patient,
+            'view',
+            ['appointment_id' => $appointment->id]
+        );
+
         // Se for requisição AJAX explícita (não do Inertia), retornar JSON
         // O Inertia sempre envia o header X-Inertia, então verificamos se NÃO é Inertia
         $isInertiaRequest = $request->header('X-Inertia') !== null || $request->header('X-Inertia-Version') !== null;
-        
+
         // Só retornar JSON se for AJAX explícito E não for Inertia E quiser JSON
-        if (!$isInertiaRequest && $request->ajax() && $request->wantsJson()) {
+        if (! $isInertiaRequest && $request->ajax() && $request->wantsJson()) {
             return response()->json([
                 'appointment' => $consultationData,
                 'patient' => $patientSummary,
@@ -161,8 +164,8 @@ class DoctorConsultationDetailController extends Controller
             'recent_consultations' => $recentConsultations,
             'mode' => $isInProgress ? 'in_progress' : ($isCompleted ? 'completed' : 'scheduled'),
             'elapsed_time' => $elapsedTime,
-            'can_edit' => true, // Sempre permitir edição
-            'can_complement' => true, // Sempre permitir complementação
+            'can_edit' => $isInProgress,
+            'can_complement' => $isCompleted,
         ]);
     }
 
@@ -171,7 +174,7 @@ class DoctorConsultationDetailController extends Controller
         $this->authorize('start', $appointment);
 
         $user = $request->user();
-        if ($appointment->status !== Appointments::STATUS_SCHEDULED && 
+        if ($appointment->status !== Appointments::STATUS_SCHEDULED &&
             $appointment->status !== Appointments::STATUS_RESCHEDULED) {
             return back()->withErrors(['status' => 'Apenas consultas agendadas podem ser iniciadas.']);
         }
@@ -202,14 +205,15 @@ class DoctorConsultationDetailController extends Controller
             'diagnosis' => ['nullable', 'string', 'max:500'],
             'cid10' => ['nullable', 'string', 'max:10'],
             'instructions' => ['nullable', 'string', 'max:2000'],
+            'notes' => ['nullable', 'string', 'max:5000'],
         ]);
 
         $metadata = $appointment->metadata ?? [];
-        $metadata = array_merge($metadata, $validated);
+        $metadata = array_merge($metadata, array_diff_key($validated, ['notes' => null]));
 
         $appointment->update([
             'metadata' => $metadata,
-            'notes' => $request->input('notes'),
+            'notes' => $validated['notes'] ?? $appointment->notes,
         ]);
 
         $appointment->logEvent('draft_saved', [
@@ -251,7 +255,7 @@ class DoctorConsultationDetailController extends Controller
             $errors['diagnosis'] = 'Diagnóstico é obrigatório.';
         }
 
-        if (!empty($errors)) {
+        if (! empty($errors)) {
             return back()->withErrors($errors);
         }
 
@@ -297,7 +301,7 @@ class DoctorConsultationDetailController extends Controller
         ]);
 
         $metadata = $appointment->metadata ?? [];
-        if (!empty($validated['complementary_notes'])) {
+        if (! empty($validated['complementary_notes'])) {
             $metadata['complementary_notes'] = $validated['complementary_notes'];
             $metadata['complementary_notes_added_at'] = now()->toIso8601String();
             $metadata['complementary_notes_added_by'] = $user->id;
@@ -329,4 +333,3 @@ class DoctorConsultationDetailController extends Controller
         );
     }
 }
-

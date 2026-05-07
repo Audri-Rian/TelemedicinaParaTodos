@@ -7,20 +7,21 @@ use App\Models\Patient;
 use App\Services\MedicalRecordService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class MedicalRecordDocumentController extends Controller
 {
     public function __construct(
         private readonly MedicalRecordService $medicalRecordService,
-    ) {
-    }
+    ) {}
 
     public function store(Request $request): RedirectResponse
     {
         $patient = $request->user()?->patient;
 
-        if (!$patient) {
+        if (! $patient) {
             abort(403, 'Perfil de paciente não encontrado.');
         }
 
@@ -37,7 +38,7 @@ class MedicalRecordDocumentController extends Controller
         $this->authorize('uploadDocument', $patient);
 
         $validated = $request->validate([
-            'file' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:' . config('telemedicine.uploads.medical_document_max_kb', 10240)],
+            'file' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:'.config('telemedicine.uploads.medical_document_max_kb', 10240)],
             'category' => ['required', Rule::in([
                 MedicalDocument::CATEGORY_EXAM,
                 MedicalDocument::CATEGORY_PRESCRIPTION,
@@ -46,7 +47,7 @@ class MedicalRecordDocumentController extends Controller
             ])],
             'name' => ['nullable', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:1000'],
-            'appointment_id' => ['nullable', 'exists:appointments,id'],
+            'appointment_id' => ['nullable', Rule::exists('appointments', 'id')->where('patient_id', $patient->id)],
             'visibility' => ['nullable', Rule::in([
                 MedicalDocument::VISIBILITY_PATIENT,
                 MedicalDocument::VISIBILITY_DOCTOR,
@@ -55,7 +56,7 @@ class MedicalRecordDocumentController extends Controller
         ]);
 
         $file = $request->file('file');
-        $path = $file->store("medical-records/uploads/{$patient->id}", 'public');
+        $path = $file->store("medical-records/uploads/{$patient->id}", 'local');
 
         $document = MedicalDocument::create([
             'patient_id' => $patient->id,
@@ -83,5 +84,26 @@ class MedicalRecordDocumentController extends Controller
 
         return back()->with('status', 'Documento enviado com sucesso.');
     }
-}
 
+    public function download(Request $request, MedicalDocument $document): StreamedResponse
+    {
+        $user = $request->user();
+
+        if ($user->isPatient() && $document->patient_id !== $user->patient?->id) {
+            abort(403);
+        }
+
+        if (! Storage::disk('local')->exists($document->file_path)) {
+            abort(404);
+        }
+
+        $this->medicalRecordService->logAccess(
+            $user,
+            $document->patient,
+            'download',
+            ['document_id' => $document->id]
+        );
+
+        return Storage::disk('local')->download($document->file_path, $document->name);
+    }
+}

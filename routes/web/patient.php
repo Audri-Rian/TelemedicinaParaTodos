@@ -16,6 +16,7 @@ Route::middleware(['auth', 'verified', 'patient'])->prefix('patient')->name('pat
     Route::get('medical-records', [App\Http\Controllers\Patient\PatientMedicalRecordController::class, 'index'])->name('medical-records');
     Route::post('medical-records/export', [App\Http\Controllers\Patient\PatientMedicalRecordController::class, 'export'])->middleware('throttle:5,1')->name('medical-records.export');
     Route::post('medical-records/documents', [App\Http\Controllers\MedicalRecordDocumentController::class, 'store'])->name('medical-records.documents.store');
+    Route::get('medical-records/documents/{document}/download', [App\Http\Controllers\MedicalRecordDocumentController::class, 'download'])->name('medical-records.documents.download');
 
     // Onboarding
     Route::post('tour/completed', [App\Http\Controllers\Patient\OnboardingController::class, 'completeTour'])->name('tour.completed');
