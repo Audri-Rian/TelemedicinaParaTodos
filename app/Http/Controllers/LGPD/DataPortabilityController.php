@@ -34,11 +34,11 @@ class DataPortabilityController extends Controller
 
         // Gerar arquivo
         $filePath = $this->lgpdService->generateDataExportFile($user);
-        $data = json_decode(Storage::disk('local')->get($filePath), true);
+        $data = json_decode(Storage::disk(config('telemedicine.medical_records.lgpd_exports_disk'))->get($filePath), true);
 
         return response()->streamDownload(function () use ($data) {
             echo json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-        }, "dados_pessoais_{$user->id}_" . now()->format('Y-m-d') . '.json', [
+        }, "dados_pessoais_{$user->id}_".now()->format('Y-m-d').'.json', [
             'Content-Type' => 'application/json',
         ]);
     }

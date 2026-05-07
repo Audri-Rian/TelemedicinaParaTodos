@@ -37,6 +37,15 @@ class MedicalRecordDocumentController extends Controller
     {
         $this->authorize('uploadDocument', $patient);
 
+        $allowedVisibility = [
+            MedicalDocument::VISIBILITY_PATIENT,
+            MedicalDocument::VISIBILITY_SHARED,
+        ];
+
+        if ($request->user()?->isDoctor()) {
+            $allowedVisibility[] = MedicalDocument::VISIBILITY_DOCTOR;
+        }
+
         $validated = $request->validate([
             'file' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:'.config('telemedicine.uploads.medical_document_max_kb', 10240)],
             'category' => ['required', Rule::in([
@@ -48,15 +57,12 @@ class MedicalRecordDocumentController extends Controller
             'name' => ['nullable', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:1000'],
             'appointment_id' => ['nullable', Rule::exists('appointments', 'id')->where('patient_id', $patient->id)],
-            'visibility' => ['nullable', Rule::in([
-                MedicalDocument::VISIBILITY_PATIENT,
-                MedicalDocument::VISIBILITY_DOCTOR,
-                MedicalDocument::VISIBILITY_SHARED,
-            ])],
+            'visibility' => ['nullable', Rule::in($allowedVisibility)],
         ]);
 
         $file = $request->file('file');
-        $path = $file->store("medical-records/uploads/{$patient->id}", 'local');
+        $medicalRecordsDisk = config('telemedicine.medical_records.disk');
+        $path = $file->store("medical-records/uploads/{$patient->id}", $medicalRecordsDisk);
 
         $document = MedicalDocument::create([
             'patient_id' => $patient->id,
@@ -89,11 +95,33 @@ class MedicalRecordDocumentController extends Controller
     {
         $user = $request->user();
 
-        if ($user->isPatient() && $document->patient_id !== $user->patient?->id) {
+        if (! $user) {
             abort(403);
         }
 
-        if (! Storage::disk('local')->exists($document->file_path)) {
+        if ($user->isPatient()) {
+            if ($document->patient_id !== $user->patient?->id) {
+                abort(403);
+            }
+
+            if ($document->visibility === MedicalDocument::VISIBILITY_DOCTOR) {
+                abort(403);
+            }
+        } elseif ($user->isDoctor()) {
+            if ($document->doctor_id !== $user->doctor?->id) {
+                abort(403);
+            }
+
+            if ($document->visibility === MedicalDocument::VISIBILITY_PATIENT) {
+                abort(403);
+            }
+        } else {
+            abort(403);
+        }
+
+        $medicalRecordsDisk = config('telemedicine.medical_records.disk');
+
+        if (! Storage::disk($medicalRecordsDisk)->exists($document->file_path)) {
             abort(404);
         }
 
@@ -104,6 +132,6 @@ class MedicalRecordDocumentController extends Controller
             ['document_id' => $document->id]
         );
 
-        return Storage::disk('local')->download($document->file_path, $document->name);
+        return Storage::disk($medicalRecordsDisk)->download($document->file_path, $document->name);
     }
 }

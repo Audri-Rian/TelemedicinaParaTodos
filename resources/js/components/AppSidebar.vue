@@ -24,7 +24,6 @@ import {
     Bug,
     Building2,
     Calendar,
-    CalendarClock,
     FileClock,
     FileText,
     History,
@@ -55,13 +54,9 @@ const doctorNavItems = computed<NavItem[]>(() => [
     },
     {
         title: 'Agenda',
-        href: doctorRoutes.appointments(),
+        href: doctorRoutes.schedule(),
         icon: Calendar,
-    },
-    {
-        title: 'Disponibilidade',
-        href: doctorRoutes.availability(),
-        icon: CalendarClock,
+        activePathPrefix: doctorRoutes.schedule().url,
     },
     {
         title: 'Pacientes',

@@ -5,8 +5,8 @@ use Illuminate\Support\Facades\Route;
 // Rotas para Médicos
 Route::middleware(['auth', 'verified', 'doctor'])->prefix('doctor')->name('doctor.')->group(function () {
     Route::get('dashboard', [App\Http\Controllers\Doctor\DoctorDashboardController::class, 'index'])->name('dashboard');
-    Route::get('appointments', [App\Http\Controllers\Doctor\DoctorAppointmentsController::class, 'index'])->name('appointments');
-    Route::get('availability', [App\Http\Controllers\Doctor\DoctorAvailabilityController::class, 'index'])->name('availability');
+    Route::redirect('appointments', '/doctor/schedule?tab=configure')->name('appointments');
+    Route::redirect('availability', '/doctor/schedule?tab=overview')->name('availability');
     Route::get('consultations', [App\Http\Controllers\Doctor\DoctorConsultationsController::class, 'index'])->name('consultations');
     Route::get('consultations/{appointment}', [App\Http\Controllers\Doctor\DoctorConsultationDetailController::class, 'show'])->name('consultations.detail');
     Route::post('consultations/{appointment}/start', [App\Http\Controllers\Doctor\DoctorConsultationDetailController::class, 'start'])->middleware('throttle:10,1')->name('consultations.detail.start');
@@ -46,7 +46,7 @@ Route::middleware(['auth', 'verified', 'doctor'])->prefix('doctor')->name('docto
     Route::post('patients/{patient}/medical-record/consultations/pdf', [App\Http\Controllers\Doctor\DoctorPatientMedicalRecordController::class, 'generateConsultationPdf'])->name('patients.medical-record.consultations.pdf');
 
     // Agenda do médico
-    Route::get('schedule', [App\Http\Controllers\Doctor\DoctorScheduleController::class, 'redirect'])->name('schedule');
+    Route::get('schedule', [App\Http\Controllers\Doctor\DoctorScheduleController::class, 'index'])->name('schedule');
     Route::get('doctors/{doctor}/schedule', [App\Http\Controllers\Doctor\DoctorScheduleController::class, 'show'])->name('schedule.show');
     Route::post('doctors/{doctor}/schedule/save', [App\Http\Controllers\Doctor\DoctorScheduleController::class, 'save'])->name('schedule.save');
 

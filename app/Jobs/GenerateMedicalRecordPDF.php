@@ -22,15 +22,26 @@ class GenerateMedicalRecordPDF implements ShouldQueue
     use Queueable;
     use SerializesModels;
 
+    public int $tries = 3;
+
+    public int $timeout = 120;
+
     /**
-     * @param array<string, mixed> $filters
+     * @return array<int, int>
+     */
+    public function backoff(): array
+    {
+        return [60, 300, 900];
+    }
+
+    /**
+     * @param  array<string, mixed>  $filters
      */
     public function __construct(
         private readonly Patient $patient,
         private readonly User $requester,
         private readonly array $filters = [],
-    ) {
-    }
+    ) {}
 
     /**
      * Execute the job.
@@ -41,7 +52,7 @@ class GenerateMedicalRecordPDF implements ShouldQueue
 
         $pdf = Pdf::loadView('pdf.medical-record', $payload)->setPaper('a4');
 
-        $disk = Storage::disk('public');
+        $disk = Storage::disk(config('telemedicine.medical_records.disk'));
         $filename = sprintf('medical-record-%s.pdf', now()->format('YmdHis'));
         $path = "medical-records/exports/{$this->patient->id}/{$filename}";
 

@@ -14,7 +14,7 @@ const props = defineProps<{
 
 const { getInitials } = useInitials();
 const { formatDate, formatGender } = useFormatters();
-const { exportForm, exportRecord, flashStatus, exportError } = useMedicalRecordExport(props.filtersState);
+const { isExporting, exportRecord, flashStatus, exportError } = useMedicalRecordExport(props.filtersState);
 </script>
 
 <template>
@@ -51,14 +51,10 @@ const { exportForm, exportRecord, flashStatus, exportError } = useMedicalRecordE
             </div>
 
             <div class="space-y-2">
-                <Button
-                    class="h-11 w-full bg-[#0f6e78] font-black text-white hover:bg-[#0a4f57]"
-                    :disabled="exportForm.processing"
-                    @click="exportRecord"
-                >
-                    <Loader2 v-if="exportForm.processing" class="mr-2 h-4 w-4 animate-spin" />
+                <Button class="h-11 w-full bg-[#0f6e78] font-black text-white hover:bg-[#0a4f57]" :disabled="isExporting" @click="exportRecord">
+                    <Loader2 v-if="isExporting" class="mr-2 h-4 w-4 animate-spin" />
                     <Download v-else class="mr-2 h-4 w-4" />
-                    Exportar PDF
+                    {{ isExporting ? 'Solicitando...' : 'Solicitar exportação PDF' }}
                 </Button>
                 <p v-if="flashStatus" class="text-xs font-semibold text-emerald-700">{{ flashStatus }}</p>
                 <p v-if="exportError" class="flex items-center gap-1 text-xs font-semibold text-rose-700">

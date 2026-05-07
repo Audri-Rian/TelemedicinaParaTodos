@@ -199,6 +199,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Storage
+    |--------------------------------------------------------------------------
+    |
+    | Discos por tipo de arquivo. Use discos privados para dados médicos/LGPD.
+    |
+    */
+
+    'storage' => [
+        'public_images_disk' => env('PUBLIC_IMAGES_DISK', 'public'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Medical Records (Prontuário)
     |--------------------------------------------------------------------------
     |
@@ -208,6 +221,12 @@ return [
     */
 
     'medical_records' => [
+        // Disco privado para documentos clínicos, prontuários, PDFs e uploads médicos.
+        'disk' => env('MEDICAL_RECORDS_DISK', 'local'),
+
+        // Disco privado para exportações de dados pessoais LGPD.
+        'lgpd_exports_disk' => env('LGPD_EXPORTS_DISK', env('MEDICAL_RECORDS_DISK', 'local')),
+
         // Dias padrão de validade de prescrição quando valid_until não informado.
         // MedicalRecordService::createPrescription: now()->addDays(30).
         'prescription_default_validity_days' => (int) env('PRESCRIPTION_DEFAULT_VALIDITY_DAYS', 30),
@@ -224,6 +243,10 @@ return [
 
         // Tamanho do código de verificação de atestado médico. MedicalRecordService::generateVerificationCode.
         'verification_code_length' => (int) env('MEDICAL_CERTIFICATE_VERIFICATION_CODE_LENGTH', 10),
+
+        // Conexão/fila usadas na geração assíncrona de exportação de prontuário.
+        'export_queue_connection' => env('MEDICAL_RECORD_EXPORT_QUEUE_CONNECTION', env('QUEUE_CONNECTION', 'database')),
+        'export_queue_name' => env('MEDICAL_RECORD_EXPORT_QUEUE_NAME', 'default'),
     ],
 
     /*

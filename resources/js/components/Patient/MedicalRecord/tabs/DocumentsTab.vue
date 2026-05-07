@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useMedicalRecordDocument } from '@/composables/Patient/useMedicalRecordDocument';
 import { useFormatters } from '@/composables/useFormatters';
+import patientMedicalRecordRoutes from '@/routes/patient/medical-records';
 import type { Appointment, MedicalDocument } from '@/types/medical-records';
 import { Link } from '@inertiajs/vue3';
 import { Download, Loader2, Upload } from 'lucide-vue-next';
@@ -29,7 +30,6 @@ const documentCategories = [
 
 const visibilityOptions = [
     { id: 'patient', label: 'Paciente' },
-    { id: 'doctor', label: 'Médico' },
     { id: 'shared', label: 'Compartilhado' },
 ];
 </script>
@@ -117,7 +117,7 @@ const visibilityOptions = [
                 </p>
                 <p v-if="document.description" class="mt-3 text-sm font-medium text-gray-600">{{ document.description }}</p>
                 <Link
-                    :href="`/patient/medical-records/documents/${document.id}/download`"
+                    :href="patientMedicalRecordRoutes.documents.download.url({ document: document.id })"
                     class="mt-4 inline-flex items-center font-black text-[#0f6e78] hover:underline"
                 >
                     <Download class="mr-1 h-4 w-4" />

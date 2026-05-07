@@ -2,12 +2,12 @@
 
 namespace App\Services;
 
-use App\Models\User;
 use App\Models\Consent;
 use App\Models\DataAccessLog;
+use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-use Carbon\Carbon;
 
 /**
  * Service para operações relacionadas à LGPD
@@ -159,10 +159,11 @@ class LGPDService
     public function generateDataExportFile(User $user): string
     {
         $data = $this->exportUserData($user);
-        $filename = "user_data_{$user->id}_" . now()->format('Y-m-d_His') . '.json';
+        $filename = "user_data_{$user->id}_".now()->format('Y-m-d_His').'.json';
         $path = "lgpd_exports/{$filename}";
 
-        Storage::disk('local')->put($path, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+        Storage::disk(config('telemedicine.medical_records.lgpd_exports_disk'))
+            ->put($path, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
 
         return $path;
     }
@@ -208,7 +209,7 @@ class LGPDService
 
                 return true;
             } catch (\Exception $e) {
-                \Log::error('Erro ao excluir dados do usuário: ' . $e->getMessage());
+                \Log::error('Erro ao excluir dados do usuário: '.$e->getMessage());
                 throw $e;
             }
         });
@@ -254,4 +255,3 @@ class LGPDService
         ];
     }
 }
-

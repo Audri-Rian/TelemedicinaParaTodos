@@ -974,7 +974,7 @@ class MedicalRecordService
         $filename = sprintf('consultation-%s.pdf', $timestamp->format('YmdHis'));
         $path = "medical-records/consultations/{$appointment->patient_id}/{$filename}";
 
-        $disk = Storage::disk('local');
+        $disk = Storage::disk(config('telemedicine.medical_records.disk'));
         $disk->put($path, $pdf->output());
         $fileSize = $disk->size($path);
 
@@ -1014,7 +1014,7 @@ class MedicalRecordService
         $filename = sprintf('medical-record-%s.pdf', $timestamp->format('YmdHis'));
         $path = "medical-records/exports/{$patient->id}/{$filename}";
 
-        $disk = Storage::disk('local');
+        $disk = Storage::disk(config('telemedicine.medical_records.disk'));
         $disk->put($path, $pdf->output());
         $fileSize = $disk->size($path);
 
@@ -1062,7 +1062,7 @@ class MedicalRecordService
         $filename = sprintf('certificate-%s.pdf', $timestamp->format('YmdHis'));
         $path = "medical-records/certificates/{$certificate->patient_id}/{$filename}";
 
-        $disk = Storage::disk('local');
+        $disk = Storage::disk(config('telemedicine.medical_records.disk'));
         $disk->put($path, $pdf->output());
         MedicalDocument::create([
             'patient_id' => $certificate->patient_id,

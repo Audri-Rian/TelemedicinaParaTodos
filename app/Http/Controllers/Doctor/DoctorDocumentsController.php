@@ -11,6 +11,7 @@ use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -138,9 +139,7 @@ class DoctorDocumentsController extends Controller
             abort(403);
         }
 
-        $disk = \Storage::disk('local')->exists($document->file_path) ? 'local' : 'public';
-
-        return \Storage::disk($disk)->download($document->file_path, $document->name);
+        return Storage::disk(config('telemedicine.medical_records.disk'))->download($document->file_path, $document->name);
     }
 
     private function sexLabel(?string $gender): ?string

@@ -94,7 +94,7 @@ class DoctorPatientMedicalRecordController extends Controller
             'filters' => $filters,
         ]);
 
-        return Storage::disk('local')->download($document['path'], $document['filename']);
+        return Storage::disk(config('telemedicine.medical_records.disk'))->download($document['path'], $document['filename']);
     }
 
     public function storeDiagnosis(StoreDiagnosisRequest $request, Patient $patient)
@@ -186,7 +186,7 @@ class DoctorPatientMedicalRecordController extends Controller
 
         $document = $this->medicalRecordService->generateConsultationPdf($appointment, $request->user());
 
-        return Storage::disk('local')->download($document['path'], $document['filename']);
+        return Storage::disk(config('telemedicine.medical_records.disk'))->download($document['path'], $document['filename']);
     }
 
     private function extractFilters(Request $request): array
