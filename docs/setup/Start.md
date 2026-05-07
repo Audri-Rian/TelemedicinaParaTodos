@@ -7,18 +7,18 @@ Este guia irá te ajudar a configurar e executar o projeto Telemedicina para Tod
 Antes de começar, certifique-se de ter instalado:
 
 - **PHP 8.2+** com as seguintes extensões:
-  - BCMath PHP Extension
-  - Ctype PHP Extension
-  - cURL PHP Extension
-  - DOM PHP Extension
-  - Fileinfo PHP Extension
-  - JSON PHP Extension
-  - Mbstring PHP Extension
-  - OpenSSL PHP Extension
-  - PCRE PHP Extension
-  - PDO PHP Extension
-  - Tokenizer PHP Extension
-  - XML PHP Extension
+    - BCMath PHP Extension
+    - Ctype PHP Extension
+    - cURL PHP Extension
+    - DOM PHP Extension
+    - Fileinfo PHP Extension
+    - JSON PHP Extension
+    - Mbstring PHP Extension
+    - OpenSSL PHP Extension
+    - PCRE PHP Extension
+    - PDO PHP Extension
+    - Tokenizer PHP Extension
+    - XML PHP Extension
 
 - **Composer 2.0+** - Gerenciador de dependências PHP
 - **Node.js 18+** e **npm** - Para dependências JavaScript
@@ -67,6 +67,13 @@ SESSION_LIFETIME=120
 ```
 
 Use `BROADCAST_CONNECTION=reverb` e preencha as variáveis `REVERB_*` no `.env` se quiser notificações/WebSocket em tempo real. Use `CACHE_STORE=redis` e `QUEUE_CONNECTION=redis` se tiver Redis instalado.
+
+Para organização por domínio, use também os templates:
+
+- `.env.telemedicine.example` (núcleo da plataforma)
+- `.env.integrations.example` (FHIR/RNDS/filas/circuit breaker)
+
+Esses arquivos são **referência**; em runtime mantenha um único `.env` por ambiente.
 
 ### 4. Gere a Chave da Aplicação
 
@@ -172,6 +179,7 @@ php artisan tinker
 ## 🚨 Solução de Problemas
 
 ### Erro de Permissões
+
 Se encontrar problemas de permissão:
 
 ```bash
@@ -179,6 +187,7 @@ chmod -R 755 storage bootstrap/cache
 ```
 
 ### Erro de Extensões PHP
+
 Verifique se todas as extensões necessárias estão instaladas:
 
 ```bash
@@ -186,6 +195,7 @@ php -m | grep -E "(bcmath|ctype|curl|dom|fileinfo|json|mbstring|openssl|pcre|pdo
 ```
 
 ### Erro de Composer
+
 Se o Composer falhar, tente:
 
 ```bash
