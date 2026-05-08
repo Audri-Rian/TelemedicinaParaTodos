@@ -2,8 +2,8 @@
 
 namespace App\Services;
 
-use App\Models\Appointments;
 use App\Models\AppointmentLog;
+use App\Models\Appointments;
 use App\Models\Doctor;
 use App\Models\Patient;
 use App\Models\User;
@@ -31,31 +31,31 @@ class AppointmentService
 
     public function canBeStarted(Appointments $appointment): bool
     {
-        if (!in_array($appointment->status, [Appointments::STATUS_SCHEDULED, Appointments::STATUS_RESCHEDULED])) {
+        if (! in_array($appointment->status, [Appointments::STATUS_SCHEDULED, Appointments::STATUS_RESCHEDULED])) {
             return false;
         }
-        
+
         $leadMinutes = config('telemedicine.appointment.lead_minutes', 10);
         $canStartAt = $appointment->scheduled_at->copy()->subMinutes($leadMinutes);
-        
+
         return Carbon::now() >= $canStartAt;
     }
 
     public function canBeCancelled(Appointments $appointment): bool
     {
-        if (!in_array($appointment->status, [Appointments::STATUS_SCHEDULED, Appointments::STATUS_RESCHEDULED])) {
+        if (! in_array($appointment->status, [Appointments::STATUS_SCHEDULED, Appointments::STATUS_RESCHEDULED])) {
             return false;
         }
-        
+
         $cancelBeforeHours = config('telemedicine.appointment.cancel_before_hours', 2);
         $canCancelUntil = $appointment->scheduled_at->copy()->subHours($cancelBeforeHours);
-        
+
         return Carbon::now() <= $canCancelUntil;
     }
 
     public function start(Appointments $appointment, ?string $userId = null): bool
     {
-        if (!$this->canBeStarted($appointment)) {
+        if (! $this->canBeStarted($appointment)) {
             return false;
         }
 
@@ -100,13 +100,13 @@ class AppointmentService
 
     public function cancel(Appointments $appointment, ?string $reason = null, ?string $userId = null): bool
     {
-        if (!$this->canBeCancelled($appointment)) {
+        if (! $this->canBeCancelled($appointment)) {
             return false;
         }
 
         $appointment->update([
             'status' => Appointments::STATUS_CANCELLED,
-            'notes' => $reason ? ($appointment->notes . "\nCancelado: " . $reason) : $appointment->notes,
+            'notes' => $reason ? ($appointment->notes."\nCancelado: ".$reason) : $appointment->notes,
         ]);
 
         // Criar log de cancelamento
@@ -121,7 +121,7 @@ class AppointmentService
 
     public function markAsNoShow(Appointments $appointment, ?string $userId = null): bool
     {
-        if ($appointment->status !== Appointments::STATUS_SCHEDULED) {
+        if (! in_array($appointment->status, [Appointments::STATUS_SCHEDULED, Appointments::STATUS_RESCHEDULED], true)) {
             return false;
         }
 
@@ -141,12 +141,12 @@ class AppointmentService
 
     public function reschedule(Appointments $appointment, Carbon $newDateTime, ?string $userId = null): bool
     {
-        if (!in_array($appointment->status, [Appointments::STATUS_SCHEDULED, Appointments::STATUS_RESCHEDULED])) {
+        if (! in_array($appointment->status, [Appointments::STATUS_SCHEDULED, Appointments::STATUS_RESCHEDULED])) {
             return false;
         }
 
         // Validar conflito com novo horário
-        if (!$this->validateNoConflict(
+        if (! $this->validateNoConflict(
             $appointment->doctor_id,
             $newDateTime,
             config('telemedicine.appointment.duration_minutes', 30),
@@ -181,18 +181,18 @@ class AppointmentService
     public function create(array $data, User $user): Appointments
     {
         // Validar doctor ativo
-        if (!$this->validateDoctorActive($data['doctor_id'])) {
+        if (! $this->validateDoctorActive($data['doctor_id'])) {
             throw new \Exception('Médico não está ativo.');
         }
 
         // Validar patient completo (deve ter completado segunda etapa de autenticação)
-        if (!$this->validatePatientComplete($data['patient_id'])) {
+        if (! $this->validatePatientComplete($data['patient_id'])) {
             throw new \Exception('Paciente não possui cadastro completo. É necessário completar a segunda etapa de autenticação (contato de emergência) para agendar consultas.');
         }
 
         // Validar conflito de horário
         $duration = config('telemedicine.appointment.duration_minutes', 30);
-        if (!$this->validateNoConflict($data['doctor_id'], Carbon::parse($data['scheduled_at']), $duration)) {
+        if (! $this->validateNoConflict($data['doctor_id'], Carbon::parse($data['scheduled_at']), $duration)) {
             throw new \Exception('Conflito de horário: médico já possui consulta neste período.');
         }
 
@@ -224,7 +224,7 @@ class AppointmentService
         // Se tentar alterar scheduled_at, validar conflito
         if (isset($data['scheduled_at']) && $data['scheduled_at'] !== $appointment->scheduled_at->toIso8601String()) {
             $duration = config('telemedicine.appointment.duration_minutes', 30);
-            if (!$this->validateNoConflict(
+            if (! $this->validateNoConflict(
                 $appointment->doctor_id,
                 Carbon::parse($data['scheduled_at']),
                 $duration,
@@ -293,7 +293,7 @@ class AppointmentService
     {
         $appointment = Appointments::find($appointmentId);
 
-        if (!$appointment) {
+        if (! $appointment) {
             return null;
         }
 
@@ -319,7 +319,7 @@ class AppointmentService
         ?string $excludeAppointmentId = null
     ): bool {
         $duration = $duration ?? config('telemedicine.appointment.duration_minutes', 30);
-        
+
         $startTime = $scheduledAt->copy();
         $endTime = $scheduledAt->copy()->addMinutes($duration);
 
@@ -328,26 +328,31 @@ class AppointmentService
             ->whereIn('status', [
                 Appointments::STATUS_SCHEDULED,
                 Appointments::STATUS_RESCHEDULED,
-                Appointments::STATUS_IN_PROGRESS
+                Appointments::STATUS_IN_PROGRESS,
             ])
             ->where(function ($q) use ($startTime, $endTime, $duration) {
                 // Conflito: appointment existente começa durante o novo período
                 $q->whereBetween('scheduled_at', [$startTime, $endTime])
                   // Conflito: appointment existente termina durante o novo período
-                  ->orWhere(function ($q2) use ($startTime, $duration) {
-                      $q2->where('scheduled_at', '<=', $startTime);
-                      if (DB::getDriverName() === 'sqlite') {
-                          $q2->whereRaw("datetime(scheduled_at, '+' || ? || ' minutes') > ?", [
-                              $duration,
-                              $startTime->toDateTimeString(),
-                          ]);
-                      } else {
-                          $q2->whereRaw('DATE_ADD(scheduled_at, INTERVAL ? MINUTE) > ?', [
-                              $duration,
-                              $startTime->toDateTimeString(),
-                          ]);
-                      }
-                  });
+                    ->orWhere(function ($q2) use ($startTime, $duration) {
+                        $q2->where('scheduled_at', '<=', $startTime);
+                        if (DB::getDriverName() === 'sqlite') {
+                            $q2->whereRaw("datetime(scheduled_at, '+' || ? || ' minutes') > ?", [
+                                $duration,
+                                $startTime->toDateTimeString(),
+                            ]);
+                        } elseif (DB::getDriverName() === 'mysql') {
+                            $q2->whereRaw('DATE_ADD(scheduled_at, INTERVAL ? MINUTE) > ?', [
+                                $duration,
+                                $startTime->toDateTimeString(),
+                            ]);
+                        } else {
+                            $q2->whereRaw("scheduled_at + (? * interval '1 minute') > ?", [
+                                $duration,
+                                $startTime->toDateTimeString(),
+                            ]);
+                        }
+                    });
             });
 
         if ($excludeAppointmentId) {
@@ -363,37 +368,34 @@ class AppointmentService
     public function validateDoctorActive(string $doctorId): bool
     {
         $doctor = Doctor::find($doctorId);
-        
+
         return $doctor && $doctor->status === Doctor::STATUS_ACTIVE;
     }
 
     /**
      * Validar se patient tem cadastro completo
-     * 
+     *
      * Valida se o paciente completou a segunda etapa de autenticação:
      * - Primeira etapa: email, senha, gênero, data de nascimento, telefone
      * - Segunda etapa: contato de emergência (obrigatório após primeira etapa)
-     * 
-     * @param string $patientId
-     * @return bool
      */
     public function validatePatientComplete(string $patientId): bool
     {
         $patient = Patient::find($patientId);
-        
-        if (!$patient) {
+
+        if (! $patient) {
             return false;
         }
 
         // Verificar campos da primeira etapa (obrigatórios no registro inicial)
-        $firstStageComplete = !empty($patient->date_of_birth) && 
-                             !empty($patient->phone_number) &&
-                             !empty($patient->gender);
+        $firstStageComplete = ! empty($patient->date_of_birth) &&
+                             ! empty($patient->phone_number) &&
+                             ! empty($patient->gender);
 
         // Verificar campos da segunda etapa (obrigatórios para agendar consultas)
         // Segundo SystemRules.md: "Contato de emergência obrigatório após a primeira etapa de autenticação"
-        $secondStageComplete = !empty($patient->emergency_contact) && 
-                              !empty($patient->emergency_phone);
+        $secondStageComplete = ! empty($patient->emergency_contact) &&
+                              ! empty($patient->emergency_phone);
 
         // Verificar status ativo
         $isActive = $patient->status === Patient::STATUS_ACTIVE;
@@ -429,4 +431,3 @@ class AppointmentService
         return in_array($newStatus, $allowedTransitions[$currentStatus] ?? []);
     }
 }
-

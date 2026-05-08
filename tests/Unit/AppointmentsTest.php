@@ -2,7 +2,6 @@
 
 namespace Tests\Unit;
 
-use Tests\TestCase;
 use App\Models\Appointments;
 use App\Models\Doctor;
 use App\Models\Patient;
@@ -10,30 +9,35 @@ use App\Models\User;
 use App\Services\AppointmentService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 
 class AppointmentsTest extends TestCase
 {
     use RefreshDatabase;
 
     private User $doctorUser;
+
     private User $patientUser;
+
     private Doctor $doctor;
+
     private Patient $patient;
+
     private AppointmentService $service;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         // Criar usuários
         $this->doctorUser = User::factory()->create();
         $this->patientUser = User::factory()->create();
-        
+
         // Criar doctor e patient
         $this->doctor = Doctor::factory()->create(['user_id' => $this->doctorUser->id]);
         $this->patient = Patient::factory()->create(['user_id' => $this->patientUser->id]);
 
-        $this->service = new AppointmentService();
+        $this->service = new AppointmentService;
     }
 
     /** @test */
@@ -191,6 +195,22 @@ class AppointmentsTest extends TestCase
             'patient_id' => $this->patient->id,
             'scheduled_at' => Carbon::now()->subHour(),
             'status' => Appointments::STATUS_SCHEDULED,
+        ]);
+
+        $result = $this->service->markAsNoShow($appointment);
+
+        $this->assertTrue($result);
+        $this->assertEquals(Appointments::STATUS_NO_SHOW, $appointment->fresh()->status);
+    }
+
+    /** @test */
+    public function it_can_mark_rescheduled_appointment_as_no_show()
+    {
+        $appointment = Appointments::create([
+            'doctor_id' => $this->doctor->id,
+            'patient_id' => $this->patient->id,
+            'scheduled_at' => Carbon::now()->subHour(),
+            'status' => Appointments::STATUS_RESCHEDULED,
         ]);
 
         $result = $this->service->markAsNoShow($appointment);

@@ -2,6 +2,9 @@
 
 use App\Integrations\Jobs\ProcessIntegrationQueue;
 use App\Integrations\Jobs\SyncExamResults;
+use App\Jobs\CleanExpiredRedisLocks;
+use App\Jobs\EndZombieVideoCalls;
+use App\Jobs\MarkNoShowAppointments;
 use App\Jobs\SendAppointmentReminders;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -14,6 +17,24 @@ Artisan::command('inspire', function () {
 // Agendar envio de lembretes de consultas (frequência em config/telemedicine.php)
 Schedule::job(new SendAppointmentReminders)
     ->cron(config('telemedicine.reminders.schedule_cron', '0 * * * *'))
+    ->withoutOverlapping()
+    ->onOneServer();
+
+// Manutenção — marcar consultas vencidas como no_show
+Schedule::job(new MarkNoShowAppointments)
+    ->cron(config('telemedicine.maintenance.no_show_cron', '*/5 * * * *'))
+    ->withoutOverlapping()
+    ->onOneServer();
+
+// Manutenção — finalizar chamadas de vídeo presas/zumbis
+Schedule::job(new EndZombieVideoCalls)
+    ->cron(config('telemedicine.maintenance.video_zombie_cleanup_cron', '*/5 * * * *'))
+    ->withoutOverlapping()
+    ->onOneServer();
+
+// Manutenção — limpar locks Redis órfãos configurados
+Schedule::job(new CleanExpiredRedisLocks)
+    ->cron(config('telemedicine.maintenance.redis_lock_cleanup_cron', '*/15 * * * *'))
     ->withoutOverlapping()
     ->onOneServer();
 

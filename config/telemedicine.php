@@ -137,10 +137,10 @@ return [
 
     'video_call' => [
         // Minutos de inatividade para encerrar sala "zumbi".
-        'room_inactive_minutes' => env('VIDEO_ROOM_INACTIVE_MINUTES', 60),
+        'room_inactive_minutes' => (int) env('VIDEO_ROOM_INACTIVE_MINUTES', 60),
 
         // Duração máxima de uma sala ativa (minutos). Evita salas eternas.
-        'room_max_duration_minutes' => env('VIDEO_ROOM_MAX_DURATION_MINUTES', 120),
+        'room_max_duration_minutes' => (int) env('VIDEO_ROOM_MAX_DURATION_MINUTES', 120),
 
         // Janela para iniciar videoconferência: usa appointment.lead_minutes e trailing_minutes.
         // DoctorConsultationsController, PatientVideoCallController.
@@ -195,6 +195,19 @@ return [
 
         // Idade máxima (minutos) de locks órfãos para limpeza. T 11.5.
         'lock_cleanup_max_age_minutes' => env('LOCK_CLEANUP_MAX_AGE_MINUTES', 60),
+
+        // Tolerância após scheduled_at para marcar consulta como no_show.
+        'no_show_grace_minutes' => (int) env('NO_SHOW_GRACE_MINUTES', 15),
+
+        // Frequência das rotinas de manutenção operacional.
+        'no_show_cron' => env('NO_SHOW_CRON', '*/5 * * * *'),
+        'video_zombie_cleanup_cron' => env('VIDEO_ZOMBIE_CLEANUP_CRON', '*/5 * * * *'),
+        'redis_lock_cleanup_cron' => env('REDIS_LOCK_CLEANUP_CRON', '*/15 * * * *'),
+
+        // Apenas locks com metadados próprios são elegíveis para limpeza.
+        'lock_key_patterns' => env('LOCK_KEY_PATTERNS')
+            ? array_map('trim', explode(',', env('LOCK_KEY_PATTERNS')))
+            : ['telemedicine:lock:*', 'appointment_lock:*', 'video_call_lock:*'],
     ],
 
     /*

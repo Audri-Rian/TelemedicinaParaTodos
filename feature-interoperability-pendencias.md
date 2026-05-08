@@ -5,6 +5,9 @@
 - Rebaseline parcial realizado em: 2026-05-04
 - Criterio: apenas itens validados diretamente no codigo foram atualizados
 - Proximo passo: revisar blocos de QA manual em ondas para evitar falso positivo/negativo
+- Rebaseline parcial realizado em: 2026-05-08
+- Escopo desta onda: validacao local por codigo, sem dependencias externas (DATASUS/RNDS, ICP-Brasil, laboratorio piloto, TURN, gateways de pagamento)
+- Achados desta onda: bloco de `/patient/medical-records` tinha itens stale sobre download direto por `/storage`; bloco de `/doctor/history` tinha itens stale de layout antigo (tabela/search/paginacao) apos redesign parcial para timeline
 
 ## Branch: development (+ feature/interoperability)
 
@@ -113,10 +116,10 @@ PENDENCIAS desta pagina (nao bloqueantes para uso interno, mas obrigatorias ante
 
 ### Tasks de manutencao (Kernel/Scheduler)
 
-[ ] Job para marcar no_show em appointments
-[ ] Job para finalizar chamadas de video zumbis
-[ ] Job para limpar locks expirados do Redis
-[ ] Job para enviar lembretes pre-consulta
+[x] Job para marcar no_show em appointments - implementado em `MarkNoShowAppointments`, agendado em `routes/console.php` e coberto por `MaintenanceJobsTest`
+[x] Job para finalizar chamadas de video zumbis - implementado em `EndZombieVideoCalls`, agendado em `routes/console.php` e coberto por `MaintenanceJobsTest`
+[x] Job para limpar locks expirados do Redis - implementado em `CleanExpiredRedisLocks`, com padroes configuraveis em `telemedicine.maintenance.lock_key_patterns` e agendamento em `routes/console.php`
+[x] Job para enviar lembretes pre-consulta - `SendAppointmentReminders` ja existia; agora ficou idempotente por janela (`reminders_sent`) e segue agendado em `routes/console.php`
 
 ### Servicos incompletos
 
@@ -383,16 +386,18 @@ Realizado em: 2026-04-16
 
 ### Historico de Consultas Medico (`/doctor/history`)
 
-[ ] **Refatorar design da pagina** - layout atual (busca + filtros + tabela + paginacao) precisa ser repensado. Avaliar: cards com agrupamento por data/mes, timeline, ou tabela densa com colunas adicionais (duracao, especialidade, valor, anexos). Alinhar com identidade visual do projeto e com a pagina `/doctor/appointments` para coerencia
+[x] **Refatorar design da pagina** - rebaseline 2026-05-08: layout antigo (busca + filtros + tabela + paginacao) nao existe mais. [History.vue](resources/js/pages/Doctor/History.vue) usa timeline agrupada por dia, sidebar de resumo, skeleton, erro e empty state.
 [x] **Controller com dados reais** - confirmado em 2026-05-04: [DoctorHistoryController.php](app/Http/Controllers/Doctor/DoctorHistoryController.php) ja monta `dayGroups` e `documentsSummary` com queries reais
 [x] **Pagina nao esta mais 100% mockada** - confirmado em 2026-05-04: [History.vue](resources/js/pages/Doctor/History.vue) consome props do backend (`dayGroups`, `documentsSummary`)
-[ ] **Search bar sem efeito** - [History.vue:104-109](resources/js/pages/Doctor/History.vue#L104-L109) declara `v-model="searchQuery"` mas nao ha `computed` filtrando `consultations`. Input digita mas lista nao muda. Implementar filtro (idealmente server-side com debounce)
-[ ] **Botoes de filtro sem funcionalidade** - [History.vue:113-121](resources/js/pages/Doctor/History.vue#L113-L121) botoes "Periodo" e "Status" nao tem `@click`, nao abrem dropdown nem aplicam filtro
-[ ] **Botao "Nova Consulta" sem destino** - [History.vue:125](resources/js/pages/Doctor/History.vue#L125) nao tem Link nem handler. Definir se leva para agendamento ou abre modal
-[ ] **Link do paciente aponta para rota inexistente** - [History.vue:157](resources/js/pages/Doctor/History.vue#L157) usa `/doctor/patient/${consultation.id}` (singular, sem "s") que nao existe em [routes/web/doctor.php](routes/web/doctor.php). Alem disso usa `consultation.id` (id da consulta) onde deveria usar `patient.id`. Trocar por `doctorRoutes.patient.details({ patient: consultation.patient_id }).url` ou rota do prontuario
-[ ] **Botao "MoreHorizontal" (acoes) sem implementacao** - [History.vue:182-184](resources/js/pages/Doctor/History.vue#L182-L184) icone de 3 pontinhos sem dropdown/menu. Definir acoes (ver detalhes, ver prontuario, reagendar, exportar PDF)
-[ ] **Paginacao fake** - [History.vue:193-205](resources/js/pages/Doctor/History.vue#L193-L205) textos estaticos "Mostrando 1 a 6 de 25 consultas" hardcoded, botoes "Anterior"/"Proximo" sem `@click` e sem logica. Integrar com Laravel paginator (links/meta do Inertia)
-[ ] **Sem empty state, loading ou error state** - pagina nao trata casos de lista vazia, carregamento ou erro de backend
+[x] **Search bar sem efeito** - rebaseline 2026-05-08: item obsoleto; a search bar foi removida do layout atual.
+[ ] **Botoes de filtro sem funcionalidade** - rebaseline 2026-05-08: chips de periodo/status e botao "Mais filtros" existem no layout atual, mas seguem estaticos/sem `@click` aplicando filtros reais.
+[ ] **Botao "Nova consulta" sem destino** - rebaseline 2026-05-08: botao existe no header e no empty state, mas continua sem Link/handler.
+[x] **Link do paciente aponta para rota inexistente** - rebaseline 2026-05-08: item obsoleto; o link textual antigo foi removido. Nova pendencia relacionada: acao de visualizar consulta usa botao com icone `Eye`, mas ainda nao navega para detalhe/prontuario.
+[ ] **Acao de visualizar consulta sem implementacao** - [History.vue](resources/js/pages/Doctor/History.vue) renderiza botao `Eye` por consulta sem `@click`/Link. Definir destino: detalhe da consulta, prontuario do paciente ou modal.
+[x] **Botao "MoreHorizontal" (acoes) sem implementacao** - rebaseline 2026-05-08: item obsoleto; o botao `MoreHorizontal` nao existe mais no layout atual.
+[x] **Paginacao fake** - rebaseline 2026-05-08: item obsoleto; a paginacao fake foi removida junto com a tabela antiga.
+[x] **Sem empty state, loading ou error state** - rebaseline 2026-05-08: resolvido em [History.vue](resources/js/pages/Doctor/History.vue) com `DataGridSkeleton`, estado de erro e empty state.
+[ ] **Resumo do periodo e pendencias com numeros hardcoded** - rebaseline 2026-05-08: sidebar mostra "142 Atendimentos", "98% Confirmacao", "7 Faltas", "12 min", "3 prontuarios a finalizar", "2 prescricoes em rascunho" e "1 reagendamento aguardando" fixos; conectar ao backend ou remover.
 [ ] **Avaliar sobreposicao com `/doctor/consultations`** - verificar se `/doctor/history` e `/doctor/consultations` mostram informacoes concorrentes e se cabe unificar (semelhante ao merge schedule/availability)
 
 ### Emissao de Documentos Medico (`/doctor/documents`)
@@ -589,23 +594,23 @@ Realizado em: 2026-04-16
 
 #### Bugs criticos de seguranca/privacidade
 
-[ ] **CRITICO LGPD: documentos do prontuario expostos via URL direta sem auth** - confirmado em 2026-05-04: [MedicalRecord.vue](resources/js/pages/Patient/MedicalRecord.vue) ainda gera `getDocumentUrl(path) => '/storage/${path}'`. Mesmo com export em `Storage::disk('local')` no controller, links diretos continuam fora de rota protegida/auditavel. Acoes: (a) migrar arquivos para disk privado, (b) substituir links por rota assinada temporaria, (c) policy de ownership, (d) audit log por download
-[ ] **Visibility "Apenas medico" disponivel no upload do paciente** - [MedicalRecord.vue:682-686](resources/js/pages/Patient/MedicalRecord.vue#L682-L686) lista `{id: 'doctor', label: 'Medico'}` como opcao; paciente que sobe documento e marca essa visibilidade nao consegue mais ver o proprio arquivo. Se a intencao for "compartilhado com o medico" o label esta errado; se for visibilidade exclusiva do medico, paciente nao deveria poder selecionar. Restringir options no frontend conforme `context.mode`
+[x] **CRITICO LGPD: documentos do prontuario expostos via URL direta sem auth** - rebaseline 2026-05-08: resolvido/obsoleto. [DocumentsTab.vue](resources/js/components/Patient/MedicalRecord/tabs/DocumentsTab.vue) usa `patientMedicalRecordRoutes.documents.download`; [MedicalRecordDocumentController.php](app/Http/Controllers/MedicalRecordDocumentController.php) valida ownership/visibilidade, usa storage privado via `FileStorageManager` e registra `logAccess(..., 'download')`. `config/telemedicine.php` define `medical_documents`, `prescriptions` e `certificates` como `visibility => private`.
+[x] **Visibility "Apenas medico" disponivel no upload do paciente** - rebaseline 2026-05-08: resolvido. [DocumentsTab.vue](resources/js/components/Patient/MedicalRecord/tabs/DocumentsTab.vue) expoe apenas `patient` e `shared`; [MedicalRecordDocumentController.php](app/Http/Controllers/MedicalRecordDocumentController.php) so permite `VISIBILITY_DOCTOR` quando `request->user()->isDoctor()`.
 [ ] `**extractFilters` aceita filtros backend que o frontend nao expoe** - confirmado em 2026-05-04: [PatientMedicalRecordController.php](app/Http/Controllers/Patient/PatientMedicalRecordController.php) ainda processa filtros extras sem FormRequest dedicado
-[ ] `**logAccess`so e disparado no view do paciente, nao em download de documentos individuais** - confirmado em 2026-05-04: links de documento ainda usam`/storage/...`direto no frontend, fora de rota auditada
-[ ] **Sem assinatura digital ICP-Brasil no PDF exportado** - ja listado em "Conformidade CFM" mas referenciar aqui: o`generatePdfDocument`do`MedicalRecordService` precisa assinar com e-CNPJ A1 antes de servir. Sem isso, exportacao tem valor legal limitado
+[x] `**logAccess`so e disparado no view do paciente, nao em download de documentos individuais** - rebaseline 2026-05-08: resolvido. [MedicalRecordDocumentController.php](app/Http/Controllers/MedicalRecordDocumentController.php) registra `logAccess(..., 'download', ['document_id' => ...])` antes de entregar o arquivo.
+[ ] **Sem assinatura digital ICP-Brasil no PDF exportado** - FORA DO ESCOPO DESTA ONDA (integracao externa). Ja listado em "Conformidade CFM"; depende de provedor ICP-Brasil/e-CNPJ real.
 
 #### Bugs criticos de funcionamento
 
-[ ] **BUG: export PDF quebra fluxo Inertia** - confirmado em 2026-05-04: [PatientMedicalRecordController.php](app/Http/Controllers/Patient/PatientMedicalRecordController.php) retorna `Storage::disk('local')->download(...)` (BinaryFileResponse), mas [MedicalRecord.vue](resources/js/pages/Patient/MedicalRecord.vue) chama via `exportForm.post` (Inertia useForm). Risco de erro de protocolo Inertia permanece; corrigir para `axios` blob ou fluxo assincrono com job
-[ ] **Rate limit do export e excessivamente restritivo** - confirmado em 2026-05-04: [PatientMedicalRecordController.php](app/Http/Controllers/Patient/PatientMedicalRecordController.php) ainda usa `tooManyAttempts(..., 1)` com janela de 1 hora
+[x] **BUG: export PDF quebra fluxo Inertia** - rebaseline 2026-05-08: resolvido. [PatientMedicalRecordController.php](app/Http/Controllers/Patient/PatientMedicalRecordController.php) enfileira `GenerateMedicalRecordPDF` e retorna JSON `202` quando `expectsJson()`; [useMedicalRecordExport.ts](resources/js/composables/Patient/useMedicalRecordExport.ts) chama `axios.post(..., Accept: application/json)` e exibe status/erro local.
+[ ] **Rate limit do export possivelmente restritivo** - rebaseline 2026-05-08: item antigo dizia `tooManyAttempts(..., 1)`, mas o código atual usa 3 solicitações por hora. Validar com produto se 3/h é adequado para LGPD/UX.
 [ ] **Payload completo carregado em um unico request** - confirmado em 2026-05-04: [MedicalRecordService.php](app/Services/MedicalRecordService.php) continua retornando pacote completo (timeline + consultas + prescricoes + exames + documentos + sinais vitais + metricas)
 [ ] **Filtros aplicados via `replace: true`** - confirmado em 2026-05-04: [MedicalRecord.vue](resources/js/pages/Patient/MedicalRecord.vue) ainda usa `replace: true` em `router.get`
-[ ] **Sem watcher em `filtersState`** - [MedicalRecord.vue:290-294](resources/js/pages/Patient/MedicalRecord.vue#L290-L294) reativo, mas `applyFilters` so dispara em click manual. Se houver botao "Aplicar" sem ele, nao testei, mas se o usuario alterar e mudar de tab, perde
+[x] **Sem watcher em `filtersState`** - rebaseline 2026-05-08: item nao e bug no layout atual; filtros disparam por acao explicita `@apply="applyFilters"` em [MedicalRecord.vue](resources/js/pages/Patient/MedicalRecord.vue), e o composable ainda oferece debounce caso seja reativado no futuro.
 
 #### Bugs e melhorias frontend/UX
 
-[ ] **God-component de 1659 linhas dual-mode (paciente/medico)** - [MedicalRecord.vue](resources/js/pages/Patient/MedicalRecord.vue) tem `isDoctorViewer` ramificado em todo lugar, com forms de medico (diagnosis, prescription, examination, note, certificate, vital_signs) que nunca sao usados quando `mode === 'patient'` mas estao no bundle. Separar em dois componentes (`Patient/MedicalRecord.vue` e `Doctor/PatientMedicalRecord.vue`) compartilhando subcomponentes por tab (`<MedicalTimeline/>`, `<PrescriptionList/>`, etc.). Reduz bundle do paciente em ~70% e elimina branching
+[x] **God-component de 1659 linhas dual-mode (paciente/medico)** - rebaseline 2026-05-08: resolvido em grande parte. Existem [Patient/MedicalRecord.vue](resources/js/pages/Patient/MedicalRecord.vue) e [Doctor/PatientMedicalRecord.vue](resources/js/pages/Doctor/PatientMedicalRecord.vue); a tela do paciente foi quebrada em componentes por header, filtros e tabs em `resources/js/components/Patient/MedicalRecord/`.
 [ ] **Badge "Privada/Compartilhada" em anotacoes para o paciente nao faz sentido** - [MedicalRecord.vue:1564-1569](resources/js/pages/Patient/MedicalRecord.vue#L1564-L1569). Backend ja filtra `is_private=false` para o paciente em [MedicalRecordService.php:355-360](app/Services/MedicalRecordService.php#L355-L360), entao o badge sempre mostra "Compartilhada". Remover o badge da visao do paciente
 [ ] **10 tabs e navegacao excessiva** - paciente comum usa 2-3 secoes (consultas, prescricoes, exames). Avaliar consolidacao: agrupar em "Resumo / Consultas / Documentos & Exames" ou usar barra lateral com agrupamentos
 [ ] **Texto "Historial medico" no header (typo e exposicao)** - [MedicalRecord.vue:721](resources/js/pages/Patient/MedicalRecord.vue#L721) usa "Historial" (espanhol/incomum em PT-BR). Trocar para "Historico medico" ou "Antecedentes". Alem disso, exibir o conteudo completo no header expoe info sensivel (browser cache, print, screen share). Truncar com "Ver mais" toggle
@@ -659,12 +664,12 @@ Realizado em: 2026-04-16
 | **QA Manual - Agenda/Disponibilidade**       | **1**    |
 | **QA Manual - Pacientes Medico**             | **7**    |
 | **QA Manual - Detalhes do Paciente**         | **4**    |
-| **QA Manual - Historico Medico**             | **11**   |
+| **QA Manual - Historico Medico**             | **5**    |
 | **QA Manual - Emissao Documentos**           | **15**   |
 | **QA Manual - Interoperabilidade**           | **24**   |
 | **QA Manual - Pesquisar Medicos (Paciente)** | **23**   |
 | **QA Manual - Agendar Consulta (Paciente)**  | **23**   |
 | **QA Manual - Mensagens (Paciente)**         | **24**   |
 | **QA Manual - Historico (Paciente)**         | **18**   |
-| **QA Manual - Prontuario (Paciente)**        | **27**   |
-| **TOTAL**                                    | **~317** |
+| **QA Manual - Prontuario (Paciente)**        | **21**   |
+| **TOTAL**                                    | **~305** |
