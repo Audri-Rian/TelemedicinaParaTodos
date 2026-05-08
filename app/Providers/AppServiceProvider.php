@@ -11,6 +11,7 @@ use App\Services\MediaGatewayStub;
 use App\Services\Signatures\DigitalSignatureService;
 use App\Services\Signatures\IcpBrasilSignatureDriver;
 use App\Services\Signatures\NullSignatureDriver;
+use App\Support\StorageDomainConfigValidator;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -46,6 +47,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        StorageDomainConfigValidator::validate();
+
         Appointments::observe(AppointmentsObserver::class);
         \App\Models\Prescription::observe(\App\Observers\PrescriptionObserver::class);
         \App\Models\Examination::observe(\App\Observers\ExaminationObserver::class);

@@ -3,30 +3,34 @@
 namespace App\Http\Controllers\Doctor;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Doctor\MedicalRecords\DoctorMedicalRecordFilterRequest;
+use App\Http\Requests\Doctor\MedicalRecords\GenerateConsultationPdfRequest;
 use App\Http\Requests\Doctor\MedicalRecords\StoreClinicalNoteRequest;
 use App\Http\Requests\Doctor\MedicalRecords\StoreDiagnosisRequest;
 use App\Http\Requests\Doctor\MedicalRecords\StoreExaminationRequest;
 use App\Http\Requests\Doctor\MedicalRecords\StoreMedicalCertificateRequest;
 use App\Http\Requests\Doctor\MedicalRecords\StorePrescriptionRequest;
 use App\Http\Requests\Doctor\MedicalRecords\StoreVitalSignRequest;
+use App\Jobs\GenerateMedicalRecordPDF;
 use App\Models\Appointments;
 use App\Models\PartnerIntegration;
 use App\Models\Patient;
+use App\Services\FileStorageManager;
 use App\Services\MedicalRecordService;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\RateLimiter;
-use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
+use Throwable;
 
 class DoctorPatientMedicalRecordController extends Controller
 {
     public function __construct(
         private readonly MedicalRecordService $medicalRecordService,
+        private readonly FileStorageManager $fileStorageManager,
     ) {}
 
-    public function show(Request $request, Patient $patient): Response
+    public function show(DoctorMedicalRecordFilterRequest $request, Patient $patient): Response
     {
         $user = $request->user();
 
@@ -36,7 +40,7 @@ class DoctorPatientMedicalRecordController extends Controller
 
         $this->authorize('view', $patient);
 
-        $filters = $this->extractFilters($request);
+        $filters = $this->extractFilters($request->validated());
         $payload = $this->medicalRecordService->getDoctorPatientMedicalRecord($user->doctor, $patient, $filters);
 
         $this->medicalRecordService->logAccess($user, $patient, 'view', [
@@ -65,7 +69,7 @@ class DoctorPatientMedicalRecordController extends Controller
         return Inertia::render('Doctor/PatientMedicalRecord', $payload);
     }
 
-    public function export(Request $request, Patient $patient)
+    public function export(DoctorMedicalRecordFilterRequest $request, Patient $patient)
     {
         $user = $request->user();
 
@@ -75,7 +79,7 @@ class DoctorPatientMedicalRecordController extends Controller
 
         $this->authorize('export', $patient);
 
-        $filters = $this->extractFilters($request);
+        $filters = $this->extractFilters($request->validated());
 
         $rateLimiterKey = sprintf('medical-record-export:%s:%s', $patient->id, $user->id);
         if (RateLimiter::tooManyAttempts($rateLimiterKey, 1)) {
@@ -86,7 +90,20 @@ class DoctorPatientMedicalRecordController extends Controller
 
         RateLimiter::hit($rateLimiterKey, 3600);
 
-        $document = $this->medicalRecordService->generatePdfDocument($patient, $user, $filters);
+        $queueConnection = config('telemedicine.medical_records.export_queue_connection', config('queue.default'));
+        $queueName = config('telemedicine.medical_records.export_queue_name', 'default');
+
+        try {
+            GenerateMedicalRecordPDF::dispatch($patient, $user, $filters, \App\Models\MedicalDocument::VISIBILITY_DOCTOR)
+                ->onConnection($queueConnection)
+                ->onQueue($queueName);
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return back()->withErrors([
+                'export' => 'Não foi possível solicitar a exportação neste momento. Tente novamente.',
+            ]);
+        }
 
         $this->medicalRecordService->logAccess($user, $patient, 'export', [
             'by' => 'doctor',
@@ -94,7 +111,10 @@ class DoctorPatientMedicalRecordController extends Controller
             'filters' => $filters,
         ]);
 
-        return Storage::disk(config('telemedicine.medical_records.disk'))->download($document['path'], $document['filename']);
+        return back()->with(
+            'status',
+            'Solicitação recebida. Estamos gerando o PDF em segundo plano. O arquivo aparecerá em Histórico de Documentos em instantes.'
+        );
     }
 
     public function storeDiagnosis(StoreDiagnosisRequest $request, Patient $patient)
@@ -175,33 +195,35 @@ class DoctorPatientMedicalRecordController extends Controller
         return back()->with('status', 'Sinais vitais registrados com sucesso.');
     }
 
-    public function generateConsultationPdf(Request $request, Patient $patient)
+    public function generateConsultationPdf(GenerateConsultationPdfRequest $request, Patient $patient)
     {
         $this->authorize('generateConsultationPdf', $patient);
 
         $doctor = $request->user()->doctor;
-        $appointmentId = $request->string('appointment_id');
+        $appointmentId = $request->validated('appointment_id');
         $appointment = $this->resolveAppointment($appointmentId, $patient, $doctor->id);
         $this->authorize('generateConsultationPdf', $appointment);
 
         $document = $this->medicalRecordService->generateConsultationPdf($appointment, $request->user());
 
-        return Storage::disk(config('telemedicine.medical_records.disk'))->download($document['path'], $document['filename']);
+        return $this->fileStorageManager
+            ->disk($document['disk_domain'])
+            ->download($document['path'], $document['filename']);
     }
 
-    private function extractFilters(Request $request): array
+    private function extractFilters(array $validated): array
     {
         return array_filter([
-            'search' => $request->string('search')->toString(),
-            'doctor_id' => $request->string('doctor_id')->toString() ?: null,
-            'date_from' => $request->date('date_from'),
-            'date_to' => $request->date('date_to'),
-            'appointment_status' => $request->input('appointment_status'),
-            'prescription_status' => $request->input('prescription_status'),
-            'examination_status' => $request->input('examination_status'),
-            'examination_type' => $request->input('examination_type'),
-            'document_category' => $request->input('document_category'),
-            'vitals_limit' => $request->integer('vitals_limit'),
+            'search' => $validated['search'] ?? null,
+            'doctor_id' => $validated['doctor_id'] ?? null,
+            'date_from' => $validated['date_from'] ?? null,
+            'date_to' => $validated['date_to'] ?? null,
+            'appointment_status' => $validated['appointment_status'] ?? null,
+            'prescription_status' => $validated['prescription_status'] ?? null,
+            'examination_status' => $validated['examination_status'] ?? null,
+            'examination_type' => $validated['examination_type'] ?? null,
+            'document_category' => $validated['document_category'] ?? null,
+            'vitals_limit' => $validated['vitals_limit'] ?? null,
         ], static function ($value) {
             if (is_array($value)) {
                 return count($value) > 0;

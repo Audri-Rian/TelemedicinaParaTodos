@@ -7,11 +7,11 @@ use App\Http\Requests\Doctor\DoctorDocumentsIndexRequest;
 use App\Models\Appointments;
 use App\Models\MedicalDocument;
 use App\Models\Patient;
+use App\Services\FileStorageManager;
 use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -19,6 +19,12 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class DoctorDocumentsController extends Controller
 {
+    private const MAX_PATIENTS_PER_VIEW = 200;
+
+    public function __construct(
+        private readonly FileStorageManager $fileStorageManager,
+    ) {}
+
     public function index(Request $request): Response
     {
         $doctor = $request->user()->doctor;
@@ -36,6 +42,7 @@ class DoctorDocumentsController extends Controller
             ->select(['id', 'user_id', 'cpf', 'date_of_birth', 'gender'])
             ->with('user:id,name')
             ->whereIn('id', $patientIds)
+            ->limit(self::MAX_PATIENTS_PER_VIEW)
             ->get()
             ->map(fn (Patient $p) => [
                 'id' => $p->id,
@@ -70,6 +77,7 @@ class DoctorDocumentsController extends Controller
             ->select(['id', 'user_id', 'cpf', 'date_of_birth', 'gender'])
             ->with('user:id,name')
             ->whereIn('id', $patientIds)
+            ->limit(self::MAX_PATIENTS_PER_VIEW)
             ->get()
             ->map(fn (Patient $p) => [
                 'id' => $p->id,
@@ -139,7 +147,30 @@ class DoctorDocumentsController extends Controller
             abort(403);
         }
 
-        return Storage::disk(config('telemedicine.medical_records.disk'))->download($document->file_path, $document->name);
+        $domain = $this->resolveDomainByDocument($document);
+
+        return $this->fileStorageManager
+            ->disk($domain)
+            ->download($document->file_path, $document->name);
+    }
+
+    private function resolveDomainByCategory(?string $category): string
+    {
+        return match ($category) {
+            MedicalDocument::CATEGORY_PRESCRIPTION => FileStorageManager::DOMAIN_PRESCRIPTIONS,
+            default => FileStorageManager::DOMAIN_MEDICAL_DOCUMENTS,
+        };
+    }
+
+    private function resolveDomainByDocument(MedicalDocument $document): string
+    {
+        $metadataDomain = data_get($document->metadata, 'storage_domain');
+
+        if (is_string($metadataDomain) && $metadataDomain !== '') {
+            return $metadataDomain;
+        }
+
+        return $this->resolveDomainByCategory($document->category);
     }
 
     private function sexLabel(?string $gender): ?string

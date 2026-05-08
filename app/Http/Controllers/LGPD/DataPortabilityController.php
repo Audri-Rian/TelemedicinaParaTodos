@@ -3,15 +3,17 @@
 namespace App\Http\Controllers\LGPD;
 
 use App\Http\Controllers\Controller;
+use App\Services\FileStorageManager;
 use App\Services\LGPDService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
+use RuntimeException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class DataPortabilityController extends Controller
 {
     public function __construct(
-        private LGPDService $lgpdService
+        private readonly LGPDService $lgpdService,
+        private readonly FileStorageManager $fileStorageManager,
     ) {}
 
     /**
@@ -34,10 +36,21 @@ class DataPortabilityController extends Controller
 
         // Gerar arquivo
         $filePath = $this->lgpdService->generateDataExportFile($user);
-        $data = json_decode(Storage::disk(config('telemedicine.medical_records.lgpd_exports_disk'))->get($filePath), true);
+        $disk = $this->fileStorageManager->disk(FileStorageManager::DOMAIN_LGPD_EXPORTS);
 
-        return response()->streamDownload(function () use ($data) {
-            echo json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        return response()->streamDownload(function () use ($disk, $filePath) {
+            $stream = $disk->readStream($filePath);
+
+            if (! is_resource($stream)) {
+                throw new RuntimeException('Não foi possível abrir o arquivo de exportação.');
+            }
+
+            try {
+                fpassthru($stream);
+            } finally {
+                fclose($stream);
+                $disk->delete($filePath);
+            }
         }, "dados_pessoais_{$user->id}_".now()->format('Y-m-d').'.json', [
             'Content-Type' => 'application/json',
         ]);

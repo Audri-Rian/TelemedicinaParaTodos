@@ -4,13 +4,16 @@ namespace App\Services;
 
 use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Intervention\Image\ImageManager;
 use League\Flysystem\Local\LocalFilesystemAdapter;
 
 class AvatarService
 {
+    public function __construct(
+        private readonly FileStorageManager $fileStorageManager,
+    ) {}
+
     /**
      * Tamanho padrão do avatar (largura e altura)
      */
@@ -58,6 +61,11 @@ class AvatarService
     {
         // Validar arquivo
         $this->validateFile($file);
+        $contents = file_get_contents($file->getRealPath());
+
+        if (! is_string($contents)) {
+            throw new \InvalidArgumentException('Não foi possível ler a imagem enviada.');
+        }
 
         // Criar diretório do usuário se não existir
         $userDir = "avatars/{$userId}";
@@ -67,11 +75,11 @@ class AvatarService
         $path = "{$userDir}/{$filename}";
 
         // Processar e salvar imagem principal
-        $this->processAndSaveImage($file, $path, self::AVATAR_SIZE, self::JPEG_QUALITY);
+        $this->processAndSaveImage($contents, $path, self::AVATAR_SIZE, self::JPEG_QUALITY);
 
         // Criar e salvar thumbnail
         $thumbnailPath = "{$userDir}/thumb_{$filename}";
-        $this->processAndSaveImage($file, $thumbnailPath, self::THUMBNAIL_SIZE, self::THUMBNAIL_QUALITY);
+        $this->processAndSaveImage($contents, $thumbnailPath, self::THUMBNAIL_SIZE, self::THUMBNAIL_QUALITY);
 
         return $path;
     }
@@ -143,7 +151,7 @@ class AvatarService
     /**
      * Processar e salvar imagem usando Intervention Image
      */
-    private function processAndSaveImage(UploadedFile $file, string $path, int $size, int $quality): void
+    private function processAndSaveImage(string $contents, string $path, int $size, int $quality): void
     {
         try {
             // Criar instância do ImageManager
@@ -160,7 +168,7 @@ class AvatarService
             }
 
             // Carregar e processar imagem
-            $image = $manager->read($file->getRealPath());
+            $image = $manager->read($contents);
 
             // Fazer crop e redimensionamento para tamanho quadrado
             // O método cover() faz crop centralizado automaticamente
@@ -236,7 +244,7 @@ class AvatarService
 
     private function publicImagesDisk(): FilesystemAdapter
     {
-        return Storage::disk(config('telemedicine.storage.public_images_disk'));
+        return $this->fileStorageManager->disk(FileStorageManager::DOMAIN_PUBLIC_IMAGES);
     }
 
     /**

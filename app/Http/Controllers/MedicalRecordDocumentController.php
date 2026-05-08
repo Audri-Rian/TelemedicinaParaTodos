@@ -4,10 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\MedicalDocument;
 use App\Models\Patient;
+use App\Services\FileStorageManager;
 use App\Services\MedicalRecordService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -15,6 +15,7 @@ class MedicalRecordDocumentController extends Controller
 {
     public function __construct(
         private readonly MedicalRecordService $medicalRecordService,
+        private readonly FileStorageManager $fileStorageManager,
     ) {}
 
     public function store(Request $request): RedirectResponse
@@ -61,8 +62,12 @@ class MedicalRecordDocumentController extends Controller
         ]);
 
         $file = $request->file('file');
-        $medicalRecordsDisk = config('telemedicine.medical_records.disk');
-        $path = $file->store("medical-records/uploads/{$patient->id}", $medicalRecordsDisk);
+        $domain = $this->resolveDomainByCategory($validated['category']);
+        $diskName = $this->fileStorageManager->diskName($domain);
+        $path = $file->store(
+            $this->fileStorageManager->buildPath($domain, (string) $patient->id),
+            $diskName
+        );
 
         $document = MedicalDocument::create([
             'patient_id' => $patient->id,
@@ -77,6 +82,7 @@ class MedicalRecordDocumentController extends Controller
             'description' => $validated['description'] ?? null,
             'metadata' => [
                 'original_name' => $file->getClientOriginalName(),
+                'storage_domain' => $domain,
             ],
             'visibility' => $validated['visibility'] ?? MedicalDocument::VISIBILITY_SHARED,
         ]);
@@ -119,9 +125,10 @@ class MedicalRecordDocumentController extends Controller
             abort(403);
         }
 
-        $medicalRecordsDisk = config('telemedicine.medical_records.disk');
+        $domain = $this->resolveDomainByDocument($document);
+        $disk = $this->fileStorageManager->disk($domain);
 
-        if (! Storage::disk($medicalRecordsDisk)->exists($document->file_path)) {
+        if (! $disk->exists($document->file_path)) {
             abort(404);
         }
 
@@ -132,6 +139,25 @@ class MedicalRecordDocumentController extends Controller
             ['document_id' => $document->id]
         );
 
-        return Storage::disk($medicalRecordsDisk)->download($document->file_path, $document->name);
+        return $disk->download($document->file_path, $document->name);
+    }
+
+    private function resolveDomainByCategory(string $category): string
+    {
+        return match ($category) {
+            MedicalDocument::CATEGORY_PRESCRIPTION => FileStorageManager::DOMAIN_PRESCRIPTIONS,
+            default => FileStorageManager::DOMAIN_MEDICAL_DOCUMENTS,
+        };
+    }
+
+    private function resolveDomainByDocument(MedicalDocument $document): string
+    {
+        $metadataDomain = data_get($document->metadata, 'storage_domain');
+
+        if (is_string($metadataDomain) && $metadataDomain !== '') {
+            return $metadataDomain;
+        }
+
+        return $this->resolveDomainByCategory($document->category);
     }
 }

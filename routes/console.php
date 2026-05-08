@@ -12,13 +12,31 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 // Agendar envio de lembretes de consultas (frequência em config/telemedicine.php)
-Schedule::job(new SendAppointmentReminders())
-    ->cron(config('telemedicine.reminders.schedule_cron', '0 * * * *'));
+Schedule::job(new SendAppointmentReminders)
+    ->cron(config('telemedicine.reminders.schedule_cron', '0 * * * *'))
+    ->withoutOverlapping()
+    ->onOneServer();
 
 // Interoperabilidade — sync de resultados de exames (pull de laboratórios)
-Schedule::job(new SyncExamResults())
-    ->cron(config('integrations.sync.exam_results_cron', '*/15 * * * *'));
+Schedule::job(new SyncExamResults)
+    ->cron(config('integrations.sync.exam_results_cron', '*/15 * * * *'))
+    ->withoutOverlapping()
+    ->onOneServer();
 
 // Interoperabilidade — processar fila de retry
-Schedule::job(new ProcessIntegrationQueue())
-    ->cron(config('integrations.sync.retry_queue_cron', '*/5 * * * *'));
+Schedule::job(new ProcessIntegrationQueue)
+    ->cron(config('integrations.sync.retry_queue_cron', '*/5 * * * *'))
+    ->withoutOverlapping()
+    ->onOneServer();
+
+// Storage — healthcheck por domínio para monitoramento operacional
+Schedule::command('storage:health-check --fail-on-error')
+    ->cron(config('telemedicine.storage.healthcheck_cron', '*/5 * * * *'))
+    ->withoutOverlapping()
+    ->onOneServer();
+
+// Storage — limpeza automática por retenção (inicialmente lgpd_exports=7 dias)
+Schedule::command('storage:cleanup-expired')
+    ->cron(config('telemedicine.storage.retention_cleanup_cron', '0 2 * * *'))
+    ->withoutOverlapping()
+    ->onOneServer();

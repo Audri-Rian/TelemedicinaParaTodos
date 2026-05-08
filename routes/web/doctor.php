@@ -36,7 +36,7 @@ Route::middleware(['auth', 'verified', 'doctor'])->prefix('doctor')->name('docto
     Route::get('patients/{patient}/details', [App\Http\Controllers\Doctor\PatientDetailsController::class, 'show'])->name('patient.details');
     Route::get('patients/{patient}/medical-record', [App\Http\Controllers\Doctor\DoctorPatientMedicalRecordController::class, 'show'])->name('patients.medical-record');
     Route::post('patients/{patient}/medical-record/export', [App\Http\Controllers\Doctor\DoctorPatientMedicalRecordController::class, 'export'])->middleware('throttle:5,1')->name('patients.medical-record.export');
-    Route::post('patients/{patient}/medical-record/documents', [App\Http\Controllers\MedicalRecordDocumentController::class, 'storeForPatient'])->name('patients.medical-record.documents.store');
+    Route::post('patients/{patient}/medical-record/documents', [App\Http\Controllers\MedicalRecordDocumentController::class, 'storeForPatient'])->middleware('throttle:10,1')->name('patients.medical-record.documents.store');
     Route::post('patients/{patient}/medical-record/diagnoses', [App\Http\Controllers\Doctor\DoctorPatientMedicalRecordController::class, 'storeDiagnosis'])->name('patients.medical-record.diagnoses.store');
     Route::post('patients/{patient}/medical-record/prescriptions', [App\Http\Controllers\Doctor\DoctorPatientMedicalRecordController::class, 'storePrescription'])->name('patients.medical-record.prescriptions.store');
     Route::post('patients/{patient}/medical-record/examinations', [App\Http\Controllers\Doctor\DoctorPatientMedicalRecordController::class, 'storeExamination'])->name('patients.medical-record.examinations.store');

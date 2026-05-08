@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Models\MedicalDocument;
 use App\Models\Patient;
 use App\Models\User;
+use App\Services\FileStorageManager;
 use App\Services\MedicalRecordService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Bus\Queueable;
@@ -12,7 +13,6 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Storage;
 use Throwable;
 
 class GenerateMedicalRecordPDF implements ShouldQueue
@@ -41,25 +41,36 @@ class GenerateMedicalRecordPDF implements ShouldQueue
         private readonly Patient $patient,
         private readonly User $requester,
         private readonly array $filters = [],
+        private readonly string $visibility = MedicalDocument::VISIBILITY_PATIENT,
     ) {}
 
     /**
      * Execute the job.
      */
-    public function handle(MedicalRecordService $medicalRecordService): void
-    {
+    public function handle(
+        MedicalRecordService $medicalRecordService,
+        FileStorageManager $fileStorageManager,
+    ): void {
+        $exportKey = hash('sha256', json_encode([
+            'patient_id' => $this->patient->id,
+            'requester_id' => $this->requester->id,
+            'filters' => $this->filters,
+            'visibility' => $this->visibility,
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+
         $payload = $medicalRecordService->prepareDataForExport($this->patient, $this->filters);
 
         $pdf = Pdf::loadView('pdf.medical-record', $payload)->setPaper('a4');
 
-        $disk = Storage::disk(config('telemedicine.medical_records.disk'));
-        $filename = sprintf('medical-record-%s.pdf', now()->format('YmdHis'));
-        $path = "medical-records/exports/{$this->patient->id}/{$filename}";
+        $diskDomain = FileStorageManager::DOMAIN_MEDICAL_DOCUMENTS;
+        $disk = $fileStorageManager->disk($diskDomain);
+        $filename = sprintf('medical-record-%s-%s.pdf', $this->patient->id, substr($exportKey, 0, 12));
+        $path = $fileStorageManager->buildPath($diskDomain, "exports/{$this->patient->id}/{$filename}");
 
         $disk->put($path, $pdf->output());
         $fileSize = $disk->size($path);
 
-        MedicalDocument::create([
+        $attributes = [
             'patient_id' => $this->patient->id,
             'doctor_id' => $this->requester->doctor?->id,
             'uploaded_by' => $this->requester->id,
@@ -73,9 +84,26 @@ class GenerateMedicalRecordPDF implements ShouldQueue
             'metadata' => [
                 'filters' => $this->filters,
                 'generated_by' => $this->requester->id,
+                'storage_domain' => $diskDomain,
+                'export_key' => $exportKey,
             ],
-            'visibility' => MedicalDocument::VISIBILITY_PATIENT,
-        ]);
+            'visibility' => $this->visibility,
+        ];
+
+        $existing = MedicalDocument::query()
+            ->where('patient_id', $this->patient->id)
+            ->where('uploaded_by', $this->requester->id)
+            ->where('category', MedicalDocument::CATEGORY_REPORT)
+            ->whereJsonContains('metadata->export_key', $exportKey)
+            ->first();
+
+        if ($existing) {
+            $existing->update($attributes);
+
+            return;
+        }
+
+        MedicalDocument::create($attributes);
     }
 
     /**

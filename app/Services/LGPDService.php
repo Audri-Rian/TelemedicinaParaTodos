@@ -7,13 +7,16 @@ use App\Models\DataAccessLog;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * Service para operações relacionadas à LGPD
  */
 class LGPDService
 {
+    public function __construct(
+        private readonly FileStorageManager $fileStorageManager,
+    ) {}
+
     /**
      * Registra consentimento do usuário
      */
@@ -121,7 +124,47 @@ class LGPDService
         // Consultas
         $appointments = $user->appointments();
         if ($appointments) {
-            $data['appointments'] = $appointments->with(['doctor', 'patient'])->get()->toArray();
+            $data['appointments'] = $appointments
+                ->select([
+                    'id',
+                    'doctor_id',
+                    'patient_id',
+                    'scheduled_at',
+                    'started_at',
+                    'ended_at',
+                    'status',
+                    'created_at',
+                    'updated_at',
+                ])
+                ->with([
+                    'doctor:id,user_id,crm',
+                    'doctor.user:id,name',
+                    'patient:id,user_id',
+                    'patient.user:id,name',
+                ])
+                ->get()
+                ->map(function ($appointment) {
+                    return [
+                        'id' => $appointment->id,
+                        'scheduled_at' => $appointment->scheduled_at,
+                        'started_at' => $appointment->started_at,
+                        'ended_at' => $appointment->ended_at,
+                        'status' => $appointment->status,
+                        'created_at' => $appointment->created_at,
+                        'updated_at' => $appointment->updated_at,
+                        'doctor' => [
+                            'id' => $appointment->doctor?->id,
+                            'name' => $appointment->doctor?->user?->name,
+                            'crm' => $appointment->doctor?->crm,
+                        ],
+                        'patient' => [
+                            'id' => $appointment->patient?->id,
+                            'name' => $appointment->patient?->user?->name,
+                        ],
+                    ];
+                })
+                ->values()
+                ->all();
         } else {
             $data['appointments'] = [];
         }
@@ -160,9 +203,11 @@ class LGPDService
     {
         $data = $this->exportUserData($user);
         $filename = "user_data_{$user->id}_".now()->format('Y-m-d_His').'.json';
-        $path = "lgpd_exports/{$filename}";
+        $domain = FileStorageManager::DOMAIN_LGPD_EXPORTS;
+        $path = $this->fileStorageManager->buildPath($domain, $filename);
 
-        Storage::disk(config('telemedicine.medical_records.lgpd_exports_disk'))
+        $this->fileStorageManager
+            ->disk($domain)
             ->put($path, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
 
         return $path;
@@ -220,6 +265,8 @@ class LGPDService
      */
     public function generateAccessReport(User $user, ?Carbon $startDate = null, ?Carbon $endDate = null): array
     {
+        $maxLogs = (int) config('telemedicine.lgpd.access_report_max_logs', 1000);
+
         $query = DataAccessLog::forUser($user->id);
 
         if ($startDate) {
@@ -230,7 +277,13 @@ class LGPDService
             $query->where('created_at', '<=', $endDate);
         }
 
-        $logs = $query->with('user')->orderBy('created_at', 'desc')->get();
+        $logs = $query
+            ->with('user')
+            ->orderBy('created_at', 'desc')
+            ->limit($maxLogs + 1)
+            ->get();
+        $isTruncated = $logs->count() > $maxLogs;
+        $logs = $isTruncated ? $logs->take($maxLogs) : $logs;
 
         return [
             'user_id' => $user->id,
@@ -241,6 +294,8 @@ class LGPDService
             'total_accesses' => $logs->count(),
             'accesses_by_type' => $logs->groupBy('data_type')->map->count(),
             'accesses_by_action' => $logs->groupBy('action')->map->count(),
+            'truncated' => $isTruncated,
+            'max_logs' => $maxLogs,
             'logs' => $logs->map(function ($log) {
                 return [
                     'id' => $log->id,

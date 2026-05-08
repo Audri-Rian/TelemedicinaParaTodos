@@ -208,6 +208,78 @@ return [
 
     'storage' => [
         'public_images_disk' => env('PUBLIC_IMAGES_DISK', 'public'),
+        'healthcheck_cron' => env('STORAGE_HEALTHCHECK_CRON', '*/5 * * * *'),
+        'retention_cleanup_cron' => env('STORAGE_RETENTION_CLEANUP_CRON', '0 2 * * *'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | File Domains (Storage por domínio de arquivo)
+    |--------------------------------------------------------------------------
+    |
+    | Catálogo central para roteamento de arquivos por domínio de negócio.
+    | Cada domínio define disco, path base, visibilidade, retenção e healthcheck.
+    |
+    */
+    'file_domains' => [
+        'public_images' => [
+            'disk' => env('PUBLIC_IMAGES_DISK', 'public'),
+            'base_path' => env('FILE_DOMAIN_PUBLIC_IMAGES_PATH', 'public/images'),
+            'visibility' => 'public',
+            // Null = remoção apenas por ação de negócio (troca/remoção de avatar).
+            'retention_days' => null,
+            'healthcheck_enabled' => true,
+        ],
+        'medical_documents' => [
+            'disk' => env('MEDICAL_DOCUMENTS_DISK', env('MEDICAL_RECORDS_DISK', 'local')),
+            'base_path' => env('FILE_DOMAIN_MEDICAL_DOCUMENTS_PATH', 'medical/documents'),
+            'visibility' => 'private',
+            'retention_days' => null,
+            'healthcheck_enabled' => true,
+        ],
+        'lgpd_exports' => [
+            'disk' => env('LGPD_EXPORTS_DISK', env('MEDICAL_RECORDS_DISK', 'local')),
+            'base_path' => env('FILE_DOMAIN_LGPD_EXPORTS_PATH', 'lgpd/exports'),
+            'visibility' => 'private',
+            'retention_days' => (int) env('FILE_DOMAIN_LGPD_EXPORTS_RETENTION_DAYS', 7),
+            'healthcheck_enabled' => true,
+        ],
+        'prescriptions' => [
+            'disk' => env('PRESCRIPTIONS_DISK', env('MEDICAL_RECORDS_DISK', 'local')),
+            'base_path' => env('FILE_DOMAIN_PRESCRIPTIONS_PATH', 'medical/prescriptions'),
+            'visibility' => 'private',
+            'retention_days' => null,
+            'healthcheck_enabled' => true,
+        ],
+        'certificates' => [
+            'disk' => env('CERTIFICATES_DISK', env('MEDICAL_RECORDS_DISK', 'local')),
+            'base_path' => env('FILE_DOMAIN_CERTIFICATES_PATH', 'medical/certificates'),
+            'visibility' => 'private',
+            'retention_days' => null,
+            'healthcheck_enabled' => true,
+        ],
+        'chat_attachments' => [
+            'disk' => env('CHAT_ATTACHMENTS_DISK', env('MEDICAL_RECORDS_DISK', 'local')),
+            'base_path' => env('FILE_DOMAIN_CHAT_ATTACHMENTS_PATH', 'chat/attachments'),
+            'visibility' => 'private',
+            'retention_days' => null,
+            'healthcheck_enabled' => true,
+        ],
+        'integration_documents' => [
+            'disk' => env('INTEGRATION_DOCUMENTS_DISK', env('MEDICAL_RECORDS_DISK', 'local')),
+            'base_path' => env('FILE_DOMAIN_INTEGRATION_DOCUMENTS_PATH', 'integrations/documents'),
+            'visibility' => 'private',
+            'retention_days' => null,
+            'healthcheck_enabled' => true,
+        ],
+        'video_recordings' => [
+            'disk' => env('VIDEO_RECORDINGS_DISK', env('MEDICAL_RECORDS_DISK', 'local')),
+            'base_path' => env('FILE_DOMAIN_VIDEO_RECORDINGS_PATH', 'calls/recordings'),
+            'visibility' => 'private',
+            // Mantido sem expurgo automático no MVP; pronto para regra futura por contrato.
+            'retention_days' => null,
+            'healthcheck_enabled' => true,
+        ],
     ],
 
     /*
@@ -222,10 +294,10 @@ return [
 
     'medical_records' => [
         // Disco privado para documentos clínicos, prontuários, PDFs e uploads médicos.
-        'disk' => env('MEDICAL_RECORDS_DISK', 'local'),
+        'disk' => env('MEDICAL_RECORDS_DISK', env('MEDICAL_DOCUMENTS_DISK', 'local')),
 
         // Disco privado para exportações de dados pessoais LGPD.
-        'lgpd_exports_disk' => env('LGPD_EXPORTS_DISK', env('MEDICAL_RECORDS_DISK', 'local')),
+        'lgpd_exports_disk' => env('LGPD_EXPORTS_DISK', env('MEDICAL_RECORDS_DISK', env('MEDICAL_DOCUMENTS_DISK', 'local'))),
 
         // Dias padrão de validade de prescrição quando valid_until não informado.
         // MedicalRecordService::createPrescription: now()->addDays(30).
@@ -453,6 +525,7 @@ return [
         // Janela padrão em dias para geração de relatórios de acesso.
         // Usado em: DataAccessReportController.
         'report_window_days' => (int) env('LGPD_REPORT_WINDOW_DAYS', 30),
+        'access_report_max_logs' => (int) env('LGPD_ACCESS_REPORT_MAX_LOGS', 1000),
     ],
 
     /*
