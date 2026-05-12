@@ -34,6 +34,8 @@ class Prescription extends Model
         'signature_status',
         'verification_code',
         'signed_at',
+        'digital_signature_hash',
+        'pdf_path',
     ];
 
     protected $casts = [

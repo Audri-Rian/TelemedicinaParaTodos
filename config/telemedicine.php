@@ -558,8 +558,21 @@ return [
     */
 
     'signature' => [
+        // Driver de assinatura: 'null' (dev), 'a1_local' (prod A1 PFX), 'icp_brasil' (legado/stub).
+        // 'a1_local' usa PadesEmbedder + A1PdfSigner com certificado PFX local.
         'driver' => env('SIGNATURE_DRIVER', 'null'),
 
+        // Configuração do driver A1 local (PAdES com certificado PFX/PKCS#12).
+        // NUNCA commitar o arquivo PFX nem a senha. Usar cofre (Vault, Secrets Manager).
+        'a1_pdf' => [
+            'pfx_path' => env('SIGNATURE_A1_PFX_PATH'),
+            'pfx_password' => env('SIGNATURE_A1_PFX_PASSWORD', ''),
+            'cert_fingerprint' => env('SIGNATURE_A1_CERT_FINGERPRINT'),
+            'trusted_ca_path' => env('SIGNATURE_A1_TRUSTED_CA_PATH'),
+            'require_doctor_name_match' => env('SIGNATURE_A1_REQUIRE_DOCTOR_NAME_MATCH', true),
+        ],
+
+        // Legado: parâmetros do driver icp_brasil (stub) — substituir pelo a1_pdf acima.
         'icp_brasil' => [
             'provider' => env('ICP_PROVIDER'),
             'certificate_path' => env('ICP_CERT_PATH'),
@@ -568,7 +581,7 @@ return [
             'api_key' => env('ICP_API_KEY'),
         ],
 
-        // URL base para link de verificação pública impresso/incluído no PDF.
+        // URL base para link de verificação pública impresso no PDF.
         // Ex.: https://app.example/verify/{code}
         'verification_url_template' => env(
             'SIGNATURE_VERIFICATION_URL_TEMPLATE',
