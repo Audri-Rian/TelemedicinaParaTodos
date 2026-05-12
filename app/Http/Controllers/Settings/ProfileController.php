@@ -4,10 +4,15 @@ namespace App\Http\Controllers\Settings;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\ProfileUpdateRequest;
+use App\Models\Doctor;
+use App\Models\Patient;
+use App\Models\Specialization;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -19,14 +24,11 @@ class ProfileController extends Controller
     public function edit(Request $request): Response
     {
         $user = $request->user();
-        
-        // Carregar o relacionamento patient explicitamente
+
+        $user->load(['patient', 'doctor.specializations']);
         $patient = $user->patient;
-        
-        // Carregar o relacionamento doctor explicitamente
         $doctor = $user->doctor;
-        
-        // Carregar timeline events se for doctor
+
         $timelineEvents = [];
         if ($user->isDoctor()) {
             $timelineEvents = $user->timelineEvents()
@@ -75,19 +77,27 @@ class ProfileController extends Controller
                 'weight' => $patient->weight ? (float) $patient->weight : null,
                 'insurance_provider' => $patient->insurance_provider,
                 'insurance_number' => $patient->insurance_number,
+                'cns_registered' => ! empty($patient->cns),
+                'cpf_registered' => ! empty($patient->cpf),
                 'consent_telemedicine' => (bool) $patient->consent_telemedicine,
             ] : null,
             'doctor' => $doctor ? [
                 'id' => $doctor->id,
+                'crm' => $doctor->crm,
                 'biography' => $doctor->biography,
+                'cns_registered' => ! empty($doctor->cns),
+                'cbo' => $doctor->cbo,
                 'license_number' => $doctor->license_number,
                 'license_expiry_date' => $doctor->license_expiry_date?->format('Y-m-d'),
                 'consultation_fee' => $doctor->consultation_fee ? (float) $doctor->consultation_fee : null,
                 'status' => $doctor->status,
                 'availability_schedule' => $doctor->availability_schedule,
+                'specializations' => $doctor->specializations->pluck('id')->values(),
             ] : null,
             'timelineEvents' => $timelineEvents,
-            'bloodTypes' => \App\Models\Patient::BLOOD_TYPES,
+            'bloodTypes' => Patient::BLOOD_TYPES,
+            'specializations' => Cache::remember('specializations:list', now()->addHours(6), fn () => Specialization::query()->orderBy('name')->get(['id', 'name'])
+            ),
         ]);
     }
 
@@ -99,56 +109,76 @@ class ProfileController extends Controller
         $user = $request->user();
         $validated = $request->validated();
 
-        // Atualizar dados do User
-        $userData = [
-            'name' => $validated['name'],
-            'email' => $validated['email'],
-        ];
+        DB::transaction(function () use ($user, $validated) {
+            $user->fill([
+                'name' => $validated['name'],
+                'email' => $validated['email'],
+            ]);
 
-        $user->fill($userData);
+            if ($user->isDirty('email')) {
+                $user->email_verified_at = null;
+            }
 
-        if ($user->isDirty('email')) {
-            $user->email_verified_at = null;
-        }
+            $user->save();
 
-        $user->save();
+            if ($user->isPatient() && $user->patient) {
+                $patientData = [
+                    'emergency_contact' => $validated['emergency_contact'] ?? null,
+                    'emergency_phone' => $validated['emergency_phone'] ?? null,
+                    'medical_history' => $validated['medical_history'] ?? null,
+                    'allergies' => $validated['allergies'] ?? null,
+                    'current_medications' => $validated['current_medications'] ?? null,
+                    'blood_type' => $validated['blood_type'] ?? null,
+                    'height' => $validated['height'] ?? null,
+                    'weight' => $validated['weight'] ?? null,
+                    'insurance_provider' => $validated['insurance_provider'] ?? null,
+                    'insurance_number' => $validated['insurance_number'] ?? null,
+                    'consent_telemedicine' => isset($validated['consent_telemedicine'])
+                        ? filter_var($validated['consent_telemedicine'], FILTER_VALIDATE_BOOLEAN)
+                        : false,
+                ];
 
-        // Atualizar dados do Patient se o usuário for paciente
-        if ($user->isPatient() && $user->patient) {
-            $patientData = [
-                'emergency_contact' => $validated['emergency_contact'] ?? null,
-                'emergency_phone' => $validated['emergency_phone'] ?? null,
-                'medical_history' => $validated['medical_history'] ?? null,
-                'allergies' => $validated['allergies'] ?? null,
-                'current_medications' => $validated['current_medications'] ?? null,
-                'blood_type' => $validated['blood_type'] ?? null,
-                'height' => $validated['height'] ?? null,
-                'weight' => $validated['weight'] ?? null,
-                'insurance_provider' => $validated['insurance_provider'] ?? null,
-                'insurance_number' => $validated['insurance_number'] ?? null,
-                'consent_telemedicine' => isset($validated['consent_telemedicine']) 
-                    ? filter_var($validated['consent_telemedicine'], FILTER_VALIDATE_BOOLEAN) 
-                    : false,
-            ];
+                // Só atualiza CPF/CNS se o valor for explicitamente enviado e não-nulo
+                if (! empty($validated['cns'])) {
+                    $patientData['cns'] = $validated['cns'];
+                }
+                if (! empty($validated['cpf'])) {
+                    $patientData['cpf'] = $validated['cpf'];
+                }
 
-            $user->patient->update($patientData);
-        }
+                $user->patient->update($patientData);
+            }
 
-        // Atualizar dados do Doctor se o usuário for médico
-        if ($user->isDoctor() && $user->doctor) {
-            $doctorData = [
-                'biography' => $validated['biography'] ?? null,
-                'license_number' => $validated['license_number'] ?? null,
-                'license_expiry_date' => isset($validated['license_expiry_date']) 
-                    ? $validated['license_expiry_date'] 
-                    : null,
-                'consultation_fee' => $validated['consultation_fee'] ?? null,
-                'status' => $validated['status'] ?? $user->doctor->status,
-                'availability_schedule' => $validated['availability_schedule'] ?? null,
-            ];
+            if ($user->isDoctor() && $user->doctor) {
+                // Médico suspenso não pode alterar o próprio status
+                $currentStatus = $user->doctor->status;
+                $requestedStatus = $validated['status'] ?? $currentStatus;
+                $newStatus = $currentStatus === Doctor::STATUS_SUSPENDED
+                    ? Doctor::STATUS_SUSPENDED
+                    : $requestedStatus;
 
-            $user->doctor->update($doctorData);
-        }
+                $doctorData = [
+                    'crm' => $validated['crm'] ?? $user->doctor->crm,
+                    'biography' => $validated['biography'] ?? null,
+                    'cbo' => $validated['cbo'] ?? null,
+                    'license_number' => $validated['license_number'] ?? null,
+                    'license_expiry_date' => $validated['license_expiry_date'] ?? null,
+                    'consultation_fee' => $validated['consultation_fee'] ?? null,
+                    'status' => $newStatus,
+                    'availability_schedule' => $validated['availability_schedule'] ?? null,
+                ];
+
+                if (! empty($validated['cns'])) {
+                    $doctorData['cns'] = $validated['cns'];
+                }
+
+                $user->doctor->update($doctorData);
+
+                if (array_key_exists('specializations', $validated)) {
+                    $user->doctor->specializations()->sync($validated['specializations'] ?? []);
+                }
+            }
+        });
 
         return to_route('profile.edit')->with('status', 'profile-updated');
     }

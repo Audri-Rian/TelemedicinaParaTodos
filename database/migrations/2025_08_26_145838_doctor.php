@@ -21,14 +21,14 @@ return new class extends Migration
             $table->date('license_expiry_date')->nullable();
             $table->enum('status', ['active', 'inactive', 'suspended'])->default('active');
             $table->json('availability_schedule')->nullable();
-            $table->decimal('consultation_fee', 8, 2)->nullable();
+            $table->decimal('consultation_fee', 8, 2)->nullable()->index();
             $table->timestamps();
             $table->softDeletes();
-            
+
             // Indexes para performance
             $table->index('status');
             $table->index('created_at');
-            
+
             // Foreign key para tabelas de usuários
             $table->foreign('user_id')->references('id')->on('users');
         });

@@ -44,7 +44,6 @@ interface DoctorSpecialization {
 
 interface DoctorUser {
     name: string;
-    email?: string;
     avatar?: string | null;
 }
 
@@ -58,6 +57,13 @@ interface Doctor {
     available_slots_for_day?: string[] | null;
     user: DoctorUser;
     specializations: DoctorSpecialization[];
+    service_locations?: Array<{
+        id: string;
+        name: string;
+        type: string;
+        type_label: string;
+        address?: string | null;
+    }>;
 }
 
 interface Specialization {
@@ -96,6 +102,10 @@ interface Filters {
     search?: string;
     specialization_id?: string;
     date?: string;
+    min_price?: string;
+    max_price?: string;
+    modality?: string;
+    location?: string;
 }
 
 interface Props {
@@ -115,6 +125,10 @@ const { getInitials } = useInitials();
 const searchQuery = ref(props.filters?.search ?? '');
 const selectedSpecialty = ref<string | null>(props.filters?.specialization_id ?? null);
 const selectedDate = ref<string | null>(props.filters?.date ?? null);
+const minPrice = ref(props.filters?.min_price ?? '');
+const maxPrice = ref(props.filters?.max_price ?? '');
+const selectedModality = ref<string | null>(props.filters?.modality ?? null);
+const locationQuery = ref(props.filters?.location ?? '');
 const availableOnDate = ref(false);
 const sort = ref<SortOption>('relevance');
 
@@ -140,14 +154,25 @@ const today = computed(() => new Date().toISOString().slice(0, 10));
 const doctors = computed<Doctor[]>(() => props.availableDoctors?.data ?? []);
 const paginationLinks = computed<PaginationLink[]>(() => props.availableDoctors?.links ?? []);
 const totalResults = computed(() => props.availableDoctors?.total ?? doctors.value.length);
-const hasActiveFilters = computed(() => Boolean(searchQuery.value.trim() || selectedSpecialty.value || selectedDate.value || availableOnDate.value));
+const hasActiveFilters = computed(() =>
+    Boolean(
+        searchQuery.value.trim() ||
+            selectedSpecialty.value ||
+            selectedDate.value ||
+            minPrice.value ||
+            maxPrice.value ||
+            selectedModality.value ||
+            locationQuery.value.trim() ||
+            availableOnDate.value,
+    ),
+);
 
 const selectedSpecializationName = computed(() => {
     return props.specializations.find((specialization) => specialization.id === selectedSpecialty.value)?.name ?? null;
 });
 
 const activeChips = computed(() => {
-    const chips: Array<{ kind: 'search' | 'specialty' | 'date' | 'available'; label: string }> = [];
+    const chips: Array<{ kind: 'search' | 'specialty' | 'date' | 'price' | 'modality' | 'location' | 'available'; label: string }> = [];
 
     if (searchQuery.value.trim()) {
         chips.push({ kind: 'search', label: searchQuery.value.trim() });
@@ -159,6 +184,20 @@ const activeChips = computed(() => {
 
     if (selectedDate.value) {
         chips.push({ kind: 'date', label: formatDate(selectedDate.value) });
+    }
+
+    if (minPrice.value || maxPrice.value) {
+        const min = minPrice.value ? formatCurrency(Number(minPrice.value)) : 'R$ 0,00';
+        const max = maxPrice.value ? formatCurrency(Number(maxPrice.value)) : 'sem teto';
+        chips.push({ kind: 'price', label: `${min} - ${max}` });
+    }
+
+    if (selectedModality.value) {
+        chips.push({ kind: 'modality', label: selectedModality.value === 'online' ? 'Online' : 'Presencial' });
+    }
+
+    if (locationQuery.value.trim()) {
+        chips.push({ kind: 'location', label: locationQuery.value.trim() });
     }
 
     if (availableOnDate.value) {
@@ -207,6 +246,22 @@ const buildQueryParams = () => {
         queryParams.date = selectedDate.value;
     }
 
+    if (minPrice.value) {
+        queryParams.min_price = minPrice.value;
+    }
+
+    if (maxPrice.value) {
+        queryParams.max_price = maxPrice.value;
+    }
+
+    if (selectedModality.value) {
+        queryParams.modality = selectedModality.value;
+    }
+
+    if (locationQuery.value.trim()) {
+        queryParams.location = locationQuery.value.trim();
+    }
+
     return queryParams;
 };
 
@@ -230,12 +285,24 @@ watch(searchQuery, () => {
 });
 
 watch(selectedSpecialty, () => applyFilters());
+watch(selectedModality, () => applyFilters());
 watch(selectedDate, () => {
     if (!selectedDate.value) {
         availableOnDate.value = false;
     }
 
     applyFilters();
+});
+
+let advancedFiltersTimeout: ReturnType<typeof setTimeout> | null = null;
+watch([minPrice, maxPrice, locationQuery], () => {
+    if (advancedFiltersTimeout) {
+        clearTimeout(advancedFiltersTimeout);
+    }
+
+    advancedFiltersTimeout = setTimeout(() => {
+        applyFilters(true);
+    }, 500);
 });
 
 const changePage = (link: PaginationLink) => {
@@ -257,11 +324,15 @@ const resetFilters = () => {
     searchQuery.value = '';
     selectedSpecialty.value = null;
     selectedDate.value = null;
+    minPrice.value = '';
+    maxPrice.value = '';
+    selectedModality.value = null;
+    locationQuery.value = '';
     availableOnDate.value = false;
     applyFilters();
 };
 
-const removeChip = (kind: 'search' | 'specialty' | 'date' | 'available') => {
+const removeChip = (kind: 'search' | 'specialty' | 'date' | 'price' | 'modality' | 'location' | 'available') => {
     if (kind === 'search') {
         searchQuery.value = '';
     }
@@ -272,6 +343,19 @@ const removeChip = (kind: 'search' | 'specialty' | 'date' | 'available') => {
 
     if (kind === 'date') {
         selectedDate.value = null;
+    }
+
+    if (kind === 'price') {
+        minPrice.value = '';
+        maxPrice.value = '';
+    }
+
+    if (kind === 'modality') {
+        selectedModality.value = null;
+    }
+
+    if (kind === 'location') {
+        locationQuery.value = '';
     }
 
     if (kind === 'available') {
@@ -436,6 +520,52 @@ const breadcrumbs: BreadcrumbItem[] = [
                                             Escolha uma data para mostrar apenas profissionais com horários livres.
                                         </span>
                                     </span>
+                                </label>
+
+                                <div class="grid grid-cols-2 gap-3">
+                                    <label class="block space-y-2">
+                                        <span class="text-sm font-extrabold text-gray-800">Preco minimo</span>
+                                        <Input
+                                            v-model="minPrice"
+                                            type="number"
+                                            min="0"
+                                            step="0.01"
+                                            class="h-11 rounded-lg border-[#d7d2c8] bg-white text-sm font-semibold focus:border-teal-600 focus:ring-teal-600/20"
+                                        />
+                                    </label>
+
+                                    <label class="block space-y-2">
+                                        <span class="text-sm font-extrabold text-gray-800">Preco maximo</span>
+                                        <Input
+                                            v-model="maxPrice"
+                                            type="number"
+                                            min="0"
+                                            step="0.01"
+                                            class="h-11 rounded-lg border-[#d7d2c8] bg-white text-sm font-semibold focus:border-teal-600 focus:ring-teal-600/20"
+                                        />
+                                    </label>
+                                </div>
+
+                                <label class="block space-y-2">
+                                    <span class="text-sm font-extrabold text-gray-800">Modalidade</span>
+                                    <select
+                                        v-model="selectedModality"
+                                        class="h-11 w-full rounded-lg border border-[#d7d2c8] bg-white px-3 text-sm font-semibold text-gray-800 focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20 focus:outline-none"
+                                    >
+                                        <option :value="null">Todas as modalidades</option>
+                                        <option value="online">Online</option>
+                                        <option value="presential">Presencial</option>
+                                    </select>
+                                </label>
+
+                                <label class="block space-y-2">
+                                    <span class="text-sm font-extrabold text-gray-800">Localizacao</span>
+                                    <Input
+                                        v-model="locationQuery"
+                                        type="search"
+                                        class="h-11 rounded-lg border-[#d7d2c8] bg-white text-sm font-semibold focus:border-teal-600 focus:ring-teal-600/20"
+                                        placeholder="Cidade, bairro ou clinica"
+                                    />
                                 </label>
                             </div>
                         </div>

@@ -3,7 +3,6 @@
 namespace Tests\Unit\Integrations\Jobs;
 
 use App\Integrations\Jobs\SendToRnds;
-use App\Integrations\Mappers\PatientFhirMapper;
 use App\Integrations\Services\CircuitBreaker;
 use App\Models\Examination;
 use App\Models\FhirResourceMapping;
@@ -20,14 +19,12 @@ class SendToRndsTest extends TestCase
 {
     use RefreshDatabase;
 
-    private PatientFhirMapper $patientMapper;
     private CircuitBreaker $circuitBreaker;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->patientMapper = new PatientFhirMapper();
         $this->circuitBreaker = Mockery::mock(CircuitBreaker::class);
 
         config([
@@ -45,6 +42,12 @@ class SendToRndsTest extends TestCase
     {
         Mockery::close();
         parent::tearDown();
+    }
+
+    private function runSendToRndsJob(SendToRnds $job): void
+    {
+        $this->instance(CircuitBreaker::class, $this->circuitBreaker);
+        $this->app->call([$job, 'handle']);
     }
 
     private function createCompletedExam(array $attrs = []): Examination
@@ -70,7 +73,7 @@ class SendToRndsTest extends TestCase
         Http::fake();
 
         $job = new SendToRnds($exam->id);
-        $job->handle($this->patientMapper, $this->circuitBreaker);
+        $this->runSendToRndsJob($job);
 
         Http::assertNothingSent();
         $this->assertDatabaseMissing('integration_events', [
@@ -87,7 +90,7 @@ class SendToRndsTest extends TestCase
         Http::fake();
 
         $job = new SendToRnds($exam->id);
-        $job->handle($this->patientMapper, $this->circuitBreaker);
+        $this->runSendToRndsJob($job);
 
         Http::assertNothingSent();
         $this->assertDatabaseMissing('integration_events', [
@@ -116,7 +119,7 @@ class SendToRndsTest extends TestCase
         ]);
 
         $job = new SendToRnds($exam->id);
-        $job->handle($this->patientMapper, $this->circuitBreaker);
+        $this->runSendToRndsJob($job);
 
         // Deve ter criado parceiro virtual RNDS
         $rndsPartner = PartnerIntegration::where('slug', 'rnds-datasus')->first();
@@ -158,7 +161,7 @@ class SendToRndsTest extends TestCase
         ]);
 
         $job = new SendToRnds($exam->id);
-        $job->handle($this->patientMapper, $this->circuitBreaker);
+        $this->runSendToRndsJob($job);
 
         Http::assertSent(function (Request $req) {
             if (! str_contains($req->url(), '/Bundle')) {
@@ -206,7 +209,7 @@ class SendToRndsTest extends TestCase
         Http::fake();
 
         $job = new SendToRnds($exam->id);
-        $job->handle($this->patientMapper, $this->circuitBreaker);
+        $this->runSendToRndsJob($job);
 
         Http::assertNothingSent();
     }
@@ -221,7 +224,7 @@ class SendToRndsTest extends TestCase
         Http::fake();
 
         $job = new SendToRnds($exam->id);
-        $job->handle($this->patientMapper, $this->circuitBreaker);
+        $this->runSendToRndsJob($job);
 
         $this->assertDatabaseHas('integration_queue', [
             'operation' => IntegrationQueueItem::OP_SUBMIT_RNDS,
@@ -249,7 +252,7 @@ class SendToRndsTest extends TestCase
         // re-throw garante que qualquer outra exceção acusada pelo código
         // apareceria no teste em vez de ser silenciosamente engolida.
         try {
-            $job->handle($this->patientMapper, $this->circuitBreaker);
+            $this->runSendToRndsJob($job);
             $this->fail('Esperava RequestException pois RNDS retornou 500');
         } catch (\Illuminate\Http\Client\RequestException $e) {
             $this->assertEquals(500, $e->response->status());
@@ -283,7 +286,7 @@ class SendToRndsTest extends TestCase
         $job = new SendToRnds($exam->id);
 
         try {
-            $job->handle($this->patientMapper, $this->circuitBreaker);
+            $this->runSendToRndsJob($job);
         } finally {
             // Mesmo com a exceção esperada, validamos que nenhum request HTTP saiu.
             Http::assertNothingSent();

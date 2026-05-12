@@ -130,10 +130,12 @@ PENDENCIAS desta pagina (nao bloqueantes para uso interno, mas obrigatorias ante
 
 ### CRUD de perfis (docs/TrueIssues.md sec 7.2)
 
-[ ] CRUD completo de perfis de Doctors (biografia, CRM, especializacoes, agenda, fee)
-[ ] CRUD completo de perfis de Patients (dados clinicos, consentimento, contatos emergencia)
-[ ] API de busca de medicos (filtro por especializacao, preco, avaliacao, localizacao)
-[ ] Autenticacao de dois fatores (2FA) para pacientes
+[x] Perfil Doctor editavel via `settings/profile`: biografia, CRM, CNS, CBO, licenca, fee, status e especializacoes; agenda operacional possui CRUD de locais, slots e datas bloqueadas em `routes/web/doctor.php`
+[ ] Revisar duplicidade entre `availability_schedule` legado e `doctor_availability_slots`
+[x] Perfil Patient editavel via `settings/profile`: dados clinicos, consentimento de telemedicina, contatos de emergencia, CNS e CPF
+[x] Busca de medicos em `PatientSearchConsultationsController`: busca por texto, especializacao, data, faixa de preco, modalidade e localizacao, com exibicao de preco e disponibilidade
+[ ] Busca por avaliacao/rating - depende de criar dominio de avaliacoes (tabela/campo de rating ainda nao existe)
+[ ] Autenticacao de dois fatores (2FA) para pacientes - adiar ate definir camada externa de envio (SMTP/OTP/provider), endpoints de ativacao, recovery codes e middleware de verificacao
 
 ### Agenda e Consultas (docs/TrueIssues.md sec 7.3)
 
