@@ -40,6 +40,12 @@ Route::middleware(['auth'])->prefix('api/notifications')->name('notifications.')
     Route::get('/', [App\Http\Controllers\NotificationController::class, 'index'])->name('index');
     Route::get('unread', [App\Http\Controllers\NotificationController::class, 'unread'])->name('unread');
     Route::get('unread-count', [App\Http\Controllers\NotificationController::class, 'unreadCount'])->name('unread-count');
+    Route::post('push-subscriptions', [App\Http\Controllers\PushSubscriptionController::class, 'store'])
+        ->middleware('throttle:30,1')
+        ->name('push-subscriptions.store');
+    Route::delete('push-subscriptions', [App\Http\Controllers\PushSubscriptionController::class, 'destroy'])
+        ->middleware('throttle:30,1')
+        ->name('push-subscriptions.destroy');
     Route::get('{id}', [App\Http\Controllers\NotificationController::class, 'show'])->name('show');
     Route::post('{id}/read', [App\Http\Controllers\NotificationController::class, 'markAsRead'])->name('mark-as-read');
     Route::post('read-all', [App\Http\Controllers\NotificationController::class, 'markAllAsRead'])->name('mark-all-as-read');

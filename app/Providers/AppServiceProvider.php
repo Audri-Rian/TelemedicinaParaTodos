@@ -4,11 +4,14 @@ namespace App\Providers;
 
 use App\Contracts\DigitalSignatureDriver;
 use App\Contracts\MediaGatewayInterface;
+use App\Contracts\Notifications\PushNotificationSender;
 use App\Contracts\PdfSigner;
 use App\Models\Appointments;
 use App\Observers\AppointmentsObserver;
 use App\Services\MediaGatewayHttp;
 use App\Services\MediaGatewayStub;
+use App\Services\Notifications\NullPushSender;
+use App\Services\Notifications\WebPushSender;
 use App\Services\Signatures\A1PdfSigner;
 use App\Services\Signatures\DigitalSignatureService;
 use App\Services\Signatures\IcpBrasilSignatureDriver;
@@ -53,6 +56,12 @@ class AppServiceProvider extends ServiceProvider
                 'a1_local' => new A1PdfSigner(new PadesEmbedder),
                 default => new NullPdfSigner,
             };
+        });
+
+        $this->app->bind(PushNotificationSender::class, function () {
+            return config('telemedicine.push.enabled')
+                ? new WebPushSender
+                : new NullPushSender;
         });
     }
 

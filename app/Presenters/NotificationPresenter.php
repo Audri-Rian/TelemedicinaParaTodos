@@ -2,23 +2,24 @@
 
 namespace App\Presenters;
 
+use App\Enums\NotificationType;
 use App\Models\Notification;
+use Illuminate\Support\Facades\Log;
+use Throwable;
+use ValueError;
 
 class NotificationPresenter
 {
     /**
      * Transformar notificação para formato do frontend
-     *
-     * @param Notification $notification
-     * @return array
      */
     public function transform(Notification $notification): array
     {
         try {
-            $typeValue = $notification->type instanceof \App\Enums\NotificationType 
-                ? $notification->type->value 
+            $typeValue = $notification->type instanceof NotificationType
+                ? $notification->type->value
                 : (is_string($notification->type) ? $notification->type : 'unknown');
-            
+
             return [
                 'id' => $notification->id,
                 'type' => $typeValue,
@@ -32,20 +33,19 @@ class NotificationPresenter
                 'is_read' => $notification->isRead(),
                 'read_at' => $notification->read_at?->toIso8601String(),
             ];
-        } catch (\Throwable $e) {
-            \Log::error('Erro ao transformar notificação: ' . $e->getMessage(), [
+        } catch (Throwable $e) {
+            Log::error('Erro ao transformar notificação: '.$e->getMessage(), [
                 'notification_id' => $notification->id ?? null,
                 'trace' => $e->getTraceAsString(),
             ]);
-            
-            // Retornar estrutura básica em caso de erro
+
             return [
                 'id' => $notification->id ?? null,
                 'type' => 'unknown',
                 'title' => 'Notificação',
                 'message' => 'Erro ao processar notificação',
-                'icon' => 'BellIcon',
-                'color' => 'text-gray-500',
+                'icon' => 'bell',
+                'color' => 'gray',
                 'time' => 'agora',
                 'timestamp' => now()->toIso8601String(),
                 'metadata' => [],
@@ -78,18 +78,19 @@ class NotificationPresenter
     {
         try {
             $type = $this->getNotificationType($notification);
+
             return match ($type) {
-                \App\Enums\NotificationType::APPOINTMENT_CREATED => 'CalendarIcon',
-                \App\Enums\NotificationType::APPOINTMENT_CANCELLED => 'XCircleIcon',
-                \App\Enums\NotificationType::APPOINTMENT_RESCHEDULED => 'RefreshCcwIcon',
-                \App\Enums\NotificationType::PRESCRIPTION_ISSUED => 'FileTextIcon',
-                \App\Enums\NotificationType::EXAMINATION_REQUESTED => 'ClipboardIcon',
-                \App\Enums\NotificationType::MEDICAL_CERTIFICATE_ISSUED => 'AwardIcon',
-                \App\Enums\NotificationType::APPOINTMENT_REMINDER => 'BellIcon',
-                default => 'BellIcon',
+                NotificationType::APPOINTMENT_CREATED => 'calendar-plus',
+                NotificationType::APPOINTMENT_CANCELLED => 'calendar-x',
+                NotificationType::APPOINTMENT_RESCHEDULED => 'calendar-clock',
+                NotificationType::PRESCRIPTION_ISSUED => 'prescription',
+                NotificationType::EXAMINATION_REQUESTED => 'clipboard-list',
+                NotificationType::MEDICAL_CERTIFICATE_ISSUED => 'file-text',
+                NotificationType::APPOINTMENT_REMINDER => 'bell',
+                default => 'bell',
             };
-        } catch (\Throwable $e) {
-            return 'BellIcon';
+        } catch (Throwable) {
+            return 'bell';
         }
     }
 
@@ -100,52 +101,52 @@ class NotificationPresenter
     {
         try {
             $type = $this->getNotificationType($notification);
+
             return match ($type) {
-                \App\Enums\NotificationType::APPOINTMENT_CREATED => 'text-blue-500',
-                \App\Enums\NotificationType::APPOINTMENT_CANCELLED => 'text-red-500',
-                \App\Enums\NotificationType::APPOINTMENT_RESCHEDULED => 'text-yellow-500',
-                \App\Enums\NotificationType::PRESCRIPTION_ISSUED => 'text-green-500',
-                \App\Enums\NotificationType::EXAMINATION_REQUESTED => 'text-purple-500',
-                \App\Enums\NotificationType::MEDICAL_CERTIFICATE_ISSUED => 'text-indigo-500',
-                \App\Enums\NotificationType::APPOINTMENT_REMINDER => 'text-orange-500',
-                default => 'text-gray-500',
+                NotificationType::APPOINTMENT_CREATED => 'blue',
+                NotificationType::APPOINTMENT_CANCELLED => 'red',
+                NotificationType::APPOINTMENT_RESCHEDULED => 'yellow',
+                NotificationType::PRESCRIPTION_ISSUED => 'green',
+                NotificationType::EXAMINATION_REQUESTED => 'purple',
+                NotificationType::MEDICAL_CERTIFICATE_ISSUED => 'indigo',
+                NotificationType::APPOINTMENT_REMINDER => 'orange',
+                default => 'gray',
             };
-        } catch (\Throwable $e) {
-            return 'text-gray-500';
+        } catch (Throwable) {
+            return 'gray';
         }
     }
-    
+
     /**
      * Obter o tipo de notificação de forma segura
      */
-    private function getNotificationType(Notification $notification): \App\Enums\NotificationType
+    private function getNotificationType(Notification $notification): NotificationType
     {
         try {
-            if ($notification->type instanceof \App\Enums\NotificationType) {
+            if ($notification->type instanceof NotificationType) {
                 return $notification->type;
             }
-            
+
             if (is_string($notification->type)) {
                 try {
-                    return \App\Enums\NotificationType::from($notification->type);
-                } catch (\ValueError $e) {
-                    \Log::warning('Tipo de notificação inválido: ' . $notification->type);
-                    return \App\Enums\NotificationType::APPOINTMENT_CREATED;
+                    return NotificationType::from($notification->type);
+                } catch (ValueError) {
+                    Log::warning('Tipo de notificação inválido: '.$notification->type);
+
+                    return NotificationType::APPOINTMENT_CREATED;
                 }
             }
-        } catch (\Throwable $e) {
-            \Log::warning('Erro ao obter tipo de notificação: ' . $e->getMessage());
+        } catch (Throwable $e) {
+            Log::warning('Erro ao obter tipo de notificação: '.$e->getMessage());
         }
-        
-        // Fallback para um tipo padrão
-        return \App\Enums\NotificationType::APPOINTMENT_CREATED;
+
+        return NotificationType::APPOINTMENT_CREATED;
     }
 
     /**
      * Transformar múltiplas notificações
      *
-     * @param \Illuminate\Database\Eloquent\Collection|array $notifications
-     * @return array
+     * @param  \Illuminate\Database\Eloquent\Collection|array  $notifications
      */
     public function transformMany($notifications): array
     {
@@ -160,4 +161,3 @@ class NotificationPresenter
         return $notifications->map(fn ($notification) => $this->transform($notification))->toArray();
     }
 }
-

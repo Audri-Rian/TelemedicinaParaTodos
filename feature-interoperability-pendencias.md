@@ -123,9 +123,9 @@ PENDENCIAS desta pagina (nao bloqueantes para uso interno, mas obrigatorias ante
 
 ### Servicos incompletos
 
-[ ] NotificationService.php:168 - sendPush() esta vazio (placeholder)
+[x] NotificationService.php:168 - sendPush() esta vazio (placeholder) — resolvido em 2026-05-12: `NotificationService` delega para `PushNotificationSender` com `NullPushSender`/`WebPushSender`, subscriptions Web Push persistidas e endpoints autenticados.
 [ ] BaseAdapter.php:74,109 - renovacao de token OAuth2 nao implementada (TODO - aguarda integracao com parceiro real)
-[ ] NotifyIntegrationFailure.php:41 - notificacao real para admins nao implementada (TODO)
+[x] NotifyIntegrationFailure.php:41 - notificacao real para admins nao implementada (TODO) — resolvido em 2026-05-12: listener chama `IntegrationFailureAlerter`, que envia e-mail para `INTEGRATION_ALERT_EMAILS` com throttle configuravel e erro sanitizado.
 [ ] DataAccessReportController.php:75 - exportacao PDF retorna 501 (TODO)
 
 ### CRUD de perfis (docs/TrueIssues.md sec 7.2)
@@ -305,14 +305,14 @@ Realizado em: 2026-04-16
 
 ### Landing Page (`/`)
 
-[ ] Ajustar navbar: botoes "Registrar-se para Pacientes" e "Faca parte da equipe" estao muito colados, quebrando nomes como "A quem servimos"
-[ ] Corrigir links do dropdown da navbar que nao redirecionam para lugar nenhum. Devem redirecionar para login (se nao autenticado) e depois para a pagina relacionada (ex: Documentacao API -> login -> /api/documentation; Interoperabilidade -> login -> secao de integracao)
-[ ] Corrigir height do botao "Conheca nossa visao" que esta desalinhado em relacao ao botao "Agendar agora" - devem ter o mesmo tamanho
-[ ] Corrigir botao "Conheca agora" que nao redireciona para login -> dashboard
-[ ] Corrigir links da section 2 ("Descubra por que a Telemedicina para todos...") para direcionar ao login (se nao autenticado) ou ao dashboard (se ja logado)
-[ ] Corrigir botao "Agendar consulta agora" na penultima section para redirecionar ao login (se nao autenticado) ou a pagina de agendamentos (se ja logado)
-[ ] Corrigir links do footer para redirecionarem corretamente (passando pelo login se nao autenticado): - Especialidades -> pagina de agendamentos - Como funciona -> pagina de Dashboard - Sobre telemedicina -> landing page - Entrar no sistema -> pagina de Dashboard
-[ ] Redesenhar botao "Entrar" na navbar que esta escondido/pouco visivel
+[x] Ajustar navbar: botoes "Registrar-se para Pacientes" e "Faca parte da equipe" estao muito colados, quebrando nomes como "A quem servimos"
+[x] Corrigir links do dropdown da navbar que nao redirecionam para lugar nenhum. Devem redirecionar para login (se nao autenticado) e depois para a pagina relacionada (ex: Documentacao API -> login -> /api/documentation; Interoperabilidade -> login -> secao de integracao)
+[x] Corrigir height do botao "Conheca nossa visao" que esta desalinhado em relacao ao botao "Agendar agora" - devem ter o mesmo tamanho
+[x] Corrigir botao "Conheca agora" que nao redireciona para login -> dashboard
+[x] Corrigir links da section 2 ("Descubra por que a Telemedicina para todos...") para direcionar ao login (se nao autenticado) ou ao dashboard (se ja logado)
+[x] Corrigir botao "Agendar consulta agora" na penultima section para redirecionar ao login (se nao autenticado) ou a pagina de agendamentos (se ja logado)
+[x] Corrigir links do footer para redirecionarem corretamente (passando pelo login se nao autenticado): - Especialidades -> pagina de agendamentos - Como funciona -> pagina de Dashboard - Sobre telemedicina -> landing page - Entrar no sistema -> pagina de Dashboard
+[x] Redesenhar botao "Entrar" na navbar que esta escondido/pouco visivel
 
 ### Login (`/login`)
 
@@ -400,7 +400,7 @@ Realizado em: 2026-04-16
 [x] **Paginacao fake** - rebaseline 2026-05-08: item obsoleto; a paginacao fake foi removida junto com a tabela antiga.
 [x] **Sem empty state, loading ou error state** - rebaseline 2026-05-08: resolvido em [History.vue](resources/js/pages/Doctor/History.vue) com `DataGridSkeleton`, estado de erro e empty state.
 [ ] **Resumo do periodo e pendencias com numeros hardcoded** - rebaseline 2026-05-08: sidebar mostra "142 Atendimentos", "98% Confirmacao", "7 Faltas", "12 min", "3 prontuarios a finalizar", "2 prescricoes em rascunho" e "1 reagendamento aguardando" fixos; conectar ao backend ou remover.
-[ ] **Avaliar sobreposicao com `/doctor/consultations`** - verificar se `/doctor/history` e `/doctor/consultations` mostram informacoes concorrentes e se cabe unificar (semelhante ao merge schedule/availability)
+[ ] \*_Avaliar sobreposicao com `/doctor/consultations_`* - verificar se `/doctor/history`e`/doctor/consultations` mostram informacoes concorrentes e se cabe unificar (semelhante ao merge schedule/availability)
 
 ### Emissao de Documentos Medico (`/doctor/documents`)
 
@@ -499,7 +499,7 @@ Realizado em: 2026-04-16
 [ ] **Sem FormRequest/validacao no `index`** - filtros e identificadores aceitos sem regras explicitas. Criar `ShowScheduleConsultationRequest` com `doctor_id: required|uuid|exists:doctors,id`
 [ ] `**payload.notes`enviado em portugues hardcoded do frontend** - [ScheduleConsultation.vue:83](resources/js/pages/Patient/ScheduleConsultation.vue#L83) gera string "Consulta online"/"Consulta presencial" e manda como`notes`. Anti-pattern: o campo `notes`do`Appointment`e para anotacoes do paciente/medico, nao para tipo. Trocar por campo dedicado`modality` (`enum: online,presential`) na tabela `appointments`e remover essa "documentacao" textual
 [ ]`**metadata.type`redundante com`notes`** - [ScheduleConsultation.vue:84-86](resources/js/pages/Patient/ScheduleConsultation.vue#L84-L86) envia `metadata.type` mas o backend ja recebe `notes` cobrindo a mesma info. Apos criar campo `modality`, remover ambos
-[ ] `**consultation_fee` enviado para o frontend sem validacao server-side no submit\*\* - paciente pode ver `consultation_fee` na prop, mas a confirmacao do appointment nao trava o valor. Quando implementar pagamento, garantir que o valor cobrado seja sempre lido do `Doctor::consultation_fee` no backend, nunca do payload do cliente
+[ ] `**consultation_fee` enviado para o frontend sem validacao server-side no submit - paciente pode ver `consultation_fee` na prop, mas a confirmacao do appointment nao trava o valor. Quando implementar pagamento, garantir que o valor cobrado seja sempre lido do `Doctor::consultation_fee` no backend, nunca do payload do cliente
 
 #### Bugs e melhorias frontend/UX
 
@@ -523,7 +523,7 @@ Realizado em: 2026-04-16
 [ ] **N+1: `unreadCount` em loop por conversa** - confirmado em 2026-05-04: [MessageService.php](app/Services/MessageService.php) ainda executa `count()` por conversa dentro do loop
 [ ] `**try/catch` no controller engole qualquer erro silenciosamente** - confirmado em 2026-05-04: [PatientMessagesController.php](app/Http/Controllers/Patient/PatientMessagesController.php) ainda retorna `conversations: []` em excecao
 [ ] **BUG: link "ver perfil do medico" provavelmente quebrado** - confirmado em 2026-05-04: [Messages.vue](resources/js/pages/Patient/Messages.vue) envia `doctorId` (camelCase) com `conversation.id`; [DoctorPerfilController.php](app/Http/Controllers/Patient/DoctorPerfilController.php) espera `doctor_id`
-[ ] **Conversa permanece habilitada para sempre apos qualquer appointment\*\* - confirmado em 2026-05-04: [MessageService.php](app/Services/MessageService.php) ainda valida permissao de chat apenas com `exists()` de appointment
+[ ] **Conversa permanece habilitada para sempre apos qualquer appointment - confirmado em 2026-05-04: [MessageService.php](app/Services/MessageService.php) ainda valida permissao de chat apenas com `exists()` de appointment
 
 #### Bugs frontend
 
@@ -536,7 +536,7 @@ Realizado em: 2026-04-16
 [ ] **Conversa sem mensagens mostra timestamp do appointment** - [MessageService.php:177-179](app/Services/MessageService.php#L177-L179) usa `appointment->created_at` quando nao ha mensagens, com texto "Nenhuma mensagem ainda". Visualmente parece atividade recente. Diferenciar visualmente (ex: italic, sem timestamp, ou texto "Conversa nao iniciada")
 [ ] **Busca filtra so por nome, nao pelo conteudo da ultima mensagem** - [Messages.vue:77-86](resources/js/pages/Patient/Messages.vue#L77-L86). Padrao de mercado (WhatsApp, Slack) tambem busca em mensagens. Adicionar filtro local sobre `lastMessage` ou ir ao backend para busca completa
 [ ] **Botao Send com `p-2` (area de toque pequena em mobile)** - [Messages.vue:323-329](resources/js/pages/Patient/Messages.vue#L323-L329). WCAG/Apple HIG recomendam minimo 44x44px. Aumentar para `p-3` ou `min-h-[44px] min-w-[44px]`
-[ ] **Layout `w-1/3 + flex-1` quebra em mobile\*\* - [Messages.vue:147-219](resources/js/pages/Patient/Messages.vue#L147-L219). Em telas <640px, lista de conversas vira coluna estreita demais e a area de chat fica espremida. Implementar comportamento "drill-down": mobile mostra so a lista, ao clicar abre chat fullscreen com botao de voltar; desktop mantem split
+[ ] **Layout `w-1/3 + flex-1` quebra em mobile - [Messages.vue:147-219](resources/js/pages/Patient/Messages.vue#L147-L219). Em telas <640px, lista de conversas vira coluna estreita demais e a area de chat fica espremida. Implementar comportamento "drill-down": mobile mostra so a lista, ao clicar abre chat fullscreen com botao de voltar; desktop mantem split
 
 #### Funcionalidades faltando (importantes para telemedicina)
 
@@ -555,7 +555,7 @@ Realizado em: 2026-04-16
 [ ] **Mensagens nao tem retencao/expurgo definidos** - LGPD exige politica de retencao para dados de saude. Definir prazo (ex: 5 anos pos-ultima consulta), automatizar expurgo via job, e exibir politica para o paciente
 [ ] **Sem audit log de acesso a conversas** - quem acessou, quando. Critico para investigacao de vazamento. Tabela `message_access_logs` com `user_id`, `conversation_with`, `accessed_at`, `ip`
 [x] **Rate limit no envio ja aplicado** - confirmado em 2026-05-04: POST `/api/messages` protegido com `throttle:30,1` em `routes/web/shared.php`
-[ ] `**message.content` exibido com `{{ }}` (Vue escapa por padrao) - validar que nao ha `v-html` em nenhum descendente\*\* - confirmar que componentes filhos nao injetam HTML cru, especialmente se houver markdown/emoji rendering futuramente
+[ ] `**message.content` exibido com `{{ }}` (Vue escapa por padrao) - validar que nao ha `v-html` em nenhum descendente - confirmar que componentes filhos nao injetam HTML cru, especialmente se houver markdown/emoji rendering futuramente
 
 ### Paciente - Historico de Consultas (`/patient/history-consultations`)
 
@@ -575,7 +575,7 @@ Realizado em: 2026-04-16
 [ ] **Filtros `rescheduled` e `no_show` aceitos no backend mas sem botao no UI** - [PatientHistoryConsultationsController.php:38-42](app/Http/Controllers/Patient/PatientHistoryConsultationsController.php#L38-L42) aceita esses status, mas [HistoryConsultations.vue:201-247](resources/js/pages/Patient/HistoryConsultations.vue#L201-L247) so renderiza 4 botoes (upcoming/completed/cancelled/all). Decidir: (a) adicionar botoes "Reagendadas" e "Faltei" na UI, ou (b) restringir o backend para os 4 valores oficiais via `Rule::in([...])`
 [ ] **Sem validacao do query param `status`** - confirmado em 2026-05-04: controller ainda usa `$request->get('status')` sem FormRequest/`Rule::in`
 [ ] **Payload nao inclui informacoes uteis para a tela**: `consultation_fee`, modalidade (online/presencial), local da consulta, motivo de cancelamento. Se redesign exigir exibir esses dados, expandir o `through()` em [PatientHistoryConsultationsController.php:48-71](app/Http/Controllers/Patient/PatientHistoryConsultationsController.php#L48-L71)
-[ ] `**orderBy('scheduled_at', 'desc')` aplicado para todos os filtros\*\* - confirmado em 2026-05-04: ordenacao unica `desc` permanece no query base, inclusive para `upcoming`
+[ ] `**orderBy('scheduled_at', 'desc')` aplicado para todos os filtros - confirmado em 2026-05-04: ordenacao unica `desc` permanece no query base, inclusive para `upcoming`
 
 #### Bugs e melhorias frontend/UX
 
@@ -628,7 +628,7 @@ Realizado em: 2026-04-16
 [ ] **Botao "Atualizar resultados" so aparece para medico** - [MedicalRecord.vue:1371-1382](resources/js/pages/Patient/MedicalRecord.vue#L1371-L1382). Paciente tambem se beneficiaria de pull manual quando exame esta "Aguardando resultado". Avaliar liberar com rate limit
 [ ] **Sinais vitais em grid 2x4 sem unidades grandes/destaques** - [MedicalRecord.vue:1626-1634](resources/js/pages/Patient/MedicalRecord.vue#L1626-L1634) listagem plana sem comparacao temporal nem highlight de valores fora da normalidade (ex: PA > 140/90 em vermelho). Util para o paciente entender evolucao
 [ ] `**exam.results?.summary`** - [MedicalRecord.vue:1403](resources/js/pages/Patient/MedicalRecord.vue#L1403) so mostra `summary`. Resultados FHIR completos vem em `results` mas paciente nao consegue ver detalhes. Considerar modal "Ver resultado completo" com renderizacao do bundle
-[ ] `**prescription.medications` renderizado como lista simples\*\* - [MedicalRecord.vue:1352-1357](resources/js/pages/Patient/MedicalRecord.vue#L1352-L1357) sem destaque para horarios, duracao, alertas de interacao. Padrao moderno: cards individuais por medicamento com timeline ("tomar agora", "proximo as 14h")
+[ ] `**prescription.medications` renderizado como lista simples - [MedicalRecord.vue:1352-1357](resources/js/pages/Patient/MedicalRecord.vue#L1352-L1357) sem destaque para horarios, duracao, alertas de interacao. Padrao moderno: cards individuais por medicamento com timeline ("tomar agora", "proximo as 14h")
 
 #### Conformidade
 
@@ -657,7 +657,7 @@ Realizado em: 2026-04-16
 | Interoperabilidade (branch)                  | 3        |
 | Gravacao de sessao                           | 6        |
 | Observabilidade                              | 5        |
-| **QA Manual - Landing Page**                 | **8**    |
+| **QA Manual - Landing Page**                 | **0**    |
 | **QA Manual - Login**                        | **3**    |
 | **QA Manual - Registro Paciente**            | **6**    |
 | **QA Manual - Registro Medico**              | **3**    |
@@ -674,4 +674,4 @@ Realizado em: 2026-04-16
 | **QA Manual - Mensagens (Paciente)**         | **24**   |
 | **QA Manual - Historico (Paciente)**         | **18**   |
 | **QA Manual - Prontuario (Paciente)**        | **21**   |
-| **TOTAL**                                    | **~305** |
+| **TOTAL**                                    | **~297** |

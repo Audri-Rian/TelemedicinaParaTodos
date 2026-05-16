@@ -266,4 +266,22 @@ return [
         'connection' => env('INTEGRATION_QUEUE_CONNECTION', 'rabbitmq'),
         'name' => env('INTEGRATION_QUEUE_NAME', 'integrations'),
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Alerts
+    |--------------------------------------------------------------------------
+    |
+    | Alertas operacionais para falhas de integração externa.
+    |
+    */
+
+    'alerts' => [
+        'emails' => array_values(array_filter(array_map(
+            'trim',
+            explode(',', (string) env('INTEGRATION_ALERT_EMAILS', ''))
+        ))),
+        'failure_throttle_seconds' => (int) env('INTEGRATION_FAILURE_ALERT_THROTTLE_SECONDS', 900),
+        'error_excerpt_length' => (int) env('INTEGRATION_FAILURE_ERROR_EXCERPT_LENGTH', 300),
+    ],
 ];

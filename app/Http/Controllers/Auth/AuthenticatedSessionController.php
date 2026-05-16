@@ -18,6 +18,8 @@ class AuthenticatedSessionController extends Controller
      */
     public function create(Request $request): Response
     {
+        $this->rememberIntendedRedirectFromQuery($request);
+
         return Inertia::render('auth/Login', [
             'canResetPassword' => Route::has('password.request'),
             'status' => $request->session()->get('status'),
@@ -35,11 +37,11 @@ class AuthenticatedSessionController extends Controller
 
         // Redirecionar baseado no tipo de usuário
         $user = Auth::user();
-        
+
         if ($user->isDoctor()) {
             return redirect()->intended(route('doctor.dashboard', absolute: false));
         }
-        
+
         if ($user->isPatient()) {
             return redirect()->intended(route('patient.dashboard', absolute: false));
         }
@@ -59,5 +61,27 @@ class AuthenticatedSessionController extends Controller
         $request->session()->regenerateToken();
 
         return redirect('/');
+    }
+
+    private function rememberIntendedRedirectFromQuery(Request $request): void
+    {
+        $candidate = $request->query('redirect');
+        if (! is_string($candidate) || $candidate === '') {
+            return;
+        }
+
+        if (strlen($candidate) > 2048) {
+            return;
+        }
+
+        if (! str_starts_with($candidate, '/') || str_starts_with($candidate, '//')) {
+            return;
+        }
+
+        if (str_contains($candidate, '\\')) {
+            return;
+        }
+
+        $request->session()->put('url.intended', $candidate);
     }
 }

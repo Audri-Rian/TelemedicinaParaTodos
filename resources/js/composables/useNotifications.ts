@@ -1,6 +1,6 @@
-import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { usePage } from '@inertiajs/vue3';
 import Echo from 'laravel-echo';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 
 interface Notification {
     id: string;
@@ -70,7 +70,7 @@ export function useNotifications() {
 
             if (response.ok) {
                 // Atualizar notificação localmente
-                const index = notifications.value.findIndex(n => n.id === notificationId);
+                const index = notifications.value.findIndex((n) => n.id === notificationId);
                 if (index !== -1) {
                     notifications.value[index].is_read = true;
                     notifications.value[index].read_at = new Date().toISOString();
@@ -96,7 +96,7 @@ export function useNotifications() {
             });
 
             if (response.ok) {
-                notifications.value.forEach(n => {
+                notifications.value.forEach((n) => {
                     n.is_read = true;
                     n.read_at = new Date().toISOString();
                 });
@@ -121,7 +121,7 @@ export function useNotifications() {
      * Remover notificação
      */
     const removeNotification = (notificationId: string) => {
-        const index = notifications.value.findIndex(n => n.id === notificationId);
+        const index = notifications.value.findIndex((n) => n.id === notificationId);
         if (index !== -1) {
             if (!notifications.value[index].is_read) {
                 unreadCount.value = Math.max(0, unreadCount.value - 1);
@@ -161,8 +161,8 @@ export function useNotifications() {
             channel.value = echo.private(`notifications.${currentUserId}`);
 
             // Escutar evento de nova notificação
-            channel.value.listen('.notification.created', (data: { data: Notification }) => {
-                addNotification(data.data);
+            channel.value.listen('.notification.created', (data: Notification | { data: Notification }) => {
+                addNotification('data' in data ? data.data : data);
             });
 
             // Tratamento de reconexão
@@ -212,9 +212,7 @@ export function useNotifications() {
 
     // Computed
     const hasUnread = computed(() => unreadCount.value > 0);
-    const unreadNotifications = computed(() => 
-        notifications.value.filter(n => !n.is_read)
-    );
+    const unreadNotifications = computed(() => notifications.value.filter((n) => !n.is_read));
 
     // Lifecycle
     onMounted(() => {
@@ -243,4 +241,3 @@ export function useNotifications() {
         removeNotification,
     };
 }
-

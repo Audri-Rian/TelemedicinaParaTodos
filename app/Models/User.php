@@ -10,7 +10,7 @@ use Illuminate\Notifications\Notifiable;
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, HasUuids;
+    use HasFactory, HasUuids, Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -106,6 +106,14 @@ class User extends Authenticatable
     }
 
     /**
+     * Get the push subscriptions associated with the user.
+     */
+    public function pushSubscriptions()
+    {
+        return $this->hasMany(PushSubscription::class);
+    }
+
+    /**
      * Check if the user is a doctor.
      */
     public function isDoctor(): bool
@@ -129,23 +137,22 @@ class User extends Authenticatable
         if ($this->isDoctor()) {
             return 'doctor';
         }
-        
+
         if ($this->isPatient()) {
             return 'patient';
         }
-        
+
         return 'user';
     }
 
     /**
      * Get the avatar URL.
      *
-     * @param bool $thumbnail Se deve retornar thumbnail
-     * @return string|null
+     * @param  bool  $thumbnail  Se deve retornar thumbnail
      */
     public function getAvatarUrl(bool $thumbnail = false): ?string
     {
-        if (!$this->avatar_path) {
+        if (! $this->avatar_path) {
             return null;
         }
 
@@ -154,12 +161,10 @@ class User extends Authenticatable
 
     /**
      * Check if user has an avatar.
-     *
-     * @return bool
      */
     public function hasAvatar(): bool
     {
-        return !empty($this->avatar_path);
+        return ! empty($this->avatar_path);
     }
 
     /**
@@ -189,6 +194,7 @@ class User extends Authenticatable
         if ($this->isPatient()) {
             return $this->patient->appointments();
         }
+
         return null;
     }
 
@@ -203,6 +209,7 @@ class User extends Authenticatable
         if ($this->isDoctor()) {
             return $this->doctor->prescriptions();
         }
+
         return null;
     }
 
@@ -214,6 +221,7 @@ class User extends Authenticatable
         if ($this->isPatient()) {
             return $this->patient->examinations();
         }
+
         return null;
     }
 
@@ -225,6 +233,7 @@ class User extends Authenticatable
         if ($this->isPatient()) {
             return $this->patient->medicalCertificates();
         }
+
         return null;
     }
 
@@ -251,7 +260,7 @@ class User extends Authenticatable
     {
         return Message::where(function ($query) {
             $query->where('sender_id', $this->id)
-                  ->orWhere('receiver_id', $this->id);
+                ->orWhere('receiver_id', $this->id);
         });
     }
 }

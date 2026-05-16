@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Contracts\Notifications\PushNotificationSender;
 use App\Enums\NotificationType;
 use App\Events\NotificationCreated;
 use App\Factories\NotificationFactory;
@@ -12,15 +13,15 @@ use Illuminate\Support\Facades\Cache;
 
 class NotificationService
 {
+    public function __construct(
+        private PushNotificationSender $pushNotificationSender
+    ) {}
+
     /**
      * Criar e enviar notificação com debounce
      *
-     * @param NotificationType $type
-     * @param array $metadata
-     * @param User|string $user
-     * @param array $channels ['email', 'in_app', 'push']
-     * @param bool $skipDebounce Pular debounce (usado internamente)
-     * @return Notification|null
+     * @param  array  $channels  ['email', 'in_app', 'push']
+     * @param  bool  $skipDebounce  Pular debounce (usado internamente)
      */
     public function create(
         NotificationType $type,
@@ -33,13 +34,14 @@ class NotificationService
         $user = $user instanceof User ? $user : User::findOrFail($userId);
 
         // Verificar debounce (a menos que seja explicitamente ignorado)
-        if (!$skipDebounce && $this->shouldDebounce($userId, $type, $metadata)) {
+        if (! $skipDebounce && $this->shouldDebounce($userId, $type, $metadata)) {
             $this->scheduleDebounce($userId, $type, $metadata, $channels);
+
             return null;
         }
 
         // Verificar preferências do usuário
-        if (!$this->shouldNotify($user, $type, 'in_app')) {
+        if (! $this->shouldNotify($user, $type, 'in_app')) {
             return null;
         }
 
@@ -70,7 +72,7 @@ class NotificationService
             NotificationType::APPOINTMENT_CANCELLED,
         ];
 
-        if (!in_array($type, $debounceableTypes)) {
+        if (! in_array($type, $debounceableTypes)) {
             return false;
         }
 
@@ -112,6 +114,7 @@ class NotificationService
     {
         // Usar appointment_id como contexto se disponível
         $context = $metadata['appointment_id'] ?? 'general';
+
         return "notification_debounce:{$userId}:{$type->value}:{$context}";
     }
 
@@ -155,19 +158,16 @@ class NotificationService
     private function sendEmail(Notification $notification): void
     {
         $mailableClass = $this->getMailableClass($notification->type);
-        
+
         if ($mailableClass && class_exists($mailableClass)) {
             \Illuminate\Support\Facades\Mail::to($notification->user)
                 ->queue(new $mailableClass($notification));
         }
     }
 
-    /**
-     * Enviar notificação push (placeholder)
-     */
     private function sendPush(Notification $notification): void
     {
-        // Implementar quando tiver integração com push notifications
+        $this->pushNotificationSender->send($notification);
     }
 
     /**
@@ -201,7 +201,7 @@ class NotificationService
     public function markAllAsRead(User|string $user): int
     {
         $userId = $user instanceof User ? $user->id : $user;
-        
+
         return Notification::where('user_id', $userId)
             ->whereNull('read_at')
             ->update(['read_at' => now()]);
@@ -228,10 +228,9 @@ class NotificationService
     public function getUnreadCount(User|string $user): int
     {
         $userId = $user instanceof User ? $user->id : $user;
-        
+
         return Notification::where('user_id', $userId)
             ->whereNull('read_at')
             ->count();
     }
 }
-

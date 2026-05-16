@@ -383,6 +383,15 @@ return [
         'list_limit' => env('NOTIFICATION_LIST_LIMIT', 10),
     ],
 
+    'push' => [
+        'enabled' => (bool) env('PUSH_ENABLED', false),
+        'vapid_public_key' => env('VAPID_PUBLIC_KEY'),
+        'vapid_private_key' => env('VAPID_PRIVATE_KEY'),
+        'vapid_subject' => env('VAPID_SUBJECT'),
+        'ttl_seconds' => (int) env('PUSH_TTL_SECONDS', 3600),
+        'timeout_seconds' => (int) env('PUSH_TIMEOUT_SECONDS', 10),
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Auth & Security

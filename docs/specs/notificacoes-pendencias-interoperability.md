@@ -170,13 +170,13 @@ Padrões reutilizados:
 
 ## Plano de implementação (ordenado)
 
-1. Config + `.env.example`: `INTEGRATION_ALERT_EMAILS`, VAPID, `telemedicine.push.*`.
-2. Migration `push_subscriptions` + model + policy (usuário só CRUD nas próprias linhas).
-3. `IntegrationFailureAlerter` + `IntegrationFailureMail` + throttle + testes.
-4. Wiring em `NotifyIntegrationFailure` removendo `TODO`.
-5. Contrato `PushNotificationSender` + `NullPushSender` + `WebPushSender` + binding.
-6. Rotas + FormRequest para registrar/remover subscription; testes feature.
-7. Testes: `IntegrationFailed` + `Mail::fake`; push com `WebPushSender` mockado ou biblioteca em teste de integração controlado.
+1. [x] Config + `.env.example`: `INTEGRATION_ALERT_EMAILS`, VAPID, `telemedicine.push.*`.
+2. [x] Migration `push_subscriptions` + model + policy (usuário só CRUD nas próprias linhas).
+3. [x] `IntegrationFailureAlerter` + `IntegrationFailureMail` + throttle + testes.
+4. [x] Wiring em `NotifyIntegrationFailure` removendo `TODO`.
+5. [x] Contrato `PushNotificationSender` + `NullPushSender` + `WebPushSender` + binding.
+6. [x] Rotas + FormRequest para registrar/remover subscription; testes feature.
+7. [x] Testes: `IntegrationFailed` + `Mail::fake`; push com `WebPushSender` mockado ou biblioteca em teste de integração controlado.
 8. Dependências de frontend (`Documents.vue`, `Messages.vue`) após API estável.
 9. Atualizar `feature-interoperability-pendencias.md` quando validado no código.
 
@@ -186,15 +186,15 @@ Padrões reutilizados:
 
 ### Backend
 
-- [ ] `NotifyIntegrationFailure` sem `TODO` — caminho feliz e throttled cobertos por testes
-- [ ] `sendPush` deixa de ser vazio ou delega explicitamente a driver documentado
-- [ ] Nenhum dado sensível em e-mail/push
+- [x] `NotifyIntegrationFailure` sem `TODO` — caminho feliz e throttled cobertos por testes
+- [x] `sendPush` deixa de ser vazio ou delega explicitamente a driver documentado
+- [x] Nenhum dado sensível em e-mail/push
 - [ ] `php artisan test` passando
 
 ### Documentação
 
-- [ ] `.env.example` documenta variáveis novas
-- [ ] Pendências raiz atualizadas após merge
+- [x] `.env.example` documenta variáveis novas
+- [x] Pendências raiz atualizadas após merge
 
 ---
 
