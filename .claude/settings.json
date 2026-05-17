@@ -7,7 +7,12 @@
             "Bash(php -l app/Http/Controllers/Doctor/DoctorPatientMedicalRecordController.php)",
             "Bash(php -l app/Http/Controllers/Patient/PatientMedicalRecordController.php)",
             "Bash(php -l app/Services/MedicalRecordClinicalActionService.php)",
-            "Bash(php -l app/Models/MedicalCertificate.php)"
+            "Bash(php -l app/Models/MedicalCertificate.php)",
+            "Bash(php -l /home/audri/Github/Audri/TelemedicinaParaTodos/app/Http/Controllers/Doctor/DoctorConsultationDetailController.php)",
+            "Bash(php -l /home/audri/Github/Audri/TelemedicinaParaTodos/app/Http/Controllers/Doctor/DoctorHistoryController.php)",
+            "Bash(php -l /home/audri/Github/Audri/TelemedicinaParaTodos/app/Jobs/LogMedicalRecordAccessJob.php)",
+            "Bash(php -l /home/audri/Github/Audri/TelemedicinaParaTodos/routes/web/shared.php)",
+            "Bash(php -l /home/audri/Github/Audri/TelemedicinaParaTodos/routes/web/doctor.php)"
         ]
     }
 }

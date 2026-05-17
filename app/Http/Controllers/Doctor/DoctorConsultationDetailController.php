@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Doctor;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\LogMedicalRecordAccessJob;
 use App\Models\Appointments;
 use App\Services\MedicalRecordService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
 class DoctorConsultationDetailController extends Controller
@@ -19,16 +21,15 @@ class DoctorConsultationDetailController extends Controller
         $this->authorize('view', $appointment);
 
         $user = $request->user();
+        $doctor = $user->doctor ?? abort(403);
         $appointment->load([
             'patient.user',
             'doctor.user',
-            'doctor.specializations',
             'prescriptions',
             'examinations.partnerIntegration',
             'diagnoses',
             'clinicalNotes',
             'vitalSigns',
-            'medicalDocuments',
         ]);
 
         $patient = $appointment->patient;
@@ -54,14 +55,21 @@ class DoctorConsultationDetailController extends Controller
             'height' => $patient->height,
             'weight' => $patient->weight,
             'bmi' => $patient->bmi,
+            'phone' => $patient->phone_number ?? null,
+            'email' => $patient->user->email ?? null,
+            'emergency_contact' => $patient->emergency_contact ?? null,
+            'emergency_phone' => $patient->emergency_phone ?? null,
+            'insurance_provider' => $patient->insurance_provider ?? null,
         ];
 
         // Últimas consultas para histórico (limite configurável)
         $recentLimit = (int) config('telemedicine.consultation_detail.recent_history_limit', 3);
+        $doctorName = $appointment->doctor->user->name ?? null;
         $recentConsultations = Appointments::where('patient_id', $patient->id)
-            ->where('doctor_id', $user->doctor->id)
+            ->where('doctor_id', $doctor->id)
             ->where('id', '!=', $appointment->id)
             ->where('status', Appointments::STATUS_COMPLETED)
+            ->select(['id', 'scheduled_at', 'metadata'])
             ->orderByDesc('scheduled_at')
             ->limit($recentLimit)
             ->get()
@@ -70,6 +78,7 @@ class DoctorConsultationDetailController extends Controller
                 'date' => $apt->scheduled_at->format('d/m/Y'),
                 'diagnosis' => $apt->metadata['diagnosis'] ?? null,
                 'cid10' => $apt->metadata['cid10'] ?? null,
+                'doctor' => $doctorName,
             ]);
 
         // Dados da consulta atual
@@ -81,7 +90,6 @@ class DoctorConsultationDetailController extends Controller
             'ended_at' => $appointment->ended_at?->toIso8601String(),
             'status' => $appointment->status,
             'notes' => $appointment->notes,
-            'metadata' => $metadata,
             // Dados clínicos da consulta (SOAP - sem anamnese)
             'chief_complaint' => $metadata['chief_complaint'] ?? '',
             'physical_exam' => $metadata['physical_exam'] ?? '',
@@ -138,12 +146,14 @@ class DoctorConsultationDetailController extends Controller
             ]),
         ];
 
-        $this->medicalRecordService->logAccess(
+        LogMedicalRecordAccessJob::dispatch(
             $user,
             $patient,
             'view',
-            ['appointment_id' => $appointment->id]
-        );
+            ['appointment_id' => $appointment->id],
+            $request->ip(),
+            $request->userAgent(),
+        )->onQueue('low');
 
         // Se for requisição AJAX explícita (não do Inertia), retornar JSON
         // O Inertia sempre envia o header X-Inertia, então verificamos se NÃO é Inertia
@@ -166,6 +176,7 @@ class DoctorConsultationDetailController extends Controller
             'elapsed_time' => $elapsedTime,
             'can_edit' => $isInProgress,
             'can_complement' => $isCompleted,
+            'doctor_name' => $appointment->doctor->user->name ?? null,
         ]);
     }
 
@@ -244,6 +255,7 @@ class DoctorConsultationDetailController extends Controller
         }
 
         // Validação de campos essenciais
+        $appointment->loadMissing('diagnoses');
         $metadata = $appointment->metadata ?? [];
         $errors = [];
 
@@ -327,9 +339,9 @@ class DoctorConsultationDetailController extends Controller
         $user = $request->user();
         $result = $this->medicalRecordService->generateConsultationPdf($appointment, $user);
 
-        return response()->download(
-            storage_path("app/public/{$result['path']}"),
-            $result['filename']
-        );
+        $disk = Storage::disk($result['disk_domain']);
+        abort_unless($disk->exists($result['path']), 404);
+
+        return $disk->download($result['path'], $result['filename']);
     }
 }

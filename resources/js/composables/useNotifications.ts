@@ -2,7 +2,7 @@ import { usePage } from '@inertiajs/vue3';
 import Echo from 'laravel-echo';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 
-interface Notification {
+export interface Notification {
     id: string;
     type: string;
     title: string;
@@ -11,16 +11,37 @@ interface Notification {
     color: string;
     time: string;
     timestamp: string;
-    metadata: Record<string, any>;
+    metadata: Record<string, unknown>;
     is_read: boolean;
     read_at: string | null;
 }
+
+interface NotificationsIndexResponse {
+    data?: Notification[];
+}
+
+interface UnreadNotificationsResponse {
+    data?: Notification[];
+    count?: number;
+}
+
+interface UnreadCountResponse {
+    count?: number;
+}
+
+const csrfToken = (): string => {
+    const token = document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content;
+    if (!token) throw new Error('CSRF token not found');
+    return token;
+};
 
 export function useNotifications() {
     const page = usePage();
     const currentUserId = (page.props.auth as any)?.user?.id;
     let echo: Echo | null = null;
+    let wsRetryDelay = 1000;
     const notifications = ref<Notification[]>([]);
+    const allNotifications = ref<Notification[]>([]);
     const unreadCount = ref(0);
     const loading = ref(false);
     const channel = ref<any>(null);
@@ -32,11 +53,39 @@ export function useNotifications() {
         try {
             loading.value = true;
             const response = await fetch('/api/notifications/unread');
-            const data = await response.json();
+            if (!response.ok) {
+                if (response.status === 401) window.location.href = '/login';
+                throw new Error(`HTTP ${response.status}`);
+            }
+            const data = (await response.json()) as UnreadNotificationsResponse;
             notifications.value = data.data || [];
             unreadCount.value = data.count || 0;
         } catch (error) {
             console.error('Erro ao carregar notificações:', error);
+        } finally {
+            loading.value = false;
+        }
+    };
+
+    /**
+     * Carregar todas as notificações para a modal
+     */
+    const loadAll = async (page = 1) => {
+        try {
+            loading.value = true;
+            const response = await fetch(`/api/notifications?per_page=20&page=${page}`);
+            if (!response.ok) {
+                if (response.status === 401) window.location.href = '/login';
+                throw new Error(`HTTP ${response.status}`);
+            }
+            const data = (await response.json()) as NotificationsIndexResponse;
+            if (page === 1) {
+                allNotifications.value = data.data || [];
+            } else {
+                allNotifications.value.push(...(data.data || []));
+            }
+        } catch (error) {
+            console.error('Erro ao carregar todas as notificações:', error);
         } finally {
             loading.value = false;
         }
@@ -48,7 +97,11 @@ export function useNotifications() {
     const loadUnreadCount = async () => {
         try {
             const response = await fetch('/api/notifications/unread-count');
-            const data = await response.json();
+            if (!response.ok) {
+                if (response.status === 401) window.location.href = '/login';
+                throw new Error(`HTTP ${response.status}`);
+            }
+            const data = (await response.json()) as UnreadCountResponse;
             unreadCount.value = data.count || 0;
         } catch (error) {
             console.error('Erro ao carregar contador:', error);
@@ -63,19 +116,32 @@ export function useNotifications() {
             const response = await fetch(`/api/notifications/${notificationId}/read`, {
                 method: 'POST',
                 headers: {
+                    Accept: 'application/json',
                     'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    'X-CSRF-TOKEN': csrfToken(),
                 },
+                credentials: 'same-origin',
             });
 
             if (response.ok) {
-                // Atualizar notificação localmente
                 const index = notifications.value.findIndex((n) => n.id === notificationId);
+                const allIndex = allNotifications.value.findIndex((n) => n.id === notificationId);
+                const wasUnread =
+                    (index !== -1 && !notifications.value[index].is_read) || (allIndex !== -1 && !allNotifications.value[allIndex].is_read);
+
                 if (index !== -1) {
                     notifications.value[index].is_read = true;
                     notifications.value[index].read_at = new Date().toISOString();
                 }
-                unreadCount.value = Math.max(0, unreadCount.value - 1);
+
+                if (allIndex !== -1) {
+                    allNotifications.value[allIndex].is_read = true;
+                    allNotifications.value[allIndex].read_at = new Date().toISOString();
+                }
+
+                if (wasUnread) {
+                    unreadCount.value = Math.max(0, unreadCount.value - 1);
+                }
             }
         } catch (error) {
             console.error('Erro ao marcar como lida:', error);
@@ -90,13 +156,19 @@ export function useNotifications() {
             const response = await fetch('/api/notifications/read-all', {
                 method: 'POST',
                 headers: {
+                    Accept: 'application/json',
                     'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    'X-CSRF-TOKEN': csrfToken(),
                 },
+                credentials: 'same-origin',
             });
 
             if (response.ok) {
                 notifications.value.forEach((n) => {
+                    n.is_read = true;
+                    n.read_at = new Date().toISOString();
+                });
+                allNotifications.value.forEach((n) => {
                     n.is_read = true;
                     n.read_at = new Date().toISOString();
                 });
@@ -112,6 +184,7 @@ export function useNotifications() {
      */
     const addNotification = (notification: Notification) => {
         notifications.value.unshift(notification);
+        allNotifications.value.unshift(notification);
         if (!notification.is_read) {
             unreadCount.value++;
         }
@@ -127,6 +200,11 @@ export function useNotifications() {
                 unreadCount.value = Math.max(0, unreadCount.value - 1);
             }
             notifications.value.splice(index, 1);
+        }
+
+        const allIndex = allNotifications.value.findIndex((n) => n.id === notificationId);
+        if (allIndex !== -1) {
+            allNotifications.value.splice(allIndex, 1);
         }
     };
 
@@ -165,34 +243,27 @@ export function useNotifications() {
                 addNotification('data' in data ? data.data : data);
             });
 
-            // Tratamento de reconexão
             echo.connector.pusher.connection.bind('connected', () => {
-                console.log('WebSocket conectado - notificações ativas');
-                // Recarregar notificações ao reconectar
+                wsRetryDelay = 1000;
                 loadUnreadCount();
             });
 
-            echo.connector.pusher.connection.bind('disconnected', () => {
-                console.warn('WebSocket desconectado - tentando reconectar...');
-            });
-
-            echo.connector.pusher.connection.bind('error', (err: any) => {
-                console.error('Erro no WebSocket:', err);
-                // Tentar reconectar após delay
-                setTimeout(() => {
-                    if (echo) {
-                        echo.disconnect();
-                        echo = null;
+            echo.connector.pusher.connection.bind('error', () => {
+                setTimeout(
+                    () => {
+                        if (echo) {
+                            echo.disconnect();
+                            echo = null;
+                        }
                         initializeRealtime();
-                    }
-                }, 5000);
+                    },
+                    wsRetryDelay + Math.random() * 500,
+                );
+                wsRetryDelay = Math.min(wsRetryDelay * 2, 30_000);
             });
-        } catch (err) {
-            console.error('Erro ao configurar Echo:', err);
-            // Tentar novamente após delay
-            setTimeout(() => {
-                initializeRealtime();
-            }, 5000);
+        } catch {
+            setTimeout(() => initializeRealtime(), wsRetryDelay + Math.random() * 500);
+            wsRetryDelay = Math.min(wsRetryDelay * 2, 30_000);
         }
     };
 
@@ -229,11 +300,13 @@ export function useNotifications() {
 
     return {
         notifications,
+        allNotifications,
         unreadCount,
         loading,
         hasUnread,
         unreadNotifications,
         loadUnread,
+        loadAll,
         loadUnreadCount,
         markAsRead,
         markAllAsRead,

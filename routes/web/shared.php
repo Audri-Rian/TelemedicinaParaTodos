@@ -36,7 +36,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 // Notificações
-Route::middleware(['auth'])->prefix('api/notifications')->name('notifications.')->group(function () {
+Route::middleware(['auth', 'verified'])->prefix('api/notifications')->name('notifications.')->group(function () {
     Route::get('/', [App\Http\Controllers\NotificationController::class, 'index'])->name('index');
     Route::get('unread', [App\Http\Controllers\NotificationController::class, 'unread'])->name('unread');
     Route::get('unread-count', [App\Http\Controllers\NotificationController::class, 'unreadCount'])->name('unread-count');

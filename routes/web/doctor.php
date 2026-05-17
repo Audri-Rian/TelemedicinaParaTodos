@@ -12,7 +12,7 @@ Route::middleware(['auth', 'verified', 'doctor'])->prefix('doctor')->name('docto
     Route::post('consultations/{appointment}/start', [App\Http\Controllers\Doctor\DoctorConsultationDetailController::class, 'start'])->middleware('throttle:10,1')->name('consultations.detail.start');
     Route::post('consultations/{appointment}/save-draft', [App\Http\Controllers\Doctor\DoctorConsultationDetailController::class, 'saveDraft'])->middleware('throttle:30,1')->name('consultations.detail.save-draft');
     Route::post('consultations/{appointment}/finalize', [App\Http\Controllers\Doctor\DoctorConsultationDetailController::class, 'finalize'])->middleware('throttle:10,1')->name('consultations.detail.finalize');
-    Route::post('consultations/{appointment}/complement', [App\Http\Controllers\Doctor\DoctorConsultationDetailController::class, 'complement'])->name('consultations.detail.complement');
+    Route::post('consultations/{appointment}/complement', [App\Http\Controllers\Doctor\DoctorConsultationDetailController::class, 'complement'])->middleware('throttle:5,1')->name('consultations.detail.complement');
     Route::get('consultations/{appointment}/pdf', [App\Http\Controllers\Doctor\DoctorConsultationDetailController::class, 'generatePdf'])->name('consultations.detail.pdf');
     Route::get('messages', [App\Http\Controllers\Doctor\DoctorMessagesController::class, 'index'])->name('messages');
     Route::get('history', [App\Http\Controllers\Doctor\DoctorHistoryController::class, 'index'])->name('history');
