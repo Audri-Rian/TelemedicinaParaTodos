@@ -205,36 +205,39 @@ PENDENCIAS desta pagina (nao bloqueantes para uso interno, mas obrigatorias ante
 
 ---
 
-# TESTES (cobertura atual: 37 metodos, maioria auth/settings)
+# TESTES (cobertura atual: ~170 metodos — 2026-05-17)
 
 ### Testes existentes
 
 - Auth (login, logout, registro, email verification, password reset) - OK
 - Settings (profile update, password update) - OK
-- AppointmentsTest (14 unit tests) - OK
+- AppointmentsTest (24 unit tests) - OK
 - DoctorMedicalRecordActionsTest (1 test) - OK
+- Doctor/DoctorDashboardTest (6 feature tests) - OK
+- Doctor/DoctorAppointmentsTest (14 feature tests — start, saveDraft, finalize, complement, history) - OK
+- Patient/PatientDashboardTest (8 feature tests) - OK
+- Patient/PatientConsultationsTest (7 feature tests — booking, details, next, video-call) - OK
+- MessagingTest (12 feature tests — pages + ConversationPolicy) - OK
+- LGPD/ConsentTest (11 feature tests — grant/revoke/check, guest bloqueado) - OK
+- LGPD/DataPortabilityTest (5 feature tests — export JSON, guest redirect) - OK
+- Unit/Policies/AppointmentPolicyTest (30 unit tests — todos os metodos da policy) - OK
+- Unit/Policies/ConversationPolicyTest (11 unit tests) - OK
+- Unit/VideoCallPolicyTest (14 unit tests — substituiu placeholder) - OK
 
-### Testes faltando (sem nenhum arquivo)
+### Testes faltando
 
-[ ] Testes de Doctor appointments management
-[ ] Testes de Doctor availability/scheduling
-[ ] Testes de Patient dashboard
-[ ] Testes de Patient booking
-[ ] Testes de Patient consultations
-[ ] Testes do sistema de mensagens
-[ ] Testes de LGPD (Consent, Data Access, Portability)
-[ ] Testes de Policies (AppointmentPolicy, ConversationPolicy)
-[ ] Testes de VideoCall
+[ ] Testes de Doctor availability/scheduling (DoctorAvailabilitySlotController — requer AvailabilitySlot factory)
+[ ] Testes de LGPD paginas Inertia (Consents, DataPortability, DataAccessReport — Vue pages nao existem ainda)
 
-### Factories faltando
+### Factories
 
-[ ] AppointmentsFactory (usado em testes mas criado manualmente)
+[x] AppointmentsFactory — criada com states: scheduled(), inProgress(), completed(), cancelled(), rescheduled(), forDoctorAndPatient()
 
-### Testes placeholder para remover ou implementar
+### Testes placeholder removidos
 
-[ ] tests/Unit/ExampleTest.php - trivial
-[ ] tests/Feature/ExampleTest.php - trivial
-[ ] tests/Unit/VideoCallPolicyTest.php - trivial/vazio
+[x] tests/Unit/ExampleTest.php — removido
+[x] tests/Feature/ExampleTest.php — removido
+[x] tests/Unit/VideoCallPolicyTest.php — substituido por 14 testes reais
 
 ---
 
@@ -400,7 +403,7 @@ Realizado em: 2026-04-16
 [x] **Paginacao fake** - rebaseline 2026-05-08: item obsoleto; a paginacao fake foi removida junto com a tabela antiga.
 [x] **Sem empty state, loading ou error state** - rebaseline 2026-05-08: resolvido em [History.vue](resources/js/pages/Doctor/History.vue) com `DataGridSkeleton`, estado de erro e empty state.
 [ ] **Resumo do periodo e pendencias com numeros hardcoded** - rebaseline 2026-05-08: sidebar mostra "142 Atendimentos", "98% Confirmacao", "7 Faltas", "12 min", "3 prontuarios a finalizar", "2 prescricoes em rascunho" e "1 reagendamento aguardando" fixos; conectar ao backend ou remover.
-[ ] \*_Avaliar sobreposicao com `/doctor/consultations_`* - verificar se `/doctor/history`e`/doctor/consultations` mostram informacoes concorrentes e se cabe unificar (semelhante ao merge schedule/availability)
+[ ] _Avaliar sobreposicao com `/doctor/consultations_`* - verificar se `/doctor/history`e`/doctor/consultations` mostram informacoes concorrentes e se cabe unificar (semelhante ao merge schedule/availability)
 
 ### Emissao de Documentos Medico (`/doctor/documents`)
 
@@ -420,7 +423,7 @@ Realizado em: 2026-04-16
 [ ] **Sem estados de loading/erro/sucesso** - submit nao mostra feedback (spinner, toast, validacao por campo)
 [ ] **Breadcrumb/rota** - confirmar nomenclatura: `Documentos` (menu) vs `Emissao de Documentos` (titulo da pagina). Alinhar labels
 
-### Interoperabilidade - Hub/Parceiros/Connect (`/doctor/integrations/*`)
+### Interoperabilidade - Hub/Parceiros/Connect (`/doctor/integrations/`\*)
 
 [ ] **Melhorar identidade visual da API Docs (logo/componente)** - criar uma logo mais profissional para a area de documentacao e refatorar o componente atual de logo (muito fraco visualmente), incluindo variantes para header e sidebar com boa legibilidade
 [x] **BUG CRITICO: PartnerIntegration global sem escopo multi-tenant** - resolvido em 2026-05-02 com adocao da Opcao A: criacao da pivot `doctor_partner_integrations`, escopo por medico em `DoctorIntegrationsController` (`index`, `partners`, `show`, `sync`) e conexao por vinculo doctor-partner (sem duplicar parceiro global por slug)

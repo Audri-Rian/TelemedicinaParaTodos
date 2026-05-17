@@ -1,0 +1,5 @@
+{
+    "permissions": {
+        "allow": ["Skill(development-rules)", "Skill(development-rules:*)"]
+    }
+}
