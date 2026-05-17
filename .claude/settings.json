@@ -1,5 +1,13 @@
 {
     "permissions": {
-        "allow": ["Skill(development-rules)", "Skill(development-rules:*)"]
+        "allow": [
+            "Skill(development-rules)",
+            "Skill(development-rules:*)",
+            "Bash(php -l app/Http/Controllers/MedicalRecordDocumentController.php)",
+            "Bash(php -l app/Http/Controllers/Doctor/DoctorPatientMedicalRecordController.php)",
+            "Bash(php -l app/Http/Controllers/Patient/PatientMedicalRecordController.php)",
+            "Bash(php -l app/Services/MedicalRecordClinicalActionService.php)",
+            "Bash(php -l app/Models/MedicalCertificate.php)"
+        ]
     }
 }

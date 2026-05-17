@@ -87,6 +87,20 @@ class MedicalRecordPolicy
         return $this->doctorCanAccessPatient($user, $patient);
     }
 
+    public function updateClinicalRecord(User $user, Patient $patient): bool
+    {
+        return $this->doctorCanAccessPatient($user, $patient);
+    }
+
+    public function viewVersionHistory(User $user, Patient $patient): bool
+    {
+        if ($user->id === $patient->user_id) {
+            return true;
+        }
+
+        return $this->doctorCanAccessPatient($user, $patient);
+    }
+
     public function updatePersonalData(User $user, Patient $patient): bool
     {
         return $user->id === $patient->user_id;

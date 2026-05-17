@@ -1,20 +1,54 @@
 <script setup lang="ts">
+import EditPrescriptionModal from '@/components/Patient/MedicalRecord/EditPrescriptionModal.vue';
 import EmptyBlock from '@/components/Patient/MedicalRecord/EmptyBlock.vue';
+import VersionHistoryModal from '@/components/Patient/MedicalRecord/VersionHistoryModal.vue';
 import { useFormatters } from '@/composables/useFormatters';
 import type { Prescription } from '@/types/medical-records';
+import { History, Pencil } from 'lucide-vue-next';
+import { ref } from 'vue';
 
 defineProps<{
     prescriptions: Prescription[];
     emptyText: string;
+    patientId?: string;
 }>();
 
 const { formatDate, formatStatus } = useFormatters();
+
+const historyTarget = ref<Prescription | null>(null);
+const editTarget = ref<Prescription | null>(null);
+
+function canEdit(prescription: Prescription): boolean {
+    // Block edit if signed/verified — observer handles server-side enforcement
+    return !['signed', 'verified'].includes(prescription.signature_status ?? '');
+}
 </script>
 
 <template>
     <div class="grid gap-4 md:grid-cols-2">
         <article v-for="prescription in prescriptions" :key="prescription.id" class="rounded-lg border border-[#dde5ea] bg-white p-4">
-            <h2 class="font-black text-gray-950">Emitida em {{ formatDate(prescription.issued_at) }}</h2>
+            <div class="flex items-start justify-between gap-2">
+                <h2 class="font-black text-gray-950">Emitida em {{ formatDate(prescription.issued_at) }}</h2>
+                <div v-if="patientId" class="flex shrink-0 gap-1">
+                    <button
+                        v-if="canEdit(prescription)"
+                        type="button"
+                        class="rounded p-1 text-gray-400 hover:bg-[#e5f1f2] hover:text-[#0f6e78]"
+                        title="Editar prescrição"
+                        @click="editTarget = prescription"
+                    >
+                        <Pencil class="h-4 w-4" />
+                    </button>
+                    <button
+                        type="button"
+                        class="rounded p-1 text-gray-400 hover:bg-[#e5f1f2] hover:text-[#0f6e78]"
+                        title="Ver histórico de alterações"
+                        @click="historyTarget = prescription"
+                    >
+                        <History class="h-4 w-4" />
+                    </button>
+                </div>
+            </div>
             <p class="mt-1 text-sm font-semibold text-gray-500">Médico: {{ prescription.doctor?.name || '—' }}</p>
             <div class="mt-4 space-y-2 text-sm text-gray-700">
                 <p class="font-black text-gray-950">Medicamentos</p>
@@ -30,4 +64,24 @@ const { formatDate, formatStatus } = useFormatters();
         </article>
         <EmptyBlock v-if="prescriptions.length === 0" :text="emptyText" />
     </div>
+
+    <template v-if="patientId">
+        <EditPrescriptionModal
+            v-if="editTarget"
+            :is-open="!!editTarget"
+            :prescription="editTarget"
+            :patient-id="patientId"
+            @close="editTarget = null"
+        />
+        <VersionHistoryModal
+            v-if="historyTarget"
+            :is-open="!!historyTarget"
+            :patient-id="patientId"
+            record-type="prescriptions"
+            :record-id="historyTarget.id"
+            :record-title="`Prescrição emitida em ${formatDate(historyTarget.issued_at)}`"
+            audience="doctor"
+            @close="historyTarget = null"
+        />
+    </template>
 </template>

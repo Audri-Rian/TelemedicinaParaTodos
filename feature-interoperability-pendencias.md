@@ -150,9 +150,9 @@ PENDENCIAS desta pagina (nao bloqueantes para uso interno, mas obrigatorias ante
 
 ### Prontuario e Prescricoes (docs/TrueIssues.md sec 7.6)
 
-[ ] Versionamento explicito de alteracoes clinicas
-[ ] Historico de edicoes com diff
-[ ] Interface para visualizar historico de alteracoes
+[x] Versionamento explicito de alteracoes clinicas - trait HasClinicalVersioning + tabela clinical_record_versions (migration 2026_05_17_000001); ClinicalNote, Prescription, MedicalCertificate capturam versoes automaticamente via model events
+[x] Historico de edicoes com diff - ClinicalRecordVersion armazena changed_fields, old_values, new_values por versao; endpoint GET /doctor/patients/{patient}/medical-record/{type}/{record}/versions
+[x] Interface para visualizar historico de alteracoes - VersionHistoryModal.vue com timeline de versoes e diff campo-a-campo; botao History nas tabs ClinicalNotesTab, PrescriptionsTab, CertificatesTab (visivel apenas no contexto medico)
 
 ---
 

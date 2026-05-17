@@ -4,7 +4,7 @@ import type { Appointment } from '@/types/medical-records';
 import { useForm } from '@inertiajs/vue3';
 import { computed, type Ref } from 'vue';
 
-export function useMedicalRecordDocument(consultations: Ref<Appointment[]>) {
+export function useMedicalRecordDocument(consultations: Ref<Appointment[]>, patientId?: Ref<string | undefined>) {
     const { formatDate } = useFormatters();
 
     const documentForm = useForm<{
@@ -31,7 +31,16 @@ export function useMedicalRecordDocument(consultations: Ref<Appointment[]>) {
     );
 
     function submitDocument() {
-        documentForm.post(patientMedicalRecordRoutes.documents.store.url(), {
+        if (!documentForm.file) {
+            documentForm.setError('file', 'Selecione um arquivo antes de enviar.');
+            return;
+        }
+
+        const uploadUrl = patientId?.value
+            ? `/doctor/patients/${patientId.value}/medical-record/documents`
+            : patientMedicalRecordRoutes.documents.store.url();
+
+        documentForm.post(uploadUrl, {
             forceFormData: true,
             preserveScroll: true,
             onSuccess: () => {
@@ -51,18 +60,18 @@ export function useMedicalRecordDocument(consultations: Ref<Appointment[]>) {
         if (file) {
             if (file.size > MAX_FILE_BYTES) {
                 documentForm.setError('file', 'Arquivo deve ter no máximo 10 MB.');
-                documentForm.file = null;
+                documentForm.setData('file', null);
                 return;
             }
             if (!ALLOWED_MIME_TYPES.includes(file.type)) {
                 documentForm.setError('file', 'Apenas PDF, JPEG e PNG são permitidos.');
-                documentForm.file = null;
+                documentForm.setData('file', null);
                 return;
             }
             documentForm.clearErrors('file');
         }
 
-        documentForm.file = file;
+        documentForm.setData('file', file);
     }
 
     return { documentForm, appointmentOptions, submitDocument, handleFileChange };

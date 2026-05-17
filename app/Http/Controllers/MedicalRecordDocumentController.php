@@ -6,8 +6,10 @@ use App\Models\MedicalDocument;
 use App\Models\Patient;
 use App\Services\FileStorageManager;
 use App\Services\MedicalRecordService;
+use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -105,6 +107,8 @@ class MedicalRecordDocumentController extends Controller
             abort(403);
         }
 
+        $document->loadMissing('patient');
+
         if ($user->isPatient()) {
             if ($document->patient_id !== $user->patient?->id) {
                 abort(403);
@@ -114,9 +118,7 @@ class MedicalRecordDocumentController extends Controller
                 abort(403);
             }
         } elseif ($user->isDoctor()) {
-            if ($document->doctor_id !== $user->doctor?->id) {
-                abort(403);
-            }
+            $this->authorize('uploadDocument', $document->patient);
 
             if ($document->visibility === MedicalDocument::VISIBILITY_PATIENT) {
                 abort(403);
@@ -128,7 +130,7 @@ class MedicalRecordDocumentController extends Controller
         $domain = $this->resolveDomainByDocument($document);
         $disk = $this->fileStorageManager->disk($domain);
 
-        if (! $disk->exists($document->file_path)) {
+        if (! $disk->exists($document->file_path) && ! $this->ensureDemoDocumentExists($disk, $document)) {
             abort(404);
         }
 
@@ -139,7 +141,16 @@ class MedicalRecordDocumentController extends Controller
             ['document_id' => $document->id]
         );
 
-        return $disk->download($document->file_path, $document->name);
+        return $disk->download($document->file_path, $this->resolveDownloadFilename($document));
+    }
+
+    public function downloadForPatient(Request $request, Patient $patient, MedicalDocument $document): StreamedResponse
+    {
+        if ($document->patient_id !== $patient->id) {
+            abort(404);
+        }
+
+        return $this->download($request, $document);
     }
 
     private function resolveDomainByCategory(string $category): string
@@ -159,5 +170,47 @@ class MedicalRecordDocumentController extends Controller
         }
 
         return $this->resolveDomainByCategory($document->category);
+    }
+
+    private function ensureDemoDocumentExists(FilesystemAdapter $disk, MedicalDocument $document): bool
+    {
+        if (app()->isProduction()) {
+            return false;
+        }
+
+        $reference = data_get($document->metadata, 'reference');
+        if (! is_string($reference) || ! str_starts_with($reference, 'DOC-DEMO-')) {
+            return false;
+        }
+
+        $pdfContent = app('dompdf.wrapper')
+            ->loadHTML(
+                '<h1>Laudo Hemograma (Demo)</h1><p>Arquivo gerado automaticamente para ambiente local de desenvolvimento.</p>'
+            )
+            ->output();
+
+        $disk->put($document->file_path, $pdfContent);
+
+        return $disk->exists($document->file_path);
+    }
+
+    private function resolveDownloadFilename(MedicalDocument $document): string
+    {
+        $fallbackName = trim($document->name) !== '' ? trim($document->name) : 'documento';
+        $originalName = data_get($document->metadata, 'original_name');
+        $baseName = is_string($originalName) && trim($originalName) !== '' ? trim($originalName) : $fallbackName;
+
+        if (Str::contains($baseName, '.')) {
+            return $baseName;
+        }
+
+        $extension = match ($document->file_type) {
+            'application/pdf' => 'pdf',
+            'image/jpeg' => 'jpg',
+            'image/png' => 'png',
+            default => pathinfo($document->file_path, PATHINFO_EXTENSION) ?: 'bin',
+        };
+
+        return "{$baseName}.{$extension}";
     }
 }

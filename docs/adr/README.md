@@ -58,6 +58,7 @@ ADRs documentam **por que** uma decisão foi tomada — contexto, alternativas d
 
 ## Índice
 
-| #                                                   | Título                                            | Status     | Data       |
-| --------------------------------------------------- | ------------------------------------------------- | ---------- | ---------- |
-| [0001](0001-pades-icp-brasil-assinatura-digital.md) | Assinatura digital PAdES com certificado A1 local | `accepted` | 2026-05-14 |
+| #                                                   | Título                                                 | Status     | Data       |
+| --------------------------------------------------- | ------------------------------------------------------ | ---------- | ---------- |
+| [0001](0001-pades-icp-brasil-assinatura-digital.md) | Assinatura digital PAdES com certificado A1 local      | `accepted` | 2026-05-14 |
+| [0002](0002-versionamento-registros-clinicos.md)    | Versionamento de registros clínicos com diff auditável | `accepted` | 2026-05-17 |

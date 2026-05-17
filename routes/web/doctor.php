@@ -37,6 +37,7 @@ Route::middleware(['auth', 'verified', 'doctor'])->prefix('doctor')->name('docto
     Route::get('patients/{patient}/medical-record', [App\Http\Controllers\Doctor\DoctorPatientMedicalRecordController::class, 'show'])->name('patients.medical-record');
     Route::post('patients/{patient}/medical-record/export', [App\Http\Controllers\Doctor\DoctorPatientMedicalRecordController::class, 'export'])->middleware('throttle:5,1')->name('patients.medical-record.export');
     Route::post('patients/{patient}/medical-record/documents', [App\Http\Controllers\MedicalRecordDocumentController::class, 'storeForPatient'])->middleware('throttle:10,1')->name('patients.medical-record.documents.store');
+    Route::get('patients/{patient}/medical-record/documents/{document}/download', [App\Http\Controllers\MedicalRecordDocumentController::class, 'downloadForPatient'])->name('patients.medical-record.documents.download');
     Route::post('patients/{patient}/medical-record/diagnoses', [App\Http\Controllers\Doctor\DoctorPatientMedicalRecordController::class, 'storeDiagnosis'])->name('patients.medical-record.diagnoses.store');
     Route::post('patients/{patient}/medical-record/prescriptions', [App\Http\Controllers\Doctor\DoctorPatientMedicalRecordController::class, 'storePrescription'])->name('patients.medical-record.prescriptions.store');
     Route::post('patients/{patient}/medical-record/examinations', [App\Http\Controllers\Doctor\DoctorPatientMedicalRecordController::class, 'storeExamination'])->name('patients.medical-record.examinations.store');
@@ -44,6 +45,10 @@ Route::middleware(['auth', 'verified', 'doctor'])->prefix('doctor')->name('docto
     Route::post('patients/{patient}/medical-record/certificates', [App\Http\Controllers\Doctor\DoctorPatientMedicalRecordController::class, 'storeMedicalCertificate'])->name('patients.medical-record.certificates.store');
     Route::post('patients/{patient}/medical-record/vital-signs', [App\Http\Controllers\Doctor\DoctorPatientMedicalRecordController::class, 'storeVitalSigns'])->name('patients.medical-record.vital-signs.store');
     Route::post('patients/{patient}/medical-record/consultations/pdf', [App\Http\Controllers\Doctor\DoctorPatientMedicalRecordController::class, 'generateConsultationPdf'])->name('patients.medical-record.consultations.pdf');
+    Route::patch('patients/{patient}/medical-record/notes/{note}', [App\Http\Controllers\Doctor\DoctorPatientMedicalRecordController::class, 'updateClinicalNote'])->middleware('throttle:30,1')->name('patients.medical-record.notes.update');
+    Route::patch('patients/{patient}/medical-record/prescriptions/{prescription}', [App\Http\Controllers\Doctor\DoctorPatientMedicalRecordController::class, 'updatePrescription'])->middleware('throttle:30,1')->name('patients.medical-record.prescriptions.update');
+    Route::patch('patients/{patient}/medical-record/certificates/{certificate}', [App\Http\Controllers\Doctor\DoctorPatientMedicalRecordController::class, 'updateMedicalCertificate'])->middleware('throttle:30,1')->name('patients.medical-record.certificates.update');
+    Route::get('patients/{patient}/medical-record/{type}/{record}/versions', [App\Http\Controllers\Doctor\DoctorPatientMedicalRecordController::class, 'showVersionHistory'])->middleware('throttle:30,1')->where('type', 'notes|prescriptions|certificates')->name('patients.medical-record.versions');
 
     // Agenda do médico
     Route::get('schedule', [App\Http\Controllers\Doctor\DoctorScheduleController::class, 'index'])->name('schedule');

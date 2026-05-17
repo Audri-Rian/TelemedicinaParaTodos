@@ -33,6 +33,7 @@ export interface Prescription {
     instructions?: string | null;
     valid_until?: string | null;
     status: string;
+    signature_status?: string | null;
     issued_at?: string | null;
 }
 
@@ -113,6 +114,7 @@ export interface MedicalCertificate {
     reason: string;
     restrictions?: string | null;
     status: string;
+    signature_status?: string | null;
     verification_code: string;
     pdf_url?: string | null;
     doctor: { id: string; name: string; crm?: string | null };
@@ -145,13 +147,43 @@ export interface PatientProfile {
     bmi_category?: string | null;
 }
 
+export interface ClinicalRecordVersion {
+    version_number: number;
+    changed_by: string;
+    change_reason?: string | null;
+    changed_fields: string[];
+    old_values: Record<string, unknown>;
+    new_values: Record<string, unknown>;
+    created_at: string;
+}
+
+export type ClinicalVersionableType = 'notes' | 'prescriptions' | 'certificates';
+
 export interface FilterState {
     search: string;
     date_from: string;
     date_to: string;
 }
 
+export interface PatientProfileExtra {
+    email?: string | null;
+    phone?: string | null;
+    cpf?: string | null;
+    emergency_contact?: string | null;
+    medical_history?: string[];
+    recent_consultations?: Array<{
+        id: string;
+        date?: string | null;
+        time?: string | null;
+        status: string;
+        statusClass: string;
+        notes?: string | null;
+    }>;
+    total_consultations_with_doctor?: number;
+}
+
 export type TabId =
+    | 'perfil'
     | 'historico'
     | 'consultas'
     | 'prescricoes'
