@@ -76,13 +76,22 @@ class SecurityHeaders
             ? ' ws://127.0.0.1:8090 wss://127.0.0.1:8090 ws://localhost:8090 wss://localhost:8090'
             : '';
 
+        $reverbHost = (string) config('broadcasting.connections.reverb.options.host', '');
+        $reverbHost = preg_replace('#^https?://#', '', $reverbHost);
+        $reverbHost = preg_replace('#/.*$#', '', $reverbHost);
+        $reverbPort = (string) config('broadcasting.connections.reverb.options.port', '');
+        $reverbScheme = config('broadcasting.connections.reverb.options.scheme') === 'https' ? 'wss' : 'ws';
+        $reverbPublicSources = $reverbHost !== ''
+            ? " {$reverbScheme}://{$reverbHost}".($reverbPort !== '' ? " {$reverbScheme}://{$reverbHost}:{$reverbPort}" : '')
+            : '';
+
         $directives = [
             "default-src 'self'",
             "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://fonts.googleapis.com https://fonts.bunny.net https://cdn.jsdelivr.net{$viteDevSources}", // unsafe-inline/unsafe-eval necessário para Vite/Inertia
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.bunny.net https://rsms.me{$viteDevSources}", // rsms.me para fonte Inter
             "font-src 'self' https://fonts.gstatic.com https://fonts.bunny.net https://rsms.me data:", // rsms.me para fonte Inter
             "img-src 'self' data: https: blob:{$viteDevSources}", // Permite imagens do Vite em desenvolvimento
-            "connect-src 'self' https://api.peerjs.com https://cdn.jsdelivr.net https://unpkg.com wss://*.pusher.com ws://localhost:* http://localhost:*{$viteDevSources}{$reverbWebSocketSources}", // cdn.jsdelivr.net e unpkg.com para WASM do LottieFiles, Reverb WebSocket
+            "connect-src 'self' https://api.peerjs.com https://cdn.jsdelivr.net https://unpkg.com wss://*.pusher.com ws://localhost:* http://localhost:*{$viteDevSources}{$reverbWebSocketSources}{$reverbPublicSources}", // cdn.jsdelivr.net e unpkg.com para WASM do LottieFiles, Reverb WebSocket
             "media-src 'self' blob:",
             "object-src 'none'",
             "base-uri 'self'",
