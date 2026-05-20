@@ -8,6 +8,7 @@ This repository uses local Codex skills mirrored from the Claude setup.
 - Use `.agents/skills/commit-message/SKILL.md` when preparing a final commit message.
 - Never edit generated files listed by the development rules, especially `resources/js/routes/`, `resources/js/actions/`, `resources/js/wayfinder/`, `resources/js/components/ui/`, and `bootstrap/ssr/`.
 - Respect existing user changes in the working tree. Do not revert unrelated files.
+- **Migrations (dev local):** new tables/resources → create a normal `create_*` migration. Changes to existing tables → edit the original `create_*` and run `migrate:fresh` (or `--seed`); do **not** add alter migrations (`add_*`, `Schema::table`, `->change()`, etc.). See `.cursor/rules/database-migrations-dev.mdc`.
 
 ## Command Equivalents
 

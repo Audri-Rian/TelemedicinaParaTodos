@@ -16,8 +16,9 @@ return new class extends Migration
             $table->foreignUuid('changed_by')->constrained('users')->restrictOnDelete();
             $table->string('change_reason')->nullable();
             $table->json('changed_fields');
-            $table->json('old_values');
-            $table->json('new_values');
+            // Text: valores são serializados pelo cast encrypted:array (payload opaco, não JSON estruturado).
+            $table->text('old_values');
+            $table->text('new_values');
             $table->timestamp('created_at')->useCurrent();
 
             $table->index(['versionable_type', 'versionable_id', 'version_number']);

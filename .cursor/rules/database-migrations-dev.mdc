@@ -1,0 +1,33 @@
+---
+description: Em dev, alterar migrations existentes em vez de criar migrations de alteração
+alwaysApply: true
+---
+
+# Migrations em ambiente de desenvolvimento
+
+Este projeto está em **desenvolvimento local**. É aceitável e esperado rodar `php artisan migrate:fresh --seed` quando o schema mudar.
+
+## Regra
+
+- **Criar migration nova** (`create_*`) quando for tabela ou recurso novo (ainda não existe migration de criação).
+- **Não criar** migrations novas só para alterar tabelas/colunas já criadas (`Schema::table`, `->change()`, `add_*`, `drop_*` em tabela existente).
+- **Editar a migration original** de criação (`create_*_table`) que define a tabela.
+- Depois da alteração, o dev roda `migrate:fresh` (ou `migrate:fresh --seed`).
+
+## Quando criar migration nova
+
+- Tabela ou recurso **novo** (ainda não existe migration de `create`).
+- Ambiente **fora de dev** (staging/produção) onde `migrate:fresh` não é opção — nesse caso, migration incremental é obrigatória (fora do escopo do fluxo local padrão).
+
+## Exemplos
+
+```php
+// ❌ Evitar em dev — migration só para corrigir tipo de coluna
+Schema::table('clinical_record_versions', function (Blueprint $table) {
+    $table->text('old_values')->change();
+});
+
+// ✅ Correto em dev — ajustar a create original
+$table->text('old_values');
+$table->text('new_values');
+```
