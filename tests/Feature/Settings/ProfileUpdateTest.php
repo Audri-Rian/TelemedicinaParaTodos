@@ -96,4 +96,17 @@ class ProfileUpdateTest extends TestCase
 
         $this->assertNotNull($user->fresh());
     }
+
+    public function test_avatar_upload_validation_returns_json_errors()
+    {
+        $user = User::factory()->create();
+
+        $response = $this
+            ->actingAs($user)
+            ->postJson('/api/avatar/upload', []);
+
+        $response
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('avatar');
+    }
 }

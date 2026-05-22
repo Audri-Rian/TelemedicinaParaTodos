@@ -1,6 +1,6 @@
 # Feature Spec — Integração Mediasoup SFU: Videochamada Médico-Paciente
 
-> Status: `draft`
+> Status: `ready-for-implementation`
 > Autor: Tech Lead Agent · Data: 2026-05-22
 
 ---
@@ -12,6 +12,16 @@ Expor via HTTP + Inertia o fluxo completo de videochamada médico-paciente sobre
 ## Motivação
 
 `CallManagerService` está completo e funcional mas sem rotas HTTP expostas. O frontend carece de composables WebRTC e UI de vídeo. Broadcasting via Reverb está configurado no app.ts mas as variáveis de ambiente não têm valores. A transição de P2P para SFU já está arquitetada — falta conectar as camadas.
+
+## Critérios de prontidão para implementação
+
+Esta spec está pronta para implementação quando os itens abaixo forem tratados como obrigatórios no desenvolvimento:
+
+1. Contratos HTTP (sucesso e erro) respeitados exatamente como definidos nesta spec.
+2. Controle de concorrência para criação/aceite de chamada garantido em nível de aplicação e banco.
+3. Configuração de rede com estratégia explícita para ambiente Tailscale (fase atual) e internet pública (fase futura).
+4. Critérios de aceite e matriz mínima de testes executados antes de considerar entrega concluída.
+5. Todas as variáveis críticas (`REVERB_*`, `SFU_*`) validadas em checklist de deploy.
 
 ---
 
@@ -47,7 +57,7 @@ POST /calls/{call}/accept (CallController@accept)
         ↓
 CallManagerService::acceptCall()
   ├─ MediaGatewayHttp::createRoom() → POST /rooms no mediasoup-server
-  ├─ Room::create() no MySQL
+  ├─ Room::create() no PostgreSQL
   ├─ AppointmentService::start()
   └─ generateRoomToken() → JWT HS256
         ↓
@@ -84,24 +94,107 @@ Padrões reutilizados:
 
 ---
 
+## Topologia de rede — Tailscale
+
+Todos os servidores se comunicam via rede privada Tailscale. Nenhuma porta precisa estar aberta na internet pública nesta fase.
+
+```
+┌─────────────────────────────────────────────────────┐
+│                  Rede Tailscale                      │
+│                                                     │
+│  audrinotebook          pc1intelceleron              │
+│  100.107.34.108         100.79.212.81                │
+│  (dev — WSL2)           (prod — Laravel + Reverb)   │
+│        │                       │                    │
+│        └──────────┬────────────┘                    │
+│                   │  HTTP + WS                      │
+│                   ▼                                 │
+│         mediasoupserverubuntu                       │
+│         100.70.223.113                              │
+│         (mediasoup-server — sempre rodando)         │
+└─────────────────────────────────────────────────────┘
+
+Browser do usuário → acessa Laravel (pc1 ou audrinotebook)
+Browser do usuário → acessa mediasoup WS direto (100.70.223.113:4443)
+                     ↑ requer Tailscale instalado no dispositivo do usuário
+```
+
+### Fase atual: testes com Tailscale
+
+Todos os usuários (médicos/pacientes) têm Tailscale instalado. O browser consegue alcançar `100.70.223.113` diretamente para WebRTC.
+
+### Fase futura: produção aberta (internet)
+
+Trocar apenas `SFU_ANNOUNCED_IP` para o IP público do `mediasoupserverubuntu` e abrir portas UDP `40000-49999` no firewall. Nenhuma mudança de código.
+
+### Requisitos de conectividade WebRTC (obrigatórios)
+
+1. **Fase Tailscale (atual):** tráfego direto entre peers/SFU na rede privada.
+2. **Fase internet pública:** habilitar WSS no endpoint de sinalização do SFU (`wss://`) e TLS válido.
+3. **NAT restritivo (4G/CGNAT):** preparar suporte a STUN/TURN no servidor SFU. Sem TURN, chamadas podem falhar em redes móveis/corporativas.
+4. **Checklist de produção pública:** validar `SFU_ANNOUNCED_IP`, portas UDP, certificado TLS e reachability WS/WSS antes do deploy funcional.
+
+---
+
 ## Infraestrutura — Variáveis de ambiente obrigatórias
 
-Adicionar ao `.env` (e `.env.example` já tem os comentários):
+### Laravel — dev (`audrinotebook`) e prod (`pc1intelceleron`)
+
+Os dois ambientes usam o **mesmo** mediasoup-server. Só `REVERB_HOST` difere.
+
+**Dev** (`audrinotebook` — `.env` local):
 
 ```
 BROADCAST_CONNECTION=reverb
 REVERB_APP_ID=<gerar>
 REVERB_APP_KEY=<gerar>
 REVERB_APP_SECRET=<gerar>
-REVERB_HOST=localhost
+REVERB_HOST=100.107.34.108
 REVERB_PORT=8080
 REVERB_SCHEME=http
 
-SFU_HTTP_URL=http://127.0.0.1:3080
-SFU_WS_URL=ws://127.0.0.1:4443
-SFU_JWT_SECRET=<mesmo valor configurado no mediasoup-server>
-SFU_API_SECRET=<mesmo valor configurado no mediasoup-server>
+SFU_HTTP_URL=http://100.70.223.113:3000
+SFU_WS_URL=ws://100.70.223.113:4443
+SFU_JWT_SECRET=<segredo compartilhado — idêntico ao mediasoup-server>
+SFU_API_SECRET=<segredo compartilhado — idêntico ao mediasoup-server>
 ```
+
+**Prod** (`pc1intelceleron` — `.env`):
+
+```
+BROADCAST_CONNECTION=reverb
+REVERB_APP_ID=<mesmo do dev>
+REVERB_APP_KEY=<mesmo do dev>
+REVERB_APP_SECRET=<mesmo do dev>
+REVERB_HOST=100.79.212.81
+REVERB_PORT=8080
+REVERB_SCHEME=http
+
+SFU_HTTP_URL=http://100.70.223.113:3000
+SFU_WS_URL=ws://100.70.223.113:4443
+SFU_JWT_SECRET=<mesmo segredo>
+SFU_API_SECRET=<mesmo segredo>
+```
+
+### mediasoup-server (`mediasoupserverubuntu`)
+
+`~/mediasoup-server/.env` (criar a partir de `.env.example`):
+
+```
+SFU_JWT_SECRET=<mesmo segredo do Laravel>
+SFU_API_SECRET=<mesmo segredo do Laravel>
+
+SFU_HTTP_PORT=3000
+SFU_WS_PORT=4443
+
+SFU_LISTEN_IP=0.0.0.0
+SFU_ANNOUNCED_IP=100.70.223.113   # IP Tailscale — troca para IP público na produção aberta
+
+SFU_RTC_MIN_PORT=40000
+SFU_RTC_MAX_PORT=49999
+```
+
+> **Crítico:** `SFU_JWT_SECRET` deve ser **exatamente igual** nos dois projetos. Divergência causa falha silenciosa: o browser conecta no WS mas o `join` é rejeitado sem mensagem clara.
 
 `config/services.php` (verificar/adicionar):
 
@@ -127,6 +220,37 @@ SFU_API_SECRET=<mesmo valor configurado no mediasoup-server>
 | POST   | `/calls/{call}/reject` | `CallController@reject` | —                  | `10,1`   |
 | POST   | `/calls/{call}/end`    | `CallController@end`    | —                  | `10,1`   |
 | GET    | `/calls/{call}`        | `CallController@show`   | —                  | —        |
+
+### Contratos HTTP (obrigatórios)
+
+Formato base de resposta:
+
+```json
+{ "message": "..." }
+```
+
+Quando houver payload de negócio:
+
+```json
+{ "message": "...", "data": {} }
+```
+
+Contratos por endpoint:
+
+- `POST /calls`
+    - `201`: `{ "message": "Chamada criada com sucesso", "data": { "call_id": "uuid" } }`
+    - `409`: `{ "message": "Chamada já em andamento para esta consulta" }`
+    - `422`: erro de validação padrão Laravel (`errors.appointment_id`)
+- `POST /calls/{call}/accept`
+    - `200`: `{ "message": "Chamada aceita", "data": { "token": "jwt", "sfu_ws_url": "ws://..." } }`
+    - `422`: `{ "message": "Chamada não está em estado solicitado ou tocando" }`
+    - `502`: `{ "message": "Falha ao criar sala de vídeo" }`
+- `POST /calls/{call}/reject`
+    - `204`: sem corpo
+- `POST /calls/{call}/end`
+    - `204`: sem corpo
+- `GET /calls/{call}`
+    - `200`: `{ "message": "Estado da chamada", "data": { "call_id": "uuid", "status": "requested|ringing|accepted|rejected|ended", "room_id": "uuid|null" } }`
 
 **Arquivo de rotas:** `routes/web/shared.php` (acessível tanto por médico quanto paciente, com middleware `auth`).
 
@@ -156,6 +280,25 @@ Sem lógica de negócio no controller. Exceções de `CallManagerService` captur
 ```
 
 Middleware adicional: verificar se já existe `Call` ativa para o appointment (`Call::where('appointment_id', ...)->whereIn('status', ['requested','ringing','accepted'])->exists()`) → retornar 409 com mensagem `"Chamada já em andamento para esta consulta"`.
+
+### Concorrência e idempotência (obrigatório)
+
+Além da checagem de aplicação, a criação da chamada deve ser protegida com transação e lock pessimista no appointment:
+
+1. Iniciar `DB::transaction`.
+2. Carregar appointment com `lockForUpdate()`.
+3. Revalidar inexistência de chamada ativa.
+4. Criar `Call`.
+
+Para reforço em banco (PostgreSQL), usar índice único parcial para chamadas ativas por appointment (se ainda não existir na migration base):
+
+```sql
+create unique index if not exists calls_one_active_per_appointment_idx
+on calls (appointment_id)
+where status in ('requested', 'ringing', 'accepted');
+```
+
+Para `accept`, a mutação de status também deve ocorrer em transação para evitar dupla aceitação concorrente.
 
 ### Autorização
 
@@ -336,6 +479,7 @@ Sem novas migrations necessárias. Modelos `Call` e `Room` já existem com estru
 - **Auth:** middleware `auth` em todas as rotas de ação
 - **Autorização:** `VideoCallPolicy` em cada ação do controller via `$this->authorize()`
 - **Token JWT:** gerado server-side com `SFU_JWT_SECRET`; TTL de 5 min; não expõe `roomId` no broadcastWith — apenas dentro do token
+- **Transporte seguro:** em produção pública, usar `wss://` para sinalização e HTTPS no app (sem mixed content)
 - **Canal Reverb:** `video-call.{userId}` é canal privado — `channels.php` já valida `user->id === $id`
 - **Idempotência:** verificar chamada ativa antes de criar duplicata (retornar 409)
 - **Rate limiting:** `throttle:10,1` em todas as ações de chamada
@@ -429,3 +573,27 @@ Ordenado por dependência técnica:
 - [ ] Testes de feature com `MediaGatewayStub` (sem mediasoup-server real)
 - [ ] Sem query N+1 no `DoctorVideoCallController` (eager load appointments)
 - [ ] `php artisan test` passando
+
+---
+
+## Critérios de aceite (Definition of Done)
+
+1. Médico inicia chamada elegível e paciente recebe evento `.VideoCallRequested` em até 2s.
+2. Paciente aceita e ambos entram na sala com áudio/vídeo funcional em até 10s.
+3. Encerramento por qualquer lado remove streams locais/remotas e atualiza estado para `ended`.
+4. Segunda tentativa de `POST /calls` para mesma consulta ativa retorna `409` de forma consistente.
+5. Queda do Reverb não impede recuperação de estado via `GET /calls/{call}`.
+6. Com `SFU_JWT_SECRET` inválido/ausente, falha é observável via status HTTP + log estruturado.
+
+## Matriz mínima de testes
+
+| Tipo    | Cenário                                                                | Resultado esperado                                               |
+| ------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| Feature | `POST /calls` com usuário autorizado e appointment elegível            | `201` + `data.call_id`                                           |
+| Feature | `POST /calls` duplicado (mesmo appointment com chamada ativa)          | `409`                                                            |
+| Feature | `POST /calls/{call}/accept` com `MediaGatewayStub`                     | `200` + `data.token` + `data.sfu_ws_url`                         |
+| Feature | `POST /calls/{call}/accept` concorrente (duas requisições simultâneas) | 1 sucesso (`200`) + 1 falha de estado (`422`)                    |
+| Feature | `POST /calls/{call}/end` após aceite                                   | `204` + chamada encerrada                                        |
+| Feature | `GET /calls/{call}` durante fallback                                   | `200` + status coerente                                          |
+| Unit    | `CallController` delega para `CallManagerService` sem regra de negócio | métodos chamados com parâmetros corretos                         |
+| Manual  | Dois navegadores em redes diferentes (wifi/4g) com Tailscale           | chamada bidirecional com áudio/vídeo e evento de encerramento ok |
