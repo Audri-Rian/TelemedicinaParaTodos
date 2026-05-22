@@ -9,7 +9,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import doctorRoutes from '@/routes/doctor';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, usePage } from '@inertiajs/vue3';
-import { Calendar, Clock, FileText, History, TrendingUp, Users, Video } from 'lucide-vue-next';
+import { Calendar, Clock, FileText, HelpCircle, History, TrendingUp, Users, Video } from 'lucide-vue-next';
 import { computed, onMounted, ref, watch } from 'vue';
 
 interface UpcomingAppointment {
@@ -167,47 +167,63 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-// Passos do tour para médico
+// Passos do tour para médico — orientação geral do aplicativo via sidebar
 const doctorTourSteps = [
     {
-        id: 'gerenciar-agenda',
-        title: 'Gerenciar Sua Agenda',
+        id: 'nav-dashboard',
+        title: 'Dashboard',
         description:
-            'Este é o botão principal para gerenciar sua agenda de consultas. Clique aqui para visualizar todos os seus compromissos, ajustar horários disponíveis e configurar sua disponibilidade para receber novos agendamentos.',
-        target: '[data-tour="gerenciar-agenda"]',
-        position: 'bottom' as const,
+            'Sua central de controle. Aqui você acompanha as consultas do dia, estatísticas da semana e o desempenho geral da sua prática médica em tempo real.',
+        target: '[data-tour="nav-dashboard"]',
+        position: 'right' as const,
     },
     {
-        id: 'estatisticas',
-        title: 'Suas Estatísticas',
+        id: 'nav-agenda',
+        title: 'Agenda',
         description:
-            'Aqui você vê um resumo rápido das suas atividades: consultas da semana, taxa de cumprimento e pacientes agendados. Essas métricas ajudam você a acompanhar seu desempenho e planejar melhor sua agenda.',
-        target: '[data-tour="estatisticas"]',
-        position: 'bottom' as const,
+            'Gerencie sua disponibilidade: configure os horários de atendimento, bloqueie datas, adicione locais de atendimento e visualize todos os agendamentos em um calendário completo.',
+        target: '[data-tour="nav-agenda"]',
+        position: 'right' as const,
     },
     {
-        id: 'proxima-consulta',
-        title: 'Sua Próxima Consulta',
+        id: 'nav-consultas',
+        title: 'Consultas',
         description:
-            'Este card mostra os detalhes da sua próxima consulta agendada: paciente, data, horário e motivo. Quando chegar o momento, você poderá iniciar a videochamada diretamente daqui. Se ainda não tem consultas agendadas, este espaço ficará disponível para quando receber agendamentos.',
-        target: '[data-tour="proxima-consulta"]',
-        position: 'left' as const,
+            'Acesse o histórico completo de todos os atendimentos. Cada consulta conta com prontuário, receitas emitidas, exames solicitados e a opção de iniciar a videochamada quando chegar o horário.',
+        target: '[data-tour="nav-consultas"]',
+        position: 'right' as const,
     },
     {
-        id: 'acessos-rapidos',
-        title: 'Acessos Rápidos',
+        id: 'nav-pacientes',
+        title: 'Pacientes',
         description:
-            'Estes três cards dão acesso rápido às principais funcionalidades: agenda diária, prontuários recentes e salas de vídeo. Tudo fica organizado e acessível aqui no seu dashboard para otimizar seu trabalho.',
-        target: '[data-tour="acessos-rapidos"]',
-        position: 'top' as const,
+            'Visualize a lista de todos os seus pacientes e acesse o prontuário médico individual de cada um, com histórico de consultas, diagnósticos, prescrições e documentos emitidos.',
+        target: '[data-tour="nav-pacientes"]',
+        position: 'right' as const,
     },
     {
-        id: 'consultas-futuras',
-        title: 'Consultas Futuras',
+        id: 'nav-documentos',
+        title: 'Documentos',
         description:
-            'Use esta seção para visualizar todas as suas consultas agendadas em uma tabela completa. Você pode ver os detalhes de cada paciente, horários e status das consultas. Clique em "Ver agenda completa" para gerenciar todos os seus compromissos.',
-        target: '[data-tour="consultas-futuras"]',
-        position: 'top' as const,
+            'Emita receitas, atestados médicos e solicitações de exame diretamente pela plataforma. Todos os documentos ficam salvos no histórico para consulta futura.',
+        target: '[data-tour="nav-documentos"]',
+        position: 'right' as const,
+    },
+    {
+        id: 'nav-mensagens',
+        title: 'Mensagens',
+        description:
+            'Canal de comunicação direta com seus pacientes. Tire dúvidas, envie orientações pós-consulta e mantenha o acompanhamento sem sair da plataforma.',
+        target: '[data-tour="nav-mensagens"]',
+        position: 'right' as const,
+    },
+    {
+        id: 'nav-integracoes',
+        title: 'Integrações',
+        description:
+            'Conecte a plataforma a sistemas parceiros: convênios, laboratórios e ERPs de clínica. Sincronize dados, gerencie parceiros ativos e monitore métricas de integração em um único lugar.',
+        target: '[data-tour="nav-integracoes"]',
+        position: 'right' as const,
     },
 ];
 </script>
@@ -223,11 +239,23 @@ const doctorTourSteps = [
                     class="flex flex-col justify-between rounded-2xl border border-gray-200 bg-linear-to-br from-primary/15 via-white to-white p-8 shadow-sm lg:col-span-2"
                 >
                     <div>
-                        <p class="text-sm font-semibold tracking-wide text-primary uppercase">Dashboard Médico</p>
-                        <h1 class="mt-2 text-3xl font-bold text-gray-900">Olá, Dr(a). {{ doctorFirstName }}! 👋</h1>
-                        <p class="mt-3 text-lg text-gray-700">
-                            Acompanhe suas consultas, otimize o atendimento e mantenha seus pacientes informados em um único lugar.
-                        </p>
+                        <div class="flex items-start justify-between gap-4">
+                            <div>
+                                <p class="text-sm font-semibold tracking-wide text-primary uppercase">Dashboard Médico</p>
+                                <h1 class="mt-2 text-3xl font-bold text-gray-900">Olá, Dr(a). {{ doctorFirstName }}! 👋</h1>
+                                <p class="mt-3 text-lg text-gray-700">
+                                    Acompanhe suas consultas, otimize o atendimento e mantenha seus pacientes informados em um único lugar.
+                                </p>
+                            </div>
+                            <button
+                                @click="showTour = true"
+                                class="mt-2 flex shrink-0 items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-500 shadow-sm transition-colors hover:border-primary/40 hover:text-primary"
+                                title="Ver tour do dashboard"
+                            >
+                                <HelpCircle class="h-4 w-4" />
+                                Tour
+                            </button>
+                        </div>
                     </div>
 
                     <div class="mt-8 grid grid-cols-1 gap-4 md:grid-cols-3" data-tour="estatisticas">

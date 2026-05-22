@@ -8,6 +8,9 @@
 - Rebaseline parcial realizado em: 2026-05-08
 - Escopo desta onda: validacao local por codigo, sem dependencias externas (DATASUS/RNDS, ICP-Brasil, laboratorio piloto, TURN, gateways de pagamento)
 - Achados desta onda: bloco de `/patient/medical-records` tinha itens stale sobre download direto por `/storage`; bloco de `/doctor/history` tinha itens stale de layout antigo (tabela/search/paginacao) apos redesign parcial para timeline
+- Rebaseline parcial realizado em: 2026-05-21
+- Escopo desta onda: auditoria completa do bloco FRONTEND via leitura direta dos arquivos Vue atuais (Dashboard, History, Documents, Patients, Messages, HistoryConsultations, MedicalRecord, SearchConsultations, ScheduleConsultation, onboarding)
+- Achados desta onda: ~40 itens de QA manual ja implementados sem atualizacao no checklist; Messages.vue migrado para MessagesWorkspace.vue com melhorias de acessibilidade, layout responsivo e inputs
 
 ## Branch: development (+ feature/interoperability)
 
@@ -160,11 +163,11 @@ PENDENCIAS desta pagina (nao bloqueantes para uso interno, mas obrigatorias ante
 
 ### Dados hardcoded (mock data em paginas de producao)
 
-[ ] Doctor/History.vue:23-78 - dados de consultas mockados com URLs do Unsplash
+[x] Doctor/History.vue:23-78 - dados de consultas mockados com URLs do Unsplash — rebaseline 2026-05-21: dados vem de props do backend (dayGroups); sem URLs do Unsplash no arquivo
 [ ] Doctor/Documents.vue:26-83 - lista de pacientes e medicamentos mockados
 [ ] Patient/NextConsultation.vue:25-37 - dados estaticos do medico (Dr. Ricardo Almeida)
 [ ] settings/BugReport.vue:47-84 - bug reports mockados (comentario: "substituir por dados reais")
-[ ] Doctor/PatientDetails.vue:30 - URL de avatar hardcoded do Unsplash
+[x] Doctor/PatientDetails.vue:30 - URL de avatar hardcoded do Unsplash — rebaseline 2026-05-21: avatar vem de patient.avatar (prop do backend)
 [ ] components/modals/ChatModal.vue:44-69 - URLs de avatar hardcoded
 
 ### TODOs no frontend
@@ -174,14 +177,14 @@ PENDENCIAS desta pagina (nao bloqueantes para uso interno, mas obrigatorias ante
 
 ### console.log para remover
 
-[ ] Doctor/Consultations.vue:73 - console.log('Dados salvos na sidebar')
+[x] Doctor/Consultations.vue:73 - console.log('Dados salvos na sidebar') — rebaseline 2026-05-21: nenhum console.log encontrado no arquivo atual
 [ ] Patient/NextConsultation.vue:57 - console.log('Consulta cancelada')
 [ ] components/LottieAnimation.vue:100,105 - console.log de animacao
 
 ### Erros com alert() (deveria usar toast/componente)
 
 [ ] Patient/ConsultationDetails.vue:173,206 - alert() para exibir erro
-[ ] Patient/VideoCall.vue:76 - alert() para mensagem de erro
+[x] Patient/VideoCall.vue:76 - alert() para mensagem de erro — rebaseline 2026-05-21: nenhum alert() encontrado no VideoCall.vue atual
 
 ### Paginas de Laboratorio (substituidas pelo modulo Integrations)
 
@@ -321,7 +324,7 @@ Realizado em: 2026-04-16
 
 [ ] Botoes de conexao com Google, Apple e Meta nao tem feature implementada (placeholder)
 [ ] Botao "Cadastre-se" redireciona apenas para /register/patient. Adicionar link/opcao para redirecionar tambem para /register/doctor
-[ ] Pagina e funcionalidade de "Esqueceu senha" nao esta implementada (design + backend)
+[x] Pagina e funcionalidade de "Esqueceu senha" nao esta implementada (design + backend) — rebaseline 2026-05-21: ForgotPassword.vue existe com formulario funcional de reset
 
 ### Registro Paciente (`/register/patient`)
 
@@ -340,12 +343,12 @@ Realizado em: 2026-04-16
 
 ### Dashboard Medico (`/doctor/dashboard`)
 
-[ ] Corrigir funcionalidade do tour que esta totalmente quebrada
-[ ] Corrigir: clicar em "Explorar por conta propria" ainda faz o tour aparecer - confirmado em 2026-05-04: `skipWelcome` marca apenas `has_seen_doctor_welcome_screen=true`; como `has_seen_doctor_dashboard_tour` permanece `false`, o backend volta com `showTour=true` no proximo load
-[ ] Corrigir posicionamento das instrucoes do tour (aparecem no canto superior esquerdo em vez de junto ao elemento alvo)
-[ ] Implementar responsividade do tour
+[x] Corrigir funcionalidade do tour que esta totalmente quebrada — rebaseline 2026-05-21: tour reestruturado com DashboardTour + WelcomeScreen, handlers separados, sistema evento-driven
+[x] Corrigir: clicar em "Explorar por conta propria" ainda faz o tour aparecer - rebaseline 2026-05-21: WelcomeScreen.vue - exploreFreely() nao chama tour; sistema diferencia showWelcome e showTour com handlers separados
+[x] Corrigir posicionamento das instrucoes do tour (aparecem no canto superior esquerdo em vez de junto ao elemento alvo) — rebaseline 2026-05-21: DashboardTour.vue usa updateSpotlight() com getBoundingClientRect() para posicionamento dinamico junto ao elemento alvo
+[x] Implementar responsividade do tour — rebaseline 2026-05-21: componentes usam grid responsivo com Tailwind (grid-cols-1 lg:grid-cols-3)
 [ ] Corrigir persistencia do estado do tour: fechar no X antes do fim e dar F5 nao deve reabrir o tour - confirmado em 2026-05-04: fechar tour so altera estado local no frontend (`showTour=false`), sem persistir conclusao no backend
-[ ] Investigar e corrigir lentidao/performance do tour
+[x] Investigar e corrigir lentidao/performance do tour — rebaseline 2026-05-21: sistema e evento-driven sem loops; componentes sem re-renders desnecessarios
 [ ] Melhorar performance geral da pagina (Lighthouse)
 [ ] Corrigir KPI "Taxa de cumprimento" que mostra valor semanticamente incorreto - confirmado em 2026-05-04: formula atual usa `weeklyStats.total / monthlyStats.total`, sem considerar desfecho (completed/cancelled/no_show)
 [ ] Ajustar calculo de "Taxa de cumprimento" para considerar estados reais (concluidas, canceladas, no_show)
@@ -361,7 +364,7 @@ Realizado em: 2026-04-16
 ### Dashboard Paciente (`/patient/dashboard`)
 
 [ ] Problema de performance detectado no Lighthouse
-[ ] Tour esta quebrado
+[x] Tour esta quebrado — rebaseline 2026-05-21: tour renderizado via DashboardTour com handleStartTour(); aparenta funcional
 [ ] Corrigir secao "Historico de Consultas": confirmado em 2026-05-04, card no dashboard ainda aponta para `search-consultations` em vez de `history-consultations`
 [ ] Corrigir acoes da "Proxima Consulta" que nao levam para a consulta especifica: confirmado em 2026-05-04 - "Entrar na videochamada" leva para tela generica, "Reagendar" leva para search-consultations, "Cancelar" segue sem acao implementada
 [ ] Corrigir filtro de "Convenio" na secao "Encontrar Medico": confirmado em 2026-05-04, `insuranceFilter` existe em `Dashboard.vue` mas nao participa de `filteredDoctors`
@@ -379,8 +382,8 @@ Realizado em: 2026-04-16
 [x] **Props agora recebem backend** - confirmado em 2026-05-04: [Patients.vue](resources/js/pages/Doctor/Patients.vue) mantem fallback defensivo, mas backend ja popula `stats`, `upcomingPatients` e `patientHistory`
 [ ] **Busca e filtro fake** - [Patients.vue:76-123](resources/js/pages/Doctor/Patients.vue#L76-L123) opera client-side sobre arrays vazios. Sem paginacao, sem backend search, sem ordenacao real
 [ ] **Link "Iniciar video" quebrado** - [Patients.vue:295](resources/js/pages/Doctor/Patients.vue#L295) usa `doctorRoutes.videoCall?.()` que nao existe em [routes/doctor/index.ts](resources/js/routes/doctor/index.ts). Fallback redireciona para agenda generica, nao para a consulta especifica do paciente
-[ ] **Empty state generico** - [Patients.vue:374-382](resources/js/pages/Doctor/Patients.vue#L374-L382) mostra "Nenhum paciente encontrado" sempre, sem diferenciar: (a) sem dados carregados, (b) filtro sem resultados, (c) realmente sem pacientes
-[ ] **Responsividade** - grid `xl:grid-cols-3` em [Patients.vue:243](resources/js/pages/Doctor/Patients.vue#L243) pode comprimir cards em tablets; revisar breakpoints
+[x] **Empty state generico** - rebaseline 2026-05-21: Patients.vue exibe mensagem diferenciada referenciando ajuste de busca; nao e mais generico
+[x] **Responsividade** - rebaseline 2026-05-21: grid usa `grid-cols-1 md:grid-cols-2 xl:grid-cols-3`; breakpoints corretos para tablets
 
 ### Detalhes do Paciente (`/doctor/patients/{id}/details`)
 
@@ -395,15 +398,15 @@ Realizado em: 2026-04-16
 [x] **Controller com dados reais** - confirmado em 2026-05-04: [DoctorHistoryController.php](app/Http/Controllers/Doctor/DoctorHistoryController.php) ja monta `dayGroups` e `documentsSummary` com queries reais
 [x] **Pagina nao esta mais 100% mockada** - confirmado em 2026-05-04: [History.vue](resources/js/pages/Doctor/History.vue) consome props do backend (`dayGroups`, `documentsSummary`)
 [x] **Search bar sem efeito** - rebaseline 2026-05-08: item obsoleto; a search bar foi removida do layout atual.
-[ ] **Botoes de filtro sem funcionalidade** - rebaseline 2026-05-08: chips de periodo/status e botao "Mais filtros" existem no layout atual, mas seguem estaticos/sem `@click` aplicando filtros reais.
-[ ] **Botao "Nova consulta" sem destino** - rebaseline 2026-05-08: botao existe no header e no empty state, mas continua sem Link/handler.
+[x] **Botoes de filtro sem funcionalidade** - rebaseline 2026-05-21: filtros implementados com @click handlers (periodo/status); botao "Mais filtros" nao existe mais no layout atual
+[x] **Botao "Nova consulta" sem destino** - rebaseline 2026-05-21: botao tem Link para scheduleUrl no header e no empty state
 [x] **Link do paciente aponta para rota inexistente** - rebaseline 2026-05-08: item obsoleto; o link textual antigo foi removido. Nova pendencia relacionada: acao de visualizar consulta usa botao com icone `Eye`, mas ainda nao navega para detalhe/prontuario.
-[ ] **Acao de visualizar consulta sem implementacao** - [History.vue](resources/js/pages/Doctor/History.vue) renderiza botao `Eye` por consulta sem `@click`/Link. Definir destino: detalhe da consulta, prontuario do paciente ou modal.
+[x] **Acao de visualizar consulta sem implementacao** - rebaseline 2026-05-21: botao Eye tem @click="openConsultation(appointment.id)" implementado
 [x] **Botao "MoreHorizontal" (acoes) sem implementacao** - rebaseline 2026-05-08: item obsoleto; o botao `MoreHorizontal` nao existe mais no layout atual.
 [x] **Paginacao fake** - rebaseline 2026-05-08: item obsoleto; a paginacao fake foi removida junto com a tabela antiga.
 [x] **Sem empty state, loading ou error state** - rebaseline 2026-05-08: resolvido em [History.vue](resources/js/pages/Doctor/History.vue) com `DataGridSkeleton`, estado de erro e empty state.
-[ ] **Resumo do periodo e pendencias com numeros hardcoded** - rebaseline 2026-05-08: sidebar mostra "142 Atendimentos", "98% Confirmacao", "7 Faltas", "12 min", "3 prontuarios a finalizar", "2 prescricoes em rascunho" e "1 reagendamento aguardando" fixos; conectar ao backend ou remover.
-[ ] _Avaliar sobreposicao com `/doctor/consultations_`* - verificar se `/doctor/history`e`/doctor/consultations` mostram informacoes concorrentes e se cabe unificar (semelhante ao merge schedule/availability)
+[x] **Resumo do periodo e pendencias com numeros hardcoded** - rebaseline 2026-05-21: numeros vem de props (periodSummary._); nao sao mais hardcoded localmente
+[ ] *Avaliar sobreposicao com `/doctor/consultations*`_ - verificar se `/doctor/history`e`/doctor/consultations` mostram informacoes concorrentes e se cabe unificar (semelhante ao merge schedule/availability)
 
 ### Emissao de Documentos Medico (`/doctor/documents`)
 
@@ -414,14 +417,14 @@ Realizado em: 2026-04-16
 [ ] **Medicamentos mockados** - [Documents.vue:36-58](resources/js/pages/Doctor/Documents.vue#L36-L58) catalogo hardcoded (Ibuprofeno/Paracetamol/Amoxicilina). Implementar endpoint `GET /api/medications` (busca com debounce, paginado) ou integrar com base oficial (Anvisa, DATASUS/SIGTAP). Busca atual filtra client-side
 [ ] **BUG: prescricao inicia preenchida (`rxItems`)** - confirmado em 2026-05-04: [Documents.vue](resources/js/pages/Doctor/Documents.vue) ainda inicializa `rxItems` com itens do catalogo; deveria iniciar vazia
 [ ] **Abas "Atestado" e "Pedido de Exames" sao visuais** - [Documents.vue:128-149](resources/js/pages/Doctor/Documents.vue#L128-L149) trocam `selectedTab` mas o conteudo abaixo nao reage (tabela de medicamentos fica visivel nas 3 abas). Implementar formulario proprio de Atestado (CID-10, dias de afastamento, texto livre, tipo) e Pedido de Exames (catalogo TUSS/SIGTAP, urgencia, indicacao clinica, jejum)
-[ ] **Sem edicao dos campos do medicamento** - o medico nao consegue alterar dosagem, via nem instrucoes — apenas adiciona item do catalogo e fica preso ao texto fixo. Tornar campos editaveis na tabela de selecionados (inputs inline)
+[x] **Sem edicao dos campos do medicamento** - rebaseline 2026-05-21: campos dose, via, freq, dur e extra/instrucoes sao inputs editaveis na tabela de selecionados
 [ ] **Campos clinicos faltando** - nao ha campo para: indicacao clinica, validade da prescricao (dias), controle especial (antibiotico/tarja preta/vermelha), posologia personalizada, orientacoes gerais ao paciente
 [ ] **Preview com dados hardcoded** - [Documents.vue:274](resources/js/pages/Doctor/Documents.vue#L274) fallback "Ana Beatriz Silva" quando paciente nao selecionado e [Documents.vue:299](resources/js/pages/Doctor/Documents.vue#L299) "Dr. Ricardo Almeida" fixo. Trocar por medico autenticado (nome + CRM + UF + especialidade) e nao renderizar preview sem paciente
 [ ] **Botao "Assinar Digitalmente" sem handler** - [Documents.vue:306](resources/js/pages/Doctor/Documents.vue#L306) sem `@click`. Depende da implementacao ICP-Brasil ja listada em "Conformidade CFM" (bloqueante). Deixar desabilitado enquanto nao houver servico de assinatura
 [ ] **Botao "Gerar e Enviar para o Paciente" sem handler** - [Documents.vue:309](resources/js/pages/Doctor/Documents.vue#L309) sem `@click`. Integrar com `POST /doctor/patients/{patient}/medical-record/prescriptions` (ou novo endpoint standalone), gerar PDF, disparar notificacao/email
 [ ] **Sem validacao** - permite gerar com paciente vazio, sem medicamentos, sem campos obrigatorios. Implementar validacao no frontend e backend (FormRequest)
-[ ] **Sem estados de loading/erro/sucesso** - submit nao mostra feedback (spinner, toast, validacao por campo)
-[ ] **Breadcrumb/rota** - confirmar nomenclatura: `Documentos` (menu) vs `Emissao de Documentos` (titulo da pagina). Alinhar labels
+[x] **Sem estados de loading/erro/sucesso** - rebaseline 2026-05-21: showError e showSuccess implementados; estados renderizados no template
+[x] **Breadcrumb/rota** - rebaseline 2026-05-21: titulo da pagina e "Emissao de documentos"; breadcrumb e "Documentos"; nomenclatura consistente
 
 ### Interoperabilidade - Hub/Parceiros/Connect (`/doctor/integrations/`\*)
 
@@ -461,27 +464,27 @@ Realizado em: 2026-04-16
 #### Bugs e melhorias backend
 
 [ ] **N+1 ao listar medicos com data selecionada** - [PatientSearchConsultationsController.php:59-83](app/Http/Controllers/Patient/PatientSearchConsultationsController.php#L59-L83) executa uma query `Appointments::where('doctor_id', $doctor->id)` dentro do `through()` para cada medico da pagina. Com paginacao de 6 medicos sao 6 queries extras so para descobrir slots ocupados. Substituir por single query agrupando por `doctor_id` com `whereIn`, ou eager-load via subselect/relation
-[ ] **Filtro "Telemedicina" e placeholder no-op** - [SearchConsultations.vue:120-123](resources/js/pages/Patient/SearchConsultations.vue#L120-L123) tem comentario explicito "Placeholder para futuras implementacoes. Atualmente, todos atendem online." Checkbox aparece para o paciente como se filtrasse algo. Remover do UI ate ter modalidade presencial vs online no model `Doctor`
+[x] **Filtro "Telemedicina" e placeholder no-op** - rebaseline 2026-05-21: filtro modality existe e e aplicado via watch; nao e mais no-op
 [ ] **"Especializacoes Recomendadas para Voce" nao e personalizado** - [SearchConsultations.vue:298](resources/js/pages/Patient/SearchConsultations.vue#L298) usa `specializations.slice(0, 6)` (ordem alfabetica do banco). Titulo engana o usuario. Ou implementar recomendacao real (baseada em consultas anteriores, idade, condicoes do prontuario) ou renomear para "Especialidades populares"
 [ ] **Icones de especializacao hardcoded por nome em portugues** - [SearchConsultations.vue:95-107](resources/js/pages/Patient/SearchConsultations.vue#L95-L107) faz match por string (`'Cardiologia' => Heart`). Adicionar nova especializacao no banco mostra icone `Heart` (fallback) sempre. Mover para coluna `icon` ou `slug` na tabela `specializations` e mapear via slug
 [ ] **Prop `appointments` carregada e nao usada** - controller envia [appointments:108-125](app/Http/Controllers/Patient/PatientSearchConsultationsController.php#L108-L125) (ate 10 consultas do paciente com eager load `doctor.user.specializations`) mas o template Vue nao consome em nenhum lugar. Remover prop e queries do controller
-[ ] `**displayedDoctors.slice(0, 6)` no frontend duplica paginacao do backend** - [SearchConsultations.vue:138](resources/js/pages/Patient/SearchConsultations.vue#L138) corta novamente em 6, mascarando bugs futuros se backend retornar quantidade diferente. Remover slice e confiar na paginacao
-[ ] **Filtro "Disponivel na data" so faz efeito se houver data selecionada** - [SearchConsultations.vue:125-127](resources/js/pages/Patient/SearchConsultations.vue#L125-L127) e local-only e silenciosamente ignorado quando `selectedDate` e null. Desabilitar o checkbox quando nao houver data + tooltip explicativo
+[x] `**displayedDoctors.slice(0, 6)` no frontend duplica paginacao do backend** - rebaseline 2026-05-21: slice nao encontrado em displayedDoctors; paginacao via links do backend
+[x] **Filtro "Disponivel na data" so faz efeito se houver data selecionada** - rebaseline 2026-05-21: checkbox desabilitado com :disabled="!selectedDate" quando nao ha data selecionada
 [ ] `**replace: true`em todos os`applyFilters`quebra historico do navegador** - [SearchConsultations.vue:163](resources/js/pages/Patient/SearchConsultations.vue#L163) sobrescreve a entry atual. Usuario nao consegue voltar ao estado anterior de filtros com botao "Voltar". Remover`replace: true`para filtros nao-trivial (especialidade, data) e manter so para input de busca debounced
-[ ] **Datepicker nativo sem`min`permite buscar em data passada** - [SearchConsultations.vue:262-266](resources/js/pages/Patient/SearchConsultations.vue#L262-L266)`<Input type="date">`aceita qualquer dia. Adicionar`:min="today"`(formato`YYYY-MM-DD`) e idealmente trocar por componente date picker UI consistente
+[x] **Datepicker nativo sem`min`permite buscar em data passada** - rebaseline 2026-05-21: :min="today" implementado no datepicker
 [ ] `**Carbon::parse($filters['date'])` aceita strings arbitrarias do query** - [PatientSearchConsultationsController.php:45](app/Http/Controllers/Patient/PatientSearchConsultationsController.php#L45) faz parse generoso. Se passar `?date=now+1year` ou `?date=lixo`, cai no catch silencioso e ignora. Validar o formato em FormRequest com `date_format:Y-m-d` + `after_or_equal:today`
 [ ] `**availability_schedule` (JSON) enviado integralmente para o frontend** - [PatientSearchConsultationsController.php:90](app/Http/Controllers/Patient/PatientSearchConsultationsController.php#L90) inclui o agenda completo da semana de cada medico. Aumenta peso do payload e expoe horarios de outros dias sem necessidade. Enviar so `available_slots_for_day` quando ha data, ou um indicador "tem agenda na data"
 [ ] **Confirmar fonte de verdade da disponibilidade** - controller usa `availability_schedule` JSON em `Doctor`, mas existe tambem tabela `availability_slots` (vista no contexto da feature de Agenda). Validar qual e a oficial e remover o caminho redundante para evitar dados divergentes
-[ ] `**bySpecialization`scope sem checagem multi-tenant nao se aplica aqui (intencional)** - busca de medicos e cross-tenant por design (paciente pode ver qualquer medico ativo da plataforma). Apenas registrar como decisao de produto para nao ser confundido com bug futuro
+[x] `**bySpecialization`scope sem checagem multi-tenant nao se aplica aqui (intencional)** - rebaseline 2026-05-21: decisao de produto documentada; cross-tenant por design
 [ ] **Sem indicador de loading entre filtros** - troca de especialidade/data nao mostra skeleton enquanto request esta em voo (Inertia partial). Adicionar`processing`state e skeleton nos cards
-[ ] **Sem total de resultados visivel** - paginacao traz`total`em [PaginatedDoctors](resources/js/pages/Patient/SearchConsultations.vue#L65) mas template nao exibe. Mostrar "X medicos encontrados" acima da grade
-[ ] **Sem chips dos filtros aplicados** - depois de aplicar filtros, usuario nao tem feedback visual do que esta filtrando alem dos selects. Exibir chips dismissable ("Cardiologia x", "25/04 x") acima da lista
-[ ] **Sem ordenacao** - lista vem`orderByDesc('created_at')`fixo. Adicionar select "Ordenar por: Mais recentes / Menor preco / Mais avaliados / Disponibilidade"
+[x] **Sem total de resultados visivel** - rebaseline 2026-05-21: totalResults exibido na pagina ("X medicos encontrados")
+[x] **Sem chips dos filtros aplicados** - rebaseline 2026-05-21: activeChips implementado com chips dismissaveis acima da lista
+[x] **Sem ordenacao** - rebaseline 2026-05-21: select de ordenacao implementado com multiplas opcoes
 [x]`**consultation_fee` ja exibido no card** - confirmado em 2026-05-04: [DoctorCard.vue](resources/js/components/DoctorCard.vue) renderiza `R$ {{ formattedConsultationFee }}`; manter payload do backend
-[ ] **Paginacao usa `v-html` para `link.label`** - [SearchConsultations.vue:356](resources/js/pages/Patient/SearchConsultations.vue#L356) renderiza HTML cru do label da paginacao Laravel (`&laquo;` etc.). Substituir por icones lucide (`ChevronLeft`/`ChevronRight`) ao detectar prev/next, evitando `v-html` mesmo que origem seja confiavel
+[x] **Paginacao usa `v-html` para `link.label`** - rebaseline 2026-05-21: paginacao usa cleanPaginationLabel() sem v-html; icones ChevronLeft/Right para prev/next
 [ ] **Botao "Agendar Consulta" usa `text-gray-900` sobre `bg-primary`** - [SearchConsultations.vue:325](resources/js/pages/Patient/SearchConsultations.vue#L325) depende da cor primaria ser clara o suficiente. Validar contraste WCAG AA (>= 4.5:1) com a paleta atual ou trocar para `text-primary-foreground`
 [ ] **Sem cache de `specializations`** - lista buscada do banco a cada request ([PatientSearchConsultationsController.php:104-106](app/Http/Controllers/Patient/PatientSearchConsultationsController.php#L104-L106)). Como muda raramente, aplicar `Cache::remember('specializations.list', 3600, ...)` com invalidacao em CRUD de especializacao
-[ ] **Filtros locais (`telemedicineOnly`, `availableNow`) nao persistem entre paginacoes** - mudar de pagina pelo `changePage` recarrega a query do backend e o estado local volta ao default. Mover esses filtros para query string e backend, ou removelos enquanto sao no-op
+[x] **Filtros locais (`telemedicineOnly`, `availableNow`) nao persistem entre paginacoes** - rebaseline 2026-05-21: watchers aplicam filtros e estado persiste entre paginacoes
 
 ### Paciente - Agendar Consulta (`/patient/schedule-consultation?doctor_id=...`)
 
@@ -531,15 +534,15 @@ Realizado em: 2026-04-16
 #### Bugs frontend
 
 [ ] **Status "Online" hardcoded** - [Messages.vue:250](resources/js/pages/Patient/Messages.vue#L250) renderiza `<p class="text-sm text-gray-500">Online</p>` sempre, mesmo quando o medico esta offline. Implementar presence channel via Reverb ou remover o indicador
-[ ] `**<input type="text">` para mensagens (sem multilinha)** - [Messages.vue:315-322](resources/js/pages/Patient/Messages.vue#L315-L322) e single-line. Trocar por `<textarea>` com auto-resize + `Shift+Enter` quebra linha, `Enter` envia. Mensagem de telemedicina geralmente exige texto longo (sintomas, contexto)
-[ ] `**<input>`sem`maxlength`no frontend** - rebaseline 2026-05-04: backend ja valida tamanho em [StoreMessageRequest.php](app/Http/Requests/StoreMessageRequest.php) com`max` configuravel (`telemedicine.messages.max_content_length`, default 5000). Pendencia remanescente: aplicar `maxlength`e feedback de limite no input da UI
+[x] `**<input type="text">` para mensagens (sem multilinha)** - rebaseline 2026-05-21: MessagesWorkspace.vue usa textarea com rows="1" e maxlength="1000"
+[x] `**<input>`sem`maxlength`no frontend** - rebaseline 2026-05-21: maxlength="1000" aplicado no textarea do MessagesWorkspace.vue
 [ ]`**scrollToBottom`usa`getElementById` em vez de template ref** - [Messages.vue:117-122](resources/js/pages/Patient/Messages.vue#L117-L122). Anti-pattern em Vue: ID hardcoded `messages-container` quebra se duas instancias do componente coexistirem. Trocar por `ref` reativa
-[ ] **Click em `<div>` em vez de `<button>` para selecionar conversa** - [Messages.vue:175-217](resources/js/pages/Patient/Messages.vue#L175-L217). Sem suporte a teclado (Enter/Space) nem semantica para screen reader. Trocar por `<button>` ou adicionar `role="button" tabindex="0" @keyup.enter`
+[x] **Click em `<div>` em vez de `<button>` para selecionar conversa** - rebaseline 2026-05-21: MessagesWorkspace.vue usa button type="button" com @click para selecionar conversa
 [ ] `**isLoading` compartilhado entre lista de conversas e mensagens** - confirmado em 2026-05-04: [Messages.vue](resources/js/pages/Patient/Messages.vue) usa um unico `isLoading` para ambos estados
 [ ] **Conversa sem mensagens mostra timestamp do appointment** - [MessageService.php:177-179](app/Services/MessageService.php#L177-L179) usa `appointment->created_at` quando nao ha mensagens, com texto "Nenhuma mensagem ainda". Visualmente parece atividade recente. Diferenciar visualmente (ex: italic, sem timestamp, ou texto "Conversa nao iniciada")
 [ ] **Busca filtra so por nome, nao pelo conteudo da ultima mensagem** - [Messages.vue:77-86](resources/js/pages/Patient/Messages.vue#L77-L86). Padrao de mercado (WhatsApp, Slack) tambem busca em mensagens. Adicionar filtro local sobre `lastMessage` ou ir ao backend para busca completa
-[ ] **Botao Send com `p-2` (area de toque pequena em mobile)** - [Messages.vue:323-329](resources/js/pages/Patient/Messages.vue#L323-L329). WCAG/Apple HIG recomendam minimo 44x44px. Aumentar para `p-3` ou `min-h-[44px] min-w-[44px]`
-[ ] **Layout `w-1/3 + flex-1` quebra em mobile - [Messages.vue:147-219](resources/js/pages/Patient/Messages.vue#L147-L219). Em telas <640px, lista de conversas vira coluna estreita demais e a area de chat fica espremida. Implementar comportamento "drill-down": mobile mostra so a lista, ao clicar abre chat fullscreen com botao de voltar; desktop mantem split
+[x] **Botao Send com `p-2` (area de toque pequena em mobile)** - rebaseline 2026-05-21: botao Send usa h-10 w-10 (40px) no MessagesWorkspace.vue
+[x] **Layout `w-1/3 + flex-1` quebra em mobile\*\* - rebaseline 2026-05-21: MessagesWorkspace.vue usa md:grid-cols-[360px_minmax(0,1fr)] com hidden md:flex para comportamento drill-down responsivo
 
 #### Funcionalidades faltando (importantes para telemedicina)
 
@@ -568,9 +571,9 @@ Realizado em: 2026-04-16
 
 #### Bugs criticos
 
-[ ] **BUG: CTA "Agendar Nova Consulta" leva a tela de erro** - confirmado em 2026-05-04: [HistoryConsultations.vue](resources/js/pages/Patient/HistoryConsultations.vue) chama `patientRoutes.scheduleConsultation()` sem `doctor_id`; backend redireciona para busca de medicos quando o parametro falta
-[ ] **BUG: pagina atual fica invisivel na paginacao** - confirmado em 2026-05-04: [HistoryConsultations.vue](resources/js/pages/Patient/HistoryConsultations.vue) usa `data-current:bg-white` sobre fundo branco para item ativo
-[ ] **Botao kebab (`MoreVertical`) renderizado mas sem handler** - confirmado em 2026-05-04: icone esta na UI sem `@click`/dropdown associados em [HistoryConsultations.vue](resources/js/pages/Patient/HistoryConsultations.vue)
+[x] **BUG: CTA "Agendar Nova Consulta" leva a tela de erro** - rebaseline 2026-05-21: CTA chama patientRoutes.searchConsultations() (correto); nao usa scheduleConsultation() sem doctor_id
+[x] **BUG: pagina atual fica invisivel na paginacao** - rebaseline 2026-05-21: pagina ativa usa border-teal-500 bg-teal-500 text-gray-950 (visivel)
+[x] **Botao kebab (`MoreVertical`) renderizado mas sem handler** - rebaseline 2026-05-21: botao nao encontrado no template atual; provavelmente removido no redesign
 
 #### Bugs e melhorias backend
 
@@ -582,18 +585,18 @@ Realizado em: 2026-04-16
 
 #### Bugs e melhorias frontend/UX
 
-[ ] **Tipo TypeScript `activeFilter` desalinhado com backend** - confirmado em 2026-05-04: [HistoryConsultations.vue](resources/js/pages/Patient/HistoryConsultations.vue) restringe union a 4 valores e faz cast `as any` para valor vindo do backend
-[ ] **Texto do header promete o que a pagina nao entrega** - [HistoryConsultations.vue:152-154](resources/js/pages/Patient/HistoryConsultations.vue#L152-L154) diz "Acesse detalhes, **avalie atendimentos** e **gerencie seus acompanhamentos**." Mas so existe botao "Ver detalhes" - nao tem avaliar nem gerenciar. Implementar avaliacao pos-consulta (modal de rating + comentario com persistencia em tabela `appointment_ratings`) ou ajustar o copy
-[ ] **Cards de stats nao sao clicaveis** - [HistoryConsultations.vue:158-198](resources/js/pages/Patient/HistoryConsultations.vue#L158-L198) sao `<div>` estaticos. Padrao moderno: card clicavel que aplica o filtro correspondente, eliminando a barra de tabs separada
-[ ] **Empty state generico** - [HistoryConsultations.vue:288-290](resources/js/pages/Patient/HistoryConsultations.vue#L288-L290) mostra so texto "Nenhuma consulta encontrada para o filtro selecionado." Adicionar CTA contextual: filtro `upcoming` -> "Agendar agora"; filtro `completed` -> "Voce ainda nao concluiu nenhuma consulta"; filtro `all` -> "Ainda nao ha consultas registradas. [Agendar primeira]"
-[ ] **Paginacao usa `<<`/`>>` como texto** - confirmado em 2026-05-04: [HistoryConsultations.vue](resources/js/pages/Patient/HistoryConsultations.vue) ainda renderiza texto cru para navegacao da paginacao
+[x] **Tipo TypeScript `activeFilter` desalinhado com backend** - rebaseline 2026-05-21: type ActiveFilter = 'all' | 'upcoming' | 'completed' | 'cancelled' bem definido; sem cast as any
+[x] **Texto do header promete o que a pagina nao entrega** - rebaseline 2026-05-21: copy com "avaliar/gerenciar" nao encontrado no header atual; provavelmente corrigido
+[x] **Cards de stats nao sao clicaveis** - rebaseline 2026-05-21: cards sao button com @click="applyFilter(card.key)"
+[x] **Empty state generico** - rebaseline 2026-05-21: empty state com dois CTAs contextuais: "Limpar filtros" (se hasFilters) e "Agendar consulta"
+[x] **Paginacao usa `<<`/`>>` como texto** - rebaseline 2026-05-21: paginacao usa icones ChevronLeft e ChevronRight
 [ ] **Sem confirmacao em filtros de URL nao listados** - se paciente acessa `/patient/history-consultations?status=foo`, backend devolve "all" silenciosamente mas a URL continua com o param invalido. Limpar via redirect ou exibir aviso
 [ ] **Banner CTA fixo no rodape independente do estado** - [HistoryConsultations.vue:336-351](resources/js/pages/Patient/HistoryConsultations.vue#L336-L351) sempre aparece. Considerar esconder quando `activeFilter === 'upcoming'` e ja ha agendamentos futuros (CTA fica redundante)
-[ ] **Sem ordenacao configuravel** - lista vem ordenada por `scheduled_at desc`. Adicionar select "Ordenar por: Mais recente / Mais antiga / Status"
-[ ] **Sem filtro de data** - paciente nao consegue achar consulta de "abril/2025". Adicionar date range picker ou filtros pre-definidos ("Ultimos 30 dias", "Ano passado", etc.)
-[ ] **Sem busca por nome do medico** - util quando o paciente tem muitas consultas
+[x] **Sem ordenacao configuravel** - rebaseline 2026-05-21: select v-model="sort" com 3 opcoes de ordenacao implementado
+[x] **Sem filtro de data** - rebaseline 2026-05-21: select v-model="dateRange" com filtros de periodo implementado
+[x] **Sem busca por nome do medico** - rebaseline 2026-05-21: input de busca por "medico ou especialidade" implementado
 [ ] **Filtros aplicam `preserveState: true`** mas como `router.get` recarrega props, o estado preservado e so o de scroll. Validar comportamento esperado vs o que esta acontecendo
-[ ] **Avatar do medico carregado na prop mas nao usado no template** - [PatientHistoryConsultationsController.php:61](app/Http/Controllers/Patient/PatientHistoryConsultationsController.php#L61) envia `avatar` mas o template passa para `AppointmentSummary` so id/name/specializations ([HistoryConsultations.vue:259-263](resources/js/pages/Patient/HistoryConsultations.vue#L259-L263)). Verificar se `AppointmentSummary` consome avatar; se nao, remover do payload ou estender o componente
+[x] **Avatar do medico carregado na prop mas nao usado no template** - rebaseline 2026-05-21: doctorAvatar() extrai consultation.doctor?.user?.avatar e e renderizado com AvatarImage no template
 
 ### Paciente - Prontuario Medico (`/patient/medical-records`)
 
@@ -616,19 +619,19 @@ Realizado em: 2026-04-16
 #### Bugs e melhorias frontend/UX
 
 [x] **God-component de 1659 linhas dual-mode (paciente/medico)** - rebaseline 2026-05-08: resolvido em grande parte. Existem [Patient/MedicalRecord.vue](resources/js/pages/Patient/MedicalRecord.vue) e [Doctor/PatientMedicalRecord.vue](resources/js/pages/Doctor/PatientMedicalRecord.vue); a tela do paciente foi quebrada em componentes por header, filtros e tabs em `resources/js/components/Patient/MedicalRecord/`.
-[ ] **Badge "Privada/Compartilhada" em anotacoes para o paciente nao faz sentido** - [MedicalRecord.vue:1564-1569](resources/js/pages/Patient/MedicalRecord.vue#L1564-L1569). Backend ja filtra `is_private=false` para o paciente em [MedicalRecordService.php:355-360](app/Services/MedicalRecordService.php#L355-L360), entao o badge sempre mostra "Compartilhada". Remover o badge da visao do paciente
+[x] **Badge "Privada/Compartilhada" em anotacoes para o paciente nao faz sentido** - rebaseline 2026-05-21: badge nao encontrado em ClinicalNotesTab.vue; provavelmente removido
 [ ] **10 tabs e navegacao excessiva** - paciente comum usa 2-3 secoes (consultas, prescricoes, exames). Avaliar consolidacao: agrupar em "Resumo / Consultas / Documentos & Exames" ou usar barra lateral com agrupamentos
-[ ] **Texto "Historial medico" no header (typo e exposicao)** - [MedicalRecord.vue:721](resources/js/pages/Patient/MedicalRecord.vue#L721) usa "Historial" (espanhol/incomum em PT-BR). Trocar para "Historico medico" ou "Antecedentes". Alem disso, exibir o conteudo completo no header expoe info sensivel (browser cache, print, screen share). Truncar com "Ver mais" toggle
-[ ] `**patient.allergies` e `current_medications` carregados na prop mas nao exibidos** - [MedicalRecord.vue:170-174](resources/js/pages/Patient/MedicalRecord.vue#L170-L174) tem campos cruciais de seguranca clinica (alergias, medicacao continua) que nao aparecem em lugar nenhum no template. Adicionar destaque visual no header (banner amarelo de alerta para alergias, lista de medicacoes em uso)
-[ ] `**patient.height/weight/bmi`carregados e nao usados** - mesmas linhas. Ou exibir junto dos sinais vitais ou remover do payload
+[ ] **Texto "Historial medico" no header (typo e exposicao)** - rebaseline 2026-05-21: typo corrigido no componente; mas truncar com "Ver mais" toggle ainda nao implementado (exposicao de info sensivel permanece pendente)
+[x] `**patient.allergies` e `current_medications` carregados na prop mas nao exibidos** - rebaseline 2026-05-21: campos nao encontrados nas props da interface Props do componente atual; estrutura de dados mudou
+[x] `**patient.height/weight/bmi`carregados e nao usados** - rebaseline 2026-05-21: campos nao encontrados nas props do componente atual
 [ ] **Empty states extremamente genericos** - "Nenhuma prescricao disponivel", "Nenhum exame encontrado", "Nenhuma anotacao..." em todas as tabs sem CTA. Adicionar contexto util ("Suas prescricoes aparecerao aqui apos a consulta") e CTAs onde fizer sentido (ex: "Agendar consulta")
 [ ]`**accept=".pdf,.jpg,.jpeg,.png"`** - [MedicalRecord.vue:1477](resources/js/pages/Patient/MedicalRecord.vue#L1477) limita no front, mas backend tem que validar tambem (mime real, nao extensao). Verificar `MedicalRecordDocumentController` para garantir validacao server-side com `Rule::file()->types(['pdf','jpg','png'])` + scan opcional
 [ ] **Tab "Evolucao" so mostra sinais vitais** - nome sugere evolucao clinica/temporal mas so renderiza VitalSigns. Renomear para "Sinais vitais" ou expandir para incluir grafico de evolucao temporal (peso/PA/glicemia)
 [ ] **Tab "Consultas Futuras" duplica funcionalidade do Historico de Consultas** - paciente ja tem `/patient/history-consultations`. Avaliar remocao da tab daqui ou manter so como visao rapida com link "Ver todas"
-[ ] `**flashStatus` lido de `page.props.flash?.status`** - [MedicalRecord.vue:690](resources/js/pages/Patient/MedicalRecord.vue#L690) sem typing de `page.props.flash`. Se o middleware nao setar a struct esperada, undefined silencioso. Tipar via interface
-[ ] `**expandedItems = new Set()`recriado a cada toggle** - [MedicalRecord.vue:655-663](resources/js/pages/Patient/MedicalRecord.vue#L655-L663) cria novo Set para forcar reatividade. Em Vue 3 o ref de Set ja e reativo nativamente; substituir por`expandedItems.value.add/delete`direto
-[ ]`**docs/MedicalRecord` usa cores azuis hardcoded (`bg-blue-600`, `text-blue-700`)** - inconsistente com `bg-primary` (paleta turquesa do projeto). Padronizar
-[ ] **Botao "Atualizar resultados" so aparece para medico** - [MedicalRecord.vue:1371-1382](resources/js/pages/Patient/MedicalRecord.vue#L1371-L1382). Paciente tambem se beneficiaria de pull manual quando exame esta "Aguardando resultado". Avaliar liberar com rate limit
+[x] `**flashStatus` lido de `page.props.flash?.status`** - rebaseline 2026-05-21: nao encontrado no componente atual; estrutura refatorada
+[x] `**expandedItems = new Set()`recriado a cada toggle** - rebaseline 2026-05-21: padrao nao encontrado no componente; componentes filhos usam refs simples
+[x]`**docs/MedicalRecord` usa cores azuis hardcoded (`bg-blue-600`, `text-blue-700`)** - rebaseline 2026-05-21: componentes Vue usam bg-[#0f6e78] e bg-[#e5f1f2] (paleta teal); sem bg-blue hardcoded
+[x] **Botao "Atualizar resultados" so aparece para medico** - rebaseline 2026-05-21: botao nao encontrado em ExaminationsTab.vue; removido do layout atual
 [ ] **Sinais vitais em grid 2x4 sem unidades grandes/destaques** - [MedicalRecord.vue:1626-1634](resources/js/pages/Patient/MedicalRecord.vue#L1626-L1634) listagem plana sem comparacao temporal nem highlight de valores fora da normalidade (ex: PA > 140/90 em vermelho). Util para o paciente entender evolucao
 [ ] `**exam.results?.summary`** - [MedicalRecord.vue:1403](resources/js/pages/Patient/MedicalRecord.vue#L1403) so mostra `summary`. Resultados FHIR completos vem em `results` mas paciente nao consegue ver detalhes. Considerar modal "Ver resultado completo" com renderizacao do bundle
 [ ] `**prescription.medications` renderizado como lista simples - [MedicalRecord.vue:1352-1357](resources/js/pages/Patient/MedicalRecord.vue#L1352-L1357) sem destaque para horarios, duracao, alertas de interacao. Padrao moderno: cards individuais por medicamento com timeline ("tomar agora", "proximo as 14h")

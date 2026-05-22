@@ -51,27 +51,32 @@ const doctorNavItems = computed<NavItem[]>(() => [
         title: 'Dashboard',
         href: doctorRoutes.dashboard(),
         icon: Home,
+        tourId: 'nav-dashboard',
     },
     {
         title: 'Agenda',
         href: doctorRoutes.schedule(),
         icon: Calendar,
         activePathPrefix: doctorRoutes.schedule().url,
+        tourId: 'nav-agenda',
     },
     {
         title: 'Pacientes',
         href: '/doctor/patients',
         icon: Users,
+        tourId: 'nav-pacientes',
     },
     {
         title: 'Consultas',
         href: doctorRoutes.consultations(),
         icon: Monitor,
+        tourId: 'nav-consultas',
     },
     {
         title: 'Mensagens',
         href: '/doctor/messages',
         icon: MessageCircle,
+        tourId: 'nav-mensagens',
     },
     {
         title: 'Histórico',
@@ -83,6 +88,7 @@ const doctorNavItems = computed<NavItem[]>(() => [
         href: '/doctor/documents',
         icon: FileText,
         activePathPrefix: '/doctor/documents',
+        tourId: 'nav-documentos',
         children: [
             {
                 title: 'Emissão',
@@ -101,6 +107,7 @@ const doctorNavItems = computed<NavItem[]>(() => [
         href: doctorRoutes.integrations(),
         icon: Plug2,
         activePathPrefix: doctorRoutes.integrations().url,
+        tourId: 'nav-integracoes',
         children: [
             {
                 title: 'Hub de Integrações',
@@ -127,31 +134,37 @@ const patientNavItems = computed<NavItem[]>(() => [
         title: 'Dashboard',
         href: patientRoutes.dashboard(),
         icon: Home,
+        tourId: 'nav-dashboard',
     },
     {
         title: 'Pesquisar Médicos',
         href: patientRoutes.searchConsultations(),
         icon: Stethoscope,
+        tourId: 'nav-pesquisar',
     },
     {
         title: 'Mensagens',
         href: patientRoutes.messages(),
         icon: MessageCircle,
+        tourId: 'nav-mensagens',
     },
     {
         title: 'Videoconferência',
         href: patientRoutes.videoCall(),
         icon: Video,
+        tourId: 'nav-video',
     },
     {
         title: 'Histórico de Consultas',
         href: patientRoutes.historyConsultations(),
         icon: History,
+        tourId: 'nav-historico',
     },
     {
         title: 'Prontuário',
         href: patientRoutes.medicalRecords(),
         icon: Activity,
+        tourId: 'nav-prontuario',
     },
 ]);
 

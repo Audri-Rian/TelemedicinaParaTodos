@@ -14,7 +14,7 @@ class OnboardingController extends Controller
     public function completeTour(Request $request)
     {
         $user = Auth::user();
-        
+
         // Determinar qual tour completar baseado no tipo de usuário
         if ($user->isDoctor()) {
             $user->update([
@@ -25,33 +25,38 @@ class OnboardingController extends Controller
                 'has_seen_dashboard_tour' => true,
             ]);
         }
-        
+
         return response()->json([
             'success' => true,
             'message' => 'Tour marcado como completo',
         ]);
     }
-    
+
     /**
      * Pular welcome screen (marcar como visto)
      */
     public function skipWelcome(Request $request)
     {
         $user = Auth::user();
-        
+
         $action = $request->input('action', 'explore');
-        
-        // Determinar qual welcome screen marcar baseado no tipo de usuário
+
+        // 'explore' = optou por não fazer o tour; marca ambos para não exibir novamente
+        // 'tour'    = quer o tour; apenas fecha o welcome, tour inicia no frontend
         if ($user->isDoctor()) {
-            $user->update([
-                'has_seen_doctor_welcome_screen' => true,
-            ]);
+            $fields = ['has_seen_doctor_welcome_screen' => true];
+            if ($action === 'explore') {
+                $fields['has_seen_doctor_dashboard_tour'] = true;
+            }
+            $user->update($fields);
         } else {
-            $user->update([
-                'has_seen_welcome_screen' => true,
-            ]);
+            $fields = ['has_seen_welcome_screen' => true];
+            if ($action === 'explore') {
+                $fields['has_seen_dashboard_tour'] = true;
+            }
+            $user->update($fields);
         }
-        
+
         return response()->json([
             'success' => true,
             'message' => 'Welcome screen marcado como visto',

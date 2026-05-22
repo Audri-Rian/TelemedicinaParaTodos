@@ -29,6 +29,8 @@ export interface NavItem {
      * Padrão: caminho do `href` do pai (ex.: /doctor/integrations).
      */
     activePathPrefix?: string;
+    /** ID para o tour de onboarding (ex.: "nav-dashboard"). Usado como data-tour no elemento. */
+    tourId?: string;
 }
 
 export type AppPageProps<T extends Record<string, unknown> = Record<string, unknown>> = T & {
