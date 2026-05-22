@@ -27,13 +27,13 @@ class StoreAvailabilitySlotRequest extends FormRequest
             'day_of_week' => [
                 'required_if:type,recurring',
                 'nullable',
-                Rule::in(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'])
+                Rule::in(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']),
             ],
             'specific_date' => [
                 'required_if:type,specific',
                 'nullable',
                 'date',
-                'after_or_equal:today'
+                'after_or_equal:today',
             ],
             'start_time' => ['required', 'date_format:H:i'],
             'end_time' => [
@@ -53,9 +53,33 @@ class StoreAvailabilitySlotRequest extends FormRequest
                     }
                 },
             ],
-            'location_id' => ['nullable', 'exists:doctor_service_locations,id'],
+            'location_id' => [
+                'nullable',
+                Rule::exists('doctor_service_locations', 'id')
+                    ->where('doctor_id', $this->user()?->doctor?->id),
+            ],
             'is_active' => ['sometimes', 'boolean'],
         ];
+    }
+
+    public function withValidator($validator): void
+    {
+        $validator->after(function ($validator): void {
+            $shouldRequireConsultationFee = (bool) config('telemedicine.availability.require_consultation_fee_to_create_slot', true);
+
+            if (! $shouldRequireConsultationFee) {
+                return;
+            }
+
+            $consultationFee = $this->user()?->doctor?->consultation_fee;
+
+            if ($consultationFee === null || (float) $consultationFee <= 0) {
+                $validator->errors()->add(
+                    'consultation_fee',
+                    'Defina o valor da consulta no perfil antes de criar horários de disponibilidade.'
+                );
+            }
+        });
     }
 
     /**
@@ -100,4 +124,3 @@ class StoreAvailabilitySlotRequest extends FormRequest
         }
     }
 }
-

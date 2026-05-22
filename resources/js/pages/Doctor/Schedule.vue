@@ -121,6 +121,7 @@ interface Props {
     };
     locations?: ServiceLocation[];
     initialTab?: ScheduleTab;
+    requireConsultationFeeToCreateSlot?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -145,6 +146,7 @@ const props = withDefaults(defineProps<Props>(), {
         end: '',
     }),
     locations: () => [],
+    requireConsultationFeeToCreateSlot: true,
 });
 
 const activeTab = ref<ScheduleTab>(props.initialTab);
@@ -284,7 +286,11 @@ const setTab = (tab: ScheduleTab) => {
                 </div>
 
                 <div class="ag-content">
-                    <ScheduleManagement v-if="activeTab === 'configure'" :schedule-config="scheduleConfig" />
+                    <ScheduleManagement
+                        v-if="activeTab === 'configure'"
+                        :schedule-config="scheduleConfig"
+                        :require-consultation-fee-to-create-slot="requireConsultationFeeToCreateSlot"
+                    />
 
                     <AvailabilityOverview v-else :timeline="timeline" :summary="summary" :meta="meta" :locations="locations" />
                 </div>

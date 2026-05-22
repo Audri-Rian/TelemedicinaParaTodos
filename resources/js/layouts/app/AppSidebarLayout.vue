@@ -4,6 +4,7 @@ import AppShell from '@/components/AppShell.vue';
 import AppSidebar from '@/components/AppSidebar.vue';
 import AppSidebarHeader from '@/components/AppSidebarHeader.vue';
 import FloatingButton from '@/components/FloatingButton.vue';
+import ToastContainer from '@/components/ToastContainer.vue';
 import type { BreadcrumbItemType } from '@/types';
 
 interface Props {
@@ -18,10 +19,11 @@ withDefaults(defineProps<Props>(), {
 <template>
     <AppShell variant="sidebar">
         <AppSidebar />
-        <AppContent variant="sidebar" class="overflow-x-hidden">
+        <AppContent variant="sidebar" class="overflow-x-clip">
             <AppSidebarHeader :breadcrumbs="breadcrumbs" />
             <slot />
         </AppContent>
         <FloatingButton />
+        <ToastContainer />
     </AppShell>
 </template>

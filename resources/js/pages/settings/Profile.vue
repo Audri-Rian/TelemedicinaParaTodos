@@ -6,22 +6,23 @@ import { send } from '@/routes/verification';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 
 import DeleteUser from '@/components/DeleteUser.vue';
-import HeadingSmall from '@/components/HeadingSmall.vue';
 import InputError from '@/components/InputError.vue';
 import Timeline from '@/components/Timeline.vue';
 import TimelineModal from '@/components/modals/TimelineModal.vue';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { useInitials } from '@/composables/useInitials';
 import AppLayout from '@/layouts/AppLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
 import { type BreadcrumbItem } from '@/types';
 import axios from 'axios';
-import { AlertCircle, CheckCircle, Loader2, Plus, Upload, User as UserIcon, X } from 'lucide-vue-next';
-import { computed, ref, watch } from 'vue';
+import { AlertCircle, CheckCircle2, ChevronDown, Loader2, Plus, ShieldCheck, Upload, X } from 'lucide-vue-next';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 
 interface Patient {
     id: string;
@@ -105,6 +106,7 @@ const breadcrumbItems: BreadcrumbItem[] = [
 const page = usePage();
 const user = (page.props.auth as any).user;
 const auth = page.props.auth as { isPatient: boolean; isDoctor: boolean; role: string | null };
+const { getInitials } = useInitials();
 
 // Criar o formulário usando useForm do Inertia
 const form = useForm({
@@ -138,11 +140,76 @@ const updateConsentTelemedicine = (checked: boolean) => {
     form.consent_telemedicine = checked;
 };
 
-const updateSpecialization = (specializationId: string, checked: boolean) => {
-    const current = Array.isArray(form.specializations) ? [...form.specializations] : [];
+const isSpecializationsDropdownOpen = ref(false);
+const specializationSearch = ref('');
 
-    form.specializations = checked ? Array.from(new Set([...current, specializationId])) : current.filter((id) => id !== specializationId);
+const filteredSpecializationsList = computed(() => {
+    const term = specializationSearch.value.trim().toLowerCase();
+    const list = props.specializations ?? [];
+
+    if (!term) {
+        return list;
+    }
+
+    return list.filter((specialization) => specialization.name.toLowerCase().includes(term));
+});
+
+const selectedSpecializationsList = computed(() => {
+    const selectedIds = Array.isArray(form.specializations) ? form.specializations : [];
+
+    return (props.specializations ?? []).filter((specialization) => selectedIds.includes(specialization.id));
+});
+
+const primarySpecialtyLabel = computed(() => {
+    const first = selectedSpecializationsList.value[0];
+    return first?.name ?? null;
+});
+
+const doctorStatusLabel = computed(() => {
+    if (form.status === 'inactive') {
+        return 'Inativo';
+    }
+
+    if (form.status === 'suspended') {
+        return 'Suspenso';
+    }
+
+    return 'Ativo';
+});
+
+const isSpecializationSelected = (specializationId: string) => form.specializations.includes(specializationId);
+
+const toggleSpecialization = (specializationId: string) => {
+    const current = Array.isArray(form.specializations) ? [...form.specializations] : [];
+    const index = current.indexOf(specializationId);
+
+    form.specializations = index > -1 ? current.filter((id) => id !== specializationId) : Array.from(new Set([...current, specializationId]));
 };
+
+const removeSpecialization = (specializationId: string) => {
+    form.specializations = form.specializations.filter((id) => id !== specializationId);
+};
+
+const closeSpecializationsDropdown = () => {
+    isSpecializationsDropdownOpen.value = false;
+    specializationSearch.value = '';
+};
+
+const handleSpecializationsClickOutside = (event: MouseEvent) => {
+    const dropdown = document.querySelector('.profile-specializations-dropdown');
+
+    if (dropdown && !dropdown.contains(event.target as Node)) {
+        closeSpecializationsDropdown();
+    }
+};
+
+onMounted(() => {
+    document.addEventListener('click', handleSpecializationsClickOutside);
+});
+
+onUnmounted(() => {
+    document.removeEventListener('click', handleSpecializationsClickOutside);
+});
 
 // Estado para mensagem de sucesso
 const recentlySuccessful = ref(false);
@@ -376,117 +443,124 @@ const cancelPreview = () => {
 
         <SettingsLayout>
             <div class="flex flex-col space-y-6">
-                <!-- Seção de Avatar -->
-                <div class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-                    <HeadingSmall title="Foto de Perfil" description="Adicione uma foto para personalizar seu perfil" />
-                    <div class="mt-4 space-y-4">
-                        <div class="flex items-start gap-6">
-                            <!-- Preview do Avatar -->
-                            <div class="relative">
-                                <div class="relative h-32 w-32 overflow-hidden rounded-full border-2 border-primary/20 bg-gray-50">
-                                    <img
-                                        v-if="previewUrl || avatarThumbnailUrl || avatarUrl"
-                                        :src="previewUrl || avatarThumbnailUrl || avatarUrl || ''"
-                                        alt="Avatar"
-                                        class="h-full w-full object-cover"
-                                    />
-                                    <div
-                                        v-else
-                                        class="flex h-full w-full items-center justify-center bg-linear-to-br from-blue-400 to-blue-600 text-white"
-                                    >
-                                        <UserIcon class="h-12 w-12" />
-                                    </div>
+                <div class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+                    <div class="flex flex-col gap-5 sm:flex-row sm:items-start">
+                        <div class="relative">
+                            <Avatar class="size-20 ring-4 ring-teal-50 sm:size-24" :class="{ 'ring-2 ring-amber-300': !!previewUrl }">
+                                <AvatarImage
+                                    v-if="previewUrl || avatarThumbnailUrl || avatarUrl"
+                                    :src="previewUrl || avatarThumbnailUrl || avatarUrl || undefined"
+                                    alt="Avatar"
+                                />
+                                <AvatarFallback class="bg-teal-700 text-2xl font-semibold text-white">
+                                    {{ getInitials(user.name) || '?' }}
+                                </AvatarFallback>
+                            </Avatar>
+                            <div v-if="isUploading" class="absolute inset-0 flex items-center justify-center rounded-full bg-black/50">
+                                <Loader2 class="h-6 w-6 animate-spin text-white" />
+                            </div>
+                        </div>
 
-                                    <!-- Overlay de loading -->
-                                    <div v-if="isUploading" class="absolute inset-0 flex items-center justify-center bg-black/50">
-                                        <Loader2 class="h-6 w-6 animate-spin text-white" />
-                                    </div>
+                        <div class="min-w-0 flex-1 space-y-4">
+                            <div class="min-w-0 space-y-2">
+                                <div v-if="auth?.isDoctor || auth?.role === 'doctor'" class="flex flex-wrap items-center gap-2">
+                                    <span
+                                        v-if="timelineCompleted"
+                                        class="inline-flex h-7 items-center gap-1.5 rounded-full bg-teal-50 px-3 text-xs font-semibold text-teal-800 ring-1 ring-teal-100"
+                                    >
+                                        <CheckCircle2 class="size-3.5" />
+                                        Perfil completo
+                                    </span>
+                                    <span
+                                        v-if="form.crm || doctor?.crm"
+                                        class="inline-flex h-7 items-center gap-1.5 rounded-full bg-slate-50 px-3 text-xs font-semibold text-slate-700 ring-1 ring-slate-200"
+                                    >
+                                        <ShieldCheck class="size-3.5" />
+                                        CRM verificado
+                                    </span>
+                                    <span
+                                        class="inline-flex h-7 items-center rounded-full bg-slate-50 px-3 text-xs font-semibold text-slate-700 ring-1 ring-slate-200"
+                                    >
+                                        {{ doctorStatusLabel }}
+                                    </span>
                                 </div>
+                                <h1 class="text-2xl font-bold text-slate-950">{{ user.name }}</h1>
+                                <p v-if="(auth?.isDoctor || auth?.role === 'doctor') && primarySpecialtyLabel" class="text-sm text-slate-600">
+                                    {{ primarySpecialtyLabel }}
+                                </p>
                             </div>
 
-                            <!-- Ações -->
-                            <div class="flex flex-1 flex-col gap-3">
-                                <div class="flex flex-wrap gap-3">
-                                    <!-- Input de arquivo oculto -->
-                                    <input
-                                        ref="fileInputRef"
-                                        type="file"
-                                        accept="image/jpeg,image/png,image/webp"
-                                        class="hidden"
-                                        @change="handleFileSelect"
-                                    />
+                            <div class="flex flex-wrap gap-3">
+                                <input
+                                    ref="fileInputRef"
+                                    type="file"
+                                    accept="image/jpeg,image/png,image/webp"
+                                    class="hidden"
+                                    @change="handleFileSelect"
+                                />
 
-                                    <!-- Botão de selecionar/upload -->
-                                    <Button
-                                        type="button"
-                                        :disabled="isUploading"
-                                        class="bg-primary text-white hover:bg-primary/90"
-                                        @click="previewUrl ? uploadAvatar() : selectFile()"
-                                    >
-                                        <Upload class="mr-2 h-4 w-4" />
-                                        {{ previewUrl ? 'Confirmar Upload' : 'Selecionar Imagem' }}
-                                    </Button>
+                                <Button
+                                    type="button"
+                                    :disabled="isUploading"
+                                    class="bg-teal-500 text-slate-950 hover:bg-teal-400"
+                                    @click="previewUrl ? uploadAvatar() : selectFile()"
+                                >
+                                    <Upload class="mr-2 h-4 w-4" />
+                                    {{ previewUrl ? 'Confirmar Upload' : 'Selecionar Imagem' }}
+                                </Button>
 
-                                    <!-- Botão de cancelar preview -->
-                                    <Button v-if="previewUrl" type="button" variant="outline" :disabled="isUploading" @click="cancelPreview">
-                                        <X class="mr-2 h-4 w-4" />
-                                        Cancelar
-                                    </Button>
+                                <Button v-if="previewUrl" type="button" variant="outline" :disabled="isUploading" @click="cancelPreview">
+                                    <X class="mr-2 h-4 w-4" />
+                                    Cancelar
+                                </Button>
 
-                                    <!-- Botão de remover -->
-                                    <Button
-                                        v-if="avatarUrl && !previewUrl"
-                                        type="button"
-                                        :disabled="isUploading"
-                                        class="border-0 bg-red-50 text-red-700 hover:bg-red-100"
-                                        @click="deleteAvatar"
-                                    >
-                                        <X class="mr-2 h-4 w-4" />
-                                        Remover
-                                    </Button>
-                                </div>
-
-                                <!-- Mensagens de feedback -->
-                                <div v-if="uploadError" class="rounded-md bg-red-50 p-3 text-sm text-red-800">
-                                    {{ uploadError }}
-                                </div>
-
-                                <div v-if="uploadSuccess" class="rounded-md bg-green-50 p-3 text-sm text-green-800">
-                                    Avatar atualizado com sucesso!
-                                </div>
-
-                                <p class="text-xs text-gray-500">Formatos aceitos: JPEG, PNG, WebP. Tamanho máximo: 5MB.</p>
+                                <Button
+                                    v-if="avatarUrl && !previewUrl"
+                                    type="button"
+                                    :disabled="isUploading"
+                                    class="border-0 bg-red-50 text-red-700 hover:bg-red-100"
+                                    @click="deleteAvatar"
+                                >
+                                    <X class="mr-2 h-4 w-4" />
+                                    Remover
+                                </Button>
                             </div>
+
+                            <div v-if="uploadError" class="rounded-md bg-red-50 p-3 text-sm text-red-800 ring-1 ring-red-100">
+                                {{ uploadError }}
+                            </div>
+
+                            <div v-if="uploadSuccess" class="rounded-md bg-teal-50 p-3 text-sm text-teal-800 ring-1 ring-teal-100">
+                                Avatar atualizado com sucesso!
+                            </div>
+
+                            <p class="text-xs text-slate-500">Formatos aceitos: JPEG, PNG, WebP. Tamanho máximo: 5MB.</p>
                         </div>
                     </div>
                 </div>
 
-                <!-- Card Informações do Perfil -->
-                <div class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-                    <HeadingSmall title="Informações do Perfil" description="Atualize seu nome e endereço de e-mail" />
-                    <form @submit.prevent="submit" class="mt-4 space-y-6">
-                        <!-- Primeira Etapa: Informações Básicas -->
+                <form @submit.prevent="submit" class="space-y-6">
+                    <div class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+                        <div class="mb-5 flex flex-wrap items-start justify-between gap-3">
+                            <div>
+                                <p class="text-xs font-bold tracking-[0.08em] text-slate-500 uppercase">Conta</p>
+                                <h2 class="mt-1 text-xl font-bold text-slate-950">Informações básicas</h2>
+                                <p class="mt-1 text-sm text-slate-500">Atualize seu nome e endereço de e-mail.</p>
+                            </div>
+                        </div>
+
                         <div class="space-y-6">
                             <div class="grid gap-2">
-                                <Label for="name" class="text-gray-800">Nome</Label>
-                                <Input
-                                    id="name"
-                                    class="mt-1 block w-full rounded-xl border-primary/30 focus-visible:ring-primary/30"
-                                    name="name"
-                                    v-model="form.name"
-                                    required
-                                    autocomplete="name"
-                                    placeholder="Nome completo"
-                                />
+                                <Label for="name" class="text-slate-700">Nome</Label>
+                                <Input id="name" name="name" v-model="form.name" required autocomplete="name" placeholder="Nome completo" />
                                 <InputError class="mt-2" :message="form.errors.name" />
                             </div>
 
                             <div class="grid gap-2">
-                                <Label for="email" class="text-gray-800">Endereço de e-mail</Label>
+                                <Label for="email" class="text-slate-700">Endereço de e-mail</Label>
                                 <Input
                                     id="email"
                                     type="email"
-                                    class="mt-1 block w-full rounded-xl border-primary/30 focus-visible:ring-primary/30"
                                     name="email"
                                     v-model="form.email"
                                     required
@@ -508,250 +582,32 @@ const cancelPreview = () => {
                                     </Link>
                                 </p>
 
-                                <div v-if="status === 'verification-link-sent'" class="mt-2 text-sm font-medium text-green-600">
+                                <div v-if="status === 'verification-link-sent'" class="mt-2 text-sm font-medium text-teal-700">
                                     Um novo link de verificação foi enviado para o seu endereço de e-mail.
                                 </div>
                             </div>
                         </div>
+                    </div>
 
-                        <!-- Segunda Etapa: Informações de Saúde e Emergência -->
-                        <div v-if="auth?.isPatient || auth?.role === 'patient'" class="space-y-6 border-t pt-6">
-                            <div class="flex items-center gap-2">
-                                <HeadingSmall title="Segunda Etapa de Autenticação" description="Complete seu cadastro para agendar consultas" />
-                                <div v-if="!isSecondStageComplete" class="flex items-center gap-2 text-yellow-600">
-                                    <AlertCircle class="h-5 w-5" />
-                                    <span class="text-sm font-medium">Incompleto</span>
-                                </div>
-                                <div v-else class="flex items-center gap-2 text-green-600">
-                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                    </svg>
-                                    <span class="text-sm font-medium">Completo</span>
-                                </div>
-                            </div>
-
-                            <!-- Contato de Emergência (Obrigatório) -->
-                            <div class="space-y-4 rounded-lg border border-yellow-200 bg-yellow-50 p-4">
-                                <h3 class="text-sm font-semibold text-yellow-800">Contato de Emergência *</h3>
-                                <p class="text-xs text-yellow-700">Estes campos são obrigatórios para agendar consultas.</p>
-
-                                <div class="grid gap-4 md:grid-cols-2">
-                                    <div class="grid gap-2">
-                                        <Label for="emergency_contact">Nome do Contato de Emergência</Label>
-                                        <Input
-                                            id="emergency_contact"
-                                            name="emergency_contact"
-                                            v-model="form.emergency_contact"
-                                            placeholder="Nome completo do contato"
-                                        />
-                                        <InputError class="mt-2" :message="form.errors.emergency_contact" />
-                                    </div>
-
-                                    <div class="grid gap-2">
-                                        <Label for="emergency_phone">Telefone de Emergência</Label>
-                                        <Input
-                                            id="emergency_phone"
-                                            name="emergency_phone"
-                                            type="tel"
-                                            v-model="form.emergency_phone"
-                                            placeholder="(00) 00000-0000"
-                                        />
-                                        <InputError class="mt-2" :message="form.errors.emergency_phone" />
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Informações Médicas -->
-                            <div class="space-y-4">
-                                <h3 class="text-sm font-semibold text-gray-800">Informações Médicas</h3>
-
-                                <div class="grid gap-4">
-                                    <div class="grid gap-2">
-                                        <Label for="medical_history">Histórico Médico</Label>
-                                        <Textarea
-                                            id="medical_history"
-                                            name="medical_history"
-                                            v-model="form.medical_history"
-                                            placeholder="Descreva seu histórico médico, cirurgias, condições crônicas, etc."
-                                            :rows="4"
-                                        />
-                                        <InputError class="mt-2" :message="form.errors.medical_history" />
-                                    </div>
-
-                                    <div class="grid gap-2">
-                                        <Label for="allergies">Alergias</Label>
-                                        <Textarea
-                                            id="allergies"
-                                            name="allergies"
-                                            v-model="form.allergies"
-                                            placeholder="Liste suas alergias (medicamentos, alimentos, etc.)"
-                                            :rows="3"
-                                        />
-                                        <InputError class="mt-2" :message="form.errors.allergies" />
-                                    </div>
-
-                                    <div class="grid gap-2">
-                                        <Label for="current_medications">Medicamentos em Uso</Label>
-                                        <Textarea
-                                            id="current_medications"
-                                            name="current_medications"
-                                            v-model="form.current_medications"
-                                            placeholder="Liste os medicamentos que você está tomando atualmente"
-                                            :rows="3"
-                                        />
-                                        <InputError class="mt-2" :message="form.errors.current_medications" />
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Informações Físicas e Tipo Sanguíneo -->
-                            <div class="space-y-4">
-                                <h3 class="text-sm font-semibold text-gray-800">Informações Físicas</h3>
-
-                                <div class="grid gap-4 md:grid-cols-3">
-                                    <div class="grid gap-2">
-                                        <Label for="blood_type">Tipo Sanguíneo</Label>
-                                        <Select id="blood_type" name="blood_type" v-model="form.blood_type">
-                                            <option value="">Selecione...</option>
-                                            <option v-for="bloodType in props.bloodTypes" :key="bloodType" :value="bloodType">
-                                                {{ bloodType }}
-                                            </option>
-                                        </Select>
-                                        <InputError class="mt-2" :message="form.errors.blood_type" />
-                                    </div>
-
-                                    <div class="grid gap-2">
-                                        <Label for="height">Altura (cm)</Label>
-                                        <Input
-                                            id="height"
-                                            name="height"
-                                            type="number"
-                                            step="0.01"
-                                            min="50"
-                                            max="250"
-                                            v-model="form.height"
-                                            placeholder="Ex: 175"
-                                        />
-                                        <InputError class="mt-2" :message="form.errors.height" />
-                                    </div>
-
-                                    <div class="grid gap-2">
-                                        <Label for="weight">Peso (kg)</Label>
-                                        <Input
-                                            id="weight"
-                                            name="weight"
-                                            type="number"
-                                            step="0.01"
-                                            min="1"
-                                            max="500"
-                                            v-model="form.weight"
-                                            placeholder="Ex: 70.5"
-                                        />
-                                        <InputError class="mt-2" :message="form.errors.weight" />
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Identificadores de Saúde (interoperabilidade) -->
-                            <div class="space-y-4">
-                                <h3 class="text-sm font-semibold text-gray-800">Identificadores de Saúde</h3>
-                                <p class="text-xs text-gray-500">
-                                    Necessários para integração com laboratórios e a Rede Nacional de Dados em Saúde (RNDS).
-                                </p>
-
-                                <div class="grid gap-4 md:grid-cols-2">
-                                    <div class="grid gap-2">
-                                        <Label for="cns">Cartão Nacional de Saúde (CNS)</Label>
-                                        <Input
-                                            id="cns"
-                                            name="cns"
-                                            inputmode="numeric"
-                                            v-model="form.cns"
-                                            :placeholder="
-                                                props.patient?.cns_registered ? '••• cadastrado — preencha para alterar' : '000000000000000'
-                                            "
-                                            maxlength="15"
-                                        />
-                                        <p class="text-[10px] text-gray-400">15 dígitos numéricos</p>
-                                        <InputError class="mt-2" :message="form.errors.cns" />
-                                    </div>
-
-                                    <div class="grid gap-2">
-                                        <Label for="cpf">CPF</Label>
-                                        <Input
-                                            id="cpf"
-                                            name="cpf"
-                                            inputmode="numeric"
-                                            v-model="form.cpf"
-                                            :placeholder="props.patient?.cpf_registered ? '••• cadastrado — preencha para alterar' : '00000000000'"
-                                            maxlength="11"
-                                        />
-                                        <p class="text-[10px] text-gray-400">11 dígitos, sem pontos ou traços</p>
-                                        <InputError class="mt-2" :message="form.errors.cpf" />
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Informações de Plano de Saúde -->
-                            <div class="space-y-4">
-                                <h3 class="text-sm font-semibold text-gray-800">Plano de Saúde</h3>
-
-                                <div class="grid gap-4 md:grid-cols-2">
-                                    <div class="grid gap-2">
-                                        <Label for="insurance_provider">Operadora do Plano</Label>
-                                        <Input
-                                            id="insurance_provider"
-                                            name="insurance_provider"
-                                            v-model="form.insurance_provider"
-                                            placeholder="Nome da operadora"
-                                        />
-                                        <InputError class="mt-2" :message="form.errors.insurance_provider" />
-                                    </div>
-
-                                    <div class="grid gap-2">
-                                        <Label for="insurance_number">Número do Plano</Label>
-                                        <Input
-                                            id="insurance_number"
-                                            name="insurance_number"
-                                            v-model="form.insurance_number"
-                                            placeholder="Número da carteirinha"
-                                        />
-                                        <InputError class="mt-2" :message="form.errors.insurance_number" />
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Consentimento para Telemedicina -->
-                            <div class="flex items-start gap-3 rounded-lg border border-gray-200 bg-gray-50 p-4">
-                                <div class="flex items-center">
-                                    <Checkbox
-                                        id="consent_telemedicine"
-                                        :checked="form.consent_telemedicine"
-                                        @update:checked="updateConsentTelemedicine"
-                                    />
-                                </div>
-                                <div class="grid gap-1">
-                                    <Label for="consent_telemedicine" class="cursor-pointer font-medium"> Consentimento para Telemedicina </Label>
-                                    <p class="text-xs text-gray-600">
-                                        Autorizo a realização de consultas médicas por meio de telemedicina, conforme a legislação vigente.
-                                    </p>
-                                    <InputError class="mt-2" :message="form.errors.consent_telemedicine" />
-                                </div>
+                    <div v-if="auth?.isDoctor || auth?.role === 'doctor'" class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+                        <div class="mb-5 flex flex-wrap items-start justify-between gap-3">
+                            <div>
+                                <p class="text-xs font-bold tracking-[0.08em] text-slate-500 uppercase">Registro profissional</p>
+                                <h2 class="mt-1 text-xl font-bold text-slate-950">Dados profissionais</h2>
+                                <p class="mt-1 text-sm text-slate-500">Atualize os dados exibidos para pacientes e integrações.</p>
                             </div>
                         </div>
 
-                        <div v-if="auth?.isDoctor || auth?.role === 'doctor'" class="space-y-6 border-t pt-6">
-                            <HeadingSmall title="Perfil Profissional" description="Atualize os dados exibidos para pacientes e integracoes" />
-
+                        <div class="space-y-6">
                             <div class="grid gap-4 md:grid-cols-3">
                                 <div class="grid gap-2">
-                                    <Label for="crm">CRM</Label>
-                                    <Input id="crm" name="crm" v-model="form.crm" placeholder="CRM sem pontos ou tracos" maxlength="20" />
+                                    <Label for="crm" class="text-slate-700">CRM</Label>
+                                    <Input id="crm" name="crm" v-model="form.crm" placeholder="CRM sem pontos ou traços" maxlength="20" />
                                     <InputError class="mt-2" :message="form.errors.crm" />
                                 </div>
 
                                 <div class="grid gap-2">
-                                    <Label for="doctor_cns">CNS</Label>
+                                    <Label for="doctor_cns" class="text-slate-700">CNS</Label>
                                     <Input
                                         id="doctor_cns"
                                         name="cns"
@@ -764,7 +620,7 @@ const cancelPreview = () => {
                                 </div>
 
                                 <div class="grid gap-2">
-                                    <Label for="cbo">CBO</Label>
+                                    <Label for="cbo" class="text-slate-700">CBO</Label>
                                     <Input id="cbo" name="cbo" inputmode="numeric" v-model="form.cbo" placeholder="000000" maxlength="6" />
                                     <InputError class="mt-2" :message="form.errors.cbo" />
                                 </div>
@@ -772,18 +628,18 @@ const cancelPreview = () => {
 
                             <div class="grid gap-4 md:grid-cols-3">
                                 <div class="grid gap-2 md:col-span-2">
-                                    <Label for="license_number">Numero de Licenca</Label>
+                                    <Label for="license_number" class="text-slate-700">Número de Licença</Label>
                                     <Input
                                         id="license_number"
                                         name="license_number"
                                         v-model="form.license_number"
-                                        placeholder="Numero de registro profissional"
+                                        placeholder="Número de registro profissional"
                                     />
                                     <InputError class="mt-2" :message="form.errors.license_number" />
                                 </div>
 
                                 <div class="grid gap-2">
-                                    <Label for="license_expiry_date">Validade da Licenca</Label>
+                                    <Label for="license_expiry_date" class="text-slate-700">Validade da Licença</Label>
                                     <Input id="license_expiry_date" name="license_expiry_date" type="date" v-model="form.license_expiry_date" />
                                     <InputError class="mt-2" :message="form.errors.license_expiry_date" />
                                 </div>
@@ -791,7 +647,7 @@ const cancelPreview = () => {
 
                             <div class="grid gap-4 md:grid-cols-2">
                                 <div class="grid gap-2">
-                                    <Label for="consultation_fee">Valor da Consulta</Label>
+                                    <Label for="consultation_fee" class="text-slate-700">Valor da Consulta</Label>
                                     <Input
                                         id="consultation_fee"
                                         name="consultation_fee"
@@ -805,7 +661,7 @@ const cancelPreview = () => {
                                 </div>
 
                                 <div class="grid gap-2">
-                                    <Label for="doctor_status">Status</Label>
+                                    <Label for="doctor_status" class="text-slate-700">Status</Label>
                                     <Select id="doctor_status" name="status" v-model="form.status">
                                         <option value="active">Ativo</option>
                                         <option value="inactive">Inativo</option>
@@ -816,7 +672,86 @@ const cancelPreview = () => {
                             </div>
 
                             <div class="grid gap-2">
-                                <Label for="biography">Biografia</Label>
+                                <Label for="specializations" class="text-slate-700">Especializações</Label>
+                                <div class="profile-specializations-dropdown relative">
+                                    <div
+                                        id="specializations"
+                                        role="combobox"
+                                        tabindex="0"
+                                        class="flex min-h-11 w-full cursor-pointer items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-left text-sm shadow-xs transition hover:border-slate-300 focus-visible:border-teal-300 focus-visible:ring-[3px] focus-visible:ring-teal-200/70 focus-visible:outline-none"
+                                        :aria-expanded="isSpecializationsDropdownOpen"
+                                        aria-haspopup="listbox"
+                                        @click.stop="isSpecializationsDropdownOpen = !isSpecializationsDropdownOpen"
+                                        @keydown.enter.prevent="isSpecializationsDropdownOpen = !isSpecializationsDropdownOpen"
+                                        @keydown.space.prevent="isSpecializationsDropdownOpen = !isSpecializationsDropdownOpen"
+                                    >
+                                        <div class="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+                                            <span
+                                                v-for="specialization in selectedSpecializationsList"
+                                                :key="specialization.id"
+                                                class="inline-flex items-center gap-1 rounded-full bg-teal-50 px-2.5 py-1 text-xs font-medium text-teal-800 ring-1 ring-teal-100"
+                                            >
+                                                {{ specialization.name }}
+                                                <button
+                                                    type="button"
+                                                    class="text-teal-700 transition hover:text-teal-900"
+                                                    :aria-label="`Remover ${specialization.name}`"
+                                                    @click.stop="removeSpecialization(specialization.id)"
+                                                >
+                                                    <X class="h-3 w-3" />
+                                                </button>
+                                            </span>
+                                            <span v-if="selectedSpecializationsList.length === 0" class="text-sm text-slate-400">
+                                                Selecione suas especializações
+                                            </span>
+                                        </div>
+                                        <ChevronDown
+                                            class="h-4 w-4 shrink-0 text-slate-500 transition-transform"
+                                            :class="isSpecializationsDropdownOpen ? 'rotate-180' : ''"
+                                        />
+                                    </div>
+
+                                    <div
+                                        v-if="isSpecializationsDropdownOpen"
+                                        class="absolute z-50 mt-2 w-full overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg"
+                                        role="listbox"
+                                    >
+                                        <div class="border-b border-slate-100 p-3">
+                                            <Input
+                                                v-model="specializationSearch"
+                                                placeholder="Buscar especialização..."
+                                                class="h-9 text-sm"
+                                                @click.stop
+                                            />
+                                        </div>
+                                        <div class="max-h-48 overflow-y-auto">
+                                            <button
+                                                v-for="specialization in filteredSpecializationsList"
+                                                :key="specialization.id"
+                                                type="button"
+                                                role="option"
+                                                :aria-selected="isSpecializationSelected(specialization.id)"
+                                                class="flex w-full cursor-pointer items-center justify-between px-3 py-2 text-left text-sm transition-colors hover:bg-slate-50"
+                                                :class="isSpecializationSelected(specialization.id) ? 'bg-teal-50 text-teal-800' : 'text-slate-700'"
+                                                @click.stop="toggleSpecialization(specialization.id)"
+                                            >
+                                                <span>{{ specialization.name }}</span>
+                                                <Checkbox :checked="isSpecializationSelected(specialization.id)" class="pointer-events-none" />
+                                            </button>
+                                            <p v-if="filteredSpecializationsList.length === 0" class="px-3 py-4 text-center text-sm text-slate-500">
+                                                Nenhuma especialização encontrada
+                                            </p>
+                                        </div>
+                                        <p class="border-t border-slate-100 bg-slate-50 px-3 py-2 text-xs text-slate-500">
+                                            {{ selectedSpecializationsList.length }} especialização(ões) selecionada(s)
+                                        </p>
+                                    </div>
+                                </div>
+                                <InputError class="mt-2" :message="form.errors.specializations" />
+                            </div>
+
+                            <div class="grid gap-2">
+                                <Label for="biography" class="text-slate-700">Biografia</Label>
                                 <Textarea
                                     id="biography"
                                     name="biography"
@@ -826,107 +761,334 @@ const cancelPreview = () => {
                                 />
                                 <InputError class="mt-2" :message="form.errors.biography" />
                             </div>
-
-                            <div class="space-y-3">
-                                <Label>Especializacoes</Label>
-                                <div class="grid gap-2 md:grid-cols-2">
-                                    <label
-                                        v-for="specialization in props.specializations"
-                                        :key="specialization.id"
-                                        class="flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3"
-                                    >
-                                        <Checkbox
-                                            :checked="form.specializations.includes(specialization.id)"
-                                            @update:checked="(checked) => updateSpecialization(specialization.id, Boolean(checked))"
-                                        />
-                                        <span class="text-sm font-medium text-gray-800">{{ specialization.name }}</span>
-                                    </label>
-                                </div>
-                                <InputError class="mt-2" :message="form.errors.specializations" />
-                            </div>
-                        </div>
-
-                        <div class="flex items-center gap-4">
-                            <Button type="submit" :disabled="form.processing" class="rounded-xl bg-primary text-white hover:bg-primary/90">
-                                Salvar Alterações
-                            </Button>
-
-                            <Transition
-                                enter-active-class="transition ease-in-out"
-                                enter-from-class="opacity-0"
-                                leave-active-class="transition ease-in-out"
-                                leave-to-class="opacity-0"
-                            >
-                                <p v-show="recentlySuccessful" class="text-sm text-neutral-600">Salvo.</p>
-                            </Transition>
-                        </div>
-
-                        <!-- Aviso de sucesso mais destacado para pacientes -->
-                        <Transition
-                            enter-active-class="transition-all duration-300 ease-out"
-                            enter-from-class="opacity-0 transform scale-95"
-                            enter-to-class="opacity-100 transform scale-100"
-                            leave-active-class="transition-all duration-200 ease-in"
-                            leave-from-class="opacity-100 transform scale-100"
-                            leave-to-class="opacity-0 transform scale-95"
-                        >
-                            <div
-                                v-if="recentlySuccessful && (auth?.isPatient || auth?.role === 'patient')"
-                                class="mt-4 rounded-lg border border-green-200 bg-green-50 p-4"
-                            >
-                                <div class="flex items-start gap-3">
-                                    <CheckCircle class="mt-0.5 h-5 w-5 flex-shrink-0 text-green-600" />
-                                    <div class="flex-1">
-                                        <h3 class="text-sm font-semibold text-green-800">Perfil atualizado com sucesso!</h3>
-                                        <p class="mt-1 text-sm text-green-700">
-                                            Suas informações foram salvas.
-                                            <span v-if="!isSecondStageComplete" class="font-medium">
-                                                Complete o contato de emergência para poder agendar consultas.
-                                            </span>
-                                            <span v-else class="font-medium"> Agora você pode agendar consultas normalmente. </span>
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        </Transition>
-                    </form>
-                </div>
-
-                <!-- Segunda Etapa: Timeline (Apenas para Doutores) -->
-                <div v-if="auth?.isDoctor || auth?.role === 'doctor'" class="space-y-6 border-t pt-6">
-                    <div class="flex items-center gap-2">
-                        <HeadingSmall
-                            title="Segunda Etapa de Autenticação - Timeline Profissional"
-                            description="Registre sua educação, cursos, certificados e projetos para completar seu perfil"
-                        />
-                        <div v-if="!isSecondStageComplete" class="flex items-center gap-2 text-yellow-600">
-                            <AlertCircle class="h-5 w-5" />
-                            <span class="text-sm font-medium">Incompleto</span>
-                        </div>
-                        <div v-else class="flex items-center gap-2 text-green-600">
-                            <CheckCircle class="h-5 w-5" />
-                            <span class="text-sm font-medium">Completo</span>
                         </div>
                     </div>
 
-                    <!-- Aviso sobre segunda etapa não obrigatória -->
-                    <div v-if="!isSecondStageComplete" class="rounded-lg border border-blue-200 bg-blue-50 p-4">
-                        <p class="text-sm text-blue-800">
+                    <template v-if="auth?.isPatient || auth?.role === 'patient'">
+                        <div class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+                            <div class="mb-5 flex flex-wrap items-start justify-between gap-3">
+                                <div>
+                                    <p class="text-xs font-bold tracking-[0.08em] text-slate-500 uppercase">Emergência</p>
+                                    <h2 class="mt-1 text-xl font-bold text-slate-950">Contato de emergência</h2>
+                                    <p class="mt-1 text-sm text-slate-500">Campos obrigatórios para habilitar o agendamento de consultas.</p>
+                                </div>
+                                <span
+                                    v-if="isSecondStageComplete"
+                                    class="inline-flex h-7 items-center gap-1.5 rounded-full bg-teal-50 px-3 text-xs font-semibold text-teal-800 ring-1 ring-teal-100"
+                                >
+                                    <CheckCircle2 class="size-3.5" />
+                                    Completo
+                                </span>
+                                <span
+                                    v-else
+                                    class="inline-flex h-7 items-center gap-1.5 rounded-full bg-amber-50 px-3 text-xs font-semibold text-amber-700 ring-1 ring-amber-200"
+                                >
+                                    <AlertCircle class="size-3.5" />
+                                    Incompleto
+                                </span>
+                            </div>
+
+                            <div class="grid gap-4 md:grid-cols-2">
+                                <div class="grid gap-2">
+                                    <Label for="emergency_contact" class="text-slate-700">Nome do contato de emergência</Label>
+                                    <Input
+                                        id="emergency_contact"
+                                        name="emergency_contact"
+                                        v-model="form.emergency_contact"
+                                        placeholder="Nome completo do contato"
+                                    />
+                                    <InputError class="mt-2" :message="form.errors.emergency_contact" />
+                                </div>
+
+                                <div class="grid gap-2">
+                                    <Label for="emergency_phone" class="text-slate-700">Telefone de emergência</Label>
+                                    <Input
+                                        id="emergency_phone"
+                                        name="emergency_phone"
+                                        type="tel"
+                                        v-model="form.emergency_phone"
+                                        placeholder="(00) 00000-0000"
+                                    />
+                                    <InputError class="mt-2" :message="form.errors.emergency_phone" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+                            <div class="mb-5">
+                                <p class="text-xs font-bold tracking-[0.08em] text-slate-500 uppercase">Saúde</p>
+                                <h2 class="mt-1 text-xl font-bold text-slate-950">Informações médicas</h2>
+                            </div>
+                            <div class="space-y-4">
+                                <div class="grid gap-4">
+                                    <div class="grid gap-2">
+                                        <Label for="medical_history" class="text-slate-700">Histórico médico</Label>
+                                        <Textarea
+                                            id="medical_history"
+                                            name="medical_history"
+                                            v-model="form.medical_history"
+                                            placeholder="Descreva seu histórico médico, cirurgias, condições crônicas, etc."
+                                            :rows="4"
+                                        />
+                                        <InputError class="mt-2" :message="form.errors.medical_history" />
+                                    </div>
+
+                                    <div class="grid gap-2">
+                                        <Label for="allergies" class="text-slate-700">Alergias</Label>
+                                        <Textarea
+                                            id="allergies"
+                                            name="allergies"
+                                            v-model="form.allergies"
+                                            placeholder="Liste suas alergias (medicamentos, alimentos, etc.)"
+                                            :rows="3"
+                                        />
+                                        <InputError class="mt-2" :message="form.errors.allergies" />
+                                    </div>
+
+                                    <div class="grid gap-2">
+                                        <Label for="current_medications" class="text-slate-700">Medicamentos em uso</Label>
+                                        <Textarea
+                                            id="current_medications"
+                                            name="current_medications"
+                                            v-model="form.current_medications"
+                                            placeholder="Liste os medicamentos que você está tomando atualmente"
+                                            :rows="3"
+                                        />
+                                        <InputError class="mt-2" :message="form.errors.current_medications" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+                            <div class="mb-5">
+                                <p class="text-xs font-bold tracking-[0.08em] text-slate-500 uppercase">Dados físicos</p>
+                                <h2 class="mt-1 text-xl font-bold text-slate-950">Medidas e tipo sanguíneo</h2>
+                            </div>
+                            <div class="grid gap-4 md:grid-cols-3">
+                                <div class="grid gap-2">
+                                    <Label for="blood_type" class="text-slate-700">Tipo sanguíneo</Label>
+                                    <Select id="blood_type" name="blood_type" v-model="form.blood_type">
+                                        <option value="">Selecione...</option>
+                                        <option v-for="bloodType in props.bloodTypes" :key="bloodType" :value="bloodType">
+                                            {{ bloodType }}
+                                        </option>
+                                    </Select>
+                                    <InputError class="mt-2" :message="form.errors.blood_type" />
+                                </div>
+
+                                <div class="grid gap-2">
+                                    <Label for="height" class="text-slate-700">Altura (cm)</Label>
+                                    <Input
+                                        id="height"
+                                        name="height"
+                                        type="number"
+                                        step="0.01"
+                                        min="50"
+                                        max="250"
+                                        v-model="form.height"
+                                        placeholder="Ex: 175"
+                                    />
+                                    <InputError class="mt-2" :message="form.errors.height" />
+                                </div>
+
+                                <div class="grid gap-2">
+                                    <Label for="weight" class="text-slate-700">Peso (kg)</Label>
+                                    <Input
+                                        id="weight"
+                                        name="weight"
+                                        type="number"
+                                        step="0.01"
+                                        min="1"
+                                        max="500"
+                                        v-model="form.weight"
+                                        placeholder="Ex: 70.5"
+                                    />
+                                    <InputError class="mt-2" :message="form.errors.weight" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+                            <div class="mb-5">
+                                <p class="text-xs font-bold tracking-[0.08em] text-slate-500 uppercase">Interoperabilidade</p>
+                                <h2 class="mt-1 text-xl font-bold text-slate-950">Identificadores de saúde</h2>
+                                <p class="mt-1 text-sm text-slate-500">Necessários para integração com laboratórios e com a RNDS.</p>
+                            </div>
+
+                            <div class="grid gap-4 md:grid-cols-2">
+                                <div class="grid gap-2">
+                                    <Label for="cns" class="text-slate-700">Cartão Nacional de Saúde (CNS)</Label>
+                                    <Input
+                                        id="cns"
+                                        name="cns"
+                                        inputmode="numeric"
+                                        v-model="form.cns"
+                                        :placeholder="props.patient?.cns_registered ? '••• cadastrado — preencha para alterar' : '000000000000000'"
+                                        maxlength="15"
+                                    />
+                                    <p class="text-[10px] text-slate-500">15 dígitos numéricos</p>
+                                    <InputError class="mt-2" :message="form.errors.cns" />
+                                </div>
+
+                                <div class="grid gap-2">
+                                    <Label for="cpf" class="text-slate-700">CPF</Label>
+                                    <Input
+                                        id="cpf"
+                                        name="cpf"
+                                        inputmode="numeric"
+                                        v-model="form.cpf"
+                                        :placeholder="props.patient?.cpf_registered ? '••• cadastrado — preencha para alterar' : '00000000000'"
+                                        maxlength="11"
+                                    />
+                                    <p class="text-[10px] text-slate-500">11 dígitos, sem pontos ou traços</p>
+                                    <InputError class="mt-2" :message="form.errors.cpf" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+                            <div class="mb-5">
+                                <p class="text-xs font-bold tracking-[0.08em] text-slate-500 uppercase">Cobertura</p>
+                                <h2 class="mt-1 text-xl font-bold text-slate-950">Plano de saúde</h2>
+                            </div>
+                            <div class="grid gap-4 md:grid-cols-2">
+                                <div class="grid gap-2">
+                                    <Label for="insurance_provider" class="text-slate-700">Operadora do plano</Label>
+                                    <Input
+                                        id="insurance_provider"
+                                        name="insurance_provider"
+                                        v-model="form.insurance_provider"
+                                        placeholder="Nome da operadora"
+                                    />
+                                    <InputError class="mt-2" :message="form.errors.insurance_provider" />
+                                </div>
+
+                                <div class="grid gap-2">
+                                    <Label for="insurance_number" class="text-slate-700">Número do plano</Label>
+                                    <Input
+                                        id="insurance_number"
+                                        name="insurance_number"
+                                        v-model="form.insurance_number"
+                                        placeholder="Número da carteirinha"
+                                    />
+                                    <InputError class="mt-2" :message="form.errors.insurance_number" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="rounded-lg border border-slate-200 bg-slate-50 p-5 shadow-sm sm:p-6">
+                            <div class="mb-5">
+                                <p class="text-xs font-bold tracking-[0.08em] text-slate-500 uppercase">Consentimento</p>
+                                <h2 class="mt-1 text-xl font-bold text-slate-950">Telemedicina</h2>
+                            </div>
+                            <div class="flex items-start gap-3 rounded-lg border border-slate-200 bg-white p-4">
+                                <div class="flex items-center">
+                                    <Checkbox
+                                        id="consent_telemedicine"
+                                        :checked="form.consent_telemedicine"
+                                        @update:checked="updateConsentTelemedicine"
+                                    />
+                                </div>
+                                <div class="grid gap-1">
+                                    <Label for="consent_telemedicine" class="cursor-pointer font-medium text-slate-700">
+                                        Consentimento para telemedicina
+                                    </Label>
+                                    <p class="text-xs text-slate-600">
+                                        Autorizo a realização de consultas médicas por meio de telemedicina, conforme a legislação vigente.
+                                    </p>
+                                    <InputError class="mt-2" :message="form.errors.consent_telemedicine" />
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+
+                    <div class="flex items-center gap-4 border-t border-slate-200 pt-1">
+                        <Button type="submit" :disabled="form.processing" class="bg-teal-500 text-slate-950 hover:bg-teal-400">
+                            Salvar Alterações
+                        </Button>
+
+                        <Transition
+                            enter-active-class="transition ease-in-out"
+                            enter-from-class="opacity-0"
+                            leave-active-class="transition ease-in-out"
+                            leave-to-class="opacity-0"
+                        >
+                            <p v-show="recentlySuccessful" class="text-sm text-slate-600">Salvo.</p>
+                        </Transition>
+                    </div>
+
+                    <Transition
+                        enter-active-class="transition-all duration-300 ease-out"
+                        enter-from-class="opacity-0 transform scale-95"
+                        enter-to-class="opacity-100 transform scale-100"
+                        leave-active-class="transition-all duration-200 ease-in"
+                        leave-from-class="opacity-100 transform scale-100"
+                        leave-to-class="opacity-0 transform scale-95"
+                    >
+                        <div
+                            v-if="recentlySuccessful && (auth?.isPatient || auth?.role === 'patient')"
+                            class="rounded-lg border border-teal-200 bg-teal-50 p-4"
+                        >
+                            <div class="flex items-start gap-3">
+                                <CheckCircle2 class="mt-0.5 h-5 w-5 flex-shrink-0 text-teal-700" />
+                                <div class="flex-1">
+                                    <h3 class="text-sm font-semibold text-teal-800">Perfil atualizado com sucesso!</h3>
+                                    <p class="mt-1 text-sm text-teal-700">
+                                        Suas informações foram salvas.
+                                        <span v-if="!isSecondStageComplete" class="font-medium">
+                                            Complete o contato de emergência para poder agendar consultas.
+                                        </span>
+                                        <span v-else class="font-medium"> Agora você pode agendar consultas normalmente. </span>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </Transition>
+                </form>
+
+                <div v-if="auth?.isDoctor || auth?.role === 'doctor'" class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+                    <div class="mb-5 flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                            <p class="text-xs font-bold tracking-[0.08em] text-slate-500 uppercase">Trajetória</p>
+                            <h2 class="mt-1 text-xl font-bold text-slate-950">Formação e certificações</h2>
+                            <p class="mt-1 text-sm text-slate-500">
+                                Registre sua educação, cursos, certificados e projetos para completar seu perfil.
+                            </p>
+                        </div>
+                        <span
+                            v-if="isSecondStageComplete"
+                            class="inline-flex h-7 items-center gap-1.5 rounded-full bg-teal-50 px-3 text-xs font-semibold text-teal-800 ring-1 ring-teal-100"
+                        >
+                            <CheckCircle2 class="size-3.5" />
+                            Completo
+                        </span>
+                        <span
+                            v-else
+                            class="inline-flex h-7 items-center gap-1.5 rounded-full bg-amber-50 px-3 text-xs font-semibold text-amber-700 ring-1 ring-amber-200"
+                        >
+                            <AlertCircle class="size-3.5" />
+                            Incompleto
+                        </span>
+                    </div>
+
+                    <div v-if="!isSecondStageComplete" class="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                        <p class="text-sm text-slate-700">
                             <strong>Nota:</strong> A segunda etapa de autenticação não é obrigatória, mas recomendamos que você complete seu perfil
                             adicionando sua formação acadêmica e experiência profissional. Isso ajuda os pacientes a conhecerem melhor sua trajetória.
                         </p>
                     </div>
 
-                    <!-- Botão para adicionar evento -->
-                    <div class="flex justify-end">
-                        <Button type="button" @click="openCreateTimelineModal" variant="default">
+                    <div class="mt-5 flex justify-end">
+                        <Button type="button" @click="openCreateTimelineModal" class="bg-teal-500 text-slate-950 hover:bg-teal-400">
                             <Plus class="mr-2 h-4 w-4" />
                             Adicionar Evento
                         </Button>
                     </div>
 
-                    <!-- Lista de eventos da timeline -->
-                    <Timeline :events="timelineEvents" :show-actions="true" @edit="openEditTimelineModal" @delete="deleteTimelineEvent" />
+                    <div class="mt-5">
+                        <Timeline :events="timelineEvents" :show-actions="true" @edit="openEditTimelineModal" @delete="deleteTimelineEvent" />
+                    </div>
                 </div>
             </div>
 

@@ -12,7 +12,12 @@
             "Bash(php -l /home/audri/Github/Audri/TelemedicinaParaTodos/app/Http/Controllers/Doctor/DoctorHistoryController.php)",
             "Bash(php -l /home/audri/Github/Audri/TelemedicinaParaTodos/app/Jobs/LogMedicalRecordAccessJob.php)",
             "Bash(php -l /home/audri/Github/Audri/TelemedicinaParaTodos/routes/web/shared.php)",
-            "Bash(php -l /home/audri/Github/Audri/TelemedicinaParaTodos/routes/web/doctor.php)"
+            "Bash(php -l /home/audri/Github/Audri/TelemedicinaParaTodos/routes/web/doctor.php)",
+            "Bash(php -l app/Http/Controllers/Doctor/DoctorAvailabilitySlotController.php)",
+            "Bash(php -l app/Http/Controllers/Doctor/DoctorScheduleController.php)",
+            "Bash(php -l app/Http/Controllers/Patient/DoctorPerfilController.php)",
+            "Bash(php -l app/Http/Controllers/Patient/ScheduleConsultationController.php)",
+            "Bash(php -l app/Http/Requests/Doctor/StoreAvailabilitySlotRequest.php)"
         ]
     }
 }

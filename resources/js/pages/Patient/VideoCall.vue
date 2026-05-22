@@ -4,9 +4,11 @@ import { Button } from '@/components/ui/button';
 import { useRouteGuard } from '@/composables/auth';
 import { useInitials } from '@/composables/useInitials';
 import AppLayout from '@/layouts/AppLayout.vue';
+import * as appointmentsRoutes from '@/routes/appointments';
 import * as patientRoutes from '@/routes/patient';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link, usePage } from '@inertiajs/vue3';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
+import axios from 'axios';
 import {
     AlertTriangle,
     Calendar,
@@ -58,6 +60,7 @@ const users = ((page.props.users as User[]) || []).map((user) => ({
 
 const selectedUser = ref<User | null>(users[0] ?? null);
 const isMobileDetail = ref(false);
+const isStartingCall = ref(false);
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -70,8 +73,28 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
+const preselectAppointmentFromQuery = () => {
+    if (typeof window === 'undefined') {
+        return;
+    }
+
+    const appointmentId = new URLSearchParams(window.location.search).get('appointment');
+    if (!appointmentId) {
+        return;
+    }
+
+    const matchedUser = users.find(
+        (user) => user.appointment?.id === appointmentId || user.allAppointments?.some((appointment) => appointment.id === appointmentId),
+    );
+
+    if (matchedUser) {
+        selectUser(matchedUser);
+    }
+};
+
 onMounted(() => {
     canAccessPatientRoute();
+    preselectAppointmentFromQuery();
 });
 
 const selectedAppointment = computed(() => selectedUser.value?.appointment ?? null);
@@ -216,8 +239,30 @@ const ctaMode = computed<'maintenance' | 'enabled' | 'disabled-window' | 'disabl
         return 'disabled-window';
     }
 
-    return 'maintenance';
+    return 'enabled';
 });
+
+const joinVideoCall = async () => {
+    if (ctaMode.value !== 'enabled' || !selectedAppointment.value || isStartingCall.value) {
+        return;
+    }
+
+    isStartingCall.value = true;
+
+    try {
+        if (['scheduled', 'rescheduled'].includes(selectedAppointment.value.status)) {
+            await axios.post(appointmentsRoutes.start.url({ appointment: selectedAppointment.value.id }));
+        }
+
+        router.reload();
+    } catch (error: unknown) {
+        const err = error as { response?: { data?: { message?: string } } };
+        console.error('Erro ao iniciar consulta:', error);
+        alert(err.response?.data?.message || 'Não foi possível iniciar a consulta. Tente novamente.');
+    } finally {
+        isStartingCall.value = false;
+    }
+};
 
 const ctaConfig = computed(() => {
     const map = {
@@ -522,12 +567,13 @@ const checklist = computed(() => [
 
                                             <button
                                                 type="button"
-                                                disabled
-                                                class="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-lg border-none px-4 text-sm font-black"
+                                                class="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-lg border-none px-4 text-sm font-black disabled:cursor-not-allowed"
                                                 :class="ctaConfig.class"
+                                                :disabled="ctaMode !== 'enabled' || isStartingCall"
+                                                @click="joinVideoCall"
                                             >
                                                 <component :is="ctaConfig.icon" class="h-4 w-4" />
-                                                {{ ctaConfig.label }}
+                                                {{ isStartingCall ? 'Iniciando consulta...' : ctaConfig.label }}
                                             </button>
                                             <p class="mt-2 text-center text-xs font-semibold text-gray-500">{{ ctaConfig.description }}</p>
                                         </div>

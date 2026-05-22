@@ -2,12 +2,11 @@
 
 namespace App\Services;
 
+use App\Models\Appointments;
 use App\Models\AvailabilitySlot;
 use App\Models\Doctor;
 use App\Models\ServiceLocation;
-use App\Models\Appointments;
 use Carbon\Carbon;
-use Illuminate\Support\Collection;
 
 class AvailabilityService
 {
@@ -24,6 +23,7 @@ class AvailabilityService
             ->where('type', AvailabilitySlot::TYPE_RECURRING)
             ->where('day_of_week', $dayOfWeek)
             ->where('is_active', true)
+            ->with('location')
             ->get();
 
         // Buscar slots específicos para a data
@@ -31,6 +31,7 @@ class AvailabilityService
             ->where('type', AvailabilitySlot::TYPE_SPECIFIC)
             ->where('specific_date', $date->format('Y-m-d'))
             ->where('is_active', true)
+            ->with('location')
             ->get();
 
         // Combinar slots
@@ -43,7 +44,7 @@ class AvailabilityService
             ->whereIn('status', [
                 Appointments::STATUS_SCHEDULED,
                 Appointments::STATUS_RESCHEDULED,
-                Appointments::STATUS_IN_PROGRESS
+                Appointments::STATUS_IN_PROGRESS,
             ])
             ->pluck('scheduled_at')
             ->map(fn ($dt) => Carbon::parse($dt)->format('H:i'))
@@ -69,8 +70,9 @@ class AvailabilityService
                 // Se for hoje, remover slots que já passaram
                 if ($date->isToday()) {
                     try {
-                        $slotDateTime = Carbon::createFromFormat('Y-m-d H:i', $date->format('Y-m-d') . ' ' . $slotTime);
+                        $slotDateTime = Carbon::createFromFormat('Y-m-d H:i', $date->format('Y-m-d').' '.$slotTime);
                         $minAllowedTime = Carbon::now()->addMinutes(5);
+
                         return $slotDateTime->greaterThan($minAllowedTime);
                     } catch (\Exception $e) {
                         return true;
@@ -124,8 +126,8 @@ class AvailabilityService
 
         while ($currentDate <= $endDate) {
             $slots = $this->getAvailableSlotsForDate($doctor, $currentDate);
-            
-            if (!empty($slots)) {
+
+            if (! empty($slots)) {
                 $availableDates[] = [
                     'date' => $currentDate->format('Y-m-d'),
                     'formatted_date' => $currentDate->format('d/m/Y'),
@@ -206,6 +208,14 @@ class AvailabilityService
     }
 
     /**
+     * Versão pública de generateTimeSlotsFromInterval para uso por serviços externos.
+     */
+    public function generateTimeSlotsPublic(string $startTime, string $endTime): array
+    {
+        return $this->generateTimeSlotsFromInterval($startTime, $endTime);
+    }
+
+    /**
      * Gerar slots de tempo a partir de um intervalo
      * Gera slots de 45 minutos por padrão, mas sempre inclui o horário de início exato
      */
@@ -214,39 +224,39 @@ class AvailabilityService
         string $endTime
     ): array {
         $slots = [];
-        
+
         // Normalizar formatos de hora (remover segundos se existirem)
         $startTime = $this->normalizeTimeFormat($startTime);
         $endTime = $this->normalizeTimeFormat($endTime);
-        
+
         [$startHour, $startMin] = explode(':', $startTime);
         [$endHour, $endMin] = explode(':', $endTime);
-        
-        $startMinutes = (int)$startHour * 60 + (int)$startMin;
-        $endMinutes = (int)$endHour * 60 + (int)$endMin;
+
+        $startMinutes = (int) $startHour * 60 + (int) $startMin;
+        $endMinutes = (int) $endHour * 60 + (int) $endMin;
 
         $slotDuration = (int) config('telemedicine.availability.slot_duration_minutes', 45);
 
         // Sempre incluir o horário de início exato como primeiro slot (já normalizado)
         $slots[] = $startTime;
-        
+
         // Calcular o próximo slot múltiplo de 45 minutos a partir do início
         $nextSlotMinutes = $startMinutes + $slotDuration;
-        
+
         // Gerar slots adicionais de 45 em 45 minutos
         while ($nextSlotMinutes + $slotDuration <= $endMinutes) {
             $hours = floor($nextSlotMinutes / 60);
             $minutes = $nextSlotMinutes % 60;
             $slotTime = sprintf('%02d:%02d', $hours, $minutes);
-            
+
             // Evitar duplicatas (caso o horário de início já seja múltiplo de 45)
             if ($slotTime !== $startTime) {
                 $slots[] = $slotTime;
             }
-            
+
             $nextSlotMinutes += $slotDuration;
         }
-        
+
         return $slots;
     }
 
@@ -259,7 +269,7 @@ class AvailabilityService
         if (strlen($time) > 5 && substr_count($time, ':') === 2) {
             return substr($time, 0, 5); // Retorna apenas HH:mm
         }
-        
+
         return $time;
     }
 
@@ -270,16 +280,15 @@ class AvailabilityService
     {
         $date = $dateTime->copy()->startOfDay();
         $time = $dateTime->format('H:i');
-        
+
         $availableSlots = $this->getAvailableSlotsForDate($doctor, $date);
-        
+
         foreach ($availableSlots as $slot) {
             if ($slot['time'] === $time) {
                 return true;
             }
         }
-        
+
         return false;
     }
 }
-

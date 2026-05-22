@@ -19,34 +19,34 @@ class ScheduleConsultationController extends Controller
     public function index(Request $request): Response|\Illuminate\Http\RedirectResponse
     {
         $doctorId = $request->get('doctor_id');
-        
-        if (!$doctorId) {
+
+        if (! $doctorId) {
             return redirect()
                 ->route('patient.search-consultations')
                 ->with('error', 'Selecione um médico para agendar.');
         }
-        
+
         $doctor = Doctor::with(['user', 'specializations'])->findOrFail($doctorId);
-        
-        if (!$doctor->isActive()) {
+
+        if (! $doctor->isActive()) {
             return redirect()
                 ->route('patient.search-consultations')
                 ->with('error', 'Médico não está disponível para agendamento.');
         }
-        
+
         $patient = auth()->user()->patient?->load('user');
-        
-        if (!$patient) {
+
+        if (! $patient) {
             return redirect()
                 ->route('patient.search-consultations')
                 ->with('error', 'Perfil de paciente não encontrado.');
         }
-        
+
         // Médicos devem configurar sua própria disponibilidade
 
         // Calcular horários disponíveis para os próximos 30 dias
         $availableDates = $this->getAvailableDates($doctor);
-        
+
         return Inertia::render('Patient/ScheduleConsultation', [
             'doctor' => [
                 'id' => $doctor->id,
@@ -55,7 +55,7 @@ class ScheduleConsultationController extends Controller
                     'email' => $doctor->user->email,
                     'avatar' => $doctor->user->avatar ?? null,
                 ],
-                'specializations' => $doctor->specializations->map(fn($spec) => [
+                'specializations' => $doctor->specializations->map(fn ($spec) => [
                     'id' => $spec->id,
                     'name' => $spec->name,
                 ]),
@@ -70,56 +70,29 @@ class ScheduleConsultationController extends Controller
                     'name' => $patient->user->name,
                 ],
             ],
+            'initialSelection' => [
+                'date' => $request->string('date')->toString() ?: null,
+                'time' => $request->string('time')->toString() ?: null,
+                'type' => $request->string('type')->toString() ?: null,
+            ],
         ]);
     }
-    
-    /**
-     * Calcular datas disponíveis para os próximos 30 dias
-     * Usa o novo sistema de ScheduleService que considera:
-     * - Slots recorrentes (por dia da semana)
-     * - Slots específicos (por data)
-     * - Datas bloqueadas
-     * - Appointments já agendados
-     */
+
     private function getAvailableDates(Doctor $doctor): array
     {
         $now = Carbon::now();
-        $startDate = $now->copy()->startOfDay();
         $windowDays = (int) config('telemedicine.availability.timeline_window_days', 30);
-        $endDate = $now->copy()->addDays($windowDays)->endOfDay();
-        
-        $availableDates = [];
-        $currentDate = $startDate->copy();
-        
-        // Iterar por cada dia no período
-        while ($currentDate <= $endDate) {
-            // Usar ScheduleService que já considera datas bloqueadas e appointments
-            $availability = $this->scheduleService->getAvailabilityForDate($doctor, $currentDate);
-            
-            // Se a data não está bloqueada e tem slots disponíveis
-            if (!$availability['is_blocked'] && !empty($availability['available_slots'])) {
-                // Extrair apenas os horários (strings) dos slots
-                $timeSlots = array_map(function($slot) {
-                    return $slot['time'] ?? null;
-                }, $availability['available_slots']);
-                
-                // Filtrar nulls e ordenar
-                $timeSlots = array_filter($timeSlots, fn($time) => $time !== null);
-                $timeSlots = array_values($timeSlots);
-                sort($timeSlots);
-                
-                if (!empty($timeSlots)) {
-                    $availableDates[] = [
-                        'date' => $currentDate->format('Y-m-d'),
-                        'available_slots' => $timeSlots,
-                    ];
-                }
-            }
-            
-            $currentDate->addDay();
-        }
-        
-        return $availableDates;
+
+        $dates = $this->scheduleService->getAvailableDatesForRange(
+            $doctor,
+            $now->copy()->startOfDay(),
+            $now->copy()->addDays($windowDays)->endOfDay()
+        );
+
+        // ScheduleConsultation só precisa de date + available_slots
+        return array_map(fn ($d) => [
+            'date' => $d['date'],
+            'available_slots' => $d['available_slots'],
+        ], $dates);
     }
 }
-

@@ -2,13 +2,13 @@
 
 namespace App\Services\Doctor;
 
-use App\Models\Doctor;
-use App\Models\ServiceLocation;
+use App\Models\Appointments;
 use App\Models\AvailabilitySlot;
+use App\Models\Doctor;
 use App\Models\Doctor\BlockedDate;
+use App\Models\ServiceLocation;
 use App\Services\AvailabilityService;
 use Carbon\Carbon;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class ScheduleService
@@ -139,16 +139,17 @@ class ScheduleService
 
             // Processar locais de atendimento
             if (isset($data['locations'])) {
+                $locationIds = collect($data['locations'])->pluck('id')->filter()->values()->all();
+                $existingLocations = $locationIds
+                    ? ServiceLocation::whereIn('id', $locationIds)->where('doctor_id', $doctor->id)->get()->keyBy('id')
+                    : collect();
+
                 foreach ($data['locations'] as $locationData) {
                     try {
                         if (isset($locationData['id'])) {
-                            // Atualizar local existente
-                            $location = ServiceLocation::find($locationData['id']);
-                            if ($location && $location->doctor_id === $doctor->id) {
-                                $location->update($locationData);
-                            }
+                            $location = $existingLocations->get($locationData['id']);
+                            $location?->update($locationData);
                         } else {
-                            // Criar novo local
                             $this->availabilityService->createServiceLocation(
                                 $doctor,
                                 $locationData['name'],
@@ -159,23 +160,23 @@ class ScheduleService
                             );
                         }
                     } catch (\Exception $e) {
-                        $errors[] = "Erro ao processar local: " . $e->getMessage();
+                        $errors[] = 'Erro ao processar local: '.$e->getMessage();
                     }
                 }
             }
 
             // Processar slots recorrentes
             if (isset($data['recurring_slots'])) {
+                $recurringIds = collect($data['recurring_slots'])->pluck('id')->filter()->values()->all();
+                $existingRecurring = $recurringIds
+                    ? AvailabilitySlot::whereIn('id', $recurringIds)->where('doctor_id', $doctor->id)->get()->keyBy('id')
+                    : collect();
+
                 foreach ($data['recurring_slots'] as $slotData) {
                     try {
                         if (isset($slotData['id'])) {
-                            // Atualizar slot existente
-                            $slot = AvailabilitySlot::find($slotData['id']);
-                            if ($slot && $slot->doctor_id === $doctor->id) {
-                                $slot->update($slotData);
-                            }
+                            $existingRecurring->get($slotData['id'])?->update($slotData);
                         } else {
-                            // Criar novo slot recorrente
                             $this->availabilityService->createRecurringSlot(
                                 $doctor,
                                 $slotData['day_of_week'],
@@ -185,24 +186,26 @@ class ScheduleService
                             );
                         }
                     } catch (\Exception $e) {
-                        $errors[] = "Erro ao processar slot recorrente: " . $e->getMessage();
+                        $errors[] = 'Erro ao processar slot recorrente: '.$e->getMessage();
                     }
                 }
             }
 
             // Processar slots específicos
             if (isset($data['specific_slots'])) {
+                $specificIds = collect($data['specific_slots'])
+                    ->flatMap(fn ($ds) => collect($ds['slots'] ?? [])->pluck('id'))
+                    ->filter()->values()->all();
+                $existingSpecific = $specificIds
+                    ? AvailabilitySlot::whereIn('id', $specificIds)->where('doctor_id', $doctor->id)->get()->keyBy('id')
+                    : collect();
+
                 foreach ($data['specific_slots'] as $dateSlots) {
                     foreach ($dateSlots['slots'] ?? [] as $slotData) {
                         try {
                             if (isset($slotData['id'])) {
-                                // Atualizar slot existente
-                                $slot = AvailabilitySlot::find($slotData['id']);
-                                if ($slot && $slot->doctor_id === $doctor->id) {
-                                    $slot->update($slotData);
-                                }
+                                $existingSpecific->get($slotData['id'])?->update($slotData);
                             } else {
-                                // Criar novo slot específico
                                 $this->availabilityService->createSpecificSlot(
                                     $doctor,
                                     Carbon::parse($dateSlots['date']),
@@ -212,7 +215,7 @@ class ScheduleService
                                 );
                             }
                         } catch (\Exception $e) {
-                            $errors[] = "Erro ao processar slot específico: " . $e->getMessage();
+                            $errors[] = 'Erro ao processar slot específico: '.$e->getMessage();
                         }
                     }
                 }
@@ -222,8 +225,7 @@ class ScheduleService
             if (isset($data['blocked_dates'])) {
                 foreach ($data['blocked_dates'] as $blockedDateData) {
                     try {
-                        if (!isset($blockedDateData['id'])) {
-                            // Criar nova data bloqueada
+                        if (! isset($blockedDateData['id'])) {
                             BlockedDate::create([
                                 'doctor_id' => $doctor->id,
                                 'blocked_date' => $blockedDateData['blocked_date'],
@@ -231,17 +233,152 @@ class ScheduleService
                             ]);
                         }
                     } catch (\Exception $e) {
-                        $errors[] = "Erro ao processar data bloqueada: " . $e->getMessage();
+                        $errors[] = 'Erro ao processar data bloqueada: '.$e->getMessage();
                     }
                 }
             }
 
-            if (!empty($errors)) {
-                throw new \Exception("Erros ao salvar configuração: " . implode(', ', $errors));
+            if (! empty($errors)) {
+                throw new \Exception('Erros ao salvar configuração: '.implode(', ', $errors));
             }
 
             return $this->getScheduleConfig($doctor);
         });
+    }
+
+    /**
+     * Retornar datas disponíveis para um período completo usando batch queries.
+     * Substitui chamar getAvailabilityForDate() em loop (evita N×4 queries).
+     */
+    public function getAvailableDatesForRange(Doctor $doctor, Carbon $startDate, Carbon $endDate): array
+    {
+        $startStr = $startDate->toDateString();
+        $endStr = $endDate->toDateString();
+
+        // 1 query: datas bloqueadas no período
+        $blockedSet = $doctor->blockedDates()
+            ->whereBetween('blocked_date', [$startStr, $endStr])
+            ->pluck('blocked_date')
+            ->map(fn ($d) => $d instanceof Carbon ? $d->toDateString() : (string) $d)
+            ->flip()
+            ->all();
+
+        // 1 query: todos os slots ativos (recorrentes + específicos do período)
+        $allSlots = $doctor->availabilitySlots()
+            ->where('is_active', true)
+            ->with('location')
+            ->where(function ($q) use ($startStr, $endStr) {
+                $q->where('type', AvailabilitySlot::TYPE_RECURRING)
+                    ->orWhere(function ($q2) use ($startStr, $endStr) {
+                        $q2->where('type', AvailabilitySlot::TYPE_SPECIFIC)
+                            ->whereBetween('specific_date', [$startStr, $endStr]);
+                    });
+            })
+            ->get();
+
+        $recurringByDay = $allSlots->where('type', AvailabilitySlot::TYPE_RECURRING)->groupBy('day_of_week');
+        $specificByDate = $allSlots->where('type', AvailabilitySlot::TYPE_SPECIFIC)
+            ->groupBy(fn ($s) => $s->specific_date instanceof Carbon
+                ? $s->specific_date->toDateString()
+                : (string) $s->specific_date);
+
+        // 1 query: appointments ocupados no período
+        $takenByDate = Appointments::where('doctor_id', $doctor->id)
+            ->whereBetween('scheduled_at', [$startDate->copy()->startOfDay(), $endDate->copy()->endOfDay()])
+            ->whereIn('status', [
+                Appointments::STATUS_SCHEDULED,
+                Appointments::STATUS_RESCHEDULED,
+                Appointments::STATUS_IN_PROGRESS,
+            ])
+            ->get()
+            ->groupBy(fn ($a) => Carbon::parse($a->scheduled_at)->toDateString())
+            ->map(fn ($apps) => $apps->map(fn ($a) => Carbon::parse($a->scheduled_at)->format('H:i'))->all());
+
+        $now = Carbon::now();
+        $availableDates = [];
+        $current = $startDate->copy()->startOfDay();
+
+        while ($current <= $endDate) {
+            $dateStr = $current->toDateString();
+
+            if (isset($blockedSet[$dateStr])) {
+                $current->addDay();
+
+                continue;
+            }
+
+            $dayOfWeek = strtolower($current->format('l'));
+            $daySlots = collect($recurringByDay->get($dayOfWeek, []))
+                ->merge($specificByDate->get($dateStr, []));
+
+            if ($daySlots->isEmpty()) {
+                $current->addDay();
+
+                continue;
+            }
+
+            $takenTimes = $takenByDate->get($dateStr, []);
+            $isToday = $current->isSameDay($now);
+            $minAllowed = $isToday ? $now->copy()->addMinutes(5) : null;
+
+            $timeSlots = [];
+            $seen = [];
+
+            foreach ($daySlots as $slot) {
+                $generated = $this->availabilityService->generateTimeSlotsPublic($slot->start_time, $slot->end_time);
+
+                foreach ($generated as $time) {
+                    if (isset($seen[$time])) {
+                        continue;
+                    }
+                    if (in_array($time, $takenTimes, true)) {
+                        continue;
+                    }
+                    if ($minAllowed) {
+                        try {
+                            $slotDt = Carbon::createFromFormat('Y-m-d H:i', $dateStr.' '.$time);
+                            if ($slotDt->lessThanOrEqualTo($minAllowed)) {
+                                continue;
+                            }
+                        } catch (\Exception) {
+                            // mantém o slot se não conseguir parsear
+                        }
+                    }
+                    $seen[$time] = true;
+                    $timeSlots[] = $time;
+                }
+            }
+
+            sort($timeSlots);
+
+            if (! empty($timeSlots)) {
+                $availableDates[] = [
+                    'date' => $dateStr,
+                    'formatted_date' => $current->format('d/m/Y'),
+                    'day_of_week' => $current->format('l'),
+                    'day_of_week_label' => $this->getDayLabel($current),
+                    'available_slots' => $timeSlots,
+                ];
+            }
+
+            $current->addDay();
+        }
+
+        return $availableDates;
+    }
+
+    private function getDayLabel(Carbon $date): string
+    {
+        return match ($date->dayOfWeek) {
+            0 => 'Domingo',
+            1 => 'Segunda',
+            2 => 'Terça',
+            3 => 'Quarta',
+            4 => 'Quinta',
+            5 => 'Sexta',
+            6 => 'Sábado',
+            default => '',
+        };
     }
 
     /**
@@ -288,7 +425,7 @@ class ScheduleService
         $defaults = config('telemedicine.doctor_defaults', []);
         $workDays = $defaults['work_days'] ?? ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
 
-        if (!empty($defaults['include_saturday']) && !in_array('saturday', $workDays, true)) {
+        if (! empty($defaults['include_saturday']) && ! in_array('saturday', $workDays, true)) {
             $workDays[] = 'saturday';
         }
 
@@ -300,7 +437,7 @@ class ScheduleService
             ->where('type', ServiceLocation::TYPE_TELECONSULTATION)
             ->first();
 
-        if (!$teleLocation) {
+        if (! $teleLocation) {
             $teleLocation = $this->availabilityService->createServiceLocation(
                 $doctor,
                 $defaults['telehealth_location']['name'] ?? 'Teleconsulta (Padrão)',
@@ -312,11 +449,12 @@ class ScheduleService
         }
 
         $availabilitySchedule = $doctor->availability_schedule ?? [];
-        $allDays = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
+        $allDays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
         foreach ($allDays as $day) {
-            if (!in_array($day, $workDays, true)) {
+            if (! in_array($day, $workDays, true)) {
                 $availabilitySchedule[$day] = $availabilitySchedule[$day] ?? null;
+
                 continue;
             }
 
@@ -356,8 +494,8 @@ class ScheduleService
 
         [$startHour, $startMin] = explode(':', $startTime);
         [$endHour, $endMin] = explode(':', $endTime);
-        $startMinutes = (int)$startHour * 60 + (int)$startMin;
-        $endMinutes = (int)$endHour * 60 + (int)$endMin;
+        $startMinutes = (int) $startHour * 60 + (int) $startMin;
+        $endMinutes = (int) $endHour * 60 + (int) $endMin;
 
         $lunchStart = null;
         $lunchEnd = null;
@@ -365,8 +503,8 @@ class ScheduleService
         if ($lunchBreak && isset($lunchBreak['start'], $lunchBreak['end'])) {
             [$lunchStartHour, $lunchStartMin] = explode(':', $lunchBreak['start']);
             [$lunchEndHour, $lunchEndMin] = explode(':', $lunchBreak['end']);
-            $lunchStart = (int)$lunchStartHour * 60 + (int)$lunchStartMin;
-            $lunchEnd = (int)$lunchEndHour * 60 + (int)$lunchEndMin;
+            $lunchStart = (int) $lunchStartHour * 60 + (int) $lunchStartMin;
+            $lunchEnd = (int) $lunchEndHour * 60 + (int) $lunchEndMin;
         }
 
         $currentMinutes = $startMinutes;
@@ -380,6 +518,7 @@ class ScheduleService
 
                 if ($overlapsLunch) {
                     $currentMinutes += $slotDuration;
+
                     continue;
                 }
             }
@@ -414,20 +553,20 @@ class ScheduleService
         // Se é slot recorrente
         if ($dayOfWeek) {
             $query->where('type', AvailabilitySlot::TYPE_RECURRING)
-                  ->where('day_of_week', $dayOfWeek);
+                ->where('day_of_week', $dayOfWeek);
         }
 
         // Se é slot específico
         if ($specificDate) {
             $query->where('type', AvailabilitySlot::TYPE_SPECIFIC)
-                  ->where('specific_date', $specificDate->format('Y-m-d'));
+                ->where('specific_date', $specificDate->format('Y-m-d'));
         }
 
         // Mesmo local se especificado
         if ($locationId) {
             $query->where(function ($q) use ($locationId) {
                 $q->where('location_id', $locationId)
-                  ->orWhereNull('location_id');
+                    ->orWhereNull('location_id');
             });
         }
 
@@ -436,7 +575,6 @@ class ScheduleService
             $query->where('id', '!=', $excludeSlotId);
         }
 
-        return !$query->exists();
+        return ! $query->exists();
     }
 }
-

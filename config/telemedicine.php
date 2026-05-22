@@ -123,6 +123,10 @@ return [
         // Janela de dias para disponibilidade/agendamento de médicos em telas de agenda.
         // Usado em: AvailabilityTimelineService, ScheduleConsultationController, DoctorPerfilController.
         'timeline_window_days' => (int) env('AVAILABILITY_TIMELINE_WINDOW_DAYS', 30),
+
+        // Exige que o médico tenha valor da consulta definido para criar novos slots.
+        // Usado em: StoreAvailabilitySlotRequest e UI de ScheduleManagement.
+        'require_consultation_fee_to_create_slot' => (bool) env('AVAILABILITY_REQUIRE_CONSULTATION_FEE', true),
     ],
 
     /*

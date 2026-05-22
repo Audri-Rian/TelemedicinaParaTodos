@@ -138,7 +138,7 @@ watch(() => props.filters, syncFromProps, { deep: true });
     <Head title="Prontuário Médico" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="min-h-full bg-[#f4f6f8] p-0 text-gray-950">
+        <div class="w-full bg-[#f4f6f8] p-0 text-gray-950">
             <div class="flex w-full flex-col gap-5 p-4 lg:p-5">
                 <PatientHeader :patient="patient" :filters-state="filtersState">
                     <template #metrics>
@@ -193,7 +193,12 @@ watch(() => props.filters, syncFromProps, { deep: true });
                             :empty-text="emptyText"
                             :patient-id="doctorPatientId"
                         />
-                        <UpcomingTab v-if="activeTab === 'futuras'" :upcoming-appointments="upcomingAppointments" :empty-text="emptyText" />
+                        <UpcomingTab
+                            v-if="activeTab === 'futuras'"
+                            :upcoming-appointments="upcomingAppointments"
+                            :empty-text="emptyText"
+                            :is-doctor-mode="isDoctorMode"
+                        />
                     </div>
                 </section>
 
