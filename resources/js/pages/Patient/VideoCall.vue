@@ -1,23 +1,23 @@
 <script setup lang="ts">
+import VideoControls from '@/components/VideoControls.vue';
+import VideoGrid from '@/components/VideoGrid.vue';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { useRouteGuard } from '@/composables/auth';
 import { useInitials } from '@/composables/useInitials';
+import { useVideoCall } from '@/composables/useVideoCall';
 import AppLayout from '@/layouts/AppLayout.vue';
-import * as appointmentsRoutes from '@/routes/appointments';
 import * as patientRoutes from '@/routes/patient';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link, router, usePage } from '@inertiajs/vue3';
-import axios from 'axios';
+import { Head, Link, usePage } from '@inertiajs/vue3';
 import {
     AlertTriangle,
     Calendar,
-    Camera,
     Check,
     Clock,
     FileText,
     Home,
-    Lock,
+    Loader2,
     Mic,
     MonitorUp,
     RefreshCw,
@@ -36,7 +36,7 @@ interface Appointment {
     status: string;
 }
 
-interface User {
+interface UserProp {
     id: number;
     name: string;
     email: string;
@@ -53,43 +53,29 @@ const { canAccessPatientRoute } = useRouteGuard();
 const { getInitials } = useInitials();
 const page = usePage();
 
-const users = ((page.props.users as User[]) || []).map((user) => ({
+const { callState, currentCall, isLoading, sfu, requestCall, endCall } = useVideoCall();
+
+const users = ((page.props.users as UserProp[]) || []).map((user) => ({
     ...user,
     allAppointments: user.allAppointments ?? [],
 }));
 
-const selectedUser = ref<User | null>(users[0] ?? null);
+const selectedUser = ref<UserProp | null>(users[0] ?? null);
 const isMobileDetail = ref(false);
-const isStartingCall = ref(false);
+const isEndingCall = ref(false);
+const videoRoomRef = ref<HTMLElement | null>(null);
 
 const breadcrumbs: BreadcrumbItem[] = [
-    {
-        title: 'Dashboard',
-        href: patientRoutes.dashboard().url,
-    },
-    {
-        title: 'Videoconferência',
-        href: patientRoutes.videoCall().url,
-    },
+    { title: 'Dashboard', href: patientRoutes.dashboard().url },
+    { title: 'Videoconferência', href: patientRoutes.videoCall().url },
 ];
 
 const preselectAppointmentFromQuery = () => {
-    if (typeof window === 'undefined') {
-        return;
-    }
-
+    if (typeof window === 'undefined') return;
     const appointmentId = new URLSearchParams(window.location.search).get('appointment');
-    if (!appointmentId) {
-        return;
-    }
-
-    const matchedUser = users.find(
-        (user) => user.appointment?.id === appointmentId || user.allAppointments?.some((appointment) => appointment.id === appointmentId),
-    );
-
-    if (matchedUser) {
-        selectUser(matchedUser);
-    }
+    if (!appointmentId) return;
+    const matchedUser = users.find((user) => user.appointment?.id === appointmentId || user.allAppointments?.some((a) => a.id === appointmentId));
+    if (matchedUser) selectUser(matchedUser);
 };
 
 onMounted(() => {
@@ -99,78 +85,21 @@ onMounted(() => {
 
 const selectedAppointment = computed(() => selectedUser.value?.appointment ?? null);
 const hasMultipleAppointments = computed(() => (selectedUser.value?.allAppointments?.length ?? 0) > 1);
+const isInCall = computed(() => callState.value === 'accepted');
 
-const selectUser = (user: User) => {
+const selectUser = (user: UserProp) => {
     selectedUser.value = user;
     isMobileDetail.value = true;
 };
 
 const updateSelectedAppointment = () => {
-    if (!selectedUser.value?.allAppointments || !selectedUser.value.appointment) {
-        return;
-    }
-
-    const newAppointment = selectedUser.value.allAppointments.find((appointment) => appointment.id === selectedUser.value?.appointment?.id);
-
-    if (newAppointment) {
-        selectedUser.value.appointment = { ...newAppointment };
-        updateAppointmentStatus(newAppointment);
-    }
-};
-
-const updateAppointmentStatus = (appointment: Appointment) => {
-    if (!selectedUser.value) {
-        return;
-    }
-
-    const now = new Date();
-    const scheduledAt = new Date(appointment.scheduled_at);
-    const diffMinutes = Math.round((scheduledAt.getTime() - now.getTime()) / 60_000);
-
-    if (appointment.status === 'in_progress') {
-        selectedUser.value.canStartCall = true;
-        selectedUser.value.timeWindowMessage = 'Consulta em andamento';
-        return;
-    }
-
-    if (appointment.status === 'completed') {
-        selectedUser.value.canStartCall = false;
-        selectedUser.value.timeWindowMessage = 'Consulta finalizada';
-        return;
-    }
-
-    if (appointment.status === 'no_show') {
-        selectedUser.value.canStartCall = false;
-        selectedUser.value.timeWindowMessage = 'Consulta não comparecida';
-        return;
-    }
-
-    if (['scheduled', 'rescheduled'].includes(appointment.status)) {
-        if (diffMinutes >= -10 && diffMinutes <= 10) {
-            selectedUser.value.canStartCall = true;
-            selectedUser.value.timeWindowMessage =
-                diffMinutes === 0
-                    ? 'Horário da consulta'
-                    : diffMinutes < 0
-                      ? `Tempo restante: ${Math.abs(diffMinutes)} min`
-                      : `Início em ${diffMinutes} min`;
-            return;
-        }
-
-        selectedUser.value.canStartCall = false;
-        if (diffMinutes < -10) {
-            selectedUser.value.timeWindowMessage = 'Janela de tempo expirada';
-            return;
-        }
-
-        const daysUntil = Math.floor(diffMinutes / (24 * 60));
-        selectedUser.value.timeWindowMessage =
-            daysUntil > 0 ? `Agendado para ${daysUntil} ${daysUntil === 1 ? 'dia' : 'dias'}` : `Início em ${Math.floor(diffMinutes / 60)} hora(s)`;
-    }
+    if (!selectedUser.value?.allAppointments || !selectedUser.value.appointment) return;
+    const newAppointment = selectedUser.value.allAppointments.find((a) => a.id === selectedUser.value?.appointment?.id);
+    if (newAppointment) selectedUser.value.appointment = { ...newAppointment };
 };
 
 const getStatusLabel = (status: string): string => {
-    const statusLabels: Record<string, string> = {
+    const labels: Record<string, string> = {
         scheduled: 'Agendado',
         rescheduled: 'Reagendado',
         in_progress: 'Em andamento',
@@ -178,31 +107,15 @@ const getStatusLabel = (status: string): string => {
         cancelled: 'Cancelado',
         no_show: 'Não compareceu',
     };
-
-    return statusLabels[status] || status;
+    return labels[status] || status;
 };
 
-const statusTone = (user: User | null): StatusTone => {
-    if (!user?.hasAppointment || !user.appointment) {
-        return 'muted';
-    }
-
-    if (user.appointment.status === 'in_progress') {
-        return 'live';
-    }
-
-    if (user.canStartCall) {
-        return 'go';
-    }
-
-    if (['completed'].includes(user.appointment.status)) {
-        return 'muted';
-    }
-
-    if (['no_show'].includes(user.appointment.status) || user.timeWindowMessage?.includes('expirada')) {
-        return 'warn';
-    }
-
+const statusTone = (user: UserProp | null): StatusTone => {
+    if (!user?.hasAppointment || !user.appointment) return 'muted';
+    if (user.appointment.status === 'in_progress') return 'live';
+    if (user.canStartCall) return 'go';
+    if (['completed'].includes(user.appointment.status)) return 'muted';
+    if (['no_show'].includes(user.appointment.status) || user.timeWindowMessage?.includes('expirada')) return 'warn';
     return 'wait';
 };
 
@@ -214,7 +127,6 @@ const statusClasses = (tone: StatusTone) => {
         warn: 'bg-orange-50 text-orange-700',
         muted: 'bg-gray-100 text-gray-600',
     };
-
     return map[tone];
 };
 
@@ -226,108 +138,67 @@ const statusDotClasses = (tone: StatusTone) => {
         warn: 'bg-orange-500',
         muted: 'bg-gray-400',
     };
-
     return map[tone];
 };
 
-const ctaMode = computed<'maintenance' | 'enabled' | 'disabled-window' | 'disabled-noappt'>(() => {
-    if (!selectedUser.value?.hasAppointment) {
-        return 'disabled-noappt';
-    }
-
-    if (!selectedUser.value.canStartCall) {
-        return 'disabled-window';
-    }
-
+const ctaMode = computed<'enabled' | 'requesting' | 'ringing' | 'disabled-window' | 'disabled-noappt'>(() => {
+    if (callState.value === 'requesting') return 'requesting';
+    if (callState.value === 'ringing') return 'ringing';
+    if (!selectedUser.value?.hasAppointment) return 'disabled-noappt';
+    if (!selectedUser.value.canStartCall) return 'disabled-window';
     return 'enabled';
 });
 
 const joinVideoCall = async () => {
-    if (ctaMode.value !== 'enabled' || !selectedAppointment.value || isStartingCall.value) {
-        return;
-    }
+    if (!selectedAppointment.value || isLoading.value) return;
+    await requestCall(selectedAppointment.value.id);
+};
 
-    isStartingCall.value = true;
+const handleEndCall = async () => {
+    if (!currentCall.value || isEndingCall.value) return;
+    isEndingCall.value = true;
+    await endCall(currentCall.value.callId);
+    isEndingCall.value = false;
+};
 
-    try {
-        if (['scheduled', 'rescheduled'].includes(selectedAppointment.value.status)) {
-            await axios.post(appointmentsRoutes.start.url({ appointment: selectedAppointment.value.id }));
-        }
-
-        router.reload();
-    } catch (error: unknown) {
-        const err = error as { response?: { data?: { message?: string } } };
-        console.error('Erro ao iniciar consulta:', error);
-        alert(err.response?.data?.message || 'Não foi possível iniciar a consulta. Tente novamente.');
-    } finally {
-        isStartingCall.value = false;
+const handleFullscreen = () => {
+    if (videoRoomRef.value) {
+        videoRoomRef.value.requestFullscreen?.();
     }
 };
 
-const ctaConfig = computed(() => {
-    const map = {
-        enabled: {
-            label: 'Entrar na videochamada',
-            description: 'Disponível agora. A janela da consulta está aberta.',
-            icon: Video,
-            class: 'bg-teal-500 text-gray-950 hover:bg-teal-400',
-        },
-        'disabled-window': {
-            label: 'Fora da janela de tempo',
-            description: 'A chamada abre 10 minutos antes do horário e fecha 10 minutos depois.',
-            icon: Clock,
-            class: 'cursor-not-allowed bg-gray-200 text-gray-500',
-        },
-        'disabled-noappt': {
-            label: 'Sem agendamento disponível',
-            description: 'Agende uma consulta para acessar a sala de vídeo.',
-            icon: VideoOff,
-            class: 'cursor-not-allowed bg-gray-200 text-gray-500',
-        },
-        maintenance: {
-            label: 'Videoconferência em atualização',
-            description: 'Estamos atualizando a infraestrutura SFU/MediaSoup. Em breve a entrada será liberada.',
-            icon: Lock,
-            class: 'cursor-not-allowed bg-gray-200 text-gray-500',
-        },
-    };
-
-    return map[ctaMode.value];
-});
-
-const checklist = computed(() => [
-    {
-        label: 'Câmera e microfone permitidos',
-        description: 'Verifique permissões do navegador antes da consulta.',
-        icon: Mic,
-        ok: true,
-    },
-    {
-        label: 'Conexão estável',
-        description: 'Prefira Wi-Fi ou conexão cabeada.',
-        icon: Wifi,
-        ok: true,
-    },
-    {
-        label: 'Documento ou exames em mãos',
-        description: 'Tenha arquivos e resultados por perto.',
-        icon: FileText,
-        ok: false,
-    },
-    {
-        label: 'Ambiente privado',
-        description: 'Use um local reservado e bem iluminado.',
-        icon: Home,
-        ok: false,
-    },
-]);
+const checklist = [
+    { label: 'Câmera e microfone permitidos', description: 'Verifique permissões do navegador antes da consulta.', icon: Mic, ok: true },
+    { label: 'Conexão estável', description: 'Prefira Wi-Fi ou conexão cabeada.', icon: Wifi, ok: true },
+    { label: 'Documento ou exames em mãos', description: 'Tenha arquivos e resultados por perto.', icon: FileText, ok: false },
+    { label: 'Ambiente privado', description: 'Use um local reservado e bem iluminado.', icon: Home, ok: false },
+];
 </script>
 
 <template>
     <Head title="Videoconferência" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex min-h-0 flex-1 bg-[#f4f6f8] p-0 text-gray-950">
+        <div v-if="isInCall" ref="videoRoomRef" class="flex min-h-0 flex-1 flex-col bg-[#0b2030]">
+            <VideoGrid
+                :local-stream="sfu.localStream.value"
+                :remote-streams="sfu.remoteStreams.value"
+                :is-mic-enabled="sfu.isMicEnabled.value"
+                :is-camera-enabled="sfu.isCameraEnabled.value"
+                class="min-h-0 flex-1"
+            />
+            <VideoControls
+                :is-mic-enabled="sfu.isMicEnabled.value"
+                :is-camera-enabled="sfu.isCameraEnabled.value"
+                :is-ending="isEndingCall"
+                @toggle-mic="sfu.toggleMic()"
+                @toggle-camera="sfu.toggleCamera()"
+                @end="handleEndCall"
+                @fullscreen="handleFullscreen"
+            />
+        </div>
+
+        <div v-else class="flex min-h-0 flex-1 bg-[#f4f6f8] p-0 text-gray-950">
             <div class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-[#dde5ea] bg-white shadow-sm">
                 <header class="border-b border-[#dde5ea] px-5 py-4">
                     <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -343,7 +214,6 @@ const checklist = computed(() => [
                                 Selecione o médico vinculado à consulta e revise o agendamento antes de entrar.
                             </p>
                         </div>
-
                         <div class="grid grid-cols-2 gap-2 sm:flex">
                             <div class="rounded-lg border border-[#dde5ea] bg-[#f4f6f8] px-4 py-2">
                                 <p class="text-[11px] font-black text-gray-500 uppercase">Médicos</p>
@@ -366,7 +236,6 @@ const checklist = computed(() => [
                             <h2 class="text-lg font-black text-gray-950">Médicos vinculados</h2>
                             <p class="mt-1 text-sm font-semibold text-gray-500">Consultas ativas, futuras e recentes.</p>
                         </div>
-
                         <div class="min-h-0 flex-1 overflow-y-auto p-3">
                             <div v-if="users.length === 0" class="flex h-full flex-col items-center justify-center px-6 text-center">
                                 <VideoOff class="h-12 w-12 text-gray-300" />
@@ -454,12 +323,25 @@ const checklist = computed(() => [
                                                         </span>
                                                     </div>
                                                 </div>
-
                                                 <div class="rounded-lg border border-[#dde5ea] bg-[#f4f6f8] px-4 py-3">
-                                                    <p class="text-[11px] font-black text-gray-500 uppercase">Status do serviço</p>
+                                                    <p class="text-[11px] font-black text-gray-500 uppercase">Status da chamada</p>
                                                     <p class="mt-1 flex items-center gap-2 text-sm font-black text-gray-700">
-                                                        <RefreshCw class="h-4 w-4" />
-                                                        Em atualização
+                                                        <Loader2 v-if="callState === 'requesting'" class="h-4 w-4 animate-spin" />
+                                                        <RefreshCw v-else-if="callState === 'ringing'" class="h-4 w-4 animate-spin" />
+                                                        <Video v-else class="h-4 w-4" />
+                                                        {{
+                                                            callState === 'requesting'
+                                                                ? 'Aguardando médico...'
+                                                                : callState === 'ringing'
+                                                                  ? 'Chamando...'
+                                                                  : callState === 'rejected'
+                                                                    ? 'Chamada recusada'
+                                                                    : callState === 'ended'
+                                                                      ? 'Chamada encerrada'
+                                                                      : callState === 'error'
+                                                                        ? 'Erro na chamada'
+                                                                        : 'Disponível'
+                                                        }}
                                                     </p>
                                                 </div>
                                             </div>
@@ -475,7 +357,7 @@ const checklist = computed(() => [
                                                 <label v-if="hasMultipleAppointments" class="mb-4 block space-y-2">
                                                     <span class="text-sm font-extrabold text-gray-700">Selecionar consulta</span>
                                                     <select
-                                                        v-model="selectedUser.appointment.id"
+                                                        v-model="selectedUser.appointment!.id"
                                                         class="h-11 w-full rounded-lg border border-[#dde5ea] bg-white px-3 text-sm font-semibold text-gray-800 outline-none focus:border-[#0f6e78] focus:ring-2 focus:ring-[#0f6e78]/20"
                                                         @change="updateSelectedAppointment"
                                                     >
@@ -526,7 +408,6 @@ const checklist = computed(() => [
                                             <p class="mt-1 text-sm font-semibold text-gray-500">
                                                 Revise permissões e ambiente para evitar interrupções.
                                             </p>
-
                                             <div class="mt-4 grid gap-3 md:grid-cols-2">
                                                 <div
                                                     v-for="item in checklist"
@@ -556,11 +437,19 @@ const checklist = computed(() => [
                                     <aside class="space-y-4">
                                         <div class="rounded-lg border border-[#dde5ea] bg-white p-5 shadow-sm">
                                             <div class="grid aspect-video place-items-center rounded-lg bg-[#0b2030] text-white">
-                                                <div class="text-center">
-                                                    <Camera class="mx-auto h-10 w-10 text-[#40e0d0]" />
-                                                    <p class="mt-3 text-sm font-black">Prévia indisponível</p>
+                                                <div v-if="callState === 'requesting'" class="text-center">
+                                                    <Loader2 class="mx-auto h-10 w-10 animate-spin text-[#40e0d0]" />
+                                                    <p class="mt-3 text-sm font-black">Aguardando médico...</p>
+                                                </div>
+                                                <div v-else-if="callState === 'ringing'" class="text-center">
+                                                    <RefreshCw class="mx-auto h-10 w-10 animate-spin text-[#40e0d0]" />
+                                                    <p class="mt-3 text-sm font-black">Chamando...</p>
+                                                </div>
+                                                <div v-else class="text-center">
+                                                    <Video class="mx-auto h-10 w-10 text-[#40e0d0]" />
+                                                    <p class="mt-3 text-sm font-black">Prévia da câmera</p>
                                                     <p class="mt-1 px-6 text-xs font-semibold text-white/60">
-                                                        A prévia será exibida quando a nova sala de vídeo estiver ativa.
+                                                        Clique em "Iniciar videochamada" para entrar.
                                                     </p>
                                                 </div>
                                             </div>
@@ -568,14 +457,33 @@ const checklist = computed(() => [
                                             <button
                                                 type="button"
                                                 class="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-lg border-none px-4 text-sm font-black disabled:cursor-not-allowed"
-                                                :class="ctaConfig.class"
-                                                :disabled="ctaMode !== 'enabled' || isStartingCall"
+                                                :class="
+                                                    ctaMode === 'enabled'
+                                                        ? 'bg-teal-500 text-gray-950 hover:bg-teal-400'
+                                                        : 'cursor-not-allowed bg-gray-200 text-gray-500'
+                                                "
+                                                :disabled="ctaMode !== 'enabled' || isLoading"
                                                 @click="joinVideoCall"
                                             >
-                                                <component :is="ctaConfig.icon" class="h-4 w-4" />
-                                                {{ isStartingCall ? 'Iniciando consulta...' : ctaConfig.label }}
+                                                <Loader2 v-if="isLoading || callState === 'requesting'" class="h-4 w-4 animate-spin" />
+                                                <Video v-else-if="ctaMode === 'enabled'" class="h-4 w-4" />
+                                                <Clock v-else-if="ctaMode === 'disabled-window'" class="h-4 w-4" />
+                                                <VideoOff v-else class="h-4 w-4" />
+                                                {{
+                                                    isLoading
+                                                        ? 'Iniciando...'
+                                                        : callState === 'requesting'
+                                                          ? 'Aguardando médico...'
+                                                          : ctaMode === 'enabled'
+                                                            ? 'Iniciar videochamada'
+                                                            : ctaMode === 'disabled-window'
+                                                              ? 'Fora da janela de tempo'
+                                                              : 'Sem agendamento disponível'
+                                                }}
                                             </button>
-                                            <p class="mt-2 text-center text-xs font-semibold text-gray-500">{{ ctaConfig.description }}</p>
+                                            <p v-if="ctaMode === 'disabled-window'" class="mt-2 text-center text-xs font-semibold text-gray-500">
+                                                A chamada abre 10 minutos antes/depois do horário.
+                                            </p>
                                         </div>
 
                                         <div class="rounded-lg border border-[#dde5ea] bg-white p-5 shadow-sm">

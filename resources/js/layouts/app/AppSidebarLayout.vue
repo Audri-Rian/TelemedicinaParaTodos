@@ -3,9 +3,11 @@ import AppContent from '@/components/AppContent.vue';
 import AppShell from '@/components/AppShell.vue';
 import AppSidebar from '@/components/AppSidebar.vue';
 import AppSidebarHeader from '@/components/AppSidebarHeader.vue';
-import FloatingButton from '@/components/FloatingButton.vue';
 import ToastContainer from '@/components/ToastContainer.vue';
+import VideoCallSessionRoot from '@/components/VideoCall/VideoCallSessionRoot.vue';
 import type { BreadcrumbItemType } from '@/types';
+import { usePage } from '@inertiajs/vue3';
+import { computed } from 'vue';
 
 interface Props {
     breadcrumbs?: BreadcrumbItemType[];
@@ -14,6 +16,9 @@ interface Props {
 withDefaults(defineProps<Props>(), {
     breadcrumbs: () => [],
 });
+
+const page = usePage();
+const userId = computed(() => (page.props.auth as { user?: { id?: number } })?.user?.id ?? 0);
 </script>
 
 <template>
@@ -23,7 +28,7 @@ withDefaults(defineProps<Props>(), {
             <AppSidebarHeader :breadcrumbs="breadcrumbs" />
             <slot />
         </AppContent>
-        <FloatingButton />
+        <VideoCallSessionRoot v-if="userId" :user-id="userId" />
         <ToastContainer />
     </AppShell>
 </template>

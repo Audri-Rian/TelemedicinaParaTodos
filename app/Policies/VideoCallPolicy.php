@@ -3,6 +3,7 @@
 namespace App\Policies;
 
 use App\Models\Appointments;
+use App\Models\Call;
 use App\Models\User;
 
 class VideoCallPolicy
@@ -30,6 +31,17 @@ class VideoCallPolicy
     public function end(User $user, Appointments $appointment): bool
     {
         return $this->request($user, $appointment);
+    }
+
+    public function view(User $user, Call $call): bool
+    {
+        return ($user->doctor && (string) $user->doctor->id === (string) $call->doctor_id)
+            || ($user->patient && (string) $user->patient->id === (string) $call->patient_id);
+    }
+
+    public function viewActive(User $user): bool
+    {
+        return $user->doctor !== null || $user->patient !== null;
     }
 
     protected function canParticipateInAppointment(User $user, Appointments $appointment): bool

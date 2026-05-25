@@ -29,11 +29,6 @@ class StoreAppointmentRequest extends FormRequest
                 'uuid',
                 Rule::exists('doctors', 'id')->where('status', Doctor::STATUS_ACTIVE),
             ],
-            'patient_id' => [
-                'required',
-                'uuid',
-                Rule::exists('patients', 'id'),
-            ],
             'scheduled_at' => [
                 'required',
                 'date',
@@ -53,8 +48,6 @@ class StoreAppointmentRequest extends FormRequest
 
     /**
      * Get custom messages for validator errors.
-     *
-     * @return array
      */
     public function messages(): array
     {

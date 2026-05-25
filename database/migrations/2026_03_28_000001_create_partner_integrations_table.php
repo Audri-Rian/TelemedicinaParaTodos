@@ -37,7 +37,16 @@ return new class extends Migration
 
             $table->index('type');
             $table->index('status');
+            $table->index(['status', 'last_sync_at'], 'partner_integrations_status_last_sync_at_index');
             $table->foreign('connected_by')->references('id')->on('users')->nullOnDelete();
+        });
+
+        Schema::table('prescriptions', function (Blueprint $table) {
+            $table->foreign('partner_integration_id')->references('id')->on('partner_integrations')->nullOnDelete();
+        });
+
+        Schema::table('examinations', function (Blueprint $table) {
+            $table->foreign('partner_integration_id')->references('id')->on('partner_integrations')->nullOnDelete();
         });
     }
 
@@ -46,6 +55,14 @@ return new class extends Migration
      */
     public function down(): void
     {
+        Schema::table('prescriptions', function (Blueprint $table) {
+            $table->dropForeign(['partner_integration_id']);
+        });
+
+        Schema::table('examinations', function (Blueprint $table) {
+            $table->dropForeign(['partner_integration_id']);
+        });
+
         Schema::dropIfExists('partner_integrations');
     }
 };

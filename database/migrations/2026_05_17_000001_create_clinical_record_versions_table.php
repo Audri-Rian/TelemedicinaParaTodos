@@ -21,7 +21,8 @@ return new class extends Migration
             $table->text('new_values');
             $table->timestamp('created_at')->useCurrent();
 
-            $table->index(['versionable_type', 'versionable_id', 'version_number']);
+            $table->unique(['versionable_type', 'versionable_id', 'version_number'], 'crv_unique_version');
+            $table->index(['versionable_type', 'versionable_id', 'created_at'], 'crv_type_id_created_at');
             $table->index('changed_by');
         });
     }

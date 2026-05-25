@@ -19,6 +19,7 @@ use App\Services\Signatures\NullPdfSigner;
 use App\Services\Signatures\NullSignatureDriver;
 use App\Support\Signatures\PadesEmbedder;
 use App\Support\StorageDomainConfigValidator;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -36,8 +37,10 @@ class AppServiceProvider extends ServiceProvider
 
         if ($httpUrl !== '' && $apiSecret !== '') {
             $this->app->bind(MediaGatewayInterface::class, MediaGatewayHttp::class);
+            $providerClass = MediaGatewayHttp::class;
         } else {
             $this->app->bind(MediaGatewayInterface::class, MediaGatewayStub::class);
+            $providerClass = MediaGatewayStub::class;
         }
 
         $this->app->bind(DigitalSignatureDriver::class, function () {
@@ -70,6 +73,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        if ((bool) config('telemedicine.video_call.enabled', true)) {
+            $jwtSecret = config('services.media_gateway.jwt_secret');
+            if (empty($jwtSecret)) {
+                Log::error('VIDEO_CALL_ENABLED=true mas SFU_JWT_SECRET não configurado. Defina SFU_JWT_SECRET no .env.');
+                throw new \RuntimeException('SFU_JWT_SECRET é obrigatório quando VIDEO_CALL_ENABLED=true.');
+            }
+        }
+
         $driver = $this->pdfSignatureDriver();
 
         // Guard: NullPdfSigner has no legal validity. CFM Res. 2.314/2022 Art. 8 requires ICP-Brasil.

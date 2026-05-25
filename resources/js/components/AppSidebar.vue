@@ -30,7 +30,6 @@ import {
     Home,
     LayoutGrid,
     MessageCircle,
-    Monitor,
     Plug2,
     Search,
     Stethoscope,
@@ -46,7 +45,7 @@ const { isDoctor, isPatient } = useAuth();
 const searchQuery = ref('');
 
 // Navegação para Médicos
-const doctorNavItems = computed<NavItem[]>(() => [
+const doctorNavItems: NavItem[] = [
     {
         title: 'Dashboard',
         href: doctorRoutes.dashboard(),
@@ -67,10 +66,10 @@ const doctorNavItems = computed<NavItem[]>(() => [
         tourId: 'nav-pacientes',
     },
     {
-        title: 'Consultas',
-        href: doctorRoutes.consultations(),
-        icon: Monitor,
-        tourId: 'nav-consultas',
+        title: 'Videoconferência',
+        href: doctorRoutes.videoCall(),
+        icon: Video,
+        tourId: 'nav-video',
     },
     {
         title: 'Mensagens',
@@ -126,10 +125,10 @@ const doctorNavItems = computed<NavItem[]>(() => [
             },
         ],
     },
-]);
+];
 
 // Navegação para Pacientes
-const patientNavItems = computed<NavItem[]>(() => [
+const patientNavItems: NavItem[] = [
     {
         title: 'Dashboard',
         href: patientRoutes.dashboard(),
@@ -143,16 +142,16 @@ const patientNavItems = computed<NavItem[]>(() => [
         tourId: 'nav-pesquisar',
     },
     {
-        title: 'Mensagens',
-        href: patientRoutes.messages(),
-        icon: MessageCircle,
-        tourId: 'nav-mensagens',
-    },
-    {
         title: 'Videoconferência',
         href: patientRoutes.videoCall(),
         icon: Video,
         tourId: 'nav-video',
+    },
+    {
+        title: 'Mensagens',
+        href: patientRoutes.messages(),
+        icon: MessageCircle,
+        tourId: 'nav-mensagens',
     },
     {
         title: 'Histórico de Consultas',
@@ -166,15 +165,15 @@ const patientNavItems = computed<NavItem[]>(() => [
         icon: Activity,
         tourId: 'nav-prontuario',
     },
-]);
+];
 
 // Selecionar navegação baseada no role
 const mainNavItems = computed(() => {
     if (isDoctor.value) {
-        return doctorNavItems.value;
+        return doctorNavItems;
     }
     if (isPatient.value) {
-        return patientNavItems.value;
+        return patientNavItems;
     }
     return [];
 });

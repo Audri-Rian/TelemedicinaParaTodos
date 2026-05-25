@@ -15,6 +15,8 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->uuid('user_id')->unique();
             $table->string('crm', 20)->nullable()->unique()->index();
+            $table->string('cns', 15)->nullable();
+            $table->string('cbo', 6)->nullable();
             $table->text('biography')->nullable();
             $table->json('language')->nullable();
             $table->string('license_number', 50)->nullable()->unique();
@@ -26,6 +28,7 @@ return new class extends Migration
             $table->softDeletes();
 
             // Indexes para performance
+            $table->index('cns');
             $table->index('status');
             $table->index('created_at');
 

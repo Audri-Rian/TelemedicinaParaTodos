@@ -11,6 +11,7 @@ class Room extends Model
         'call_id',
         'room_id',
         'sfu_node',
+        'media_ws_url',
     ];
 
     public function call(): BelongsTo

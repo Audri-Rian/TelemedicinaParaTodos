@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Contracts\MediaGatewayInterface;
+use App\DataTransferObjects\MediaRoomData;
 use App\Models\Appointments;
 use App\Models\Call;
 use App\Models\Room;
@@ -31,7 +32,7 @@ class CallManagerService
         $callerDoctor = $caller->doctor?->id;
         $callerPatient = $caller->patient?->id;
 
-        if (!$callerDoctor && !$callerPatient) {
+        if (! $callerDoctor && ! $callerPatient) {
             throw new \InvalidArgumentException('Usuário não é médico nem paciente desta consulta.');
         }
         if ($callerDoctor !== $doctorId && $callerPatient !== $patientId) {
@@ -42,7 +43,7 @@ class CallManagerService
             'appointment_id' => $appointment->id,
             'doctor_id' => $doctorId,
             'patient_id' => $patientId,
-            'status' => Call::STATUS_REQUESTED,
+            'status' => Call::STATUS_RINGING,
             'requested_at' => now(),
         ]);
 
@@ -65,9 +66,11 @@ class CallManagerService
      */
     public function acceptCall(Call $call, User $acceptedBy): array
     {
-        if (!in_array($call->status, [Call::STATUS_REQUESTED, Call::STATUS_RINGING], true)) {
+        if (! in_array($call->status, [Call::STATUS_REQUESTED, Call::STATUS_RINGING], true)) {
             throw new \InvalidArgumentException('Chamada não está em estado solicitado ou tocando.');
         }
+
+        $call->loadMissing(['doctor.user', 'patient.user', 'appointment']);
 
         $calleeUserId = $this->getCalleeUserId($call, $acceptedBy);
         if ((string) $acceptedBy->id !== (string) $calleeUserId) {
@@ -85,10 +88,9 @@ class CallManagerService
             $this->appointmentService->start($call->appointment, $acceptedBy->id);
         }
 
-        $token = $this->generateRoomToken($call, $room, $acceptedBy);
-        $sfuWsUrl = config('services.media_gateway.sfu_ws_url', env('SFU_WS_URL', ''));
+        $token = $this->generatePublicRoomToken($call, $room, $acceptedBy);
+        $sfuWsUrl = $room->media_ws_url ?? config('services.media_gateway.sfu_ws_url', '') ?: null;
 
-        $call->load(['doctor', 'patient']);
         event(new \App\Events\VideoCallAccepted(
             $call,
             $token,
@@ -117,7 +119,7 @@ class CallManagerService
      */
     public function rejectCall(Call $call, User $rejectedBy): void
     {
-        if (!in_array($call->status, [Call::STATUS_REQUESTED, Call::STATUS_RINGING], true)) {
+        if (! in_array($call->status, [Call::STATUS_REQUESTED, Call::STATUS_RINGING], true)) {
             throw new \InvalidArgumentException('Chamada não está em estado solicitado ou tocando.');
         }
 
@@ -130,7 +132,7 @@ class CallManagerService
      */
     public function endCall(Call $call, User $endedBy): void
     {
-        if (!in_array($call->status, [Call::STATUS_ACCEPTED, Call::STATUS_REQUESTED, Call::STATUS_RINGING], true)) {
+        if (! in_array($call->status, [Call::STATUS_ACCEPTED, Call::STATUS_REQUESTED, Call::STATUS_RINGING], true)) {
             throw new \InvalidArgumentException('Chamada não está ativa.');
         }
 
@@ -159,16 +161,44 @@ class CallManagerService
     }
 
     /**
+     * Retorna a call ativa do usuário (status requested/ringing/accepted), ou null.
+     */
+    public function getActiveCallForUser(User $user): ?Call
+    {
+        $doctorId = $user->doctor?->id;
+        $patientId = $user->patient?->id;
+
+        if (! $doctorId && ! $patientId) {
+            return null;
+        }
+
+        return Call::with(['room', 'appointment'])
+            ->whereIn('status', [Call::STATUS_REQUESTED, Call::STATUS_RINGING, Call::STATUS_ACCEPTED])
+            ->where(function ($q) use ($doctorId, $patientId) {
+                if ($doctorId) {
+                    $q->orWhere('doctor_id', $doctorId);
+                }
+                if ($patientId) {
+                    $q->orWhere('patient_id', $patientId);
+                }
+            })
+            ->latest('requested_at')
+            ->first();
+    }
+
+    /**
      * Delega ao Media Gateway: criar sala no SFU; persiste e retorna Room.
      */
     public function createRoom(Call $call): Room
     {
-        $result = $this->mediaGateway->createRoom($call->id);
+        /** @var MediaRoomData $roomData */
+        $roomData = $this->mediaGateway->createRoom($call->id);
 
         $room = Room::create([
             'call_id' => $call->id,
-            'room_id' => $result['room_id'],
-            'sfu_node' => $result['sfu_node'] ?? null,
+            'room_id' => $roomData->roomId,
+            'sfu_node' => $roomData->sfuNode,
+            'media_ws_url' => $roomData->mediaWsUrl,
         ]);
 
         Log::info('ROOM_CREATED', [
@@ -214,15 +244,15 @@ class CallManagerService
      * Gera token de acesso à sala (JWT HS256).
      * Payload: callId, roomId, userId, role, exp.
      */
-    protected function generateRoomToken(Call $call, Room $room, User $user): string
+    public function generatePublicRoomToken(Call $call, Room $room, User $user): string
     {
-        $secret = config('services.media_gateway.jwt_secret', env('SFU_JWT_SECRET'));
+        $secret = config('services.media_gateway.jwt_secret');
 
-        if (!$secret) {
+        if (! $secret) {
             throw new \RuntimeException('JWT secret não configurado (SFU_JWT_SECRET ou services.media_gateway.jwt_secret).');
         }
 
-        $ttlMinutes = (int) config('telemedicine.video_call.token_ttl_minutes', 5);
+        $ttlMinutes = (int) config('telemedicine.video_call.token_ttl_minutes', 10);
         $now = time();
         $exp = $now + ($ttlMinutes * 60);
 

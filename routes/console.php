@@ -2,6 +2,7 @@
 
 use App\Integrations\Jobs\ProcessIntegrationQueue;
 use App\Integrations\Jobs\SyncExamResults;
+use App\Jobs\AutoStartVideoCall;
 use App\Jobs\CleanExpiredRedisLocks;
 use App\Jobs\EndZombieVideoCalls;
 use App\Jobs\MarkNoShowAppointments;
@@ -17,6 +18,12 @@ Artisan::command('inspire', function () {
 // Agendar envio de lembretes de consultas (frequência em config/telemedicine.php)
 Schedule::job(new SendAppointmentReminders)
     ->cron(config('telemedicine.reminders.schedule_cron', '0 * * * *'))
+    ->withoutOverlapping()
+    ->onOneServer();
+
+// Videochamada — iniciar automaticamente consultas na janela de tempo
+Schedule::job(new AutoStartVideoCall)
+    ->everyMinute()
     ->withoutOverlapping()
     ->onOneServer();
 

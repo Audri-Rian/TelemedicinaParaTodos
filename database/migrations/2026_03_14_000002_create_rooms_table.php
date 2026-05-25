@@ -17,6 +17,7 @@ return new class extends Migration
             $table->foreignUuid('call_id')->constrained('calls')->cascadeOnDelete();
             $table->string('room_id')->comment('ID da sala no SFU (nunca confiar no valor vindo do frontend)');
             $table->string('sfu_node')->nullable()->comment('Nó SFU / Media Gateway que criou a sala');
+            $table->string('media_ws_url')->nullable()->comment('WebSocket URL do SFU para o cliente; null em modo stub');
             $table->timestamps();
 
             $table->unique('room_id');

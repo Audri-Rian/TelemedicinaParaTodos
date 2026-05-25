@@ -27,6 +27,12 @@ return new class extends Migration
             $table->index(['doctor_id', 'status']);
             $table->index(['patient_id', 'status']);
         });
+
+        \DB::statement("
+            create unique index if not exists calls_one_active_per_appointment_idx
+            on calls (appointment_id)
+            where status in ('requested', 'ringing', 'accepted')
+        ");
     }
 
     /**

@@ -4,7 +4,8 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     public function up(): void
     {
         Schema::create('medical_certificates', function (Blueprint $table) {
@@ -19,6 +20,8 @@ return new class extends Migration {
             $table->text('reason');
             $table->text('restrictions')->nullable();
             $table->string('signature_hash')->nullable();
+            $table->enum('signature_status', ['unsigned', 'signed', 'verified', 'invalid'])->default('unsigned');
+            $table->timestamp('signed_at')->nullable();
             $table->string('crm_number')->nullable();
             $table->string('verification_code')->unique();
             $table->string('pdf_url')->nullable();
@@ -26,6 +29,11 @@ return new class extends Migration {
             $table->json('metadata')->nullable();
             $table->timestamps();
             $table->softDeletes();
+
+            $table->index(['doctor_id', 'created_at'], 'medical_certificates_doctor_created_at_index');
+            $table->index(['doctor_id', 'signature_status'], 'medical_certificates_doctor_signature_status_index');
+            $table->index(['patient_id', 'status'], 'medical_certificates_patient_status_index');
+            $table->index(['patient_id', 'created_at'], 'medical_certificates_patient_created_at_index');
 
             $table->foreign('appointment_id')->references('id')->on('appointments')->nullOnDelete();
             $table->foreign('doctor_id')->references('id')->on('doctors')->cascadeOnDelete();
@@ -38,5 +46,3 @@ return new class extends Migration {
         Schema::dropIfExists('medical_certificates');
     }
 };
-
-

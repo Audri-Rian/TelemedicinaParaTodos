@@ -3,25 +3,33 @@
 namespace App\Services;
 
 use App\Contracts\MediaGatewayInterface;
-use Illuminate\Support\Str;
+use App\DataTransferObjects\MediaRoomData;
+use Illuminate\Support\Facades\Log;
 
 /**
- * Implementação stub do Media Gateway.
- * Usada até a integração real com Media Gateway ou SFU estar disponível.
- * createRoom retorna um room_id fictício; destroyRoom não faz chamada externa.
+ * Implementação stub do Media Gateway — sem SFU real.
+ * room_id determinístico baseado em callId; mediaWsUrl sempre null.
  */
 class MediaGatewayStub implements MediaGatewayInterface
 {
-    public function createRoom(string $callId): array
+    public function createRoom(string $callId): MediaRoomData
     {
-        return [
-            'room_id' => 'room_'.Str::random(16),
-            'sfu_node' => config('services.media_gateway.sfu_node', 'local'),
-        ];
+        $roomId = 'stub_'.$callId;
+
+        Log::debug('MediaGatewayStub::createRoom', [
+            'call_id' => $callId,
+            'room_id' => $roomId,
+        ]);
+
+        return new MediaRoomData(
+            roomId: $roomId,
+            sfuNode: 'local',
+            mediaWsUrl: null,
+        );
     }
 
     public function destroyRoom(string $roomId): void
     {
-        // Stub: nenhuma chamada externa. Na implementação real, notificar SFU/Gateway.
+        Log::debug('MediaGatewayStub::destroyRoom', ['room_id' => $roomId]);
     }
 }

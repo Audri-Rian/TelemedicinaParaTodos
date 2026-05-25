@@ -58,20 +58,24 @@ class SecurityHeaders
         return $response;
     }
 
+    private static ?string $cachedCsp = null;
+
     /**
-     * Constrói a política de Content Security Policy
+     * Constrói a política de Content Security Policy (cached por processo).
      */
     private function buildCSP(): string
     {
+        return static::$cachedCsp ??= $this->computeCSP();
+    }
+
+    private function computeCSP(): string
+    {
         $isDevelopment = app()->environment('local', 'development');
 
-        // Domínios do Vite para desenvolvimento
-        // Nota: localhost resolve para IPv4 e IPv6, então não precisamos especificar [::1] separadamente
         $viteDevSources = $isDevelopment
-            ? ' http://localhost:5173 http://127.0.0.1:5173 ws://localhost:5173 ws://127.0.0.1:5173'
+            ? ' http://localhost:5173 http://127.0.0.1:5173 ws://localhost:5173 ws://127.0.0.1:5173 ws://localhost:* http://localhost:*'
             : '';
 
-        // Conexões WebSocket do Reverb (porta 8090)
         $reverbWebSocketSources = $isDevelopment
             ? ' ws://127.0.0.1:8090 wss://127.0.0.1:8090 ws://localhost:8090 wss://localhost:8090'
             : '';
@@ -80,18 +84,19 @@ class SecurityHeaders
         $reverbHost = preg_replace('#^https?://#', '', $reverbHost);
         $reverbHost = preg_replace('#/.*$#', '', $reverbHost);
         $reverbPort = (string) config('broadcasting.connections.reverb.options.port', '');
-        $reverbScheme = config('broadcasting.connections.reverb.options.scheme') === 'https' ? 'wss' : 'ws';
         $reverbPublicSources = $reverbHost !== ''
-            ? " {$reverbScheme}://{$reverbHost}".($reverbPort !== '' ? " {$reverbScheme}://{$reverbHost}:{$reverbPort}" : '')
+            ? " ws://{$reverbHost} wss://{$reverbHost}".($reverbPort !== '' ? " ws://{$reverbHost}:{$reverbPort} wss://{$reverbHost}:{$reverbPort}" : '')
             : '';
+
+        $unsafeEval = $isDevelopment ? " 'unsafe-eval'" : '';
 
         $directives = [
             "default-src 'self'",
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://fonts.googleapis.com https://fonts.bunny.net https://cdn.jsdelivr.net{$viteDevSources}", // unsafe-inline/unsafe-eval necessário para Vite/Inertia
-            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.bunny.net https://rsms.me{$viteDevSources}", // rsms.me para fonte Inter
-            "font-src 'self' https://fonts.gstatic.com https://fonts.bunny.net https://rsms.me data:", // rsms.me para fonte Inter
-            "img-src 'self' data: https: blob:{$viteDevSources}", // Permite imagens do Vite em desenvolvimento
-            "connect-src 'self' https://api.peerjs.com https://cdn.jsdelivr.net https://unpkg.com wss://*.pusher.com ws://localhost:* http://localhost:*{$viteDevSources}{$reverbWebSocketSources}{$reverbPublicSources}", // cdn.jsdelivr.net e unpkg.com para WASM do LottieFiles, Reverb WebSocket
+            "script-src 'self' 'unsafe-inline'{$unsafeEval} https://fonts.googleapis.com https://fonts.bunny.net https://cdn.jsdelivr.net{$viteDevSources}",
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.bunny.net https://rsms.me{$viteDevSources}",
+            "font-src 'self' https://fonts.gstatic.com https://fonts.bunny.net https://rsms.me data:",
+            "img-src 'self' data: https: blob:{$viteDevSources}",
+            "connect-src 'self' https://api.peerjs.com https://cdn.jsdelivr.net https://unpkg.com wss://*.pusher.com{$viteDevSources}{$reverbWebSocketSources}{$reverbPublicSources}",
             "media-src 'self' blob:",
             "object-src 'none'",
             "base-uri 'self'",
@@ -99,7 +104,6 @@ class SecurityHeaders
             "frame-ancestors 'self'",
         ];
 
-        // upgrade-insecure-requests apenas em produção
         if (! $isDevelopment) {
             $directives[] = 'upgrade-insecure-requests';
         }

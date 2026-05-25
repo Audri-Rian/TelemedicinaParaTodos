@@ -146,6 +146,15 @@ return [
         // Duração máxima de uma sala ativa (minutos). Evita salas eternas.
         'room_max_duration_minutes' => (int) env('VIDEO_ROOM_MAX_DURATION_MINUTES', 120),
 
+        // TTL do JWT de acesso à sala de vídeo (minutos). CallManagerService::generateRoomToken.
+        'token_ttl_minutes' => (int) env('VIDEO_CALL_TOKEN_TTL_MINUTES', 10),
+
+        // Habilita o módulo de videochamada. Exige SFU_JWT_SECRET quando true.
+        'enabled' => (bool) env('VIDEO_CALL_ENABLED', true),
+
+        // Exige healthcheck do SFU antes de aceitar chamadas (fail-closed). Provider=sfu apenas.
+        'require_sfu_health' => (bool) env('VIDEO_CALL_REQUIRE_SFU_HEALTH', true),
+
         // Janela para iniciar videoconferência: usa appointment.lead_minutes e trailing_minutes.
         // DoctorConsultationsController, PatientVideoCallController.
     ],
