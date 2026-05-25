@@ -8,7 +8,7 @@ import VideoCallActiveModal from './VideoCallActiveModal.vue';
 import VideoCallFloatingWidget from './VideoCallFloatingWidget.vue';
 
 const props = defineProps<{
-    userId: number;
+    userId: string;
 }>();
 
 const store = useVideoCallStore();

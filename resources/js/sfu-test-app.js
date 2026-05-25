@@ -447,8 +447,16 @@ function runSfuTest(config) {
             } catch {}
         };
 
-        ws.onclose = () => {
-            log('WebSocket fechado' + (intentionalClose ? ' (voluntário)' : ' (inesperado)'), null, intentionalClose ? 'info' : 'warn');
+        ws.onclose = (event) => {
+            log(
+                'WebSocket fechado' + (intentionalClose ? ' (voluntário)' : ' (inesperado)'),
+                {
+                    code: event.code,
+                    reason: event.reason || null,
+                    wasClean: event.wasClean,
+                },
+                intentionalClose ? 'info' : 'warn',
+            );
             connected = false;
             updateUI();
             if (!intentionalClose && autoReconnect) {
@@ -462,7 +470,7 @@ function runSfuTest(config) {
             }
         };
 
-        ws.onerror = () => log('WebSocket erro', null, 'error');
+        ws.onerror = () => log('WebSocket erro. Verifique o console do navegador para detalhes de CSP, mixed content ou rede.', null, 'error');
     }
 
     // ── Start camera (full — audio + video) ───────────────────────────────────

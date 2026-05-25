@@ -18,7 +18,7 @@ withDefaults(defineProps<Props>(), {
 });
 
 const page = usePage();
-const userId = computed(() => (page.props.auth as { user?: { id?: number } })?.user?.id ?? 0);
+const userId = computed(() => (page.props.auth as { user?: { id?: string } })?.user?.id ?? '');
 </script>
 
 <template>

@@ -88,6 +88,8 @@ class SecurityHeaders
             ? " ws://{$reverbHost} wss://{$reverbHost}".($reverbPort !== '' ? " ws://{$reverbHost}:{$reverbPort} wss://{$reverbHost}:{$reverbPort}" : '')
             : '';
 
+        $sfuWebSocketSources = $this->sfuWebSocketSources();
+
         $unsafeEval = $isDevelopment ? " 'unsafe-eval'" : '';
 
         $directives = [
@@ -96,7 +98,7 @@ class SecurityHeaders
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.bunny.net https://rsms.me{$viteDevSources}",
             "font-src 'self' https://fonts.gstatic.com https://fonts.bunny.net https://rsms.me data:",
             "img-src 'self' data: https: blob:{$viteDevSources}",
-            "connect-src 'self' https://api.peerjs.com https://cdn.jsdelivr.net https://unpkg.com wss://*.pusher.com{$viteDevSources}{$reverbWebSocketSources}{$reverbPublicSources}",
+            "connect-src 'self' https://api.peerjs.com https://cdn.jsdelivr.net https://unpkg.com wss://*.pusher.com{$viteDevSources}{$reverbWebSocketSources}{$reverbPublicSources}{$sfuWebSocketSources}",
             "media-src 'self' blob:",
             "object-src 'none'",
             "base-uri 'self'",
@@ -109,5 +111,23 @@ class SecurityHeaders
         }
 
         return implode('; ', $directives);
+    }
+
+    private function sfuWebSocketSources(): string
+    {
+        $sfuWsUrl = (string) config('services.media_gateway.sfu_ws_url', '');
+        if ($sfuWsUrl === '') {
+            return '';
+        }
+
+        $scheme = parse_url($sfuWsUrl, PHP_URL_SCHEME);
+        $host = parse_url($sfuWsUrl, PHP_URL_HOST);
+        $port = parse_url($sfuWsUrl, PHP_URL_PORT);
+
+        if (! in_array($scheme, ['ws', 'wss'], true) || ! is_string($host) || $host === '') {
+            return '';
+        }
+
+        return ' '.$scheme.'://'.$host.($port ? ':'.$port : '');
     }
 }

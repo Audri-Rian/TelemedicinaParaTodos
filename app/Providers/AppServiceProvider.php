@@ -94,6 +94,8 @@ class AppServiceProvider extends ServiceProvider
         StorageDomainConfigValidator::validate();
 
         Appointments::observe(AppointmentsObserver::class);
+        \App\Models\Notification::observe(\App\Observers\NotificationObserver::class);
+        \App\Models\NotificationPreference::observe(\App\Observers\NotificationPreferenceObserver::class);
         \App\Models\Prescription::observe(\App\Observers\PrescriptionObserver::class);
         \App\Models\Examination::observe(\App\Observers\ExaminationObserver::class);
         \App\Models\MedicalCertificate::observe(\App\Observers\MedicalCertificateObserver::class);

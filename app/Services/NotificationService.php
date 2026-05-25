@@ -9,13 +9,38 @@ use App\Factories\NotificationFactory;
 use App\Models\Notification;
 use App\Models\NotificationPreference;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Cache;
 
 class NotificationService
 {
+    private const PREFERENCE_CACHE_TTL_MINUTES = 5;
+
+    private const UNREAD_COUNT_CACHE_TTL_SECONDS = 30;
+
     public function __construct(
         private PushNotificationSender $pushNotificationSender
     ) {}
+
+    public static function forgetUnreadCountCache(string $userId): void
+    {
+        Cache::forget(self::unreadCountCacheKey($userId));
+    }
+
+    public static function forgetPreferenceCache(string $userId, string $channel): void
+    {
+        Cache::forget(self::preferenceCacheKey($userId, $channel));
+    }
+
+    private static function unreadCountCacheKey(string $userId): string
+    {
+        return "unread_notifications_count:{$userId}";
+    }
+
+    private static function preferenceCacheKey(string $userId, string $channel): string
+    {
+        return "notification_prefs:{$userId}:{$channel}";
+    }
 
     /**
      * Criar e enviar notificação com debounce
@@ -32,6 +57,15 @@ class NotificationService
     ): ?Notification {
         $userId = $user instanceof User ? $user->id : $user;
         $user = $user instanceof User ? $user : User::findOrFail($userId);
+
+        // Idempotência para evitar duplicidade de notificação quando o listener
+        // for reprocessado (ex.: retry de fila para AppointmentCreated).
+        if ($type === NotificationType::APPOINTMENT_CREATED) {
+            $existingNotification = $this->findExistingAppointmentCreatedNotification($userId, $metadata);
+            if ($existingNotification) {
+                return $existingNotification;
+            }
+        }
 
         // Verificar debounce (a menos que seja explicitamente ignorado)
         if (! $skipDebounce && $this->shouldDebounce($userId, $type, $metadata)) {
@@ -59,6 +93,20 @@ class NotificationService
         event(new NotificationCreated($notification));
 
         return $notification;
+    }
+
+    private function findExistingAppointmentCreatedNotification(string $userId, array $metadata): ?Notification
+    {
+        $appointmentId = $metadata['appointment_id'] ?? null;
+
+        if (! is_string($appointmentId) || trim($appointmentId) === '') {
+            return null;
+        }
+
+        return Notification::where('user_id', $userId)
+            ->where('type', NotificationType::APPOINTMENT_CREATED->value)
+            ->where('metadata->appointment_id', $appointmentId)
+            ->first();
     }
 
     /**
@@ -123,20 +171,24 @@ class NotificationService
      */
     public function shouldNotify(User $user, NotificationType $type, string $channel): bool
     {
-        // Verificar preferência específica
-        $preference = NotificationPreference::where('user_id', $user->id)
-            ->where('channel', $channel)
-            ->where(function ($query) use ($type) {
-                $query->where('type', $type->value)
-                    ->orWhere('type', NotificationPreference::TYPE_ALL);
-            })
-            ->first();
+        $preferences = Cache::remember(
+            self::preferenceCacheKey($user->id, $channel),
+            now()->addMinutes(self::PREFERENCE_CACHE_TTL_MINUTES),
+            fn (): Collection => NotificationPreference::where('user_id', $user->id)
+                ->where('channel', $channel)
+                ->get(),
+        );
 
-        if ($preference) {
-            return $preference->isEnabled();
+        $specific = $preferences->firstWhere('type', $type->value);
+        if ($specific) {
+            return $specific->isEnabled();
         }
 
-        // Padrão: habilitado para todos os canais e tipos
+        $allTypes = $preferences->firstWhere('type', NotificationPreference::TYPE_ALL);
+        if ($allTypes) {
+            return $allTypes->isEnabled();
+        }
+
         return true;
     }
 
@@ -202,9 +254,15 @@ class NotificationService
     {
         $userId = $user instanceof User ? $user->id : $user;
 
-        return Notification::where('user_id', $userId)
+        $updated = Notification::where('user_id', $userId)
             ->whereNull('read_at')
             ->update(['read_at' => now()]);
+
+        if ($updated > 0) {
+            self::forgetUnreadCountCache($userId);
+        }
+
+        return $updated;
     }
 
     /**
@@ -229,8 +287,12 @@ class NotificationService
     {
         $userId = $user instanceof User ? $user->id : $user;
 
-        return Notification::where('user_id', $userId)
-            ->whereNull('read_at')
-            ->count();
+        return Cache::remember(
+            self::unreadCountCacheKey($userId),
+            now()->addSeconds(self::UNREAD_COUNT_CACHE_TTL_SECONDS),
+            fn (): int => Notification::where('user_id', $userId)
+                ->whereNull('read_at')
+                ->count(),
+        );
     }
 }

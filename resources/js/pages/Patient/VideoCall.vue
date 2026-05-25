@@ -141,12 +141,12 @@ const statusDotClasses = (tone: StatusTone) => {
     return map[tone];
 };
 
-const ctaMode = computed<'enabled' | 'requesting' | 'ringing' | 'disabled-window' | 'disabled-noappt'>(() => {
-    if (callState.value === 'requesting') return 'requesting';
-    if (callState.value === 'ringing') return 'ringing';
-    if (!selectedUser.value?.hasAppointment) return 'disabled-noappt';
-    if (!selectedUser.value.canStartCall) return 'disabled-window';
-    return 'enabled';
+const ctaMode = computed<'join' | 'ringing' | 'in-call' | 'ended' | 'waiting'>(() => {
+    if (callState.value === 'accepted') return 'in-call';
+    if (callState.value === 'ended') return 'ended';
+    if (callState.value === 'requesting' || callState.value === 'ringing') return 'ringing';
+    if (!selectedUser.value?.hasAppointment || !selectedUser.value.canStartCall) return 'waiting';
+    return 'join';
 });
 
 const joinVideoCall = async () => {
@@ -437,19 +437,30 @@ const checklist = [
                                     <aside class="space-y-4">
                                         <div class="rounded-lg border border-[#dde5ea] bg-white p-5 shadow-sm">
                                             <div class="grid aspect-video place-items-center rounded-lg bg-[#0b2030] text-white">
-                                                <div v-if="callState === 'requesting'" class="text-center">
+                                                <div v-if="ctaMode === 'in-call'" class="text-center">
+                                                    <RefreshCw class="mx-auto h-10 w-10 animate-spin text-[#40e0d0]" />
+                                                    <p class="mt-3 text-sm font-black">Chamada em andamento</p>
+                                                </div>
+                                                <div v-else-if="ctaMode === 'ended'" class="text-center">
+                                                    <VideoOff class="mx-auto h-10 w-10 text-gray-400" />
+                                                    <p class="mt-3 text-sm font-black">Chamada finalizada</p>
+                                                </div>
+                                                <div v-else-if="ctaMode === 'ringing'" class="text-center">
                                                     <Loader2 class="mx-auto h-10 w-10 animate-spin text-[#40e0d0]" />
                                                     <p class="mt-3 text-sm font-black">Aguardando médico...</p>
                                                 </div>
-                                                <div v-else-if="callState === 'ringing'" class="text-center">
-                                                    <RefreshCw class="mx-auto h-10 w-10 animate-spin text-[#40e0d0]" />
-                                                    <p class="mt-3 text-sm font-black">Chamando...</p>
+                                                <div v-else-if="ctaMode === 'waiting'" class="text-center">
+                                                    <Clock class="mx-auto h-10 w-10 text-[#40e0d0]/70" />
+                                                    <p class="mt-3 text-sm font-black">Aguardando o horário</p>
+                                                    <p class="mt-1 px-6 text-xs font-semibold text-white/60">
+                                                        A chamada abre 10 min antes do horário agendado.
+                                                    </p>
                                                 </div>
                                                 <div v-else class="text-center">
                                                     <Video class="mx-auto h-10 w-10 text-[#40e0d0]" />
-                                                    <p class="mt-3 text-sm font-black">Prévia da câmera</p>
+                                                    <p class="mt-3 text-sm font-black">Pronto para entrar</p>
                                                     <p class="mt-1 px-6 text-xs font-semibold text-white/60">
-                                                        Clique em "Iniciar videochamada" para entrar.
+                                                        Clique em "Entrar na chamada" para iniciar.
                                                     </p>
                                                 </div>
                                             </div>
@@ -458,30 +469,35 @@ const checklist = [
                                                 type="button"
                                                 class="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-lg border-none px-4 text-sm font-black disabled:cursor-not-allowed"
                                                 :class="
-                                                    ctaMode === 'enabled'
+                                                    ctaMode === 'join'
                                                         ? 'bg-teal-500 text-gray-950 hover:bg-teal-400'
-                                                        : 'cursor-not-allowed bg-gray-200 text-gray-500'
+                                                        : ctaMode === 'in-call'
+                                                          ? 'bg-emerald-100 text-emerald-800'
+                                                          : 'cursor-not-allowed bg-gray-200 text-gray-500'
                                                 "
-                                                :disabled="ctaMode !== 'enabled' || isLoading"
+                                                :disabled="ctaMode !== 'join' || isLoading"
                                                 @click="joinVideoCall"
                                             >
-                                                <Loader2 v-if="isLoading || callState === 'requesting'" class="h-4 w-4 animate-spin" />
-                                                <Video v-else-if="ctaMode === 'enabled'" class="h-4 w-4" />
-                                                <Clock v-else-if="ctaMode === 'disabled-window'" class="h-4 w-4" />
-                                                <VideoOff v-else class="h-4 w-4" />
+                                                <Loader2 v-if="isLoading || ctaMode === 'ringing'" class="h-4 w-4 animate-spin" />
+                                                <Video v-else-if="ctaMode === 'join'" class="h-4 w-4" />
+                                                <Video v-else-if="ctaMode === 'in-call'" class="h-4 w-4" />
+                                                <VideoOff v-else-if="ctaMode === 'ended'" class="h-4 w-4" />
+                                                <Clock v-else class="h-4 w-4" />
                                                 {{
                                                     isLoading
                                                         ? 'Iniciando...'
-                                                        : callState === 'requesting'
+                                                        : ctaMode === 'ringing'
                                                           ? 'Aguardando médico...'
-                                                          : ctaMode === 'enabled'
-                                                            ? 'Iniciar videochamada'
-                                                            : ctaMode === 'disabled-window'
-                                                              ? 'Fora da janela de tempo'
-                                                              : 'Sem agendamento disponível'
+                                                          : ctaMode === 'join'
+                                                            ? 'Entrar na chamada'
+                                                            : ctaMode === 'in-call'
+                                                              ? 'Chamada em andamento'
+                                                              : ctaMode === 'ended'
+                                                                ? 'Chamada finalizada'
+                                                                : 'Aguardando o horário'
                                                 }}
                                             </button>
-                                            <p v-if="ctaMode === 'disabled-window'" class="mt-2 text-center text-xs font-semibold text-gray-500">
+                                            <p v-if="ctaMode === 'waiting'" class="mt-2 text-center text-xs font-semibold text-gray-500">
                                                 A chamada abre 10 minutos antes/depois do horário.
                                             </p>
                                         </div>

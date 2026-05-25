@@ -29,273 +29,276 @@ interface UnreadCountResponse {
     count?: number;
 }
 
+const MAX_WS_RETRIES = 8;
+
+const notifications = ref<Notification[]>([]);
+const allNotifications = ref<Notification[]>([]);
+const unreadCount = ref(0);
+const loading = ref(false);
+
+let echo: any = null;
+
+let channel: any = null;
+let wsRetryDelay = 1000;
+let wsRetryCount = 0;
+let subscriberCount = 0;
+
 const csrfToken = (): string => {
     const token = document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content;
     if (!token) throw new Error('CSRF token not found');
     return token;
 };
 
-export function useNotifications() {
-    const page = usePage();
-    const currentUserId = (page.props.auth as any)?.user?.id;
-    let echo: Echo | null = null;
-    let wsRetryDelay = 1000;
-    const notifications = ref<Notification[]>([]);
-    const allNotifications = ref<Notification[]>([]);
-    const unreadCount = ref(0);
-    const loading = ref(false);
-    const channel = ref<any>(null);
-
-    /**
-     * Carregar notificações não lidas
-     */
-    const loadUnread = async () => {
-        try {
-            loading.value = true;
-            const response = await fetch('/api/notifications/unread');
-            if (!response.ok) {
-                if (response.status === 401) window.location.href = '/login';
-                throw new Error(`HTTP ${response.status}`);
-            }
-            const data = (await response.json()) as UnreadNotificationsResponse;
-            notifications.value = data.data || [];
-            unreadCount.value = data.count || 0;
-        } catch (error) {
-            console.error('Erro ao carregar notificações:', error);
-        } finally {
-            loading.value = false;
+const loadUnread = async () => {
+    try {
+        loading.value = true;
+        const response = await fetch('/api/notifications/unread');
+        if (!response.ok) {
+            if (response.status === 401) window.location.href = '/login';
+            throw new Error(`HTTP ${response.status}`);
         }
-    };
+        const data = (await response.json()) as UnreadNotificationsResponse;
+        notifications.value = data.data || [];
+        unreadCount.value = data.count || 0;
+    } catch (error) {
+        console.error('Erro ao carregar notificações:', error);
+    } finally {
+        loading.value = false;
+    }
+};
 
-    /**
-     * Carregar todas as notificações para a modal
-     */
-    const loadAll = async (page = 1) => {
-        try {
-            loading.value = true;
-            const response = await fetch(`/api/notifications?per_page=20&page=${page}`);
-            if (!response.ok) {
-                if (response.status === 401) window.location.href = '/login';
-                throw new Error(`HTTP ${response.status}`);
-            }
-            const data = (await response.json()) as NotificationsIndexResponse;
-            if (page === 1) {
-                allNotifications.value = data.data || [];
-            } else {
-                allNotifications.value.push(...(data.data || []));
-            }
-        } catch (error) {
-            console.error('Erro ao carregar todas as notificações:', error);
-        } finally {
-            loading.value = false;
+const loadAll = async (page = 1) => {
+    try {
+        loading.value = true;
+        const response = await fetch(`/api/notifications?per_page=20&page=${page}`);
+        if (!response.ok) {
+            if (response.status === 401) window.location.href = '/login';
+            throw new Error(`HTTP ${response.status}`);
         }
-    };
+        const data = (await response.json()) as NotificationsIndexResponse;
+        if (page === 1) {
+            allNotifications.value = data.data || [];
+        } else {
+            allNotifications.value.push(...(data.data || []));
+        }
+    } catch (error) {
+        console.error('Erro ao carregar todas as notificações:', error);
+    } finally {
+        loading.value = false;
+    }
+};
 
-    /**
-     * Carregar contador de não lidas
-     */
-    const loadUnreadCount = async () => {
-        try {
-            const response = await fetch('/api/notifications/unread-count');
-            if (!response.ok) {
-                if (response.status === 401) window.location.href = '/login';
-                throw new Error(`HTTP ${response.status}`);
+const loadUnreadCount = async () => {
+    try {
+        const response = await fetch('/api/notifications/unread-count');
+        if (!response.ok) {
+            if (response.status === 401) window.location.href = '/login';
+            throw new Error(`HTTP ${response.status}`);
+        }
+        const data = (await response.json()) as UnreadCountResponse;
+        unreadCount.value = data.count || 0;
+    } catch (error) {
+        console.error('Erro ao carregar contador:', error);
+    }
+};
+
+const markAsRead = async (notificationId: string) => {
+    try {
+        const response = await fetch(`/api/notifications/${notificationId}/read`, {
+            method: 'POST',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken(),
+            },
+            credentials: 'same-origin',
+        });
+
+        if (response.ok) {
+            const index = notifications.value.findIndex((n) => n.id === notificationId);
+            const allIndex = allNotifications.value.findIndex((n) => n.id === notificationId);
+            const wasUnread = (index !== -1 && !notifications.value[index].is_read) || (allIndex !== -1 && !allNotifications.value[allIndex].is_read);
+
+            if (index !== -1) {
+                notifications.value[index].is_read = true;
+                notifications.value[index].read_at = new Date().toISOString();
             }
-            const data = (await response.json()) as UnreadCountResponse;
-            unreadCount.value = data.count || 0;
-        } catch (error) {
-            console.error('Erro ao carregar contador:', error);
-        }
-    };
 
-    /**
-     * Marcar notificação como lida
-     */
-    const markAsRead = async (notificationId: string) => {
-        try {
-            const response = await fetch(`/api/notifications/${notificationId}/read`, {
-                method: 'POST',
-                headers: {
-                    Accept: 'application/json',
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': csrfToken(),
-                },
-                credentials: 'same-origin',
-            });
-
-            if (response.ok) {
-                const index = notifications.value.findIndex((n) => n.id === notificationId);
-                const allIndex = allNotifications.value.findIndex((n) => n.id === notificationId);
-                const wasUnread =
-                    (index !== -1 && !notifications.value[index].is_read) || (allIndex !== -1 && !allNotifications.value[allIndex].is_read);
-
-                if (index !== -1) {
-                    notifications.value[index].is_read = true;
-                    notifications.value[index].read_at = new Date().toISOString();
-                }
-
-                if (allIndex !== -1) {
-                    allNotifications.value[allIndex].is_read = true;
-                    allNotifications.value[allIndex].read_at = new Date().toISOString();
-                }
-
-                if (wasUnread) {
-                    unreadCount.value = Math.max(0, unreadCount.value - 1);
-                }
+            if (allIndex !== -1) {
+                allNotifications.value[allIndex].is_read = true;
+                allNotifications.value[allIndex].read_at = new Date().toISOString();
             }
-        } catch (error) {
-            console.error('Erro ao marcar como lida:', error);
-        }
-    };
 
-    /**
-     * Marcar todas como lidas
-     */
-    const markAllAsRead = async () => {
-        try {
-            const response = await fetch('/api/notifications/read-all', {
-                method: 'POST',
-                headers: {
-                    Accept: 'application/json',
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': csrfToken(),
-                },
-                credentials: 'same-origin',
-            });
-
-            if (response.ok) {
-                notifications.value.forEach((n) => {
-                    n.is_read = true;
-                    n.read_at = new Date().toISOString();
-                });
-                allNotifications.value.forEach((n) => {
-                    n.is_read = true;
-                    n.read_at = new Date().toISOString();
-                });
-                unreadCount.value = 0;
-            }
-        } catch (error) {
-            console.error('Erro ao marcar todas como lidas:', error);
-        }
-    };
-
-    /**
-     * Adicionar nova notificação
-     */
-    const addNotification = (notification: Notification) => {
-        notifications.value.unshift(notification);
-        allNotifications.value.unshift(notification);
-        if (!notification.is_read) {
-            unreadCount.value++;
-        }
-    };
-
-    /**
-     * Remover notificação
-     */
-    const removeNotification = (notificationId: string) => {
-        const index = notifications.value.findIndex((n) => n.id === notificationId);
-        if (index !== -1) {
-            if (!notifications.value[index].is_read) {
+            if (wasUnread) {
                 unreadCount.value = Math.max(0, unreadCount.value - 1);
             }
-            notifications.value.splice(index, 1);
         }
+    } catch (error) {
+        console.error('Erro ao marcar como lida:', error);
+    }
+};
 
-        const allIndex = allNotifications.value.findIndex((n) => n.id === notificationId);
-        if (allIndex !== -1) {
-            allNotifications.value.splice(allIndex, 1);
+const markAllAsRead = async () => {
+    try {
+        const response = await fetch('/api/notifications/read-all', {
+            method: 'POST',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken(),
+            },
+            credentials: 'same-origin',
+        });
+
+        if (response.ok) {
+            notifications.value.forEach((n) => {
+                n.is_read = true;
+                n.read_at = new Date().toISOString();
+            });
+            allNotifications.value.forEach((n) => {
+                n.is_read = true;
+                n.read_at = new Date().toISOString();
+            });
+            unreadCount.value = 0;
         }
-    };
+    } catch (error) {
+        console.error('Erro ao marcar todas como lidas:', error);
+    }
+};
 
-    /**
-     * Inicializar listener de notificações em tempo real
-     */
-    const initializeRealtime = () => {
-        if (!currentUserId || echo) {
-            return;
+const addNotification = (notification: Notification) => {
+    const alreadyExistsInUnread = notifications.value.some((item) => item.id === notification.id);
+    const alreadyExistsInAll = allNotifications.value.some((item) => item.id === notification.id);
+
+    if (alreadyExistsInUnread || alreadyExistsInAll) {
+        return;
+    }
+
+    notifications.value.unshift(notification);
+    allNotifications.value.unshift(notification);
+    if (!notification.is_read) {
+        unreadCount.value++;
+    }
+};
+
+const removeNotification = (notificationId: string) => {
+    const index = notifications.value.findIndex((n) => n.id === notificationId);
+    if (index !== -1) {
+        if (!notifications.value[index].is_read) {
+            unreadCount.value = Math.max(0, unreadCount.value - 1);
         }
+        notifications.value.splice(index, 1);
+    }
 
-        try {
-            // Usar configuração do Reverb do Inertia (mesmo padrão do useMessages)
-            const reverbConfig = (page.props as any)?.reverb;
+    const allIndex = allNotifications.value.findIndex((n) => n.id === notificationId);
+    if (allIndex !== -1) {
+        allNotifications.value.splice(allIndex, 1);
+    }
+};
 
-            if (!reverbConfig?.key) {
-                // Reverb/Pusher não configurado ou REVERB_APP_KEY ausente no .env — notificações em tempo real desativadas
-                return;
+const disconnect = () => {
+    if (channel) {
+        channel.stopListening('.notification.created');
+        channel = null;
+    }
+    if (echo) {
+        echo.disconnect();
+        echo = null;
+    }
+    wsRetryCount = 0;
+};
+
+const initializeRealtime = (currentUserId: string, reverbConfig: { key: string; host: string; port: number; scheme: string } | null) => {
+    if (!currentUserId || echo) {
+        return;
+    }
+
+    if (!reverbConfig?.key) {
+        return;
+    }
+
+    try {
+        echo = new Echo({
+            broadcaster: 'reverb',
+            key: reverbConfig.key,
+            wsHost: reverbConfig.host,
+            wsPort: reverbConfig.port,
+            wssPort: reverbConfig.port,
+            forceTLS: reverbConfig.scheme === 'https',
+            enabledTransports: ['ws', 'wss'],
+        });
+
+        channel = echo.private(`notifications.${currentUserId}`);
+
+        channel.listen('.notification.created', (data: Notification | { data: Notification }) => {
+            addNotification('data' in data ? data.data : data);
+        });
+
+        echo.connector.pusher.connection.bind('connected', () => {
+            wsRetryDelay = 1000;
+            wsRetryCount = 0;
+            void loadUnread();
+        });
+
+        echo.connector.pusher.connection.bind('error', () => {
+            scheduleRealtimeRetry(currentUserId, reverbConfig);
+        });
+    } catch {
+        scheduleRealtimeRetry(currentUserId, reverbConfig);
+    }
+};
+
+const scheduleRealtimeRetry = (currentUserId: string, reverbConfig: { key: string; host: string; port: number; scheme: string } | null) => {
+    if (wsRetryCount >= MAX_WS_RETRIES) {
+        return;
+    }
+
+    wsRetryCount++;
+    setTimeout(
+        () => {
+            if (echo) {
+                echo.disconnect();
+                echo = null;
+                channel = null;
             }
+            initializeRealtime(currentUserId, reverbConfig);
+        },
+        wsRetryDelay + Math.random() * 500,
+    );
+    wsRetryDelay = Math.min(wsRetryDelay * 2, 30_000);
+};
 
-            echo = new Echo({
-                broadcaster: 'reverb',
-                key: reverbConfig.key,
-                wsHost: reverbConfig.host,
-                wsPort: reverbConfig.port,
-                wssPort: reverbConfig.port,
-                forceTLS: reverbConfig.scheme === 'https',
-                enabledTransports: ['ws', 'wss'],
-            });
+export function useNotifications() {
+    const page = usePage();
+    const currentUserId = (page.props.auth as { user?: { id?: string } })?.user?.id;
+    const reverbConfig = (page.props as { reverb?: { key: string; host: string; port: number; scheme: string } })?.reverb ?? null;
 
-            // Conectar ao canal privado de notificações
-            channel.value = echo.private(`notifications.${currentUserId}`);
-
-            // Escutar evento de nova notificação
-            channel.value.listen('.notification.created', (data: Notification | { data: Notification }) => {
-                addNotification('data' in data ? data.data : data);
-            });
-
-            echo.connector.pusher.connection.bind('connected', () => {
-                wsRetryDelay = 1000;
-                loadUnreadCount();
-            });
-
-            echo.connector.pusher.connection.bind('error', () => {
-                setTimeout(
-                    () => {
-                        if (echo) {
-                            echo.disconnect();
-                            echo = null;
-                        }
-                        initializeRealtime();
-                    },
-                    wsRetryDelay + Math.random() * 500,
-                );
-                wsRetryDelay = Math.min(wsRetryDelay * 2, 30_000);
-            });
-        } catch {
-            setTimeout(() => initializeRealtime(), wsRetryDelay + Math.random() * 500);
-            wsRetryDelay = Math.min(wsRetryDelay * 2, 30_000);
-        }
-    };
-
-    /**
-     * Desconectar do canal
-     */
-    const disconnect = () => {
-        if (channel.value) {
-            channel.value.stopListening('.notification.created');
-            channel.value = null;
-        }
-        if (echo) {
-            echo.disconnect();
-            echo = null;
-        }
-    };
-
-    // Computed
     const hasUnread = computed(() => unreadCount.value > 0);
     const unreadNotifications = computed(() => notifications.value.filter((n) => !n.is_read));
 
-    // Lifecycle
     onMounted(() => {
-        if (currentUserId) {
-            loadUnreadCount();
-            loadUnread();
-            initializeRealtime();
+        if (!currentUserId) {
+            return;
+        }
+
+        subscriberCount++;
+
+        if (subscriberCount === 1) {
+            void loadUnread();
+            initializeRealtime(currentUserId, reverbConfig);
         }
     });
 
     onUnmounted(() => {
-        disconnect();
+        if (!currentUserId) {
+            return;
+        }
+
+        subscriberCount = Math.max(0, subscriberCount - 1);
+
+        if (subscriberCount === 0) {
+            disconnect();
+        }
     });
 
     return {

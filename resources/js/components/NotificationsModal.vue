@@ -64,14 +64,34 @@ const formattedNotifications = computed(() =>
     })),
 );
 
-const unreadCount = computed(() => formattedNotifications.value.filter((notification) => !notification.is_read).length);
-const importantCount = computed(() => formattedNotifications.value.filter((notification) => notification.important).length);
+const notificationStats = computed(() =>
+    formattedNotifications.value.reduce(
+        (acc, notification) => {
+            if (!notification.is_read) {
+                acc.unread++;
+            }
+            if (notification.important) {
+                acc.important++;
+            }
+            acc.byCategory[notification.category] = (acc.byCategory[notification.category] ?? 0) + 1;
+            return acc;
+        },
+        {
+            unread: 0,
+            important: 0,
+            byCategory: {} as Record<string, number>,
+        },
+    ),
+);
+
+const unreadCount = computed(() => notificationStats.value.unread);
+const importantCount = computed(() => notificationStats.value.important);
 
 const categories = computed(() => [
     { id: 'all', label: 'Todas', icon: Inbox, count: formattedNotifications.value.length },
-    { id: 'agenda', label: 'Agenda', icon: Calendar, count: countByCategory('agenda') },
-    { id: 'documentos', label: 'Documentos', icon: FileText, count: countByCategory('documentos') },
-    { id: 'sistema', label: 'Sistema', icon: Settings, count: countByCategory('sistema') },
+    { id: 'agenda', label: 'Agenda', icon: Calendar, count: notificationStats.value.byCategory.agenda ?? 0 },
+    { id: 'documentos', label: 'Documentos', icon: FileText, count: notificationStats.value.byCategory.documentos ?? 0 },
+    { id: 'sistema', label: 'Sistema', icon: Settings, count: notificationStats.value.byCategory.sistema ?? 0 },
 ]);
 
 const filteredNotifications = computed(() => {
@@ -94,7 +114,7 @@ const filteredNotifications = computed(() => {
             return true;
         }
 
-        return `${notification.title} ${notification.message} ${notification.type}`.toLowerCase().includes(query);
+        return `${notification.title} ${notification.message}`.toLowerCase().includes(query);
     });
 });
 
@@ -122,9 +142,10 @@ function categoryForNotification(notification: Notification) {
     return 'sistema';
 }
 
-function countByCategory(category: string) {
-    return formattedNotifications.value.filter((notification) => notification.category === category).length;
-}
+const ptBRDateFormatter = new Intl.DateTimeFormat('pt-BR', {
+    day: '2-digit',
+    month: 'short',
+});
 
 function dateLabel(timestamp: string) {
     const date = new Date(timestamp);
@@ -140,16 +161,13 @@ function dateLabel(timestamp: string) {
         return 'Ontem';
     }
 
-    return new Intl.DateTimeFormat('pt-BR', {
-        day: '2-digit',
-        month: 'short',
-    }).format(date);
+    return ptBRDateFormatter.format(date);
 }
 </script>
 
 <template>
     <Dialog :open="open" @update:open="emit('update:open', $event)">
-        <DialogContent class="flex max-h-[88vh] overflow-hidden rounded-2xl p-0 sm:max-w-5xl">
+        <DialogContent class="flex max-h-[88vh] flex-col overflow-hidden rounded-2xl p-0 sm:max-w-5xl">
             <DialogHeader class="border-b border-zinc-200 px-5 py-4 pr-12">
                 <div class="flex flex-col gap-4 lg:flex-row lg:items-center">
                     <div class="flex min-w-0 flex-1 items-start gap-3">
@@ -291,10 +309,8 @@ function dateLabel(timestamp: string) {
                                                             </span>
                                                             {{ notification.title }}
                                                         </h3>
-                                                        <p class="mt-1 flex items-center gap-1.5 text-xs font-medium text-zinc-400">
-                                                            <span>{{ notification.time }}</span>
-                                                            <span class="h-1 w-1 rounded-full bg-zinc-300" />
-                                                            <span>{{ notification.type }}</span>
+                                                        <p class="mt-1 text-xs font-medium text-zinc-400">
+                                                            {{ notification.time }}
                                                         </p>
                                                     </div>
 

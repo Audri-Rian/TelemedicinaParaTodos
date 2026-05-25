@@ -99,7 +99,9 @@ const visibleNotifications = computed(() => {
 
 const openNotificationsModal = async () => {
     isNotificationsModalOpen.value = true;
-    await loadAll();
+    if (allNotifications.value.length === 0) {
+        await loadAll();
+    }
 };
 
 // Handler para clicar em notificação
@@ -253,10 +255,8 @@ const handleViewAll = () => {
                                         <p class="line-clamp-2 text-xs leading-5 text-zinc-600">
                                             {{ notification.description }}
                                         </p>
-                                        <p class="flex items-center gap-1.5 text-[11px] font-medium text-zinc-400">
-                                            <span>{{ notification.time }}</span>
-                                            <span class="h-1 w-1 rounded-full bg-zinc-300" />
-                                            <span>{{ notification.type }}</span>
+                                        <p class="text-[11px] font-medium text-zinc-400">
+                                            {{ notification.time }}
                                         </p>
                                     </div>
                                 </div>

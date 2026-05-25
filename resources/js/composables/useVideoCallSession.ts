@@ -1,7 +1,7 @@
 import { echo } from '@laravel/echo-vue';
 import axios from 'axios';
 
-import { createStubVideoMediaProvider } from '@/services/video-call-media/StubVideoMediaProvider';
+import { createSfuVideoMediaProvider } from '@/services/video-call-media/SfuVideoMediaProvider';
 import type { VideoMediaProvider } from '@/services/video-call-media/VideoMediaProvider';
 import { useVideoCallStore } from '@/stores/videoCall';
 import { useToast } from './useToast';
@@ -28,7 +28,7 @@ let mediaProvider: VideoMediaProvider | null = null;
 
 function getMediaProvider(): VideoMediaProvider {
     if (!mediaProvider) {
-        mediaProvider = createStubVideoMediaProvider();
+        mediaProvider = createSfuVideoMediaProvider();
     }
     return mediaProvider;
 }
@@ -58,7 +58,7 @@ export function useVideoCallSession() {
         }
     }
 
-    function setupEchoListeners(userId: number): void {
+    function setupEchoListeners(userId: string): void {
         if (initialized) return;
         initialized = true;
 
