@@ -14,7 +14,8 @@ return new class extends Migration
     {
         Schema::create('calls', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->foreignUuid('appointment_id')->constrained('appointments')->cascadeOnDelete();
+            $table->enum('call_type', ['scheduled', 'ad_hoc'])->default('scheduled')->after('id');
+            $table->foreignUuid('appointment_id')->nullable()->constrained('appointments')->nullOnDelete();
             $table->foreignUuid('doctor_id')->constrained('doctors')->cascadeOnDelete();
             $table->foreignUuid('patient_id')->constrained('patients')->cascadeOnDelete();
             $table->string('status')->default('requested');
@@ -24,14 +25,23 @@ return new class extends Migration
             $table->timestamps();
 
             $table->index(['status', 'appointment_id']);
+            $table->index(['call_type', 'status']);
             $table->index(['doctor_id', 'status']);
             $table->index(['patient_id', 'status']);
         });
 
+        // Idempotência: um scheduled ativo por appointment
         \DB::statement("
             create unique index if not exists calls_one_active_per_appointment_idx
             on calls (appointment_id)
-            where status in ('requested', 'ringing', 'accepted')
+            where appointment_id is not null and status in ('requested', 'ringing', 'accepted')
+        ");
+
+        // Um ad_hoc ativo por par doctor/patient
+        \DB::statement("
+            create unique index if not exists calls_one_adhoc_per_pair_idx
+            on calls (doctor_id, patient_id)
+            where call_type = 'ad_hoc' and ended_at is null
         ");
     }
 

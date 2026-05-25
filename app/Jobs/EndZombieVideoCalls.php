@@ -19,7 +19,7 @@ class EndZombieVideoCalls implements ShouldQueue
         CallManagerService $callManager
     ): void {
         $inactiveMinutes = (int) config('telemedicine.video_call.room_inactive_minutes', 60);
-        $maxDurationMinutes = (int) config('telemedicine.video_call.room_max_duration_minutes', 120);
+        $maxDurationMinutes = (int) config('telemedicine.video_call.ad_hoc_max_duration_minutes', 60);
         $inactiveCutoff = now()->subMinutes($inactiveMinutes);
         $maxDurationCutoff = now()->subMinutes($maxDurationMinutes);
         $ended = 0;
@@ -27,6 +27,7 @@ class EndZombieVideoCalls implements ShouldQueue
 
         Call::query()
             ->with(['appointment', 'room'])
+            ->where('call_type', Call::TYPE_AD_HOC)
             ->whereIn('status', [Call::STATUS_REQUESTED, Call::STATUS_RINGING, Call::STATUS_ACCEPTED])
             ->where(function ($query) use ($inactiveCutoff, $maxDurationCutoff) {
                 $query

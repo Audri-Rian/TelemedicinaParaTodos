@@ -3,11 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreCallRequest;
-use App\Models\Appointments;
 use App\Models\Call;
+use App\Models\Doctor;
 use App\Services\CallManagerService;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -17,44 +19,33 @@ class CallController extends Controller
 
     public function store(StoreCallRequest $request): JsonResponse
     {
-        $appointment = Appointments::findOrFail($request->validated('appointment_id'));
+        $doctor = Doctor::findOrFail($request->validated('doctor_id'));
 
-        $this->authorize('video-call-request', $appointment);
+        $this->authorize('video-call-request-adhoc', $doctor);
 
         try {
-            ['call' => $call, 'existing' => $existing] = DB::transaction(function () use ($appointment, $request) {
-                $appointment = Appointments::lockForUpdate()->findOrFail($appointment->id);
-
-                $existingCall = Call::where('appointment_id', $appointment->id)
-                    ->whereIn('status', [Call::STATUS_REQUESTED, Call::STATUS_RINGING, Call::STATUS_ACCEPTED])
-                    ->first();
-
-                if ($existingCall) {
-                    return ['call' => $existingCall, 'existing' => true];
-                }
-
-                return ['call' => $this->callManager->createCall($appointment, $request->user()), 'existing' => false];
+            $call = DB::transaction(function () use ($request, $doctor) {
+                return $this->callManager->createCall($request->user(), $doctor);
             });
         } catch (\InvalidArgumentException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+            $status = str_contains($e->getMessage(), 'não tem consulta') ? 403 : 422;
 
-        if ($existing) {
-            return response()->json([
-                'message' => 'Chamada já em andamento para esta consulta',
-                'data' => ['call_id' => $call->id],
-            ], 409);
+            return response()->json(['message' => $e->getMessage()], $status);
         }
 
         return response()->json([
-            'message' => 'Chamada criada com sucesso',
+            'message' => 'Chamada ad-hoc criada com sucesso',
             'data' => ['call_id' => $call->id],
         ], 201);
     }
 
     public function accept(Call $call): JsonResponse
     {
-        $this->authorize('video-call-accept', $call->appointment);
+        if ($call->call_type === Call::TYPE_SCHEDULED) {
+            return response()->json(['message' => 'Chamadas agendadas não requerem aceite manual.'], 403);
+        }
+
+        $this->authorize('video-call-accept', $call);
 
         try {
             $result = DB::transaction(function () use ($call) {
@@ -85,7 +76,11 @@ class CallController extends Controller
 
     public function reject(Call $call): JsonResponse
     {
-        $this->authorize('video-call-reject', $call->appointment);
+        if ($call->call_type === Call::TYPE_SCHEDULED) {
+            return response()->json(['message' => 'Chamadas agendadas não podem ser recusadas manualmente.'], 403);
+        }
+
+        $this->authorize('video-call-reject', $call);
 
         try {
             $this->callManager->rejectCall($call, request()->user());
@@ -98,7 +93,7 @@ class CallController extends Controller
 
     public function end(Call $call): JsonResponse
     {
-        $this->authorize('video-call-end', $call->appointment);
+        $this->authorize('video-call-end', $call);
 
         try {
             $this->callManager->endCall($call, request()->user());
@@ -119,6 +114,7 @@ class CallController extends Controller
             'message' => 'Estado da chamada',
             'data' => [
                 'call_id' => $call->id,
+                'call_type' => $call->call_type,
                 'status' => $call->status,
                 'room_id' => $call->room?->room_id,
             ],
@@ -140,23 +136,50 @@ class CallController extends Controller
         $videoCallRoute = $role === 'doctor' ? route('doctor.video-call') : route('patient.video-call');
 
         $appointmentLabel = null;
+        $window = null;
+
         if ($call->appointment) {
             $dt = $call->appointment->scheduled_at;
-            $appointmentLabel = $dt ? \Carbon\Carbon::parse($dt)->format('d/m H:i') : null;
+            $appointmentLabel = $dt ? Carbon::parse($dt)->format('d/m H:i') : null;
+
+            if ($call->call_type === Call::TYPE_SCHEDULED && $dt) {
+                $leadMinutes = (int) config('telemedicine.video_call.window_lead_minutes', 10);
+                $trailingMinutes = (int) config('telemedicine.video_call.window_trailing_minutes', 10);
+                $window = [
+                    'opens_at' => Carbon::parse($dt)->subMinutes($leadMinutes)->toIso8601String(),
+                    'closes_at' => Carbon::parse($dt)->addMinutes($trailingMinutes)->toIso8601String(),
+                ];
+            }
         }
 
         $token = null;
         if ($call->status === Call::STATUS_ACCEPTED && $call->room) {
-            try {
-                $token = $this->callManager->generatePublicRoomToken($call, $call->room, $user);
-            } catch (\Throwable) {
-                // Token generation fail: omit silently, client will re-enter
+            $tokenCacheTtl = max(15, ((int) config('telemedicine.video_call.token_ttl_minutes', 10) * 60) - 30);
+            $tokenCacheKey = implode(':', [
+                'video_call_active_token',
+                (string) $call->id,
+                (string) $user->id,
+                (string) ($call->updated_at?->getTimestamp() ?? 0),
+                (string) ($call->room->updated_at?->getTimestamp() ?? 0),
+            ]);
+
+            $token = Cache::get($tokenCacheKey);
+
+            if (! is_string($token) || $token === '') {
+                try {
+                    $token = $this->callManager->generatePublicRoomToken($call, $call->room, $user);
+                    Cache::put($tokenCacheKey, $token, now()->addSeconds($tokenCacheTtl));
+                } catch (\Throwable) {
+                    $token = null;
+                    // Token generation fail: client will re-enter on next poll
+                }
             }
         }
 
         return response()->json([
             'data' => [
                 'call_id' => $call->id,
+                'call_type' => $call->call_type,
                 'appointment_id' => $call->appointment_id,
                 'status' => $call->status,
                 'role' => $role,
@@ -164,6 +187,7 @@ class CallController extends Controller
                 'sfu_ws_url' => $call->room?->media_ws_url,
                 'video_call_route' => $videoCallRoute,
                 'appointment_label' => $appointmentLabel,
+                'window' => $window,
             ],
         ]);
     }

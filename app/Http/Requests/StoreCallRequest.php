@@ -10,13 +10,15 @@ class StoreCallRequest extends FormRequest
     {
         $user = $this->user();
 
-        return $user !== null && ($user->isDoctor() || $user->isPatient());
+        // Apenas pacientes iniciam chamadas ad-hoc; médicos não podem iniciar
+        return $user !== null && $user->isPatient();
     }
 
     public function rules(): array
     {
         return [
-            'appointment_id' => ['required', 'uuid', 'exists:appointments,id'],
+            'call_type' => ['required', 'in:ad_hoc'],
+            'doctor_id' => ['required', 'uuid', 'exists:doctors,id'],
         ];
     }
 }

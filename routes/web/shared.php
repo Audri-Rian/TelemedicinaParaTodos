@@ -38,11 +38,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
 // Videochamadas
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('calls', [App\Http\Controllers\CallController::class, 'store'])->middleware('throttle:10,1')->name('calls.store');
-    Route::get('calls/active', [App\Http\Controllers\CallController::class, 'active'])->name('calls.active');
+    Route::get('calls/active', [App\Http\Controllers\CallController::class, 'active'])->middleware('throttle:30,1')->name('calls.active');
     Route::post('calls/{call}/accept', [App\Http\Controllers\CallController::class, 'accept'])->middleware('throttle:10,1')->name('calls.accept');
     Route::post('calls/{call}/reject', [App\Http\Controllers\CallController::class, 'reject'])->middleware('throttle:10,1')->name('calls.reject');
     Route::post('calls/{call}/end', [App\Http\Controllers\CallController::class, 'end'])->middleware('throttle:10,1')->name('calls.end');
     Route::get('calls/{call}', [App\Http\Controllers\CallController::class, 'show'])->name('calls.show');
+
+    Route::post('appointments/{appointment}/video/session', [App\Http\Controllers\AppointmentVideoSessionController::class, 'store'])
+        ->middleware('throttle:10,1')
+        ->name('appointments.video.session');
 });
 
 // Notificações

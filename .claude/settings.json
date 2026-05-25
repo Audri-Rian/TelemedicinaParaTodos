@@ -19,7 +19,9 @@
             "Bash(php -l app/Http/Controllers/Patient/ScheduleConsultationController.php)",
             "Bash(php -l app/Http/Requests/Doctor/StoreAvailabilitySlotRequest.php)",
             "Bash(openssl rand *)",
-            "Bash(npx tsc *)"
+            "Bash(npx tsc *)",
+            "Bash(grep -E \"\\\\.\\(php|ts|vue|js\\)$\")",
+            "Bash(grep -v \"^$\")"
         ]
     }
 }

@@ -3,19 +3,22 @@ import axios from 'axios';
 
 import { createSfuVideoMediaProvider } from '@/services/video-call-media/SfuVideoMediaProvider';
 import type { VideoMediaProvider } from '@/services/video-call-media/VideoMediaProvider';
+import type { VideoCallStatus, VideoCallType } from '@/stores/videoCall';
 import { useVideoCallStore } from '@/stores/videoCall';
 import { useToast } from './useToast';
 
 interface ActiveCallResponse {
     data: {
         call_id: string;
-        appointment_id: string;
-        status: 'requested' | 'ringing' | 'accepted';
+        call_type: VideoCallType;
+        appointment_id: string | null;
+        status: 'requested' | 'ringing' | 'calling' | 'accepted';
         role: 'doctor' | 'patient';
         token: string | null;
         sfu_ws_url: string | null;
         video_call_route: string;
         appointment_label: string | null;
+        window: { opens_at: string; closes_at: string } | null;
     } | null;
 }
 
@@ -25,6 +28,11 @@ let initialized = false;
 
 // Shared provider instance — reused across pages
 let mediaProvider: VideoMediaProvider | null = null;
+const allowedSyncStatuses: VideoCallStatus[] = ['idle', 'requested', 'ringing', 'calling', 'accepted', 'ended', 'rejected', 'error'];
+
+function isValidSyncStatus(value: unknown): value is VideoCallStatus {
+    return typeof value === 'string' && allowedSyncStatuses.includes(value as VideoCallStatus);
+}
 
 function getMediaProvider(): VideoMediaProvider {
     if (!mediaProvider) {
@@ -45,6 +53,7 @@ export function useVideoCallSession() {
 
             store.setCall({
                 callId: data.call_id,
+                callType: data.call_type,
                 appointmentId: data.appointment_id,
                 status: data.status,
                 role: data.role,
@@ -52,7 +61,18 @@ export function useVideoCallSession() {
                 sfuWsUrl: data.sfu_ws_url,
                 videoCallRoute: data.video_call_route,
                 appointmentLabel: data.appointment_label,
+                window: data.window,
             });
+
+            // Se scheduled e já tem token, conectar SFU automaticamente
+            if (data.call_type === 'scheduled' && data.status === 'accepted' && data.token) {
+                getMediaProvider()
+                    .connect(data.sfu_ws_url ?? null, data.token)
+                    .catch(() => {
+                        toastError('Erro ao conectar à sala de vídeo');
+                        store.setStatus('error');
+                    });
+            }
         } catch {
             // bootstrap miss: sem call ativa ou endpoint indisponível
         }
@@ -67,19 +87,30 @@ export function useVideoCallSession() {
 
         echoChannel = echoInstance.private(`video-call.${userId}`);
 
+        // Scheduled: sala provisionada pelo sistema
+        echoChannel.listen('.VideoCallAvailable', () => {
+            if (store.isActive && store.callType === 'scheduled') return;
+            // Re-bootstrap para obter token e room
+            bootstrap();
+            broadcastSync();
+        });
+
+        // Ad-hoc: médico recebe solicitação
         echoChannel.listen(
             '.VideoCallRequested',
-            (data: { call_id: string; appointment_id: string; caller: { id: number; name: string }; video_call_route?: string }) => {
+            (data: { call_id: string; appointment_id: string | null; caller: { id: number; name: string }; video_call_route?: string }) => {
                 if (store.isActive) return;
                 store.setCall({
                     callId: data.call_id,
+                    callType: 'ad_hoc',
                     appointmentId: data.appointment_id,
                     status: 'ringing',
-                    role: store.role ?? 'patient',
+                    role: store.role ?? 'doctor',
                     token: null,
                     sfuWsUrl: null,
                     videoCallRoute: data.video_call_route ?? '/video-call',
                     appointmentLabel: null,
+                    window: null,
                 });
                 broadcastSync();
             },
@@ -120,7 +151,7 @@ export function useVideoCallSession() {
             broadcastChannel = new BroadcastChannel('video-call-session');
             broadcastChannel.onmessage = (ev) => {
                 const { type, callId, status } = ev.data ?? {};
-                if (type === 'sync' && callId && status) {
+                if (type === 'sync' && callId && isValidSyncStatus(status)) {
                     if (status === 'ended' || status === 'rejected') {
                         store.clearCall();
                     } else if (callId !== store.callId) {
@@ -143,6 +174,7 @@ export function useVideoCallSession() {
 
     function teardown(): void {
         if (echoChannel) {
+            echoChannel.stopListening('.VideoCallAvailable');
             echoChannel.stopListening('.VideoCallRequested');
             echoChannel.stopListening('.VideoCallAccepted');
             echoChannel.stopListening('.VideoCallRejected');

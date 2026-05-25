@@ -58,6 +58,21 @@ docker_compose_cmd() {
   fi
 }
 
+env_value() {
+  local key="$1"
+  local value
+  value="$(printenv "$key" 2>/dev/null || true)"
+  if [ -n "$value" ]; then
+    printf '%s' "$value"
+    return 0
+  fi
+
+  if [ -f .env ]; then
+    value="$(grep -E "^${key}=" .env | head -n1 | cut -d= -f2- | sed -e 's/^"//' -e 's/"$//' -e "s/^'//" -e "s/'$//")"
+    printf '%s' "$value"
+  fi
+}
+
 # --- 2. .env a partir de .env.example ---
 ensure_env() {
   if [ ! -f .env ]; then
@@ -125,7 +140,14 @@ wait_for_db() {
         return 0
       fi
     elif [ "$db_connection" = "mysql" ]; then
-      if docker_compose_cmd exec -T mysql mysqladmin ping -h localhost -u root -proot_secret >/dev/null 2>&1; then
+      local db_password
+      db_password="$(env_value DB_PASSWORD)"
+      if [ -n "$db_password" ]; then
+        if docker_compose_cmd exec -T mysql mysqladmin ping -h localhost -u root -p"$db_password" >/dev/null 2>&1; then
+          log_ok "MySQL pronto."
+          return 0
+        fi
+      elif docker_compose_cmd exec -T mysql mysqladmin ping -h localhost -u root >/dev/null 2>&1; then
         log_ok "MySQL pronto."
         return 0
       fi
@@ -191,12 +213,13 @@ start_servers() {
   echo ""
   log_ok "Ambiente pronto!"
   echo ""
-  exec npx concurrently -c "#93c5fd,#c4b5fd,#fdba74,#bbf7d0" \
+  exec npx concurrently -c "#93c5fd,#c4b5fd,#fdba74,#bbf7d0,#fde68a" \
     "php artisan serve" \
     "php artisan queue:listen --tries=1" \
     "npm run dev" \
     "php artisan reverb:start" \
-    --names='server,queue,vite,reverb'
+    "php artisan schedule:work" \
+    --names='server,queue,vite,reverb,scheduler'
 }
 
 # --- Main ---

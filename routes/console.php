@@ -4,6 +4,7 @@ use App\Integrations\Jobs\ProcessIntegrationQueue;
 use App\Integrations\Jobs\SyncExamResults;
 use App\Jobs\AutoStartVideoCall;
 use App\Jobs\CleanExpiredRedisLocks;
+use App\Jobs\EndScheduledVideoCalls;
 use App\Jobs\EndZombieVideoCalls;
 use App\Jobs\MarkNoShowAppointments;
 use App\Jobs\SendAppointmentReminders;
@@ -33,7 +34,13 @@ Schedule::job(new MarkNoShowAppointments)
     ->withoutOverlapping()
     ->onOneServer();
 
-// Manutenção — finalizar chamadas de vídeo presas/zumbis
+// Videochamada — encerrar salas scheduled fora da janela
+Schedule::job(new EndScheduledVideoCalls)
+    ->everyMinute()
+    ->withoutOverlapping()
+    ->onOneServer();
+
+// Manutenção — finalizar chamadas ad-hoc presas/zumbis
 Schedule::job(new EndZombieVideoCalls)
     ->cron(config('telemedicine.maintenance.video_zombie_cleanup_cron', '*/5 * * * *'))
     ->withoutOverlapping()

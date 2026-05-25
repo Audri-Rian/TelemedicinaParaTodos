@@ -12,6 +12,7 @@ class Call extends Model
     use HasUuids;
 
     protected $fillable = [
+        'call_type',
         'appointment_id',
         'doctor_id',
         'patient_id',
@@ -27,11 +28,20 @@ class Call extends Model
         'ended_at' => 'datetime',
     ];
 
+    public const TYPE_SCHEDULED = 'scheduled';
+
+    public const TYPE_AD_HOC = 'ad_hoc';
+
     public const STATUS_REQUESTED = 'requested';
+
     public const STATUS_RINGING = 'ringing';
+
     public const STATUS_ACCEPTED = 'accepted';
+
     public const STATUS_REJECTED = 'rejected';
+
     public const STATUS_ENDED = 'ended';
+
     public const STATUS_MISSED = 'missed';
 
     public function appointment(): BelongsTo

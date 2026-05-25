@@ -140,10 +140,23 @@ return [
     */
 
     'video_call' => [
-        // Minutos de inatividade para encerrar sala "zumbi".
+        // Minutos ANTES do scheduled_at para abrir a sala (chamada agendada).
+        // Unificado com appointment.lead_minutes — agenda e sala abrem juntos.
+        'window_lead_minutes' => (int) env('VIDEO_CALL_WINDOW_LEAD_MINUTES', 10),
+
+        // Minutos APÓS o scheduled_at para encerrar a sala (chamada agendada).
+        'window_trailing_minutes' => (int) env('VIDEO_CALL_WINDOW_TRAILING_MINUTES', 10),
+
+        // Duração máxima em minutos de chamadas ad-hoc. EndZombieVideoCalls usa este valor.
+        'ad_hoc_max_duration_minutes' => (int) env('VIDEO_CALL_ADHOC_MAX_MINUTES', 60),
+
+        // Janela de elegibilidade ad-hoc: paciente só liga se tiver consulta nos últimos N dias.
+        'ad_hoc_relationship_days' => (int) env('VIDEO_CALL_ADHOC_RELATIONSHIP_DAYS', 7),
+
+        // Minutos de inatividade para encerrar sala "zumbi" (ad-hoc apenas).
         'room_inactive_minutes' => (int) env('VIDEO_ROOM_INACTIVE_MINUTES', 60),
 
-        // Duração máxima de uma sala ativa (minutos). Evita salas eternas.
+        // Duração máxima de uma sala ativa (minutos). Evita salas eternas (ad-hoc fallback).
         'room_max_duration_minutes' => (int) env('VIDEO_ROOM_MAX_DURATION_MINUTES', 120),
 
         // TTL do JWT de acesso à sala de vídeo (minutos). CallManagerService::generateRoomToken.
@@ -154,9 +167,6 @@ return [
 
         // Exige healthcheck do SFU antes de aceitar chamadas (fail-closed). Provider=sfu apenas.
         'require_sfu_health' => (bool) env('VIDEO_CALL_REQUIRE_SFU_HEALTH', true),
-
-        // Janela para iniciar videoconferência: usa appointment.lead_minutes e trailing_minutes.
-        // DoctorConsultationsController, PatientVideoCallController.
     ],
 
     /*

@@ -64,10 +64,12 @@ class AuthServiceProvider extends ServiceProvider
         });
 
         Gate::define('video-call-request', [VideoCallPolicy::class, 'request']);
+        Gate::define('video-call-request-adhoc', [VideoCallPolicy::class, 'requestAdhoc']);
         Gate::define('video-call-accept', [VideoCallPolicy::class, 'accept']);
         Gate::define('video-call-reject', [VideoCallPolicy::class, 'reject']);
         Gate::define('video-call-end', [VideoCallPolicy::class, 'end']);
         Gate::define('video-call-view', [VideoCallPolicy::class, 'view']);
         Gate::define('video-call-view-active', [VideoCallPolicy::class, 'viewActive']);
+        Gate::define('video-call-join-session', [VideoCallPolicy::class, 'joinSession']);
     }
 }

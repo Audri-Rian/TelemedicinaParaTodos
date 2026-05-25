@@ -22,19 +22,21 @@ class DoctorVideoCallController extends Controller
             return Inertia::render('Doctor/VideoCall', ['appointments' => []]);
         }
 
-        $leadMinutes = (int) config('telemedicine.appointment.lead_minutes', 10);
-        $trailingMinutes = (int) config('telemedicine.appointment.trailing_minutes', 10);
+        $leadMinutes = (int) config('telemedicine.video_call.window_lead_minutes', 10);
+        $trailingMinutes = (int) config('telemedicine.video_call.window_trailing_minutes', 10);
         $now = Carbon::now();
         $windowStart = $now->copy()->subMinutes($trailingMinutes);
         $windowEnd = $now->copy()->addMinutes($leadMinutes);
 
+        // Inclui scheduled (type=scheduled, status=accepted) e ad-hoc entrantes (requested/ringing)
         $activeCallsByAppointment = Call::whereIn('status', [
             Call::STATUS_REQUESTED,
             Call::STATUS_RINGING,
             Call::STATUS_ACCEPTED,
         ])
             ->where('doctor_id', $doctor->id)
-            ->get(['id', 'status', 'appointment_id'])
+            ->whereNull('ended_at')
+            ->get(['id', 'status', 'call_type', 'appointment_id'])
             ->keyBy('appointment_id');
 
         $appointments = Appointments::with('patient.user')
@@ -44,9 +46,9 @@ class DoctorVideoCallController extends Controller
                 Appointments::STATUS_RESCHEDULED,
                 Appointments::STATUS_IN_PROGRESS,
             ])
-            ->where(function ($query) use ($windowStart, $windowEnd) {
+            ->where(function ($query) use ($windowStart) {
                 $query->where('status', Appointments::STATUS_IN_PROGRESS)
-                    ->orWhereBetween('scheduled_at', [$windowStart, $windowEnd]);
+                    ->orWhere('scheduled_at', '>=', $windowStart);
             })
             ->orderByRaw("CASE WHEN status = 'in_progress' THEN 0 ELSE 1 END")
             ->orderBy('scheduled_at')
@@ -64,8 +66,14 @@ class DoctorVideoCallController extends Controller
                     $timeWindowMessage = 'Horário da consulta';
                 } elseif ($minutesDiff < 0) {
                     $timeWindowMessage = 'Tempo restante: '.abs($minutesDiff).' min';
-                } else {
+                } elseif ($minutesDiff < 60) {
                     $timeWindowMessage = 'Início em '.$minutesDiff.' min';
+                } elseif ($minutesDiff < 1440) {
+                    $hoursUntil = (int) round($minutesDiff / 60);
+                    $timeWindowMessage = 'Início em '.$hoursUntil.($hoursUntil === 1 ? ' hora' : ' horas');
+                } else {
+                    $daysUntil = (int) round($minutesDiff / 1440);
+                    $timeWindowMessage = 'Agendado para '.$daysUntil.($daysUntil === 1 ? ' dia' : ' dias');
                 }
 
                 $activeCall = $activeCallsByAppointment->get($appointment->id);
@@ -78,7 +86,11 @@ class DoctorVideoCallController extends Controller
                     'status' => $appointment->status,
                     'can_start_call' => $canStartCall,
                     'time_window_message' => $timeWindowMessage,
-                    'active_call' => $activeCall ? ['id' => $activeCall->id, 'status' => $activeCall->status] : null,
+                    'active_call' => $activeCall ? [
+                        'id' => $activeCall->id,
+                        'status' => $activeCall->status,
+                        'call_type' => $activeCall->call_type,
+                    ] : null,
                     'patient' => [
                         'id' => $appointment->patient->user_id,
                         'name' => $appointment->patient->user->name,
@@ -86,8 +98,6 @@ class DoctorVideoCallController extends Controller
                 ];
             });
 
-        return Inertia::render('Doctor/VideoCall', [
-            'appointments' => $appointments,
-        ]);
+        return Inertia::render('Doctor/VideoCall', ['appointments' => $appointments]);
     }
 }

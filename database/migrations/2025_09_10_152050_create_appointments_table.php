@@ -22,22 +22,23 @@ return new class extends Migration
             $table->string('video_recording_url')->nullable();
             $table->enum('status', [
                 'scheduled',
-                'in_progress', 
+                'in_progress',
                 'completed',
                 'no_show',
                 'cancelled',
-                'rescheduled'
+                'rescheduled',
             ])->default('scheduled');
             $table->text('notes')->nullable();
             $table->json('metadata')->nullable();
             $table->timestamps();
             $table->softDeletes();
-            
+
             // Índices para performance
             $table->index(['doctor_id', 'scheduled_at']);
             $table->index(['patient_id', 'scheduled_at']);
             $table->index(['status', 'scheduled_at']);
             $table->index('access_code');
+            $table->index(['patient_id', 'doctor_id', 'ended_at'], 'appointments_adhoc_relationship_idx');
         });
     }
 

@@ -20,6 +20,7 @@ import {
     Loader2,
     Mic,
     MonitorUp,
+    Phone,
     RefreshCw,
     ShieldCheck,
     Video,
@@ -38,13 +39,15 @@ interface Appointment {
 
 interface UserProp {
     id: number;
+    doctor_id?: string;
     name: string;
-    email: string;
     hasAppointment?: boolean;
     canStartCall?: boolean;
     appointment?: Appointment | null;
     allAppointments?: Appointment[];
     timeWindowMessage?: string | null;
+    hasActiveScheduledCall?: boolean;
+    hasRecentConsultation?: boolean;
 }
 
 type StatusTone = 'live' | 'go' | 'wait' | 'warn' | 'muted';
@@ -53,7 +56,7 @@ const { canAccessPatientRoute } = useRouteGuard();
 const { getInitials } = useInitials();
 const page = usePage();
 
-const { callState, currentCall, isLoading, sfu, requestCall, endCall } = useVideoCall();
+const { callState, currentCall, isLoading, sfu, joinActiveCall, requestCall, endCall } = useVideoCall();
 
 const users = ((page.props.users as UserProp[]) || []).map((user) => ({
     ...user,
@@ -113,7 +116,7 @@ const getStatusLabel = (status: string): string => {
 const statusTone = (user: UserProp | null): StatusTone => {
     if (!user?.hasAppointment || !user.appointment) return 'muted';
     if (user.appointment.status === 'in_progress') return 'live';
-    if (user.canStartCall) return 'go';
+    if (user.canStartCall || user.hasActiveScheduledCall) return 'go';
     if (['completed'].includes(user.appointment.status)) return 'muted';
     if (['no_show'].includes(user.appointment.status) || user.timeWindowMessage?.includes('expirada')) return 'warn';
     return 'wait';
@@ -141,17 +144,35 @@ const statusDotClasses = (tone: StatusTone) => {
     return map[tone];
 };
 
-const ctaMode = computed<'join' | 'ringing' | 'in-call' | 'ended' | 'waiting'>(() => {
+// Modo CTA baseado em tipo de chamada disponível
+const ctaMode = computed<'join-scheduled' | 'calling' | 'in-call' | 'ended' | 'waiting' | 'ad-hoc-available' | 'ad-hoc-calling'>(() => {
     if (callState.value === 'accepted') return 'in-call';
     if (callState.value === 'ended') return 'ended';
-    if (callState.value === 'requesting' || callState.value === 'ringing') return 'ringing';
-    if (!selectedUser.value?.hasAppointment || !selectedUser.value.canStartCall) return 'waiting';
-    return 'join';
+    if (callState.value === 'calling' || callState.value === 'ringing') return 'ad-hoc-calling';
+
+    if (selectedUser.value?.hasActiveScheduledCall || (selectedUser.value?.canStartCall && selectedUser.value.hasAppointment)) {
+        return 'join-scheduled';
+    }
+
+    if (selectedUser.value?.hasRecentConsultation && selectedUser.value.doctor_id) {
+        return 'ad-hoc-available';
+    }
+
+    return 'waiting';
 });
 
 const joinVideoCall = async () => {
-    if (!selectedAppointment.value || isLoading.value) return;
-    await requestCall(selectedAppointment.value.id);
+    if (isLoading.value) return;
+
+    if (ctaMode.value === 'join-scheduled') {
+        await joinActiveCall();
+        return;
+    }
+
+    if (ctaMode.value === 'ad-hoc-available' && selectedUser.value?.doctor_id) {
+        await requestCall(selectedUser.value.doctor_id);
+        return;
+    }
 };
 
 const handleEndCall = async () => {
@@ -265,7 +286,6 @@ const checklist = [
                                         <h3 class="truncate text-sm font-black text-gray-950">{{ user.name }}</h3>
                                         <Check v-if="selectedUser?.id === user.id" class="h-4 w-4 shrink-0 text-[#0f6e78]" />
                                     </div>
-                                    <p class="mt-0.5 truncate text-xs font-semibold text-gray-500">{{ user.email }}</p>
                                     <span
                                         class="mt-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-black"
                                         :class="statusClasses(statusTone(user))"
@@ -313,7 +333,6 @@ const checklist = [
                                                     <div>
                                                         <p class="text-xs font-black text-gray-500 uppercase">Médico selecionado</p>
                                                         <h2 class="mt-1 text-2xl font-black text-gray-950">{{ selectedUser.name }}</h2>
-                                                        <p class="mt-1 text-sm font-semibold text-gray-500">{{ selectedUser.email }}</p>
                                                         <span
                                                             class="mt-3 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-black"
                                                             :class="statusClasses(statusTone(selectedUser))"
@@ -326,11 +345,14 @@ const checklist = [
                                                 <div class="rounded-lg border border-[#dde5ea] bg-[#f4f6f8] px-4 py-3">
                                                     <p class="text-[11px] font-black text-gray-500 uppercase">Status da chamada</p>
                                                     <p class="mt-1 flex items-center gap-2 text-sm font-black text-gray-700">
-                                                        <Loader2 v-if="callState === 'requesting'" class="h-4 w-4 animate-spin" />
-                                                        <RefreshCw v-else-if="callState === 'ringing'" class="h-4 w-4 animate-spin" />
+                                                        <Loader2
+                                                            v-if="callState === 'calling' || callState === 'ringing'"
+                                                            class="h-4 w-4 animate-spin"
+                                                        />
+                                                        <RefreshCw v-else-if="callState === 'accepted'" class="h-4 w-4 text-emerald-600" />
                                                         <Video v-else class="h-4 w-4" />
                                                         {{
-                                                            callState === 'requesting'
+                                                            callState === 'calling'
                                                                 ? 'Aguardando médico...'
                                                                 : callState === 'ringing'
                                                                   ? 'Chamando...'
@@ -445,22 +467,25 @@ const checklist = [
                                                     <VideoOff class="mx-auto h-10 w-10 text-gray-400" />
                                                     <p class="mt-3 text-sm font-black">Chamada finalizada</p>
                                                 </div>
-                                                <div v-else-if="ctaMode === 'ringing'" class="text-center">
+                                                <div v-else-if="ctaMode === 'ad-hoc-calling'" class="text-center">
                                                     <Loader2 class="mx-auto h-10 w-10 animate-spin text-[#40e0d0]" />
                                                     <p class="mt-3 text-sm font-black">Aguardando médico...</p>
                                                 </div>
-                                                <div v-else-if="ctaMode === 'waiting'" class="text-center">
+                                                <div v-else-if="ctaMode === 'join-scheduled'" class="text-center">
+                                                    <Video class="mx-auto h-10 w-10 text-[#40e0d0]" />
+                                                    <p class="mt-3 text-sm font-black">Consulta disponível</p>
+                                                    <p class="mt-1 px-6 text-xs font-semibold text-white/60">Sala pronta. Clique para entrar.</p>
+                                                </div>
+                                                <div v-else-if="ctaMode === 'ad-hoc-available'" class="text-center">
+                                                    <Phone class="mx-auto h-10 w-10 text-[#40e0d0]" />
+                                                    <p class="mt-3 text-sm font-black">Ligar para médico</p>
+                                                    <p class="mt-1 px-6 text-xs font-semibold text-white/60">Chamada fora do horário agendado.</p>
+                                                </div>
+                                                <div v-else class="text-center">
                                                     <Clock class="mx-auto h-10 w-10 text-[#40e0d0]/70" />
                                                     <p class="mt-3 text-sm font-black">Aguardando o horário</p>
                                                     <p class="mt-1 px-6 text-xs font-semibold text-white/60">
                                                         A chamada abre 10 min antes do horário agendado.
-                                                    </p>
-                                                </div>
-                                                <div v-else class="text-center">
-                                                    <Video class="mx-auto h-10 w-10 text-[#40e0d0]" />
-                                                    <p class="mt-3 text-sm font-black">Pronto para entrar</p>
-                                                    <p class="mt-1 px-6 text-xs font-semibold text-white/60">
-                                                        Clique em "Entrar na chamada" para iniciar.
                                                     </p>
                                                 </div>
                                             </div>
@@ -469,32 +494,35 @@ const checklist = [
                                                 type="button"
                                                 class="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-lg border-none px-4 text-sm font-black disabled:cursor-not-allowed"
                                                 :class="
-                                                    ctaMode === 'join'
+                                                    ctaMode === 'join-scheduled' || ctaMode === 'ad-hoc-available'
                                                         ? 'bg-teal-500 text-gray-950 hover:bg-teal-400'
                                                         : ctaMode === 'in-call'
                                                           ? 'bg-emerald-100 text-emerald-800'
                                                           : 'cursor-not-allowed bg-gray-200 text-gray-500'
                                                 "
-                                                :disabled="ctaMode !== 'join' || isLoading"
+                                                :disabled="(ctaMode !== 'join-scheduled' && ctaMode !== 'ad-hoc-available') || isLoading"
                                                 @click="joinVideoCall"
                                             >
-                                                <Loader2 v-if="isLoading || ctaMode === 'ringing'" class="h-4 w-4 animate-spin" />
-                                                <Video v-else-if="ctaMode === 'join'" class="h-4 w-4" />
+                                                <Loader2 v-if="isLoading || ctaMode === 'ad-hoc-calling'" class="h-4 w-4 animate-spin" />
+                                                <Video v-else-if="ctaMode === 'join-scheduled'" class="h-4 w-4" />
+                                                <Phone v-else-if="ctaMode === 'ad-hoc-available'" class="h-4 w-4" />
                                                 <Video v-else-if="ctaMode === 'in-call'" class="h-4 w-4" />
                                                 <VideoOff v-else-if="ctaMode === 'ended'" class="h-4 w-4" />
                                                 <Clock v-else class="h-4 w-4" />
                                                 {{
                                                     isLoading
-                                                        ? 'Iniciando...'
-                                                        : ctaMode === 'ringing'
+                                                        ? 'Aguarde...'
+                                                        : ctaMode === 'ad-hoc-calling'
                                                           ? 'Aguardando médico...'
-                                                          : ctaMode === 'join'
-                                                            ? 'Entrar na chamada'
-                                                            : ctaMode === 'in-call'
-                                                              ? 'Chamada em andamento'
-                                                              : ctaMode === 'ended'
-                                                                ? 'Chamada finalizada'
-                                                                : 'Aguardando o horário'
+                                                          : ctaMode === 'join-scheduled'
+                                                            ? 'Entrar na consulta'
+                                                            : ctaMode === 'ad-hoc-available'
+                                                              ? 'Ligar para médico'
+                                                              : ctaMode === 'in-call'
+                                                                ? 'Chamada em andamento'
+                                                                : ctaMode === 'ended'
+                                                                  ? 'Chamada finalizada'
+                                                                  : 'Aguardando o horário'
                                                 }}
                                             </button>
                                             <p v-if="ctaMode === 'waiting'" class="mt-2 text-center text-xs font-semibold text-gray-500">
@@ -510,7 +538,7 @@ const checklist = [
                                             <ul class="mt-3 space-y-3 text-sm font-semibold text-gray-600">
                                                 <li class="flex gap-2">
                                                     <span class="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#0f6e78]" />
-                                                    A chamada só abre na janela de 10 minutos antes/depois do horário.
+                                                    A consulta agendada abre automaticamente na janela de 10 minutos.
                                                 </li>
                                                 <li class="flex gap-2">
                                                     <span class="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#0f6e78]" />

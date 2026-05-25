@@ -5,19 +5,29 @@ import { ref } from 'vue';
 export type SfuConnectionState = 'idle' | 'connecting' | 'connected' | 'failed' | 'closed';
 
 interface SfuResponse {
-    action: string;
+    action?: string;
     id?: string;
+    ok?: boolean;
     routerRtpCapabilities?: RtpCapabilities;
+    rtpCapabilities?: RtpCapabilities;
     params?: Record<string, unknown>;
     producerId?: string;
+    peerId?: string;
     consumerId?: string;
     kind?: string;
     rtpParameters?: Record<string, unknown>;
-    error?: string;
+    error?: string | { message?: string };
+    data?: Record<string, unknown>;
     [key: string]: unknown;
 }
 
-type PendingResolver = (value: SfuResponse) => void;
+interface PendingRequest {
+    resolve: (value: SfuResponse) => void;
+    reject: (reason: Error) => void;
+    timeout: ReturnType<typeof setTimeout>;
+}
+
+type PendingProducer = { producerId: string; peerId?: string; kind?: string };
 
 export function useSfu() {
     const connectionState = ref<SfuConnectionState>('idle');
@@ -32,7 +42,8 @@ export function useSfu() {
     let recvTransport: Transport | null = null;
     const producers = new Map<string, Producer>();
     const consumers = new Map<string, Consumer>();
-    const pendingRequests = new Map<string, PendingResolver>();
+    const pendingRequests = new Map<string, PendingRequest>();
+    const pendingNewProducers: PendingProducer[] = [];
     let requestIdCounter = 0;
 
     const sendRequest = (action: string, data: Record<string, unknown> = {}): Promise<SfuResponse> => {
@@ -43,20 +54,24 @@ export function useSfu() {
             }
 
             const id = String(++requestIdCounter);
-            pendingRequests.set(id, resolve);
-
             const timeout = setTimeout(() => {
                 pendingRequests.delete(id);
                 reject(new Error(`Timeout na requisição: ${action}`));
             }, 15000);
 
-            pendingRequests.set(id, (response) => {
-                clearTimeout(timeout);
-                resolve(response);
-            });
+            pendingRequests.set(id, { resolve, reject, timeout });
 
             ws.send(JSON.stringify({ action, id, ...data }));
         });
+    };
+
+    const normalizeResponse = (msg: SfuResponse): SfuResponse => {
+        if (msg.ok === false) {
+            const message = typeof msg.error === 'string' ? msg.error : (msg.error?.message ?? 'Erro no servidor');
+            throw new Error(message);
+        }
+
+        return (msg.data ?? msg) as SfuResponse;
     };
 
     const sendNotification = (action: string, data: Record<string, unknown> = {}) => {
@@ -73,9 +88,15 @@ export function useSfu() {
         }
 
         if (msg.id && pendingRequests.has(msg.id as string)) {
-            const resolve = pendingRequests.get(msg.id as string)!;
+            const pending = pendingRequests.get(msg.id as string)!;
             pendingRequests.delete(msg.id as string);
-            resolve(msg);
+            clearTimeout(pending.timeout);
+
+            try {
+                pending.resolve(normalizeResponse(msg));
+            } catch (error) {
+                pending.reject(error as Error);
+            }
             return;
         }
 
@@ -90,19 +111,32 @@ export function useSfu() {
     };
 
     const handleNewProducer = async (msg: SfuResponse) => {
-        if (!recvTransport || !device || !msg.producerId) return;
+        const data = msg.data ?? {};
+        const producerId = (msg.producerId ?? data.producerId) as string | undefined;
+        const peerId = (msg.peerId ?? data.peerId) as string | undefined;
+        const kind = (msg.kind ?? data.kind) as string | undefined;
+
+        if (!producerId) return;
+
+        if (!recvTransport || !device) {
+            pendingNewProducers.push({ producerId, peerId, kind });
+            return;
+        }
 
         try {
             const response = await sendRequest('consume', {
-                producerId: msg.producerId,
+                producerId,
                 rtpCapabilities: device.rtpCapabilities,
             });
 
-            if (response.error || !response.consumerId || !response.kind || !response.rtpParameters) return;
+            const consumerId = response.consumerId ?? response.id;
+            const responseProducerId = response.producerId ?? producerId;
+
+            if (response.error || !consumerId || !response.kind || !response.rtpParameters) return;
 
             const consumer = await recvTransport.consume({
-                id: response.consumerId as string,
-                producerId: msg.producerId as string,
+                id: consumerId as string,
+                producerId: responseProducerId as string,
                 kind: response.kind as 'audio' | 'video',
                 rtpParameters: response.rtpParameters as mediasoup.types.RtpParameters,
             });
@@ -111,37 +145,47 @@ export function useSfu() {
 
             const stream = new MediaStream([consumer.track]);
             const updated = new Map(remoteStreams.value);
-            updated.set(msg.producerId as string, stream);
+            updated.set(`${peerId ?? 'remote'}:${kind ?? consumer.kind}:${producerId}`, stream);
             remoteStreams.value = updated;
 
-            sendNotification('resumeConsumer', { consumerId: consumer.id });
+            await sendRequest('resumeConsumer', { consumerId: consumer.id });
         } catch {
             // falha silenciosa — peer pode ter saído antes de consumir
         }
     };
 
     const handlePeerLeft = (msg: SfuResponse) => {
-        if (!msg.producerId) return;
+        const data = msg.data ?? {};
+        const peerId = (msg.peerId ?? data.peerId) as string | undefined;
+        if (!peerId) return;
+
         const updated = new Map(remoteStreams.value);
-        updated.delete(msg.producerId as string);
+        [...updated.keys()].forEach((key) => {
+            if (key.startsWith(`${peerId}:`)) {
+                updated.delete(key);
+            }
+        });
         remoteStreams.value = updated;
     };
 
     const createWebRtcTransport = async (direction: 'send' | 'recv'): Promise<Transport> => {
         const response = await sendRequest('createWebRtcTransport', { direction });
 
-        if (response.error || !response.params) {
-            throw new Error(`Falha ao criar transporte ${direction}: ${response.error ?? 'sem params'}`);
-        }
-
-        const params = response.params as {
-            id: string;
-            iceParameters: mediasoup.types.IceParameters;
-            iceCandidates: mediasoup.types.IceCandidate[];
-            dtlsParameters: mediasoup.types.DtlsParameters;
+        const params = (response.params ?? response) as {
+            id?: string;
+            iceParameters?: mediasoup.types.IceParameters;
+            iceCandidates?: mediasoup.types.IceCandidate[];
+            dtlsParameters?: mediasoup.types.DtlsParameters;
         };
 
-        const transport = direction === 'send' ? device!.createSendTransport(params) : device!.createRecvTransport(params);
+        if (response.error || !params.id || !params.iceParameters || !params.iceCandidates || !params.dtlsParameters) {
+            throw new Error(`Falha ao criar transporte ${direction}: ${response.error ?? 'params inválidos'}`);
+        }
+
+        const transport =
+            direction === 'send'
+                ? device!.createSendTransport(params as mediasoup.types.TransportOptions)
+                : device!.createRecvTransport(params as mediasoup.types.TransportOptions);
 
         transport.on('connect', ({ dtlsParameters }, callback, errback) => {
             sendRequest('connectWebRtcTransport', { transportId: transport.id, dtlsParameters })
@@ -190,13 +234,13 @@ export function useSfu() {
 
             ws.onopen = async () => {
                 try {
-                    await sendRequest('join', { token });
+                    const joinResponse = await sendRequest('join', { token });
 
-                    const capsResponse = await sendRequest('getRouterRtpCapabilities');
-                    if (!capsResponse.routerRtpCapabilities) throw new Error('Sem RTP capabilities');
+                    const routerRtpCapabilities = joinResponse.rtpCapabilities ?? joinResponse.routerRtpCapabilities;
+                    if (!routerRtpCapabilities) throw new Error('Sem RTP capabilities');
 
                     device = new mediasoup.Device();
-                    await device.load({ routerRtpCapabilities: capsResponse.routerRtpCapabilities });
+                    await device.load({ routerRtpCapabilities });
 
                     sendTransport = await createWebRtcTransport('send');
                     recvTransport = await createWebRtcTransport('recv');
@@ -211,6 +255,13 @@ export function useSfu() {
                     for (const track of stream.getTracks()) {
                         const producer = await sendTransport.produce({ track });
                         producers.set(producer.id, producer);
+                    }
+
+                    while (pendingNewProducers.length) {
+                        const pending = pendingNewProducers.shift();
+                        if (pending) {
+                            await handleNewProducer(pending as SfuResponse);
+                        }
                     }
 
                     connectionState.value = 'connected';

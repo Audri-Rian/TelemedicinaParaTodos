@@ -16,28 +16,29 @@ class AutoStartVideoCall implements ShouldQueue
 
     public function handle(CallManagerService $callManager): void
     {
-        $leadMinutes = (int) config('telemedicine.appointment.lead_minutes', 10);
-        $trailingMinutes = (int) config('telemedicine.appointment.trailing_minutes', 10);
+        $leadMinutes = (int) config('telemedicine.video_call.window_lead_minutes', 10);
+        $trailingMinutes = (int) config('telemedicine.video_call.window_trailing_minutes', 10);
         $now = Carbon::now();
+
+        // Janela: [scheduled_at - lead, scheduled_at + trailing]
         $windowStart = $now->copy()->subMinutes($trailingMinutes);
         $windowEnd = $now->copy()->addMinutes($leadMinutes);
 
-        $activeAppointmentIds = Call::whereIn('status', [
-            Call::STATUS_REQUESTED,
-            Call::STATUS_RINGING,
-            Call::STATUS_ACCEPTED,
-        ])->pluck('appointment_id');
+        $provisionedAppointmentIds = Call::where('call_type', Call::TYPE_SCHEDULED)
+            ->whereNull('ended_at')
+            ->whereIn('status', [Call::STATUS_ACCEPTED])
+            ->whereNotNull('appointment_id')
+            ->pluck('appointment_id');
 
         $appointments = Appointments::with(['patient.user', 'doctor'])
             ->whereIn('status', [Appointments::STATUS_SCHEDULED, Appointments::STATUS_RESCHEDULED])
             ->whereBetween('scheduled_at', [$windowStart, $windowEnd])
-            ->whereNotIn('id', $activeAppointmentIds)
+            ->whereNotIn('id', $provisionedAppointmentIds)
             ->get();
 
         foreach ($appointments as $appointment) {
             try {
-                $patientUser = $appointment->patient->user;
-                $callManager->createCall($appointment, $patientUser);
+                $callManager->provisionAppointmentCall($appointment);
 
                 Log::info('AUTO_CALL_CREATED', [
                     'appointment_id' => $appointment->id,

@@ -17,6 +17,7 @@ import { computed, onMounted, ref } from 'vue';
 interface ActiveCall {
     id: string;
     status: string;
+    call_type?: 'scheduled' | 'ad_hoc';
 }
 
 interface AppointmentProp {
@@ -34,7 +35,7 @@ interface AppointmentProp {
     };
 }
 
-type CtaMode = 'join' | 'in-call' | 'ended' | 'waiting' | 'disabled-window';
+type CtaMode = 'join' | 'join-scheduled' | 'ringing' | 'in-call' | 'ended' | 'waiting' | 'disabled-window';
 type StatusTone = 'live' | 'go' | 'wait' | 'warn' | 'muted';
 
 const { canAccessDoctorRoute } = useRouteGuard();
@@ -42,7 +43,7 @@ const { getInitials } = useInitials();
 const page = usePage();
 const store = useVideoCallStore();
 
-const { callState, currentCall, isLoading, sfu, acceptCall, endCall } = useVideoCall();
+const { callState, currentCall, isLoading, sfu, joinActiveCall, acceptCall, rejectCall, endCall } = useVideoCall();
 
 const appointments = (page.props.appointments as AppointmentProp[]) ?? [];
 const selectedAppointment = ref<AppointmentProp | null>(appointments[0] ?? null);
@@ -70,8 +71,23 @@ const appointmentCtaMode = (appointment: AppointmentProp): CtaMode => {
     const isSelected = selectedAppointment.value?.id === appointment.id;
     if (isSelected && callState.value === 'accepted') return 'in-call';
     if (isSelected && callState.value === 'ended') return 'ended';
+
+    // Ad-hoc entrante: médico recebe solicitação
+    if (isSelected && callState.value === 'ringing' && store.callType === 'ad_hoc') return 'ringing';
+
+    // Scheduled: sala provisionada pelo sistema, entrar diretamente
+    if (
+        appointment.active_call?.call_type === 'scheduled' ||
+        (store.isActive && store.callType === 'scheduled' && store.appointmentId === appointment.id)
+    ) {
+        return 'join-scheduled';
+    }
+
+    // Ad-hoc ativa: entrar
     if (appointment.active_call || (store.isActive && store.appointmentId === appointment.id)) return 'join';
+
     if (appointment.can_start_call) return 'waiting';
+
     return 'disabled-window';
 };
 
@@ -82,6 +98,20 @@ const selectedCtaMode = computed<CtaMode>(() => {
 
 const handleJoinCall = async () => {
     if (!selectedAppointment.value || isLoading.value) return;
+
+    // Scheduled: conectar diretamente via token já no store (de /calls/active)
+    if (selectedCtaMode.value === 'join-scheduled') {
+        await joinActiveCall();
+        return;
+    }
+
+    // Ad-hoc ringing: aceitar chamada
+    if (selectedCtaMode.value === 'ringing' && store.callId) {
+        await acceptCall(store.callId);
+        return;
+    }
+
+    // Ad-hoc já aceita com call ativa no appointment
     const appointment = selectedAppointment.value;
     const callId = store.isActive && store.appointmentId === appointment.id ? store.callId : appointment.active_call?.id;
     if (!callId) return;
@@ -149,6 +179,17 @@ const callStatusLabel = computed(() => {
     if (callState.value === 'rejected') return 'Chamada recusada';
     if (callState.value === 'error') return 'Erro na chamada';
     return 'Disponível';
+});
+
+const ctaLabel = computed(() => {
+    if (isLoading.value) return 'Entrando...';
+    if (selectedCtaMode.value === 'ringing') return 'Atender chamada';
+    if (selectedCtaMode.value === 'join-scheduled') return 'Entrar na consulta';
+    if (selectedCtaMode.value === 'join') return 'Entrar na chamada';
+    if (selectedCtaMode.value === 'in-call') return 'Chamada em andamento';
+    if (selectedCtaMode.value === 'ended') return 'Chamada finalizada';
+    if (selectedCtaMode.value === 'waiting') return 'Aguardando o horário';
+    return 'Fora da janela de tempo';
 });
 </script>
 
@@ -347,6 +388,40 @@ const callStatusLabel = computed(() => {
                                             </div>
                                         </div>
 
+                                        <!-- Modal inline ad-hoc: chamada entrante -->
+                                        <div
+                                            v-if="callState === 'ringing' && store.callType === 'ad_hoc'"
+                                            class="rounded-lg border border-emerald-100 bg-emerald-50 p-4"
+                                        >
+                                            <div class="flex items-center justify-between gap-3">
+                                                <div class="flex items-center gap-3">
+                                                    <Phone class="h-5 w-5 shrink-0 text-emerald-700" />
+                                                    <div>
+                                                        <h3 class="font-black text-emerald-900">Chamada recebida</h3>
+                                                        <p class="mt-1 text-sm font-semibold text-emerald-800">Paciente quer falar com você agora.</p>
+                                                    </div>
+                                                </div>
+                                                <div class="flex gap-2">
+                                                    <Button
+                                                        class="bg-emerald-600 font-black text-white hover:bg-emerald-500"
+                                                        :disabled="isLoading"
+                                                        @click="store.callId && acceptCall(store.callId)"
+                                                    >
+                                                        <Phone class="mr-1.5 h-4 w-4" />
+                                                        Atender
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        class="font-black text-red-700 hover:bg-red-50"
+                                                        @click="store.callId && rejectCall(store.callId)"
+                                                    >
+                                                        <PhoneOff class="mr-1.5 h-4 w-4" />
+                                                        Recusar
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        </div>
+
                                         <div v-if="callState === 'rejected'" class="rounded-lg border border-orange-100 bg-orange-50 p-4">
                                             <div class="flex items-center gap-3">
                                                 <AlertTriangle class="h-5 w-5 shrink-0 text-orange-700" />
@@ -367,9 +442,17 @@ const callStatusLabel = computed(() => {
                                                     <RefreshCw class="mx-auto h-10 w-10 animate-spin text-[#40e0d0]" />
                                                     <p class="mt-3 text-sm font-black">Em chamada</p>
                                                 </div>
-                                                <div v-else-if="selectedCtaMode === 'join'" class="text-center">
+                                                <div v-else-if="selectedCtaMode === 'ringing'" class="text-center">
                                                     <Phone class="mx-auto h-10 w-10 animate-pulse text-[#40e0d0]" />
-                                                    <p class="mt-3 text-sm font-black">Paciente aguardando</p>
+                                                    <p class="mt-3 text-sm font-black">Chamada recebida</p>
+                                                    <p class="mt-1 px-6 text-xs font-semibold text-white/60">Paciente aguarda seu atendimento.</p>
+                                                </div>
+                                                <div
+                                                    v-else-if="selectedCtaMode === 'join-scheduled' || selectedCtaMode === 'join'"
+                                                    class="text-center"
+                                                >
+                                                    <Phone class="mx-auto h-10 w-10 animate-pulse text-[#40e0d0]" />
+                                                    <p class="mt-3 text-sm font-black">Consulta disponível</p>
                                                 </div>
                                                 <div v-else-if="selectedCtaMode === 'ended'" class="text-center">
                                                     <PhoneOff class="mx-auto h-10 w-10 text-gray-400" />
@@ -393,33 +476,21 @@ const callStatusLabel = computed(() => {
                                                 type="button"
                                                 class="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-lg border-none px-4 text-sm font-black disabled:cursor-not-allowed"
                                                 :class="
-                                                    selectedCtaMode === 'join'
+                                                    ['join', 'join-scheduled', 'ringing'].includes(selectedCtaMode)
                                                         ? 'bg-teal-500 text-gray-950 hover:bg-teal-400'
                                                         : selectedCtaMode === 'in-call'
                                                           ? 'bg-emerald-100 text-emerald-800'
                                                           : 'cursor-not-allowed bg-gray-200 text-gray-500'
                                                 "
-                                                :disabled="selectedCtaMode !== 'join' || isLoading"
+                                                :disabled="!['join', 'join-scheduled', 'ringing'].includes(selectedCtaMode) || isLoading"
                                                 @click="handleJoinCall"
                                             >
-                                                <Loader2 v-if="isLoading && selectedCtaMode === 'join'" class="h-4 w-4 animate-spin" />
-                                                <Phone v-else-if="selectedCtaMode === 'join'" class="h-4 w-4" />
+                                                <Loader2 v-if="isLoading" class="h-4 w-4 animate-spin" />
+                                                <Phone v-else-if="['join', 'join-scheduled', 'ringing'].includes(selectedCtaMode)" class="h-4 w-4" />
                                                 <Video v-else-if="selectedCtaMode === 'in-call'" class="h-4 w-4" />
                                                 <PhoneOff v-else-if="selectedCtaMode === 'ended'" class="h-4 w-4" />
                                                 <Clock v-else class="h-4 w-4" />
-                                                {{
-                                                    isLoading && selectedCtaMode === 'join'
-                                                        ? 'Entrando...'
-                                                        : selectedCtaMode === 'join'
-                                                          ? 'Entrar na chamada'
-                                                          : selectedCtaMode === 'in-call'
-                                                            ? 'Chamada em andamento'
-                                                            : selectedCtaMode === 'ended'
-                                                              ? 'Chamada finalizada'
-                                                              : selectedCtaMode === 'waiting'
-                                                                ? 'Aguardando o horário'
-                                                                : 'Fora da janela de tempo'
-                                                }}
+                                                {{ ctaLabel }}
                                             </button>
                                             <p v-if="selectedCtaMode === 'waiting'" class="mt-2 text-center text-xs font-semibold text-gray-500">
                                                 A chamada é iniciada automaticamente pelo sistema.
