@@ -19,12 +19,17 @@ class Call extends Model
         'status',
         'requested_at',
         'accepted_at',
+        'doctor_joined_at',
+        'patient_joined_at',
         'ended_at',
+        'call_closed_reason',
     ];
 
     protected $casts = [
         'requested_at' => 'datetime',
         'accepted_at' => 'datetime',
+        'doctor_joined_at' => 'datetime',
+        'patient_joined_at' => 'datetime',
         'ended_at' => 'datetime',
     ];
 
@@ -43,6 +48,16 @@ class Call extends Model
     public const STATUS_ENDED = 'ended';
 
     public const STATUS_MISSED = 'missed';
+
+    public const CLOSED_REASON_NO_SHOW = 'no_show';
+
+    public const CLOSED_REASON_DOCTOR_NO_SHOW = 'doctor_no_show';
+
+    public const CLOSED_REASON_PATIENT_NO_SHOW = 'patient_no_show';
+
+    public const CLOSED_REASON_ENDED_BY_USER = 'ended_by_user';
+
+    public const CLOSED_REASON_WINDOW_EXPIRED = 'window_expired';
 
     public function appointment(): BelongsTo
     {

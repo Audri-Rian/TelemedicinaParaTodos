@@ -39,16 +39,47 @@ export function useVideoCall() {
     const sfu = session.mediaProvider;
 
     /**
-     * Conecta a uma chamada scheduled já provisionada via /calls/active.
+     * Conecta (ou reconecta) a uma chamada scheduled já provisionada via /calls/active.
+     * Sempre busca token fresco do servidor para evitar expiração JWT.
      */
     const joinActiveCall = async (): Promise<void> => {
-        if (isLoading.value || !store.token || !store.callId) return;
+        if (isLoading.value || !store.callId) return;
         isLoading.value = true;
 
+        const currentState = sfu.getConnectionState();
+        console.debug('[VIDEO_CALL] joinActiveCall() — estado atual SFU:', currentState);
+
+        if (currentState === 'closed' || currentState === 'failed') {
+            console.debug('[VIDEO_CALL] Desconectando SFU antes de reconectar');
+            sfu.disconnect();
+        }
+
         try {
+            // Token fresco: evita TokenExpiredError no SFU
+            console.debug('[VIDEO_CALL] Buscando token fresco via /calls/active...');
+            await session.bootstrap();
+
+            if (!store.token) {
+                console.warn('[VIDEO_CALL] /calls/active não retornou token — chamada encerrada');
+                toastError('Chamada não encontrada ou encerrada.');
+                store.clearCall();
+                return;
+            }
+
+            console.debug('[VIDEO_CALL] Token obtido — conectando ao SFU', { sfuWsUrl: store.sfuWsUrl });
             await sfu.connect(store.sfuWsUrl ?? null, store.token);
             store.setStatus('accepted');
-        } catch {
+            console.debug('[VIDEO_CALL] joinActiveCall() — conectado com sucesso');
+        } catch (err) {
+            console.error('[VIDEO_CALL] joinActiveCall() — falha ao conectar SFU:', err);
+            // Room pode ter sido destruído no SFU (peers saíram, room expirou).
+            // Se temos appointmentId, re-provisiona via session endpoint (idempotente).
+            if (store.appointmentId) {
+                console.debug('[VIDEO_CALL] Tentando re-provisionar room via /video/session', { appointmentId: store.appointmentId });
+                isLoading.value = false;
+                await joinVideoSession(store.appointmentId);
+                return;
+            }
             toastError('Não foi possível conectar à sala de vídeo');
             store.setStatus('error');
         } finally {

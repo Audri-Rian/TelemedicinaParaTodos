@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { Button } from '@/components/ui/button';
 import { Calendar, CheckCircle2, ChevronLeft, ChevronRight, Clock, Info } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 
@@ -161,16 +160,20 @@ watch(
     },
 );
 
+const isTimeSelected = (time: string): boolean => time === props.selectedTime;
+
 const handleDateSelect = (date: string) => {
     if (props.disabled || date === props.selectedDate) {
         return;
     }
 
+    const slots = availableByDate.value.get(date) ?? [];
     emit('update:selectedDate', date);
+    emit('update:selectedTime', slots[0] ?? null);
 };
 
 const handleTimeSelect = (time: string) => {
-    if (props.disabled || time === props.selectedTime) {
+    if (props.disabled) {
         return;
     }
 
@@ -261,21 +264,22 @@ watch(
                 </div>
 
                 <div v-if="selectedDate && currentDateSlots.length" class="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                    <Button
+                    <button
                         v-for="slot in currentDateSlots"
                         :key="slot"
-                        variant="outline"
+                        type="button"
                         :disabled="disabled"
+                        :aria-pressed="isTimeSelected(slot)"
                         @click="handleTimeSelect(slot)"
                         :class="[
-                            'h-11 border-slate-200 text-sm font-semibold transition',
-                            slot === selectedTime
-                                ? 'border-teal-600 bg-teal-600 text-white hover:bg-teal-700'
-                                : 'bg-white text-slate-700 hover:border-teal-300 hover:bg-teal-50',
+                            'h-11 rounded-lg border text-sm font-semibold transition focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50',
+                            isTimeSelected(slot)
+                                ? 'border-teal-600 bg-teal-600 text-white shadow-sm hover:border-teal-700 hover:bg-teal-700'
+                                : 'border-slate-200 bg-white text-slate-700 hover:border-teal-300 hover:bg-teal-50',
                         ]"
                     >
                         {{ slot }}
-                    </Button>
+                    </button>
                 </div>
 
                 <div

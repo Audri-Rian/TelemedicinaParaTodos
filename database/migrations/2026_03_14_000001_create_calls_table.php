@@ -21,7 +21,10 @@ return new class extends Migration
             $table->string('status')->default('requested');
             $table->timestamp('requested_at')->nullable();
             $table->timestamp('accepted_at')->nullable();
+            $table->timestamp('doctor_joined_at')->nullable();
+            $table->timestamp('patient_joined_at')->nullable();
             $table->timestamp('ended_at')->nullable();
+            $table->string('call_closed_reason')->nullable();
             $table->timestamps();
 
             $table->index(['status', 'appointment_id']);
@@ -43,6 +46,19 @@ return new class extends Migration
             on calls (doctor_id, patient_id)
             where call_type = 'ad_hoc' and ended_at is null
         ");
+
+        // Busca rápida de chamada ativa por médico ou paciente (GET /calls/active)
+        \DB::statement('
+            create index if not exists calls_active_doctor_idx
+            on calls (doctor_id, call_type, status)
+            where ended_at is null
+        ');
+
+        \DB::statement('
+            create index if not exists calls_active_patient_idx
+            on calls (patient_id, call_type, status)
+            where ended_at is null
+        ');
     }
 
     /**

@@ -107,6 +107,9 @@ export function useSfu() {
             case 'peerLeft':
                 handlePeerLeft(msg);
                 break;
+            case 'ping':
+                sendNotification('pong', msg.ts !== undefined ? { ts: msg.ts } : {});
+                break;
         }
     };
 
@@ -143,9 +146,11 @@ export function useSfu() {
 
             consumers.set(consumer.id, consumer);
 
-            const stream = new MediaStream([consumer.track]);
+            const peerKey = peerId ?? 'remote';
             const updated = new Map(remoteStreams.value);
-            updated.set(`${peerId ?? 'remote'}:${kind ?? consumer.kind}:${producerId}`, stream);
+            const peerStream = updated.get(peerKey) ?? new MediaStream();
+            peerStream.addTrack(consumer.track);
+            updated.set(peerKey, peerStream);
             remoteStreams.value = updated;
 
             await sendRequest('resumeConsumer', { consumerId: consumer.id });
@@ -160,11 +165,7 @@ export function useSfu() {
         if (!peerId) return;
 
         const updated = new Map(remoteStreams.value);
-        [...updated.keys()].forEach((key) => {
-            if (key.startsWith(`${peerId}:`)) {
-                updated.delete(key);
-            }
-        });
+        updated.delete(peerId);
         remoteStreams.value = updated;
     };
 
@@ -214,6 +215,7 @@ export function useSfu() {
         if (connectionState.value === 'connecting' || connectionState.value === 'connected') return;
 
         connectionState.value = 'connecting';
+        console.debug('[VIDEO_CALL][SFU] connect() — state: connecting', { sfuWsUrl, tokenPrefix: token.slice(0, 20) + '...' });
 
         // Modo stub: sem SFU real, apenas captura mídia local
         if (!sfuWsUrl) {
@@ -233,6 +235,7 @@ export function useSfu() {
             ws = new WebSocket(sfuWsUrl);
 
             ws.onopen = async () => {
+                console.debug('[VIDEO_CALL][SFU] WebSocket aberto — enviando join');
                 try {
                     const joinResponse = await sendRequest('join', { token });
 
@@ -265,8 +268,10 @@ export function useSfu() {
                     }
 
                     connectionState.value = 'connected';
+                    console.debug('[VIDEO_CALL][SFU] Conectado com sucesso');
                     resolve();
                 } catch (err) {
+                    console.error('[VIDEO_CALL][SFU] Falha no join:', err);
                     connectionState.value = 'failed';
                     ws?.close();
                     reject(err);
@@ -277,12 +282,18 @@ export function useSfu() {
                 handleMessage(event.data as string);
             };
 
-            ws.onerror = () => {
+            ws.onerror = (ev) => {
+                console.error('[VIDEO_CALL][SFU] WebSocket error', ev);
                 connectionState.value = 'failed';
                 reject(new Error('WebSocket error'));
             };
 
-            ws.onclose = () => {
+            ws.onclose = (ev) => {
+                console.debug('[VIDEO_CALL][SFU] WebSocket fechado', {
+                    code: ev.code,
+                    reason: ev.reason,
+                    wasConnected: connectionState.value === 'connected',
+                });
                 if (connectionState.value === 'connected') {
                     connectionState.value = 'closed';
                 }

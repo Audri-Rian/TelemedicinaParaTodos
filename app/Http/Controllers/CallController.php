@@ -154,7 +154,8 @@ class CallController extends Controller
 
         $token = null;
         if ($call->status === Call::STATUS_ACCEPTED && $call->room) {
-            $tokenCacheTtl = max(15, ((int) config('telemedicine.video_call.token_ttl_minutes', 10) * 60) - 30);
+            $tokenTtlMinutes = (int) config('telemedicine.video_call.token_ttl_minutes', 10);
+            $tokenCacheTtl = max(15, ($tokenTtlMinutes * 60) - 30);
             $tokenCacheKey = implode(':', [
                 'video_call_active_token',
                 (string) $call->id,
@@ -163,17 +164,44 @@ class CallController extends Controller
                 (string) ($call->room->updated_at?->getTimestamp() ?? 0),
             ]);
 
-            $token = Cache::get($tokenCacheKey);
+            $cachedToken = Cache::get($tokenCacheKey);
+            $cacheHit = is_string($cachedToken) && $cachedToken !== '';
 
-            if (! is_string($token) || $token === '') {
+            Log::debug('[VIDEO_CALL] GET /calls/active — token resolve', [
+                'call_id' => $call->id,
+                'user_id' => $user->id,
+                'cache_hit' => $cacheHit,
+                'cache_ttl_seconds' => $tokenCacheTtl,
+                'token_ttl_minutes' => $tokenTtlMinutes,
+                'room_id' => $call->room->room_id,
+            ]);
+
+            if ($cacheHit) {
+                $token = $cachedToken;
+            } else {
                 try {
                     $token = $this->callManager->generatePublicRoomToken($call, $call->room, $user);
                     Cache::put($tokenCacheKey, $token, now()->addSeconds($tokenCacheTtl));
-                } catch (\Throwable) {
+
+                    Log::debug('[VIDEO_CALL] Token gerado e cacheado', [
+                        'call_id' => $call->id,
+                        'user_id' => $user->id,
+                        'expires_in_seconds' => $tokenCacheTtl,
+                    ]);
+                } catch (\Throwable $e) {
                     $token = null;
-                    // Token generation fail: client will re-enter on next poll
+                    Log::error('[VIDEO_CALL] Falha ao gerar token', [
+                        'call_id' => $call->id,
+                        'error' => $e->getMessage(),
+                    ]);
                 }
             }
+        } else {
+            Log::debug('[VIDEO_CALL] GET /calls/active — sem token (status ou room)', [
+                'call_id' => $call->id,
+                'status' => $call->status,
+                'has_room' => (bool) $call->room,
+            ]);
         }
 
         return response()->json([
@@ -184,7 +212,6 @@ class CallController extends Controller
                 'status' => $call->status,
                 'role' => $role,
                 'token' => $token,
-                'sfu_ws_url' => $call->room?->media_ws_url,
                 'video_call_route' => $videoCallRoute,
                 'appointment_label' => $appointmentLabel,
                 'window' => $window,

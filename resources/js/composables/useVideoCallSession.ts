@@ -6,6 +6,7 @@ import type { VideoMediaProvider } from '@/services/video-call-media/VideoMediaP
 import type { VideoCallStatus, VideoCallType } from '@/stores/videoCall';
 import { useVideoCallStore } from '@/stores/videoCall';
 import { useToast } from './useToast';
+import { isSafeInternalPath } from './useVideoCallNavigation';
 
 interface ActiveCallResponse {
     data: {
@@ -15,7 +16,6 @@ interface ActiveCallResponse {
         status: 'requested' | 'ringing' | 'calling' | 'accepted';
         role: 'doctor' | 'patient';
         token: string | null;
-        sfu_ws_url: string | null;
         video_call_route: string;
         appointment_label: string | null;
         window: { opens_at: string; closes_at: string } | null;
@@ -43,7 +43,7 @@ function getMediaProvider(): VideoMediaProvider {
 
 export function useVideoCallSession() {
     const store = useVideoCallStore();
-    const { warning: toastWarning, error: toastError } = useToast();
+    const { warning: toastWarning, info: toastInfo } = useToast();
 
     async function bootstrap(): Promise<void> {
         try {
@@ -58,21 +58,11 @@ export function useVideoCallSession() {
                 status: data.status,
                 role: data.role,
                 token: data.token,
-                sfuWsUrl: data.sfu_ws_url,
+                sfuWsUrl: null,
                 videoCallRoute: data.video_call_route,
                 appointmentLabel: data.appointment_label,
                 window: data.window,
             });
-
-            // Se scheduled e já tem token, conectar SFU automaticamente
-            if (data.call_type === 'scheduled' && data.status === 'accepted' && data.token) {
-                getMediaProvider()
-                    .connect(data.sfu_ws_url ?? null, data.token)
-                    .catch(() => {
-                        toastError('Erro ao conectar à sala de vídeo');
-                        store.setStatus('error');
-                    });
-            }
         } catch {
             // bootstrap miss: sem call ativa ou endpoint indisponível
         }
@@ -100,6 +90,7 @@ export function useVideoCallSession() {
             '.VideoCallRequested',
             (data: { call_id: string; appointment_id: string | null; caller: { id: number; name: string }; video_call_route?: string }) => {
                 if (store.isActive) return;
+                const safeRoute = data.video_call_route && isSafeInternalPath(data.video_call_route) ? data.video_call_route : '/video-call';
                 store.setCall({
                     callId: data.call_id,
                     callType: 'ad_hoc',
@@ -108,7 +99,7 @@ export function useVideoCallSession() {
                     role: store.role ?? 'doctor',
                     token: null,
                     sfuWsUrl: null,
-                    videoCallRoute: data.video_call_route ?? '/video-call',
+                    videoCallRoute: safeRoute,
                     appointmentLabel: null,
                     window: null,
                 });
@@ -121,15 +112,6 @@ export function useVideoCallSession() {
             store.setStatus('accepted');
             store.setToken(data.token, data.sfu_ws_url ?? null);
             broadcastSync();
-
-            if (data.token) {
-                getMediaProvider()
-                    .connect(data.sfu_ws_url ?? null, data.token)
-                    .catch(() => {
-                        toastError('Erro ao conectar à sala de vídeo');
-                        store.setStatus('error');
-                    });
-            }
         });
 
         echoChannel.listen('.VideoCallRejected', (data: { call_id: string }) => {
@@ -141,9 +123,13 @@ export function useVideoCallSession() {
 
         echoChannel.listen('.VideoCallEnded', (data: { call_id: string }) => {
             if (store.callId !== data.call_id) return;
+            const wasConnected = getMediaProvider().getConnectionState() === 'connected';
             getMediaProvider().disconnect();
             store.clearCall();
             broadcastSync();
+            if (wasConnected) {
+                toastInfo('Consulta encerrada.');
+            }
         });
 
         // BroadcastChannel: sync cross-tab (sem token — segurança)

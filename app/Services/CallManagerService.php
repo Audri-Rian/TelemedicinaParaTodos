@@ -111,7 +111,7 @@ class CallManagerService
         $hasRelationship = Appointments::where('doctor_id', $doctor->id)
             ->where('patient_id', $patientId)
             ->whereNotIn('status', ['cancelled'])
-            ->where('ended_at', '>=', now()->subDays($relationshipDays))
+            ->where('scheduled_at', '>=', now()->subDays($relationshipDays))
             ->exists();
 
         if (! $hasRelationship) {
@@ -167,6 +167,8 @@ class CallManagerService
             'accepted_at' => now(),
         ]);
 
+        $this->invalidateActiveCallCache($call);
+
         $token = $this->generatePublicRoomToken($call, $room, $acceptedBy);
         $sfuWsUrl = $room->media_ws_url ?? config('services.media_gateway.sfu_ws_url', '') ?: null;
 
@@ -205,6 +207,7 @@ class CallManagerService
         }
 
         $call->update(['status' => Call::STATUS_REJECTED]);
+        $this->invalidateActiveCallCache($call);
         event(new \App\Events\VideoCallRejected($call, $rejectedBy));
 
         Log::info('VIDEO_CALL_ADHOC_REJECTED', ['call_id' => $call->id]);
@@ -223,7 +226,10 @@ class CallManagerService
         $call->update([
             'status' => Call::STATUS_ENDED,
             'ended_at' => now(),
+            'call_closed_reason' => Call::CLOSED_REASON_ENDED_BY_USER,
         ]);
+
+        $this->invalidateActiveCallCache($call);
 
         // Não encerrar appointment em scheduled (D6) — apenas em ad-hoc
         if ($call->call_type === Call::TYPE_AD_HOC && $call->appointment && $call->appointment->status === Appointments::STATUS_IN_PROGRESS) {
@@ -263,57 +269,87 @@ class CallManagerService
             }
         }
 
+        $closedReason = match (true) {
+            $call->doctor_joined_at && $call->patient_joined_at => Call::CLOSED_REASON_WINDOW_EXPIRED,
+            $call->patient_joined_at && ! $call->doctor_joined_at => Call::CLOSED_REASON_DOCTOR_NO_SHOW,
+            $call->doctor_joined_at && ! $call->patient_joined_at => Call::CLOSED_REASON_PATIENT_NO_SHOW,
+            default => Call::CLOSED_REASON_NO_SHOW,
+        };
+
         $call->update([
             'status' => Call::STATUS_ENDED,
             'ended_at' => now(),
+            'call_closed_reason' => $closedReason,
         ]);
+
+        $this->invalidateActiveCallCache($call);
 
         Log::info('VIDEO_CALL_WINDOW_ENDED', [
             'call_id' => $call->id,
             'appointment_id' => $call->appointment_id,
+            'closed_reason' => $closedReason,
+            'doctor_joined_at' => $call->doctor_joined_at?->toIso8601String(),
+            'patient_joined_at' => $call->patient_joined_at?->toIso8601String(),
         ]);
     }
 
     /**
      * Retorna a call ativa do usuário.
      * Prioridade: scheduled na janela > ad-hoc aceita (D13).
+     * Cache de 20s por user_id — invalidado em mudanças de status.
      */
     public function getActiveCallForUser(User $user): ?Call
     {
-        $doctorId = $user->doctor?->id;
-        $patientId = $user->patient?->id;
+        $cacheKey = "active_call_user:{$user->id}";
 
-        if (! $doctorId && ! $patientId) {
-            return null;
+        return Cache::remember($cacheKey, 20, function () use ($user) {
+            $doctorId = $user->doctor?->id;
+            $patientId = $user->patient?->id;
+
+            if (! $doctorId && ! $patientId) {
+                return null;
+            }
+
+            $baseQuery = fn ($type) => Call::with(['room', 'appointment'])
+                ->where('call_type', $type)
+                ->where(function ($q) use ($doctorId, $patientId) {
+                    if ($doctorId) {
+                        $q->orWhere('doctor_id', $doctorId);
+                    }
+                    if ($patientId) {
+                        $q->orWhere('patient_id', $patientId);
+                    }
+                });
+
+            // Scheduled na janela (status=accepted, sem ended_at)
+            $scheduled = $baseQuery(Call::TYPE_SCHEDULED)
+                ->where('status', Call::STATUS_ACCEPTED)
+                ->whereNull('ended_at')
+                ->latest('accepted_at')
+                ->first();
+
+            if ($scheduled) {
+                return $scheduled;
+            }
+
+            // Ad-hoc aceita ou em andamento
+            return $baseQuery(Call::TYPE_AD_HOC)
+                ->whereIn('status', [Call::STATUS_REQUESTED, Call::STATUS_RINGING, Call::STATUS_ACCEPTED])
+                ->latest('requested_at')
+                ->first();
+        });
+    }
+
+    private function invalidateActiveCallCache(Call $call): void
+    {
+        $call->loadMissing(['doctor.user', 'patient.user']);
+
+        if ($call->doctor?->user_id) {
+            Cache::forget("active_call_user:{$call->doctor->user_id}");
         }
-
-        $baseQuery = fn ($type) => Call::with(['room', 'appointment'])
-            ->where('call_type', $type)
-            ->where(function ($q) use ($doctorId, $patientId) {
-                if ($doctorId) {
-                    $q->orWhere('doctor_id', $doctorId);
-                }
-                if ($patientId) {
-                    $q->orWhere('patient_id', $patientId);
-                }
-            });
-
-        // Scheduled na janela (status=accepted, sem ended_at)
-        $scheduled = $baseQuery(Call::TYPE_SCHEDULED)
-            ->where('status', Call::STATUS_ACCEPTED)
-            ->whereNull('ended_at')
-            ->latest('accepted_at')
-            ->first();
-
-        if ($scheduled) {
-            return $scheduled;
+        if ($call->patient?->user_id) {
+            Cache::forget("active_call_user:{$call->patient->user_id}");
         }
-
-        // Ad-hoc aceita ou em andamento
-        return $baseQuery(Call::TYPE_AD_HOC)
-            ->whereIn('status', [Call::STATUS_REQUESTED, Call::STATUS_RINGING, Call::STATUS_ACCEPTED])
-            ->latest('requested_at')
-            ->first();
     }
 
     public function createRoom(Call $call): Room

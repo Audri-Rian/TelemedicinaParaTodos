@@ -28,6 +28,7 @@ export function createSfuVideoMediaProvider(): VideoMediaProvider {
         publishLocalStream: async () => {},
         subscribeToRemoteStream: async () => {},
         getConnectionState: () => sfu.connectionState.value,
+        connectionState: sfu.connectionState,
         localStream: sfu.localStream,
         remoteStreams: sfu.remoteStreams,
         isMicEnabled: sfu.isMicEnabled,

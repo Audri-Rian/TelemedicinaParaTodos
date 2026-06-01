@@ -1,7 +1,7 @@
 import { useVideoCallStore } from '@/stores/videoCall';
 import { router } from '@inertiajs/vue3';
 
-function isSafeInternalPath(path: string): boolean {
+export function isSafeInternalPath(path: string): boolean {
     if (!path.startsWith('/') || path.startsWith('//')) {
         return false;
     }

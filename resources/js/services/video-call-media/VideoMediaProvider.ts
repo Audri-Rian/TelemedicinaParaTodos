@@ -8,6 +8,7 @@ export interface VideoMediaProvider {
     publishLocalStream(): Promise<void>;
     subscribeToRemoteStream(producerId: string): Promise<void>;
     getConnectionState(): MediaConnectionState;
+    connectionState: Ref<MediaConnectionState>;
     localStream: Ref<MediaStream | null>;
     remoteStreams: Ref<Map<string, MediaStream>>;
     isMicEnabled: Ref<boolean>;

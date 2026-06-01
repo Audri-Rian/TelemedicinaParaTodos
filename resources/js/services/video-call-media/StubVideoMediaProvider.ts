@@ -6,11 +6,11 @@ export function createStubVideoMediaProvider(): VideoMediaProvider {
     const remoteStreams = ref<Map<string, MediaStream>>(new Map());
     const isMicEnabled = ref(true);
     const isCameraEnabled = ref(true);
-    let connectionState: MediaConnectionState = 'idle';
+    const connectionState = ref<MediaConnectionState>('idle');
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     async function connect(_sfuWsUrl: string | null, _token: string): Promise<void> {
-        connectionState = 'connecting';
+        connectionState.value = 'connecting';
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
             localStream.value = stream;
@@ -18,14 +18,14 @@ export function createStubVideoMediaProvider(): VideoMediaProvider {
             // Stub: preview sem mídia é aceitável (ex.: sem câmera no dev)
             localStream.value = null;
         }
-        connectionState = 'connected';
+        connectionState.value = 'connected';
     }
 
     function disconnect(): void {
         localStream.value?.getTracks().forEach((t) => t.stop());
         localStream.value = null;
         remoteStreams.value.clear();
-        connectionState = 'closed';
+        connectionState.value = 'closed';
     }
 
     async function publishLocalStream(): Promise<void> {
@@ -38,7 +38,7 @@ export function createStubVideoMediaProvider(): VideoMediaProvider {
     }
 
     function getConnectionState(): MediaConnectionState {
-        return connectionState;
+        return connectionState.value;
     }
 
     function toggleMic(): void {
@@ -65,6 +65,7 @@ export function createStubVideoMediaProvider(): VideoMediaProvider {
         publishLocalStream,
         subscribeToRemoteStream,
         getConnectionState,
+        connectionState,
         localStream,
         remoteStreams,
         isMicEnabled,

@@ -485,8 +485,8 @@ const qrCells = computed(() => {
     <Head title="Detalhes da Consulta" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="min-h-full flex-1 bg-slate-50 px-4 py-6 text-slate-950 sm:px-6 lg:px-8">
-            <div class="mx-auto w-full max-w-7xl">
+        <div class="min-h-full flex-1 bg-slate-50 px-2 py-6 text-slate-950 sm:px-3 lg:px-4">
+            <div class="w-full">
                 <!-- Mensagem de Sucesso -->
                 <Transition
                     enter-active-class="transition ease-out duration-300"

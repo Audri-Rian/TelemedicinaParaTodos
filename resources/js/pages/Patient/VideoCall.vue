@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import VideoControls from '@/components/VideoControls.vue';
-import VideoGrid from '@/components/VideoGrid.vue';
+import PatientVideoCallInCallOverlay from '@/components/VideoCall/PatientVideoCallInCallOverlay.vue';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { useRouteGuard } from '@/composables/auth';
@@ -26,8 +25,9 @@ import {
     Video,
     VideoOff,
     Wifi,
+    WifiOff,
 } from 'lucide-vue-next';
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 
 interface Appointment {
     id: string;
@@ -66,7 +66,7 @@ const users = ((page.props.users as UserProp[]) || []).map((user) => ({
 const selectedUser = ref<UserProp | null>(users[0] ?? null);
 const isMobileDetail = ref(false);
 const isEndingCall = ref(false);
-const videoRoomRef = ref<HTMLElement | null>(null);
+const connectionLost = ref(false);
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: patientRoutes.dashboard().url },
@@ -88,7 +88,19 @@ onMounted(() => {
 
 const selectedAppointment = computed(() => selectedUser.value?.appointment ?? null);
 const hasMultipleAppointments = computed(() => (selectedUser.value?.allAppointments?.length ?? 0) > 1);
-const isInCall = computed(() => callState.value === 'accepted');
+const isInCall = computed(() => sfu.connectionState.value === 'connected');
+
+watch(
+    () => sfu.connectionState.value,
+    (state, prev) => {
+        if (prev === 'connected' && state === 'closed') {
+            connectionLost.value = true;
+        }
+        if (state === 'connected') {
+            connectionLost.value = false;
+        }
+    },
+);
 
 const selectUser = (user: UserProp) => {
     selectedUser.value = user;
@@ -146,9 +158,12 @@ const statusDotClasses = (tone: StatusTone) => {
 
 // Modo CTA baseado em tipo de chamada disponível
 const ctaMode = computed<'join-scheduled' | 'calling' | 'in-call' | 'ended' | 'waiting' | 'ad-hoc-available' | 'ad-hoc-calling'>(() => {
-    if (callState.value === 'accepted') return 'in-call';
+    if (isInCall.value) return 'in-call';
     if (callState.value === 'ended') return 'ended';
     if (callState.value === 'calling' || callState.value === 'ringing') return 'ad-hoc-calling';
+
+    // Chamada aceita pelo servidor mas SFU não conectado, ou falha de conexão (permite retry)
+    if (callState.value === 'accepted' || callState.value === 'error') return 'join-scheduled';
 
     if (selectedUser.value?.hasActiveScheduledCall || (selectedUser.value?.canStartCall && selectedUser.value.hasAppointment)) {
         return 'join-scheduled';
@@ -182,12 +197,6 @@ const handleEndCall = async () => {
     isEndingCall.value = false;
 };
 
-const handleFullscreen = () => {
-    if (videoRoomRef.value) {
-        videoRoomRef.value.requestFullscreen?.();
-    }
-};
-
 const checklist = [
     { label: 'Câmera e microfone permitidos', description: 'Verifique permissões do navegador antes da consulta.', icon: Mic, ok: true },
     { label: 'Conexão estável', description: 'Prefira Wi-Fi ou conexão cabeada.', icon: Wifi, ok: true },
@@ -199,27 +208,23 @@ const checklist = [
 <template>
     <Head title="Videoconferência" />
 
-    <AppLayout :breadcrumbs="breadcrumbs">
-        <div v-if="isInCall" ref="videoRoomRef" class="flex min-h-0 flex-1 flex-col bg-[#0b2030]">
-            <VideoGrid
-                :local-stream="sfu.localStream.value"
-                :remote-streams="sfu.remoteStreams.value"
-                :is-mic-enabled="sfu.isMicEnabled.value"
-                :is-camera-enabled="sfu.isCameraEnabled.value"
-                class="min-h-0 flex-1"
-            />
-            <VideoControls
-                :is-mic-enabled="sfu.isMicEnabled.value"
-                :is-camera-enabled="sfu.isCameraEnabled.value"
-                :is-ending="isEndingCall"
-                @toggle-mic="sfu.toggleMic()"
-                @toggle-camera="sfu.toggleCamera()"
-                @end="handleEndCall"
-                @fullscreen="handleFullscreen"
-            />
-        </div>
+    <PatientVideoCallInCallOverlay
+        :is-in-call="isInCall"
+        :local-stream="sfu.localStream.value"
+        :remote-streams="sfu.remoteStreams.value"
+        :is-mic-enabled="sfu.isMicEnabled.value"
+        :is-camera-enabled="sfu.isCameraEnabled.value"
+        :is-ending="isEndingCall"
+        :doctor-display-name="selectedUser?.name ?? null"
+        :patient-display-name="'Você'"
+        :chief-complaint="selectedAppointment ? `Consulta em ${selectedAppointment.formatted_date} às ${selectedAppointment.formatted_time}` : null"
+        @toggle-mic="sfu.toggleMic()"
+        @toggle-camera="sfu.toggleCamera()"
+        @end="handleEndCall"
+    />
 
-        <div v-else class="flex min-h-0 flex-1 bg-[#f4f6f8] p-0 text-gray-950">
+    <AppLayout :breadcrumbs="breadcrumbs">
+        <div class="flex min-h-0 flex-1 bg-[#f4f6f8] p-0 text-gray-950">
             <div class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-[#dde5ea] bg-white shadow-sm">
                 <header class="border-b border-[#dde5ea] px-5 py-4">
                     <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -322,6 +327,16 @@ const checklist = [
                             <div class="min-h-0 flex-1 overflow-y-auto p-4 lg:p-5">
                                 <div class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
                                     <section class="space-y-5">
+                                        <div v-if="connectionLost" class="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4">
+                                            <WifiOff class="h-5 w-5 shrink-0 text-amber-700" />
+                                            <div>
+                                                <h3 class="font-black text-amber-900">Conexão interrompida</h3>
+                                                <p class="mt-1 text-sm font-semibold text-amber-800">
+                                                    A chamada foi desconectada. Clique em "Reconectar à sala" para retomar.
+                                                </p>
+                                            </div>
+                                        </div>
+
                                         <div class="rounded-lg border border-[#dde5ea] bg-white p-5 shadow-sm">
                                             <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                                                 <div class="flex gap-4">
@@ -472,9 +487,14 @@ const checklist = [
                                                     <p class="mt-3 text-sm font-black">Aguardando médico...</p>
                                                 </div>
                                                 <div v-else-if="ctaMode === 'join-scheduled'" class="text-center">
-                                                    <Video class="mx-auto h-10 w-10 text-[#40e0d0]" />
-                                                    <p class="mt-3 text-sm font-black">Consulta disponível</p>
-                                                    <p class="mt-1 px-6 text-xs font-semibold text-white/60">Sala pronta. Clique para entrar.</p>
+                                                    <WifiOff v-if="connectionLost" class="mx-auto h-10 w-10 text-amber-400" />
+                                                    <Video v-else class="mx-auto h-10 w-10 text-[#40e0d0]" />
+                                                    <p class="mt-3 text-sm font-black">
+                                                        {{ connectionLost ? 'Conexão interrompida' : 'Consulta disponível' }}
+                                                    </p>
+                                                    <p class="mt-1 px-6 text-xs font-semibold text-white/60">
+                                                        {{ connectionLost ? 'Clique para reconectar à sala.' : 'Sala pronta. Clique para entrar.' }}
+                                                    </p>
                                                 </div>
                                                 <div v-else-if="ctaMode === 'ad-hoc-available'" class="text-center">
                                                     <Phone class="mx-auto h-10 w-10 text-[#40e0d0]" />
@@ -515,7 +535,9 @@ const checklist = [
                                                         : ctaMode === 'ad-hoc-calling'
                                                           ? 'Aguardando médico...'
                                                           : ctaMode === 'join-scheduled'
-                                                            ? 'Entrar na consulta'
+                                                            ? connectionLost
+                                                                ? 'Reconectar à sala'
+                                                                : 'Entrar na consulta'
                                                             : ctaMode === 'ad-hoc-available'
                                                               ? 'Ligar para médico'
                                                               : ctaMode === 'in-call'

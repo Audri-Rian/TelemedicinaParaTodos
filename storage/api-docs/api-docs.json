@@ -18,9 +18,7 @@
     "paths": {
         "/api/messages/conversations": {
             "get": {
-                "tags": [
-                    "Mensagens"
-                ],
+                "tags": ["Mensagens"],
                 "summary": "Listar conversas",
                 "description": "Listar conversas do usuário atual",
                 "operationId": "listConversations",
@@ -59,9 +57,7 @@
         },
         "/api/messages/{userId}": {
             "get": {
-                "tags": [
-                    "Mensagens"
-                ],
+                "tags": ["Mensagens"],
                 "summary": "Mensagens com um usuário",
                 "description": "Buscar mensagens entre o usuário atual e outro usuário",
                 "operationId": "getMessages",
@@ -129,9 +125,7 @@
         },
         "/api/messages": {
             "post": {
-                "tags": [
-                    "Mensagens"
-                ],
+                "tags": ["Mensagens"],
                 "summary": "Enviar mensagem",
                 "description": "Enviar uma mensagem",
                 "operationId": "sendMessage",
@@ -140,10 +134,7 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "required": [
-                                    "receiver_id",
-                                    "content"
-                                ],
+                                "required": ["receiver_id", "content"],
                                 "properties": {
                                     "receiver_id": {
                                         "description": "ID do destinatário",
@@ -205,9 +196,7 @@
         },
         "/api/messages/{userId}/read": {
             "post": {
-                "tags": [
-                    "Mensagens"
-                ],
+                "tags": ["Mensagens"],
                 "summary": "Marcar mensagens como lidas",
                 "description": "Marcar mensagens como lidas",
                 "operationId": "markMessagesAsRead",
@@ -246,9 +235,7 @@
         },
         "/api/messages/{messageId}/delivered": {
             "post": {
-                "tags": [
-                    "Mensagens"
-                ],
+                "tags": ["Mensagens"],
                 "summary": "Marcar mensagem como entregue",
                 "description": "Marcar mensagem como entregue (delivered)",
                 "operationId": "markMessageAsDelivered",
@@ -290,9 +277,7 @@
         },
         "/api/messages/unread/count": {
             "get": {
-                "tags": [
-                    "Mensagens"
-                ],
+                "tags": ["Mensagens"],
                 "summary": "Contagem de mensagens não lidas",
                 "description": "Contar mensagens não lidas",
                 "operationId": "getUnreadMessagesCount",
@@ -328,9 +313,7 @@
         },
         "/api/appointments/availability": {
             "get": {
-                "tags": [
-                    "Agendamentos"
-                ],
+                "tags": ["Agendamentos"],
                 "summary": "Disponibilidade para agendamento",
                 "description": "Retorna horários disponíveis do médico na data. Requer autenticação (sessão).",
                 "operationId": "getAppointmentsAvailability",
@@ -382,9 +365,7 @@
         },
         "/api/avatar/upload": {
             "post": {
-                "tags": [
-                    "Avatar"
-                ],
+                "tags": ["Avatar"],
                 "summary": "Upload de avatar",
                 "description": "Upload de avatar do usuário autenticado",
                 "operationId": "uploadAvatar",
@@ -436,9 +417,7 @@
         },
         "/api/avatar/delete": {
             "delete": {
-                "tags": [
-                    "Avatar"
-                ],
+                "tags": ["Avatar"],
                 "summary": "Remover avatar",
                 "description": "Deletar avatar do usuário autenticado",
                 "operationId": "deleteAvatar",
@@ -469,9 +448,7 @@
         },
         "/api/avatar/show": {
             "get": {
-                "tags": [
-                    "Avatar"
-                ],
+                "tags": ["Avatar"],
                 "summary": "URL do avatar",
                 "description": "Obter URL do avatar do usuário autenticado",
                 "operationId": "getAvatarUrl",
@@ -514,9 +491,7 @@
         },
         "/api/doctors/{doctor}/availability/{date}": {
             "get": {
-                "tags": [
-                    "Disponibilidade"
-                ],
+                "tags": ["Disponibilidade"],
                 "summary": "Disponibilidade do médico por data",
                 "description": "Retorna slots disponíveis do médico para a data informada. Rota pública.",
                 "operationId": "getDoctorAvailabilityByDate",
@@ -568,9 +543,7 @@
         },
         "/api/notifications": {
             "get": {
-                "tags": [
-                    "Notificações"
-                ],
+                "tags": ["Notificações"],
                 "summary": "Listar notificações",
                 "description": "Listar notificações do usuário",
                 "operationId": "listNotifications",
@@ -635,9 +608,7 @@
         },
         "/api/notifications/unread": {
             "get": {
-                "tags": [
-                    "Notificações"
-                ],
+                "tags": ["Notificações"],
                 "summary": "Notificações não lidas",
                 "description": "Obter notificações não lidas",
                 "operationId": "getUnreadNotifications",
@@ -676,9 +647,7 @@
         },
         "/api/notifications/unread-count": {
             "get": {
-                "tags": [
-                    "Notificações"
-                ],
+                "tags": ["Notificações"],
                 "summary": "Contagem de não lidas",
                 "description": "Obter contador de notificações não lidas",
                 "operationId": "getUnreadNotificationsCount",
@@ -711,9 +680,7 @@
         },
         "/api/notifications/{id}/read": {
             "post": {
-                "tags": [
-                    "Notificações"
-                ],
+                "tags": ["Notificações"],
                 "summary": "Marcar como lida",
                 "description": "Marcar notificação como lida",
                 "operationId": "markNotificationAsRead",
@@ -755,9 +722,7 @@
         },
         "/api/notifications/read-all": {
             "post": {
-                "tags": [
-                    "Notificações"
-                ],
+                "tags": ["Notificações"],
                 "summary": "Marcar todas como lidas",
                 "description": "Marcar todas as notificações como lidas",
                 "operationId": "markAllNotificationsAsRead",
@@ -793,9 +758,7 @@
         },
         "/api/notifications/{id}": {
             "get": {
-                "tags": [
-                    "Notificações"
-                ],
+                "tags": ["Notificações"],
                 "summary": "Exibir notificação",
                 "description": "Obter uma notificação específica",
                 "operationId": "getNotification",
@@ -842,9 +805,7 @@
         },
         "/api/specializations/list": {
             "get": {
-                "tags": [
-                    "Especializações"
-                ],
+                "tags": ["Especializações"],
                 "summary": "Lista especializações",
                 "description": "Retorna especializações com filtros opcionais (busca, apenas ativos, contagem de médicos).",
                 "operationId": "listSpecializations",
@@ -901,9 +862,7 @@
         },
         "/api/specializations/options": {
             "get": {
-                "tags": [
-                    "Especializações"
-                ],
+                "tags": ["Especializações"],
                 "summary": "Opções de especializações",
                 "description": "Retorna id e nome para uso em selects/dropdowns.",
                 "operationId": "getSpecializationOptions",
@@ -931,9 +890,7 @@
         },
         "/api/timeline-events": {
             "get": {
-                "tags": [
-                    "Timeline"
-                ],
+                "tags": ["Timeline"],
                 "summary": "Listar eventos de timeline",
                 "description": "Display a listing of the resource.\nGET /api/timeline-events",
                 "operationId": "listTimelineEvents",
@@ -980,9 +937,7 @@
                 ]
             },
             "post": {
-                "tags": [
-                    "Timeline"
-                ],
+                "tags": ["Timeline"],
                 "summary": "Criar evento de timeline",
                 "description": "Store a newly created resource in storage.\nPOST /api/timeline-events",
                 "operationId": "createTimelineEvent",
@@ -1024,9 +979,7 @@
         },
         "/api/timeline-events/{timelineEvent}": {
             "get": {
-                "tags": [
-                    "Timeline"
-                ],
+                "tags": ["Timeline"],
                 "summary": "Exibir evento",
                 "description": "Display the specified resource.\nGET /api/timeline-events/{id}",
                 "operationId": "getTimelineEvent",
@@ -1066,9 +1019,7 @@
                 ]
             },
             "put": {
-                "tags": [
-                    "Timeline"
-                ],
+                "tags": ["Timeline"],
                 "summary": "Atualizar evento",
                 "description": "Update the specified resource in storage.\nPUT /api/timeline-events/{id}",
                 "operationId": "updateTimelineEvent",
@@ -1118,9 +1069,7 @@
                 ]
             },
             "delete": {
-                "tags": [
-                    "Timeline"
-                ],
+                "tags": ["Timeline"],
                 "summary": "Excluir evento",
                 "description": "Remove the specified resource from storage.\nDELETE /api/timeline-events/{id}",
                 "operationId": "deleteTimelineEvent",
@@ -1153,6 +1102,309 @@
                 "security": [
                     {
                         "cookieAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/public/oauth/token": {
+            "post": {
+                "tags": ["API pública"],
+                "summary": "Emite token de acesso para parceiro externo",
+                "description": "OAuth2 Client Credentials Grant. Parceiro envia client_id + client_secret e recebe um Bearer token com TTL de 1 hora.",
+                "operationId": "3e1c8ea5eef2597caf52cb0947d35aca",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": ["grant_type", "client_id", "client_secret"],
+                                "properties": {
+                                    "grant_type": {
+                                        "type": "string",
+                                        "example": "client_credentials",
+                                        "enum": ["client_credentials"]
+                                    },
+                                    "client_id": {
+                                        "type": "string",
+                                        "example": "lab-hermes-prod"
+                                    },
+                                    "client_secret": {
+                                        "type": "string",
+                                        "example": "s3cr3t"
+                                    },
+                                    "scope": {
+                                        "description": "Espaço-separado. Omitir para receber todos os scopes permitidos.",
+                                        "type": "string",
+                                        "example": "lab:read lab:write"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Token emitido com sucesso",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "access_token": {
+                                            "type": "string"
+                                        },
+                                        "token_type": {
+                                            "type": "string",
+                                            "example": "Bearer"
+                                        },
+                                        "expires_in": {
+                                            "type": "integer",
+                                            "example": 3600
+                                        },
+                                        "scope": {
+                                            "type": "string",
+                                            "example": "lab:read lab:write"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "invalid_scope — scope solicitado não permitido"
+                    },
+                    "401": {
+                        "description": "invalid_client — credenciais inválidas"
+                    },
+                    "403": {
+                        "description": "Parceiro inativo"
+                    }
+                }
+            }
+        },
+        "/api/v1/public/lab/{partnerSlug}/orders": {
+            "get": {
+                "tags": ["API pública"],
+                "summary": "Lista pedidos de exame pendentes para o laboratório",
+                "description": "Retorna um FHIR Bundle (searchset) com ServiceRequests ainda sem resultado registrado. Requer scope `lab:read`.",
+                "operationId": "3ae329e5dc1e2fb144910af8696d8868",
+                "parameters": [
+                    {
+                        "name": "partnerSlug",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "example": "lab-hermes"
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 50,
+                            "maximum": 100,
+                            "minimum": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "FHIR Bundle com pedidos pendentes",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "resourceType": {
+                                            "type": "string",
+                                            "example": "Bundle"
+                                        },
+                                        "type": {
+                                            "type": "string",
+                                            "example": "searchset"
+                                        },
+                                        "total": {
+                                            "type": "integer",
+                                            "example": 3
+                                        },
+                                        "entry": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Token inválido ou expirado"
+                    },
+                    "403": {
+                        "description": "Parceiro inativo ou scope insuficiente"
+                    },
+                    "404": {
+                        "description": "Laboratório não encontrado"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/public/webhooks/lab/{partnerSlug}": {
+            "post": {
+                "tags": ["API pública"],
+                "summary": "Recebe resultado de exame do laboratório (webhook)",
+                "description": "Laboratório envia DiagnosticReport FHIR R4 (recurso direto ou Bundle). Autenticado via HMAC-SHA256 nos headers `X-Webhook-Signature` e `X-Webhook-Timestamp`.",
+                "operationId": "117cc83eed2a08b8805e193c002f733e",
+                "parameters": [
+                    {
+                        "name": "partnerSlug",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "example": "lab-hermes"
+                    },
+                    {
+                        "name": "X-Webhook-Signature",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "example": "sha256=abc123..."
+                    },
+                    {
+                        "name": "X-Webhook-Timestamp",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "example": "1746300000"
+                    },
+                    {
+                        "name": "X-Idempotency-Key",
+                        "in": "header",
+                        "description": "Chave de idempotência. Se omitida, usa o id do DiagnosticReport.",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "description": "DiagnosticReport FHIR R4 ou Bundle contendo DiagnosticReport"
+                            },
+                            "example": {
+                                "resourceType": "DiagnosticReport",
+                                "id": "dr-001",
+                                "status": "final"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Resultado processado",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "processed"
+                                        },
+                                        "examination_id": {
+                                            "type": "string",
+                                            "format": "uuid"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Assinatura HMAC inválida ou timestamp expirado"
+                    },
+                    "404": {
+                        "description": "Parceiro ou exame não encontrado"
+                    },
+                    "500": {
+                        "description": "Erro ao processar resultado"
+                    }
+                }
+            }
+        },
+        "/api/v1/public/health/{partnerSlug}": {
+            "get": {
+                "tags": ["API pública"],
+                "summary": "Verifica status da integração com o parceiro",
+                "description": "Retorna status do parceiro, circuit breaker e resultado do health check do adapter.",
+                "operationId": "20d1809277ace76f41a16709987b2029",
+                "parameters": [
+                    {
+                        "name": "partnerSlug",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "example": "lab-hermes"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Status da integração",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "partner": {
+                                            "type": "string"
+                                        },
+                                        "status": {
+                                            "type": "string",
+                                            "enum": ["ok", "degraded", "error"]
+                                        },
+                                        "circuit_breaker": {
+                                            "type": "string",
+                                            "enum": ["closed", "open", "half_open"]
+                                        },
+                                        "adapter_check": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Token inválido"
+                    },
+                    "404": {
+                        "description": "Parceiro não encontrado"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
                     }
                 ]
             }
@@ -1238,6 +1490,10 @@
         {
             "name": "Avatar",
             "description": "Upload e gestão de avatar"
+        },
+        {
+            "name": "API pública",
+            "description": "Endpoints de interoperabilidade (futuro)"
         }
     ]
 }

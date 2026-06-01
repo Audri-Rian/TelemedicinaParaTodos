@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, ref, watchEffect } from 'vue';
 
 interface Props {
     localStream: MediaStream | null;
@@ -12,43 +12,34 @@ const props = defineProps<Props>();
 
 const localVideoEl = ref<HTMLVideoElement | null>(null);
 
-watch(
-    () => props.localStream,
-    (stream) => {
-        if (localVideoEl.value) {
-            localVideoEl.value.srcObject = stream;
-        }
-    },
-    { immediate: true },
-);
+watchEffect(() => {
+    if (localVideoEl.value) {
+        localVideoEl.value.srcObject = props.localStream;
+    }
+});
 
 const remoteVideoEls = ref<Map<string, HTMLVideoElement>>(new Map());
 
-const setRemoteVideoEl = (producerId: string, el: HTMLVideoElement | null) => {
+const setRemoteVideoEl = (peerId: string, el: HTMLVideoElement | null) => {
     if (!el) return;
-    remoteVideoEls.value.set(producerId, el);
-    const stream = props.remoteStreams.get(producerId);
+    remoteVideoEls.value.set(peerId, el);
+    const stream = props.remoteStreams.get(peerId);
     if (stream) el.srcObject = stream;
 };
 
-watch(
-    () => props.remoteStreams,
-    (streams) => {
-        streams.forEach((stream, producerId) => {
-            const el = remoteVideoEls.value.get(producerId);
-            if (el) el.srcObject = stream;
-        });
-    },
-    { deep: true },
-);
+watchEffect(() => {
+    props.remoteStreams.forEach((stream, peerId) => {
+        const el = remoteVideoEls.value.get(peerId);
+        if (el && el.srcObject !== stream) el.srcObject = stream;
+    });
+});
 
 const remoteEntries = computed(() => [...props.remoteStreams.entries()]);
 
 const gridClass = computed(() => {
     const count = remoteEntries.value.length;
-    if (count === 0) return 'grid-cols-1';
-    if (count === 1) return 'grid-cols-2';
-    if (count <= 3) return 'grid-cols-2';
+    if (count <= 1) return 'grid-cols-1';
+    if (count <= 4) return 'grid-cols-2';
     return 'grid-cols-3';
 });
 </script>
@@ -56,9 +47,9 @@ const gridClass = computed(() => {
 <template>
     <div class="relative flex h-full w-full flex-col bg-[#0b2030]">
         <div class="min-h-0 flex-1 p-2" :class="['grid gap-2', gridClass]">
-            <div v-for="[producerId] in remoteEntries" :key="producerId" class="relative overflow-hidden rounded-lg bg-[#0f2a3a]">
+            <div v-for="[peerId] in remoteEntries" :key="peerId" class="relative overflow-hidden rounded-lg bg-[#0f2a3a]">
                 <video
-                    :ref="(el) => setRemoteVideoEl(producerId, el as HTMLVideoElement | null)"
+                    :ref="(el) => setRemoteVideoEl(peerId, el as HTMLVideoElement | null)"
                     autoplay
                     playsinline
                     class="h-full w-full object-cover"

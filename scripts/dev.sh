@@ -25,6 +25,9 @@ log_ok()  { echo -e "${OK} $*"; }
 log_err() { echo -e "${FAIL} $*" >&2; }
 log_info() { echo -e "${YELLOW}→${NC} $*"; }
 
+# Filtro de ruído dos logs no terminal (pode desligar com DEV_LOG_FILTER=0)
+DEV_LOG_FILTER="${DEV_LOG_FILTER:-1}"
+
 # --- 1. Verificar dependências do ambiente ---
 check_requirements() {
   log_info "Verificando dependências do ambiente..."
@@ -181,6 +184,13 @@ install_node_deps() {
 
 # --- 8. Migrações ---
 run_migrations() {
+  local app_env
+  app_env="$(env_value APP_ENV)"
+  if [ "$app_env" = "production" ]; then
+    log_err "APP_ENV=production detectado. Abortando para evitar dano ao banco de produção."
+    exit 1
+  fi
+
   log_info "Rodando migrações..."
   if ! php artisan migrate --force --ansi; then
     log_err "Falha ao rodar migrações."
@@ -212,13 +222,46 @@ run_seed_if_requested() {
 start_servers() {
   echo ""
   log_ok "Ambiente pronto!"
+  if [ "$DEV_LOG_FILTER" = "1" ]; then
+    log_info "Filtro de logs ativo (DEV_LOG_FILTER=0 para desativar)."
+  else
+    log_info "Filtro de logs desativado."
+  fi
   echo ""
-  exec npx concurrently -c "#93c5fd,#c4b5fd,#fdba74,#bbf7d0,#fde68a" \
-    "php artisan serve" \
-    "php artisan queue:listen --tries=1" \
-    "npm run dev" \
-    "php artisan reverb:start" \
-    "php artisan schedule:work" \
+  local server_cmd
+  local queue_cmd
+  local vite_cmd
+  local reverb_cmd
+  local scheduler_cmd
+
+  if [ "$DEV_LOG_FILTER" = "1" ]; then
+    server_cmd="php artisan serve 2>&1 | stdbuf -oL -eL awk '{
+      if (\$0 ~ /\\.(png|jpe?g|gif|webp|svg|ico|css|js|map|woff2?|ttf)(\\?|$)/) next;
+      if (\$0 ~ /\\/(storage|build|images|favicon\\.ico)(\\?|$)/) next;
+      print \$0;
+      fflush();
+    }'"
+    queue_cmd="php artisan queue:work --tries=1 --quiet"
+    vite_cmd="npm run dev -- --clearScreen false --logLevel warn"
+    reverb_cmd="php artisan reverb:start"
+    scheduler_cmd="php artisan schedule:work 2>&1 | stdbuf -oL -eL awk '!/No scheduled commands are ready to run/ { print; fflush(); }'"
+  else
+    server_cmd="php artisan serve"
+    queue_cmd="php artisan queue:listen --tries=1"
+    vite_cmd="npm run dev -- --clearScreen false"
+    reverb_cmd="php artisan reverb:start"
+    scheduler_cmd="php artisan schedule:work"
+  fi
+
+  exec npx concurrently \
+    --prefix "[{time}][{name}]" \
+    --timestamp-format "HH:mm:ss" \
+    -c "#93c5fd,#c4b5fd,#fdba74,#bbf7d0,#fde68a" \
+    "$server_cmd" \
+    "$queue_cmd" \
+    "$vite_cmd" \
+    "$reverb_cmd" \
+    "$scheduler_cmd" \
     --names='server,queue,vite,reverb,scheduler'
 }
 

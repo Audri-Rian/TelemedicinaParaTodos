@@ -49,10 +49,38 @@ const csrfToken = (): string => {
     return token;
 };
 
+const xsrfToken = (): string | null => {
+    const cookie = document.cookie.split('; ').find((row) => row.startsWith('XSRF-TOKEN='));
+
+    if (!cookie) {
+        return null;
+    }
+
+    return decodeURIComponent(cookie.substring('XSRF-TOKEN='.length));
+};
+
+const jsonHeaders = (): HeadersInit => ({
+    Accept: 'application/json',
+    'X-Requested-With': 'XMLHttpRequest',
+});
+
+const csrfHeaders = (): HeadersInit => {
+    const token = xsrfToken();
+
+    return {
+        ...jsonHeaders(),
+        'Content-Type': 'application/json',
+        ...(token ? { 'X-XSRF-TOKEN': token } : { 'X-CSRF-TOKEN': csrfToken() }),
+    };
+};
+
 const loadUnread = async () => {
     try {
         loading.value = true;
-        const response = await fetch('/api/notifications/unread');
+        const response = await fetch('/api/notifications/unread', {
+            headers: jsonHeaders(),
+            credentials: 'same-origin',
+        });
         if (!response.ok) {
             if (response.status === 401) window.location.href = '/login';
             throw new Error(`HTTP ${response.status}`);
@@ -70,7 +98,10 @@ const loadUnread = async () => {
 const loadAll = async (page = 1) => {
     try {
         loading.value = true;
-        const response = await fetch(`/api/notifications?per_page=20&page=${page}`);
+        const response = await fetch(`/api/notifications?per_page=20&page=${page}`, {
+            headers: jsonHeaders(),
+            credentials: 'same-origin',
+        });
         if (!response.ok) {
             if (response.status === 401) window.location.href = '/login';
             throw new Error(`HTTP ${response.status}`);
@@ -90,7 +121,10 @@ const loadAll = async (page = 1) => {
 
 const loadUnreadCount = async () => {
     try {
-        const response = await fetch('/api/notifications/unread-count');
+        const response = await fetch('/api/notifications/unread-count', {
+            headers: jsonHeaders(),
+            credentials: 'same-origin',
+        });
         if (!response.ok) {
             if (response.status === 401) window.location.href = '/login';
             throw new Error(`HTTP ${response.status}`);
@@ -106,11 +140,7 @@ const markAsRead = async (notificationId: string) => {
     try {
         const response = await fetch(`/api/notifications/${notificationId}/read`, {
             method: 'POST',
-            headers: {
-                Accept: 'application/json',
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': csrfToken(),
-            },
+            headers: csrfHeaders(),
             credentials: 'same-origin',
         });
 
@@ -142,11 +172,7 @@ const markAllAsRead = async () => {
     try {
         const response = await fetch('/api/notifications/read-all', {
             method: 'POST',
-            headers: {
-                Accept: 'application/json',
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': csrfToken(),
-            },
+            headers: csrfHeaders(),
             credentials: 'same-origin',
         });
 

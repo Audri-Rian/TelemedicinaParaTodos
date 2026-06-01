@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import VideoControls from '@/components/VideoControls.vue';
-import VideoGrid from '@/components/VideoGrid.vue';
+import DoctorVideoCallInCallOverlay from '@/components/VideoCall/DoctorVideoCallInCallOverlay.vue';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { useRouteGuard } from '@/composables/auth';
@@ -11,8 +10,22 @@ import * as doctorRoutes from '@/routes/doctor';
 import { useVideoCallStore } from '@/stores/videoCall';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, usePage } from '@inertiajs/vue3';
-import { AlertTriangle, Calendar, Check, Clock, Loader2, MonitorUp, Phone, PhoneOff, RefreshCw, ShieldCheck, Video, VideoOff } from 'lucide-vue-next';
-import { computed, onMounted, ref } from 'vue';
+import {
+    AlertTriangle,
+    Calendar,
+    Check,
+    Clock,
+    Loader2,
+    MonitorUp,
+    Phone,
+    PhoneOff,
+    RefreshCw,
+    ShieldCheck,
+    Video,
+    VideoOff,
+    WifiOff,
+} from 'lucide-vue-next';
+import { computed, onMounted, ref, watch } from 'vue';
 
 interface ActiveCall {
     id: string;
@@ -49,7 +62,7 @@ const appointments = (page.props.appointments as AppointmentProp[]) ?? [];
 const selectedAppointment = ref<AppointmentProp | null>(appointments[0] ?? null);
 const isMobileDetail = ref(false);
 const isEndingCall = ref(false);
-const videoRoomRef = ref<HTMLElement | null>(null);
+const connectionLost = ref(false);
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: doctorRoutes.dashboard().url },
@@ -60,7 +73,19 @@ onMounted(() => {
     canAccessDoctorRoute();
 });
 
-const isInCall = computed(() => callState.value === 'accepted');
+const isInCall = computed(() => sfu.connectionState.value === 'connected');
+
+watch(
+    () => sfu.connectionState.value,
+    (state, prev) => {
+        if (prev === 'connected' && state === 'closed') {
+            connectionLost.value = true;
+        }
+        if (state === 'connected') {
+            connectionLost.value = false;
+        }
+    },
+);
 
 const selectAppointment = (appointment: AppointmentProp) => {
     selectedAppointment.value = appointment;
@@ -69,7 +94,9 @@ const selectAppointment = (appointment: AppointmentProp) => {
 
 const appointmentCtaMode = (appointment: AppointmentProp): CtaMode => {
     const isSelected = selectedAppointment.value?.id === appointment.id;
-    if (isSelected && callState.value === 'accepted') return 'in-call';
+    if (isSelected && isInCall.value) return 'in-call';
+    // Chamada aceita no servidor mas SFU não conectado ainda, ou falha (permite retry)
+    if (isSelected && (callState.value === 'accepted' || callState.value === 'error')) return 'join-scheduled';
     if (isSelected && callState.value === 'ended') return 'ended';
 
     // Ad-hoc entrante: médico recebe solicitação
@@ -123,10 +150,6 @@ const handleEndCall = async () => {
     isEndingCall.value = true;
     await endCall(currentCall.value.callId);
     isEndingCall.value = false;
-};
-
-const handleFullscreen = () => {
-    videoRoomRef.value?.requestFullscreen?.();
 };
 
 const getStatusLabel = (status: string): string => {
@@ -196,27 +219,21 @@ const ctaLabel = computed(() => {
 <template>
     <Head title="Videoconferência" />
 
-    <AppLayout :breadcrumbs="breadcrumbs">
-        <div v-if="isInCall" ref="videoRoomRef" class="flex min-h-0 flex-1 flex-col bg-[#0b2030]">
-            <VideoGrid
-                :local-stream="sfu.localStream.value"
-                :remote-streams="sfu.remoteStreams.value"
-                :is-mic-enabled="sfu.isMicEnabled.value"
-                :is-camera-enabled="sfu.isCameraEnabled.value"
-                class="min-h-0 flex-1"
-            />
-            <VideoControls
-                :is-mic-enabled="sfu.isMicEnabled.value"
-                :is-camera-enabled="sfu.isCameraEnabled.value"
-                :is-ending="isEndingCall"
-                @toggle-mic="sfu.toggleMic()"
-                @toggle-camera="sfu.toggleCamera()"
-                @end="handleEndCall"
-                @fullscreen="handleFullscreen"
-            />
-        </div>
+    <DoctorVideoCallInCallOverlay
+        :is-in-call="isInCall"
+        :local-stream="sfu.localStream.value"
+        :remote-streams="sfu.remoteStreams.value"
+        :is-mic-enabled="sfu.isMicEnabled.value"
+        :is-camera-enabled="sfu.isCameraEnabled.value"
+        :is-ending="isEndingCall"
+        :patient-display-name="selectedAppointment?.patient.name ?? null"
+        @toggle-mic="sfu.toggleMic()"
+        @toggle-camera="sfu.toggleCamera()"
+        @end="handleEndCall"
+    />
 
-        <div v-else class="flex min-h-0 flex-1 bg-[#f4f6f8] p-0 text-gray-950">
+    <AppLayout :breadcrumbs="breadcrumbs">
+        <div class="flex min-h-0 flex-1 bg-[#f4f6f8] p-0 text-gray-950">
             <div class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-[#dde5ea] bg-white shadow-sm">
                 <header class="border-b border-[#dde5ea] px-5 py-4">
                     <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -321,6 +338,16 @@ const ctaLabel = computed(() => {
                             <div class="min-h-0 flex-1 overflow-y-auto p-4 lg:p-5">
                                 <div class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
                                     <section class="space-y-5">
+                                        <div v-if="connectionLost" class="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4">
+                                            <WifiOff class="h-5 w-5 shrink-0 text-amber-700" />
+                                            <div>
+                                                <h3 class="font-black text-amber-900">Conexão interrompida</h3>
+                                                <p class="mt-1 text-sm font-semibold text-amber-800">
+                                                    A chamada foi desconectada. Clique em "Entrar na consulta" para reconectar.
+                                                </p>
+                                            </div>
+                                        </div>
+
                                         <div class="rounded-lg border border-[#dde5ea] bg-white p-5 shadow-sm">
                                             <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                                                 <div class="flex gap-4">
@@ -451,8 +478,14 @@ const ctaLabel = computed(() => {
                                                     v-else-if="selectedCtaMode === 'join-scheduled' || selectedCtaMode === 'join'"
                                                     class="text-center"
                                                 >
-                                                    <Phone class="mx-auto h-10 w-10 animate-pulse text-[#40e0d0]" />
-                                                    <p class="mt-3 text-sm font-black">Consulta disponível</p>
+                                                    <WifiOff v-if="connectionLost" class="mx-auto h-10 w-10 text-amber-400" />
+                                                    <Phone v-else class="mx-auto h-10 w-10 animate-pulse text-[#40e0d0]" />
+                                                    <p class="mt-3 text-sm font-black">
+                                                        {{ connectionLost ? 'Conexão interrompida' : 'Consulta disponível' }}
+                                                    </p>
+                                                    <p v-if="connectionLost" class="mt-1 px-6 text-xs font-semibold text-white/60">
+                                                        Clique para reconectar.
+                                                    </p>
                                                 </div>
                                                 <div v-else-if="selectedCtaMode === 'ended'" class="text-center">
                                                     <PhoneOff class="mx-auto h-10 w-10 text-gray-400" />

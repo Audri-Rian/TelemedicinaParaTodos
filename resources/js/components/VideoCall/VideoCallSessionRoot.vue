@@ -27,7 +27,9 @@ async function handleEndFromWidget() {
 }
 
 onMounted(async () => {
-    await session.bootstrap();
+    if (!store.isActive) {
+        await session.bootstrap();
+    }
     session.setupEchoListeners(props.userId);
 });
 
