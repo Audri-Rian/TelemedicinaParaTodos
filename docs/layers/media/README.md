@@ -1,87 +1,67 @@
-## 🎥 Camada de Mídia (Media Transport Layer)
+## Camada de Mídia (Media Transport Layer)
 
-Responsável por **transportar áudio, vídeo e dados em tempo real** entre participantes da consulta, normalmente de forma **P2P (peer-to-peer)**.
+Responsável por transportar áudio e vídeo em tempo real entre participantes da consulta via **WebRTC com SFU MediaSoup**.
 
-Nesta camada NÃO há regra de negócio de consulta ou permissão de usuário; ela apenas cuida de:
+Esta camada não contém regra de negócio de consulta, agenda ou permissão de usuário. Ela recebe do Laravel apenas os dados necessários para entrar na sala já autorizada: `token` JWT e `sfu_ws_url`.
 
-- Conexão WebRTC (negociação de mídia).
-- Streams de áudio/vídeo.
-- Qualidade de chamada, reconexão e encerramento.
+### Responsabilidades
 
-### 🎯 Responsabilidades
+- Conectar o navegador ao WebSocket do SFU.
+- Executar o fluxo MediaSoup:
+    - `join` com JWT.
+    - criação de transports WebRTC.
+    - conexão DTLS/ICE.
+    - publicação de áudio/vídeo com `produce`.
+    - consumo de streams remotos com `consume`.
+- Capturar mídia local com `getUserMedia`.
+- Controlar câmera, microfone, desconexão e limpeza de tracks.
+- Expor streams local/remotos para os componentes Vue.
 
-- Estabelecer e manter **conexões WebRTC** entre navegador do médico e do paciente.
-- Gerenciar:
-  - Captura de mídia (câmera, microfone, futuramente tela).
-  - Encerramento limpo de chamadas e liberação de recursos.
-  - Tratamento de erros de mídia e reconexão básica.
-- Permitir evolução futura para topologias:
-  - **P2P** (atual).
-  - **SFU** (Selective Forwarding Unit).
-  - **MCU** (Multipoint Control Unit).
+### Tecnologias envolvidas
 
-### 🧩 Tecnologias Envolvidas
+- **WebRTC** - protocolo de mídia em tempo real.
+- **MediaSoup / SFU** - roteamento seletivo de mídia no servidor.
+- **mediasoup-client** - cliente WebRTC usado pelo frontend.
+- **WebSocket do SFU** - sinalização técnica de mídia.
+- **Vue/Pinia** - estado e interface de chamada.
 
-- **WebRTC** – Protocolo de mídia em tempo real.
-- **PeerJS** – Abstração para WebRTC P2P.
-- **Vue.js** – Componentes de UI de vídeo.
-- **Navigator MediaDevices** (`getUserMedia`) – captura de mídia no navegador.
+### Documentos relacionados
 
-### 📂 Documentos Relacionados
+- `../signaling/videocall/VideoCallImplementation.md` - implementação atual de videochamada.
+- `../signaling/videocall/VideoCallTasks.md` - checklist do módulo.
+- `../../videocall/TESTE_SFU_MEDIASOUP.md` - guia de teste do SFU.
+- `../architecture-governance/diagrams/04_FluxoVideoconferencia.md` - fluxo arquitetural.
 
-- Videochamadas (implementação de mídia):
-  - `../../modules/videocall/VideoCallImplementation.md` – foco na implementação WebRTC/PeerJS.
-  - `../../modules/videocall/README.md` – visão geral do módulo de videochamadas.
-  - `../../modules/videocall/VideoCallTasks.md` – fluxo de caller/callee, `callUser`, `peer.on('call')`, etc.
-  - `../../diagrams/04_FluxoVideoconferencia.md` – sequence diagram destacando a parte P2P.
-- Frontend:
-  - Páginas de videoconferência (ex.: `resources/js/pages/Patient/VideoCall.vue`, `Dev/VideoTest.vue` – ver código).
+### Fluxo de mídia
 
-### 🔄 Fluxo de Comunicação de Mídia
+1. Laravel autoriza a chamada e emite token com `callId`, `roomId`, `userId`, `role` e expiração.
+2. Frontend chama `SfuVideoMediaProvider.connect(sfuWsUrl, token)`.
+3. `useSfu.ts` abre WebSocket com o SFU.
+4. Cliente envia `join` com o token.
+5. SFU valida JWT e retorna RTP capabilities.
+6. Cliente cria transports de envio e recebimento.
+7. Cliente captura câmera/microfone e publica producers.
+8. Ao receber `newProducer`, cliente cria consumers e monta `remoteStreams`.
+9. Ao sair, frontend fecha WebSocket, transports, producers, consumers e tracks locais.
 
-1. **Sinalização** (camada de Sinalização) troca `peerId` entre médico e paciente.
-2. Cada lado:
-   - Conecta ao servidor PeerJS.
-   - Captura fluxo local (`getUserMedia`).
-3. **Chamador**:
-   - Usa `peer.call(remotePeerId, localStream)` para iniciar conexão.
-4. **Receptor**:
-   - Escuta `peer.on('call')` e responde com `call.answer(localStream)`.
-5. Ambos:
-   - Recebem `remoteStream` e exibem nos elementos `<video>`.
-6. **Encerramento**:
-   - Parar tracks de mídia.
-   - Fechar `call` e limpar refs no composable `useVideoCall`.
+### Dependências com outras camadas
 
-### 🤝 Dependências com Outras Camadas
+- **Recebe estado de negócio da camada de sinalização:** eventos Reverb indicam quando uma chamada está disponível, aceita ou encerrada.
+- **Não acessa banco de dados:** `roomId` confiável fica no JWT emitido pelo backend.
+- **Não decide autorização:** policies e endpoints Laravel decidem quem pode entrar.
+- **É consumida pela apresentação:** telas de médico/paciente renderizam streams e controles.
 
-- **Recebe sinalização de**:
-  - Camada de Sinalização (`RequestVideoCall`, `RequestVideoCallStatus`).
-- **Não acessa diretamente**:
-  - Banco de dados, regras de negócio ou policies.
-- **É usada por**:
-  - Camada de Apresentação (componentes Vue de vídeo).
+### Boas práticas
 
-### 📈 Boas Práticas e Escalabilidade
+- Nunca enviar `roomId` ou token vindo do usuário como fonte de verdade.
+- Renovar token por `/calls/active` ou `/appointments/{appointment}/video/session` quando necessário.
+- Logar erros técnicos sem PII.
+- Monitorar ICE/DTLS state, bitrate, perda de pacotes e tempo até primeiro frame.
+- Em produção, configurar portas RTC, `announcedIp` e TURN quando a rede exigir.
 
-- Encapsular toda a lógica em um **composable dedicado** (`useVideoCall.ts`) com:
-  - Controle de estado (connecting, in_call, ended).
-  - Tratamento de erros (permissão negada, falha de rede).
-  - Timeouts para chamadas não atendidas.
-- Isolar credenciais/configuração do PeerJS em variáveis de ambiente.
-- Planejar migração futura para **SFU** quando:
-  - Houver >2 participantes por chamada.
-  - For necessário gravar chamadas ou fazer broadcast.
+### Evoluções futuras
 
-### 🔮 Evoluções Futuras
-
-- **SFU (Selective Forwarding Unit)**:
-  - Introduzir um servidor de mídia (ex.: Janus, Mediasoup, LiveKit) para mixar/rotear streams.
-  - A camada de Sinalização passa a orquestrar rooms/sessions no SFU.
-- **Gravação de Consultas**:
-  - Centralizar gravação no lado servidor (SFU/MCU) por compliance.
-- **Screen Sharing**:
-  - Extender composable para `getDisplayMedia` e múltiplos streams (câmera + tela).
-- **QoS e Monitoramento**:
-  - Coletar métricas WebRTC (bitrate, jitter, packet loss) e exportar para observabilidade.
-
+- Gravação centralizada no SFU ou serviço dedicado, condicionada a consentimento e regra LGPD/CFM.
+- Compartilhamento de tela com `getDisplayMedia`.
+- Métricas de qualidade por chamada.
+- Testes E2E com múltiplos dispositivos.

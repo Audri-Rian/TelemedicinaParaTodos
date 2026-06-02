@@ -102,7 +102,7 @@
 │  /patient/video-call                                                │
 │  ─────────────────────────────────────────────────────────────────── │
 │  • Status Badge: "Em Andamento" (azul)                              │
-│  • Vídeo chamada ativa (PeerJS/WebRTC)                              │
+│  • Vídeo chamada ativa (SFU/WebRTC)                                 │
 │  • Controles: áudio, vídeo, compartilhar tela                       │
 │  • Botão "Finalizar Consulta"                                       │
 └────────┬─────────────────────────────────────────────────────────────┘
@@ -244,6 +244,7 @@
 ## 🎨 Componentes Visuais por Status
 
 ### Status: `scheduled` (Agendada)
+
 ```
 ┌─────────────────────────────────────────┐
 │  📅 15 de Novembro, 2024 - 14:00       │
@@ -256,6 +257,7 @@
 ```
 
 ### Status: `in_progress` (Em Andamento)
+
 ```
 ┌─────────────────────────────────────────┐
 │  📹 Consulta em Andamento              │
@@ -270,6 +272,7 @@
 ```
 
 ### Status: `completed` (Concluída)
+
 ```
 ┌─────────────────────────────────────────┐
 │  ✅ Consulta Finalizada                 │
@@ -284,6 +287,7 @@
 ```
 
 ### Status: `cancelled` (Cancelada)
+
 ```
 ┌─────────────────────────────────────────┐
 │  ❌ Consulta Cancelada                  │
@@ -299,6 +303,7 @@
 ## 🔔 Notificações e Feedback
 
 ### Sucesso
+
 - ✅ "Agendamento criado com sucesso!"
 - ✅ "Consulta iniciada com sucesso!"
 - ✅ "Consulta finalizada com sucesso!"
@@ -306,12 +311,14 @@
 - ✅ "Consulta reagendada com sucesso!"
 
 ### Erro
+
 - ❌ "Não foi possível agendar. Horário já ocupado."
 - ❌ "Não foi possível iniciar. Aguarde o horário da consulta."
 - ❌ "Não foi possível cancelar. Prazo para cancelamento expirado."
 - ❌ "Não foi possível reagendar. Novo horário conflita com outro agendamento."
 
 ### Validação
+
 - ⚠️ "Selecione uma data e horário."
 - ⚠️ "Este horário não está mais disponível."
 - ⚠️ "Você só pode cancelar até 2 horas antes da consulta."
@@ -321,12 +328,14 @@
 ## 📱 Responsividade e Acessibilidade
 
 ### Mobile
+
 - Cards de médicos em coluna única
 - Calendário adaptado para touch
 - Botões de ação em tamanho adequado para toque
 - Vídeo chamada em tela cheia
 
 ### Desktop
+
 - Grid de médicos (3 colunas)
 - Calendário lado a lado com horários
 - Painel lateral com resumo
@@ -334,5 +343,4 @@
 
 ---
 
-*Última atualização: Novembro 2025*
-
+_Última atualização: Novembro 2025_

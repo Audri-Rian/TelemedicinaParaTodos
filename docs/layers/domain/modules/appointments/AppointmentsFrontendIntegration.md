@@ -5,6 +5,7 @@
 Este documento mapeia a integração entre o módulo back-end de Appointments (documentado em `AppointmentsArchitecture.md`) e as páginas existentes no front-end, focando na experiência do usuário paciente.
 
 **Status do Back-End:**
+
 - ✅ Regras de negócio implementadas
 - ✅ Fluxo de status definido: `scheduled` → `in_progress` → `completed`
 - ✅ Desvios: `cancelled`, `rescheduled`, `no_show`
@@ -12,6 +13,7 @@ Este documento mapeia a integração entre o módulo back-end de Appointments (d
 - ✅ Endpoints REST disponíveis
 
 **Status do Front-End:**
+
 - ✅ Páginas base criadas (estáticas/mockadas)
 - ⚠️ Necessita integração com back-end
 - ⚠️ Componentes precisam ser convertidos para dinâmicos
@@ -91,6 +93,7 @@ Este documento mapeia a integração entre o módulo back-end de Appointments (d
 **Função UX:** Página de busca e descoberta de médicos disponíveis.
 
 **Estado Atual:**
+
 - ✅ UI completa com filtros
 - ✅ Lista de médicos (mockada)
 - ⚠️ Dados estáticos (`exampleDoctors`)
@@ -101,6 +104,7 @@ Este documento mapeia a integração entre o módulo back-end de Appointments (d
 #### 1.1. Endpoint para Listar Médicos Disponíveis
 
 **Back-End (a criar):**
+
 ```php
 // app/Http/Controllers/Patient/PatientSearchConsultationsController.php
 public function searchConsultations(Request $request): Response
@@ -108,12 +112,12 @@ public function searchConsultations(Request $request): Response
     $query = Doctor::query()
         ->with(['user', 'specializations'])
         ->active();
-    
+
     // Filtros
     if ($request->has('specialization_id')) {
         $query->bySpecialization($request->get('specialization_id'));
     }
-    
+
     if ($request->has('search')) {
         $search = $request->get('search');
         $query->whereHas('user', function($q) use ($search) {
@@ -122,16 +126,16 @@ public function searchConsultations(Request $request): Response
             $q->where('name', 'like', "%{$search}%");
         });
     }
-    
+
     // Verificar disponibilidade de horários
     if ($request->has('date')) {
         $date = Carbon::parse($request->get('date'));
         // Filtrar médicos com slots disponíveis na data
     }
-    
+
     $doctors = $query->paginate(12);
     $specializations = Specialization::all();
-    
+
     return Inertia::render('Patient/SearchConsultations', [
         'availableDoctors' => $doctors,
         'specializations' => $specializations,
@@ -140,6 +144,7 @@ public function searchConsultations(Request $request): Response
 ```
 
 **Front-End (adaptações):**
+
 ```typescript
 // resources/js/pages/Patient/SearchConsultations.vue
 
@@ -147,19 +152,19 @@ public function searchConsultations(Request $request): Response
 // Usar props.availableDoctors do back-end
 const filteredDoctors = computed(() => {
     let doctors = props.availableDoctors || [];
-    
+
     // Aplicar filtros locais (busca, checkboxes)
     if (searchQuery.value.trim()) {
         // ... filtro local
     }
-    
+
     return doctors;
 });
 
 // Botão "Agendar Consulta" deve passar doctor_id
-<Link 
-    :href="patientRoutes.scheduleConsultation({ 
-        query: { doctor_id: doctor.id } 
+<Link
+    :href="patientRoutes.scheduleConsultation({
+        query: { doctor_id: doctor.id }
     })"
 >
     Agendar Consulta
@@ -169,13 +174,14 @@ const filteredDoctors = computed(() => {
 #### 1.2. Endpoint para Verificar Disponibilidade de Horários
 
 **Back-End (a criar):**
+
 ```php
 // app/Http/Controllers/AppointmentsController.php
 public function availability(Request $request): JsonResponse
 {
     $doctorId = $request->get('doctor_id');
     $date = Carbon::parse($request->get('date'));
-    
+
     // Buscar appointments existentes do médico na data
     $existingAppointments = Appointments::query()
         ->where('doctor_id', $doctorId)
@@ -189,12 +195,12 @@ public function availability(Request $request): JsonResponse
         ->pluck('scheduled_at')
         ->map(fn($dt) => $dt->format('H:i'))
         ->toArray();
-    
+
     // Gerar slots disponíveis baseado no availability_schedule do médico
     $doctor = Doctor::findOrFail($doctorId);
     $schedule = $doctor->availability_schedule ?? [];
     $availableSlots = $this->generateAvailableSlots($date, $schedule, $existingAppointments);
-    
+
     return response()->json([
         'date' => $date->format('Y-m-d'),
         'available_slots' => $availableSlots,
@@ -203,11 +209,12 @@ public function availability(Request $request): JsonResponse
 ```
 
 **Front-End (chamada opcional):**
+
 ```typescript
 // Ao selecionar um médico, verificar disponibilidade
 const checkAvailability = async (doctorId: string, date: string) => {
     const response = await axios.get('/api/appointments/availability', {
-        params: { doctor_id: doctorId, date }
+        params: { doctor_id: doctorId, date },
     });
     return response.data.available_slots;
 };
@@ -220,6 +227,7 @@ const checkAvailability = async (doctorId: string, date: string) => {
 **Função UX:** Página de confirmação e marcação do appointment.
 
 **Estado Atual:**
+
 - ✅ UI completa com calendário e seleção de horário
 - ⚠️ Dados do médico estáticos
 - ⚠️ Sem validação de disponibilidade real
@@ -230,22 +238,23 @@ const checkAvailability = async (doctorId: string, date: string) => {
 #### 2.1. Receber Dados do Médico via Query Params
 
 **Back-End:**
+
 ```php
 // app/Http/Controllers/Patient/ScheduleConsultationController.php
 public function scheduleConsultation(Request $request): Response
 {
     $doctorId = $request->get('doctor_id');
-    
+
     if (!$doctorId) {
         return redirect()->route('patient.search-consultations')
             ->with('error', 'Selecione um médico para agendar.');
     }
-    
+
     $doctor = Doctor::with(['user', 'specializations'])->findOrFail($doctorId);
-    
+
     // Buscar horários disponíveis para os próximos 30 dias
     $availableDates = $this->getAvailableDates($doctor);
-    
+
     return Inertia::render('Patient/ScheduleConsultation', [
         'doctor' => $doctor,
         'availableDates' => $availableDates,
@@ -255,6 +264,7 @@ public function scheduleConsultation(Request $request): Response
 ```
 
 **Front-End:**
+
 ```typescript
 // resources/js/pages/Patient/ScheduleConsultation.vue
 
@@ -285,7 +295,7 @@ const selectedDoctor = computed(() => props.doctor);
 // Usar props.availableDates para popular calendário
 const availableTimes = computed(() => {
     const selectedDateStr = formatDateForApi(selectedDate.value);
-    const dateData = props.availableDates.find(d => d.date === selectedDateStr);
+    const dateData = props.availableDates.find((d) => d.date === selectedDateStr);
     return dateData?.available_slots || [];
 });
 ```
@@ -293,6 +303,7 @@ const availableTimes = computed(() => {
 #### 2.2. Criar Appointment (POST /appointments)
 
 **Front-End:**
+
 ```typescript
 // resources/js/pages/Patient/ScheduleConsultation.vue
 
@@ -307,12 +318,12 @@ const confirmAppointment = async () => {
         errors.value.datetime = 'Selecione data e horário';
         return;
     }
-    
+
     isSubmitting.value = true;
-    
+
     // Combinar data e horário
     const scheduledAt = `${selectedDate.value}T${selectedTime.value}:00`;
-    
+
     // Montar payload
     const payload = {
         doctor_id: props.doctor.id,
@@ -321,7 +332,7 @@ const confirmAppointment = async () => {
         type: consultationType.value, // 'online' ou 'presential'
         notes: '', // Opcional: campo de observações
     };
-    
+
     try {
         // Usar Inertia para POST
         router.post(appointmentsRoutes.store.url(), payload, {
@@ -345,7 +356,7 @@ const confirmAppointment = async () => {
 };
 
 // Atualizar botão
-<Button 
+<Button
     @click="confirmAppointment"
     :disabled="isSubmitting || !selectedDate || !selectedTime"
     class="bg-primary hover:bg-primary/90"
@@ -356,6 +367,7 @@ const confirmAppointment = async () => {
 ```
 
 **Back-End (já existe):**
+
 ```php
 // app/Http/Controllers/AppointmentsController.php::store()
 // Já implementado e funcional
@@ -368,6 +380,7 @@ const confirmAppointment = async () => {
 **Função UX:** Exibir detalhes completos de uma consulta.
 
 **Estado Atual:**
+
 - ✅ UI completa com timeline, prescrições, anexos
 - ⚠️ Dados estáticos
 - ⚠️ Sem integração com back-end
@@ -377,6 +390,7 @@ const confirmAppointment = async () => {
 #### 3.1. Buscar Appointment com Relacionamentos
 
 **Back-End:**
+
 ```php
 // app/Http/Controllers/Patient/PatientConsultationDetailsController.php
 public function consultationDetails(string $id): Response
@@ -387,12 +401,12 @@ public function consultationDetails(string $id): Response
         'patient.user',
         'logs.user'
     ])->findOrFail($id);
-    
+
     // Verificar se o paciente autenticado tem acesso
     if ($appointment->patient_id !== auth()->user()->patient->id) {
         abort(403);
     }
-    
+
     return Inertia::render('Patient/ConsultationDetails', [
         'appointment' => $appointment,
     ]);
@@ -400,6 +414,7 @@ public function consultationDetails(string $id): Response
 ```
 
 **Front-End:**
+
 ```typescript
 // resources/js/pages/Patient/ConsultationDetails.vue
 
@@ -450,7 +465,7 @@ const statusBadge = computed(() => {
 
 // Construir timeline a partir dos logs
 const timeline = computed(() => {
-    return props.appointment.logs.map(log => ({
+    return props.appointment.logs.map((log) => ({
         time: formatTime(log.created_at),
         event: mapEventName(log.event),
         description: formatEventDescription(log.event, log.payload),
@@ -459,13 +474,11 @@ const timeline = computed(() => {
 
 // Ações baseadas no status
 const canStart = computed(() => {
-    return ['scheduled', 'rescheduled'].includes(props.appointment.status) &&
-           canBeStarted(props.appointment);
+    return ['scheduled', 'rescheduled'].includes(props.appointment.status) && canBeStarted(props.appointment);
 });
 
 const canCancel = computed(() => {
-    return ['scheduled', 'rescheduled'].includes(props.appointment.status) &&
-           canBeCancelled(props.appointment);
+    return ['scheduled', 'rescheduled'].includes(props.appointment.status) && canBeCancelled(props.appointment);
 });
 
 // Funções de ação
@@ -488,6 +501,7 @@ const cancelAppointment = async (reason?: string) => {
 **Função UX:** Listar histórico de consultas com filtros.
 
 **Estado Atual:**
+
 - ✅ UI completa com filtros e paginação
 - ⚠️ Dados estáticos (`allConsultations`)
 - ⚠️ Sem integração com back-end
@@ -497,17 +511,18 @@ const cancelAppointment = async (reason?: string) => {
 #### 4.1. Listar Appointments do Paciente
 
 **Back-End:**
+
 ```php
 // app/Http/Controllers/Patient/PatientHistoryConsultationsController.php
 public function historyConsultations(Request $request): Response
 {
     $patient = auth()->user()->patient;
-    
+
     $query = Appointments::query()
         ->with(['doctor.user', 'doctor.specializations'])
         ->where('patient_id', $patient->id)
         ->orderBy('scheduled_at', 'desc');
-    
+
     // Filtros
     if ($request->has('status')) {
         $status = $request->get('status');
@@ -521,9 +536,9 @@ public function historyConsultations(Request $request): Response
             // 'all' - sem filtro
         }
     }
-    
+
     $appointments = $query->paginate(10);
-    
+
     // Estatísticas
     $stats = [
         'total' => Appointments::where('patient_id', $patient->id)->count(),
@@ -531,7 +546,7 @@ public function historyConsultations(Request $request): Response
         'completed' => Appointments::where('patient_id', $patient->id)->completed()->count(),
         'cancelled' => Appointments::where('patient_id', $patient->id)->cancelled()->count(),
     ];
-    
+
     return Inertia::render('Patient/HistoryConsultations', [
         'appointments' => $appointments,
         'stats' => $stats,
@@ -541,6 +556,7 @@ public function historyConsultations(Request $request): Response
 ```
 
 **Front-End:**
+
 ```typescript
 // resources/js/pages/Patient/HistoryConsultations.vue
 
@@ -582,23 +598,31 @@ const activeFilter = ref(props.filters.status || 'all');
 // Ao mudar filtro, fazer nova requisição
 const changeFilter = (filter: string) => {
     activeFilter.value = filter;
-    router.get(patientRoutes.historyConsultations.url(), {
-        status: filter === 'all' ? undefined : filter
-    }, {
-        preserveState: true,
-        preserveScroll: true,
-    });
+    router.get(
+        patientRoutes.historyConsultations.url(),
+        {
+            status: filter === 'all' ? undefined : filter,
+        },
+        {
+            preserveState: true,
+            preserveScroll: true,
+        },
+    );
 };
 
 // Paginação
 const changePage = (page: number) => {
-    router.get(patientRoutes.historyConsultations.url(), {
-        status: activeFilter.value === 'all' ? undefined : activeFilter.value,
-        page,
-    }, {
-        preserveState: true,
-        preserveScroll: true,
-    });
+    router.get(
+        patientRoutes.historyConsultations.url(),
+        {
+            status: activeFilter.value === 'all' ? undefined : activeFilter.value,
+            page,
+        },
+        {
+            preserveState: true,
+            preserveScroll: true,
+        },
+    );
 };
 ```
 
@@ -613,12 +637,13 @@ const changePage = (page: number) => {
 #### 5.1. Buscar Próximas Consultas
 
 **Back-End:**
+
 ```php
 // app/Http/Controllers/Patient/PatientDashboardController.php
 public function dashboard(): Response
 {
     $patient = auth()->user()->patient;
-    
+
     $upcomingAppointments = Appointments::query()
         ->with(['doctor.user', 'doctor.specializations'])
         ->where('patient_id', $patient->id)
@@ -626,7 +651,7 @@ public function dashboard(): Response
         ->orderBy('scheduled_at', 'asc')
         ->limit(5)
         ->get();
-    
+
     $recentAppointments = Appointments::query()
         ->with(['doctor.user', 'doctor.specializations'])
         ->where('patient_id', $patient->id)
@@ -634,7 +659,7 @@ public function dashboard(): Response
         ->orderBy('scheduled_at', 'desc')
         ->limit(5)
         ->get();
-    
+
     return Inertia::render('Patient/Dashboard', [
         'upcomingAppointments' => $upcomingAppointments,
         'recentAppointments' => $recentAppointments,
@@ -643,6 +668,7 @@ public function dashboard(): Response
 ```
 
 **Front-End:**
+
 ```typescript
 // resources/js/pages/Patient/Dashboard.vue
 
@@ -694,8 +720,8 @@ onMounted(async () => {
             console.error('Erro ao iniciar consulta:', error);
         }
     }
-    
-    // Inicializar vídeo chamada (PeerJS, etc.)
+
+    // Inicializar vídeo chamada (SFU/MediaSoup)
     initializeVideoCall();
 });
 ```
@@ -723,6 +749,7 @@ const endCall = async () => {
 #### 1. Status de Appointment Mudou
 
 **Back-End:**
+
 ```php
 // app/Events/AppointmentStatusChanged.php
 class AppointmentStatusChanged implements ShouldBroadcast
@@ -730,7 +757,7 @@ class AppointmentStatusChanged implements ShouldBroadcast
     public function __construct(
         public Appointments $appointment
     ) {}
-    
+
     public function broadcastOn(): array
     {
         return [
@@ -738,7 +765,7 @@ class AppointmentStatusChanged implements ShouldBroadcast
             new PrivateChannel("appointment.{$this->appointment->patient_id}"),
         ];
     }
-    
+
     public function broadcastAs(): string
     {
         return 'status.changed';
@@ -756,6 +783,7 @@ public function updated(Appointments $appointment): void
 ```
 
 **Front-End:**
+
 ```typescript
 // resources/js/pages/Patient/ConsultationDetails.vue ou VideoCall.vue
 
@@ -770,24 +798,23 @@ onMounted(() => {
         wsPort: import.meta.env.VITE_REVERB_PORT,
         forceTLS: (import.meta.env.VITE_REVERB_SCHEME ?? 'https') === 'https',
     });
-    
+
     // Escutar mudanças de status
-    echo.private(`appointment.${props.appointment.patient_id}`)
-        .listen('.status.changed', (event: any) => {
-            // Atualizar status local
-            appointment.value.status = event.appointment.status;
-            
-            // Se mudou para 'in_progress', iniciar vídeo se necessário
-            if (event.appointment.status === 'in_progress') {
-                // Lógica de vídeo
-            }
-            
-            // Se mudou para 'completed', redirecionar
-            if (event.appointment.status === 'completed') {
-                router.visit(patientRoutes.consultationDetails.url({ id: event.appointment.id }));
-            }
-        });
-    
+    echo.private(`appointment.${props.appointment.patient_id}`).listen('.status.changed', (event: any) => {
+        // Atualizar status local
+        appointment.value.status = event.appointment.status;
+
+        // Se mudou para 'in_progress', iniciar vídeo se necessário
+        if (event.appointment.status === 'in_progress') {
+            // Lógica de vídeo
+        }
+
+        // Se mudou para 'completed', redirecionar
+        if (event.appointment.status === 'completed') {
+            router.visit(patientRoutes.consultationDetails.url({ id: event.appointment.id }));
+        }
+    });
+
     onUnmounted(() => {
         echo.leave(`appointment.${props.appointment.patient_id}`);
     });
@@ -797,6 +824,7 @@ onMounted(() => {
 #### 2. Novo Appointment Criado
 
 **Back-End:**
+
 ```php
 // app/Events/AppointmentCreated.php
 class AppointmentCreated implements ShouldBroadcast
@@ -804,7 +832,7 @@ class AppointmentCreated implements ShouldBroadcast
     public function __construct(
         public Appointments $appointment
     ) {}
-    
+
     public function broadcastOn(): array
     {
         return [
@@ -816,35 +844,36 @@ class AppointmentCreated implements ShouldBroadcast
 ```
 
 **Front-End:**
+
 ```typescript
 // resources/js/pages/Patient/Dashboard.vue
 
 // Escutar novos appointments para atualizar lista
-echo.private(`user.${auth.user.id}`)
-    .listen('.appointment.created', (event: any) => {
-        // Adicionar à lista de upcomingAppointments
-        upcomingAppointments.value.push(event.appointment);
-    });
+echo.private(`user.${auth.user.id}`).listen('.appointment.created', (event: any) => {
+    // Adicionar à lista de upcomingAppointments
+    upcomingAppointments.value.push(event.appointment);
+});
 ```
 
 #### 3. Disponibilidade de Horários Atualizada
 
 **Back-End:**
+
 ```php
 // Quando um appointment é criado/cancelado, notificar outros usuários
 // que estão visualizando a disponibilidade do mesmo médico
 ```
 
 **Front-End:**
+
 ```typescript
 // resources/js/pages/Patient/ScheduleConsultation.vue
 
 // Escutar mudanças na disponibilidade
-echo.private(`doctor.${props.doctor.id}.availability`)
-    .listen('.slots.updated', (event: any) => {
-        // Atualizar lista de horários disponíveis
-        availableTimes.value = event.available_slots;
-    });
+echo.private(`doctor.${props.doctor.id}.availability`).listen('.slots.updated', (event: any) => {
+    // Atualizar lista de horários disponíveis
+    availableTimes.value = event.available_slots;
+});
 ```
 
 ---
@@ -874,7 +903,7 @@ const config = computed(() => statusConfig[props.status] || statusConfig.schedul
 </script>
 
 <template>
-    <span :class="['px-3 py-1 rounded-full text-xs font-medium', config.class]">
+    <span :class="['rounded-full px-3 py-1 text-xs font-medium', config.class]">
         {{ config.label }}
     </span>
 </template>
@@ -895,13 +924,11 @@ interface Props {
 const props = defineProps<Props>();
 
 const canStart = computed(() => {
-    return ['scheduled', 'rescheduled'].includes(props.appointment.status) &&
-           canBeStarted(props.appointment);
+    return ['scheduled', 'rescheduled'].includes(props.appointment.status) && canBeStarted(props.appointment);
 });
 
 const canCancel = computed(() => {
-    return ['scheduled', 'rescheduled'].includes(props.appointment.status) &&
-           canBeCancelled(props.appointment);
+    return ['scheduled', 'rescheduled'].includes(props.appointment.status) && canBeCancelled(props.appointment);
 });
 
 // Funções de ação...
@@ -909,26 +936,9 @@ const canCancel = computed(() => {
 
 <template>
     <div class="flex gap-2">
-        <Button 
-            v-if="canStart"
-            @click="startAppointment"
-        >
-            Iniciar Consulta
-        </Button>
-        <Button 
-            v-if="canCancel"
-            @click="cancelAppointment"
-            variant="outline"
-        >
-            Cancelar
-        </Button>
-        <Button 
-            v-if="canCancel"
-            @click="rescheduleAppointment"
-            variant="outline"
-        >
-            Reagendar
-        </Button>
+        <Button v-if="canStart" @click="startAppointment"> Iniciar Consulta </Button>
+        <Button v-if="canCancel" @click="cancelAppointment" variant="outline"> Cancelar </Button>
+        <Button v-if="canCancel" @click="rescheduleAppointment" variant="outline"> Reagendar </Button>
     </div>
 </template>
 ```
@@ -987,20 +997,21 @@ const emit = defineEmits<{
 
 ## 📊 Mapeamento de Status no Front-End
 
-| Status Back-End | Exibição Front-End | Badge | Ações Disponíveis |
-|----------------|-------------------|-------|------------------|
-| `scheduled` | "Agendada" | Amarelo | Cancelar, Reagendar, Iniciar (quando disponível) |
-| `in_progress` | "Em Andamento" | Azul | Finalizar |
-| `completed` | "Concluída" | Verde | Ver Detalhes, Avaliar |
-| `cancelled` | "Cancelada" | Vermelho | Ver Detalhes |
-| `rescheduled` | "Reagendada" | Roxo | Cancelar, Reagendar Novamente, Iniciar |
-| `no_show` | "Não Compareceu" | Cinza | Ver Detalhes |
+| Status Back-End | Exibição Front-End | Badge    | Ações Disponíveis                                |
+| --------------- | ------------------ | -------- | ------------------------------------------------ |
+| `scheduled`     | "Agendada"         | Amarelo  | Cancelar, Reagendar, Iniciar (quando disponível) |
+| `in_progress`   | "Em Andamento"     | Azul     | Finalizar                                        |
+| `completed`     | "Concluída"        | Verde    | Ver Detalhes, Avaliar                            |
+| `cancelled`     | "Cancelada"        | Vermelho | Ver Detalhes                                     |
+| `rescheduled`   | "Reagendada"       | Roxo     | Cancelar, Reagendar Novamente, Iniciar           |
+| `no_show`       | "Não Compareceu"   | Cinza    | Ver Detalhes                                     |
 
 ---
 
 ## 🚀 Checklist de Implementação
 
 ### Fase 1: Endpoints Back-End
+
 - [ ] Criar `PatientSearchConsultationsController::searchConsultations()`
 - [ ] Criar endpoint `GET /api/appointments/availability`
 - [ ] Atualizar `ScheduleConsultationController` para receber `doctor_id`
@@ -1009,6 +1020,7 @@ const emit = defineEmits<{
 - [ ] Atualizar `PatientDashboardController` para buscar próximas consultas
 
 ### Fase 2: Integração Front-End - Páginas
+
 - [ ] `SearchConsultations.vue`: Remover mocks, integrar com back-end
 - [ ] `ScheduleConsultation.vue`: Receber doctor via props, criar appointment
 - [ ] `ConsultationDetails.vue`: Buscar appointment real, exibir status dinâmico
@@ -1017,6 +1029,7 @@ const emit = defineEmits<{
 - [ ] `VideoCall.vue`: Iniciar/finalizar appointment
 
 ### Fase 3: Componentes Reutilizáveis
+
 - [ ] Criar `AppointmentStatusBadge.vue`
 - [ ] Criar `AppointmentActions.vue`
 - [ ] Criar `DoctorCard.vue`
@@ -1024,6 +1037,7 @@ const emit = defineEmits<{
 - [ ] Criar `AppointmentSummary.vue`
 
 ### Fase 4: WebSocket/Real-Time
+
 - [ ] Implementar eventos de broadcast no back-end
 - [ ] Configurar canais privados no `routes/channels.php`
 - [ ] Integrar Echo no front-end
@@ -1031,12 +1045,14 @@ const emit = defineEmits<{
 - [ ] Atualizar disponibilidade de horários em tempo real
 
 ### Fase 5: Validações e Tratamento de Erros
+
 - [ ] Validar disponibilidade antes de criar appointment
 - [ ] Tratar erros de conflito de horário
 - [ ] Exibir mensagens de erro amigáveis
 - [ ] Validar janelas de tempo (lead, cancel_before_hours)
 
 ### Fase 6: Testes e Refinamentos
+
 - [ ] Testar fluxo completo de agendamento
 - [ ] Testar cancelamento e reagendamento
 - [ ] Testar sincronização em tempo real
@@ -1055,5 +1071,4 @@ const emit = defineEmits<{
 
 ---
 
-*Última atualização: Novembro 2025*
-
+_Última atualização: Novembro 2025_

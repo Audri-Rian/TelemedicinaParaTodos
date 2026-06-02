@@ -127,7 +127,7 @@ Após seguir todos os passos, você poderá acessar:
 
 - **Aplicação Principal**: http://localhost:8000
 - **Servidor Reverb**: http://localhost:8080
-- **Servidor Peerjs**: Para projetos grandes, é comum rodar um servidor PeerJS (com npx peerjs --port 9000) ou usar STUN/TURN para conexões externas.
+- **Servidor SFU MediaSoup**: necessário para videochamada real; configure `SFU_HTTP_URL`, `SFU_WS_URL`, `SFU_API_SECRET` e `SFU_JWT_SECRET`. Para teste, veja `docs/videocall/TESTE_SFU_MEDIASOUP.md`.
 
 ## 🧪 Executando Testes
 

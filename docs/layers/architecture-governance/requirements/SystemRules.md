@@ -5,13 +5,15 @@
 > A rastreabilidade entre regras de negócio e configurações está documentada em `docs/Tasks/TASK_11_MIGRACAO_CONFIG_TELEMEDICINE.md`.
 
 ## 🎯 Objetivo
+
 Esse projeto tem como objetivo de criar uma platarforma de Telemedicina Moderna, segura e acessível desenvolvida com Laravel(PHP). Ele conecta médicos e pacientes de forma remota, oferecendo consultas online, agendamento inteligente, prontuários digitais e comunicação segura tudo em um único sistema integrado.
 
-# 🏥 Regras de Negócio 
+# 🏥 Regras de Negócio
 
 ### Módulo Usuários e Informações
 
 #### 👥 USERS (Usuários Base)
+
 - **Tabela central** de autenticação (polimórfica: médico OU paciente)
 - **Email único** e obrigatório, verificação obrigatória
 - **Senha segura** (mínimo 8 caracteres, maiúsculas, números)
@@ -19,6 +21,7 @@ Esse projeto tem como objetivo de criar uma platarforma de Telemedicina Moderna,
 - **Soft delete** para auditoria completa
 
 #### 👨‍⚕️ DOCTORS (Médicos)
+
 - **Extensão de USERS** com relacionamento 1:1
 - **CRM obrigatório** e único por estado/região
 - **Especialidade principal** obrigatória
@@ -26,20 +29,24 @@ Esse projeto tem como objetivo de criar uma platarforma de Telemedicina Moderna,
 - **Apenas ativos** podem receber agendamentos
 
 #### 👤 PATIENTS (Pacientes)
+
 ##### Alguns dados do patient não são obrigatorios no inicio
+
 - **Extensão de USERS** com relacionamento 1:1
 - **Data de nascimento** obrigatória para cálculos médicos
-- **Contato de emergência**  Obrigatorio apos a primeira etapa de autenticação.
+- **Contato de emergência** Obrigatorio apos a primeira etapa de autenticação.
 - **Consentimento explícito** para telemedicina, não precisa no register incial
 - **Histórico médico** para diagnósticos precisos, não precisa no register incial
 
 #### 🔗 Relacionamentos
+
 - **USERS** é a entidade base obrigatória
 - **DOCTORS/PATIENTS** dependem de USERS existentes
 - **Exclusão em cascata** com soft delete para auditoria
 - **Apenas entidades ativas** podem se relacionar
 
 #### 🛡️ Segurança e Compliance
+
 - **Criptografia** de dados sensíveis (histórico médico)
 - **Logs de auditoria** para todas as ações médicas
 - **Controle de acesso** baseado em roles
@@ -51,6 +58,7 @@ Esse projeto tem como objetivo de criar uma platarforma de Telemedicina Moderna,
 ### Módulo de Agenda e Disponibilidade
 
 #### 📅 SERVICE_LOCATIONS (Locais de Atendimento)
+
 - **Múltiplos locais** por médico
 - **Tipos**: teleconsultation, office, hospital, clinic
 - **Status ativo/inativo** para controle
@@ -59,9 +67,10 @@ Esse projeto tem como objetivo de criar uma platarforma de Telemedicina Moderna,
 - **Soft delete** para histórico
 
 #### ⏰ AVAILABILITY_SLOTS (Slots de Disponibilidade)
+
 - **Dois tipos**:
-  - `recurring` - Recorrente (toda segunda-feira, por exemplo)
-  - `specific` - Data específica
+    - `recurring` - Recorrente (toda segunda-feira, por exemplo)
+    - `specific` - Data específica
 - **Horário obrigatório**: start_time e end_time
 - **Local opcional**: Pode estar vinculado a um ServiceLocation ou ser geral
 - **Status ativo/inativo** para controle
@@ -69,6 +78,7 @@ Esse projeto tem como objetivo de criar uma platarforma de Telemedicina Moderna,
 - **Soft delete** para histórico
 
 #### 🚫 BLOCKED_DATES (Datas Bloqueadas)
+
 - **Data obrigatória**: blocked_date
 - **Motivo opcional**: reason
 - **Bloqueio total**: Quando uma data está bloqueada, nenhum slot funciona nessa data
@@ -76,6 +86,7 @@ Esse projeto tem como objetivo de criar uma platarforma de Telemedicina Moderna,
 - **Soft delete** para histórico
 
 #### 📋 Regras de Agenda
+
 - **Agenda obrigatória**: Médico deve configurar pelo menos um slot de disponibilidade
 - **Disponibilidade padrão**: Sistema pode criar disponibilidade padrão se médico não configurar
 - **Validação de agendamento**: Consultas só podem ser agendadas em slots ativos e não bloqueados
@@ -86,6 +97,7 @@ Esse projeto tem como objetivo de criar uma platarforma de Telemedicina Moderna,
 ### Módulo de Prontuários Médicos
 
 #### 💊 PRESCRIPTIONS (Prescrições)
+
 - **Vinculação obrigatória**: Deve estar vinculada a um Appointment, Doctor e Patient
 - **Medicamentos em JSON**: Array estruturado com nome, dosagem, frequência
 - **Validade**: Campo valid_until opcional
@@ -94,6 +106,7 @@ Esse projeto tem como objetivo de criar uma platarforma de Telemedicina Moderna,
 - **Soft delete** para histórico
 
 #### 🩺 DIAGNOSES (Diagnósticos)
+
 - **CID-10 obrigatório**: cid10_code deve ser válido
 - **Tipo**: principal ou secondary
 - **Vinculação**: Appointment, Doctor e Patient obrigatórios
@@ -101,6 +114,7 @@ Esse projeto tem como objetivo de criar uma platarforma de Telemedicina Moderna,
 - **Soft delete** para histórico
 
 #### 🔬 EXAMINATIONS (Exames)
+
 - **Tipos**: lab, image, other
 - **Status**: requested, in_progress, completed, cancelled
 - **Resultados em JSON**: Campo results estruturado
@@ -109,6 +123,7 @@ Esse projeto tem como objetivo de criar uma platarforma de Telemedicina Moderna,
 - **Soft delete** para histórico
 
 #### 📝 CLINICAL_NOTES (Anotações Clínicas)
+
 - **Privacidade**: Campo is_private (true = apenas médico, false = paciente vê)
 - **Categorização**: Campo category para organização
 - **Tags**: Campo tags em JSON para busca
@@ -117,6 +132,7 @@ Esse projeto tem como objetivo de criar uma platarforma de Telemedicina Moderna,
 - **Soft delete** para histórico
 
 #### 📜 MEDICAL_CERTIFICATES (Atestados)
+
 - **Código único**: verification_code único e obrigatório
 - **Período**: start_date obrigatório, end_date opcional
 - **Dias calculados**: Campo days calculado automaticamente
@@ -126,12 +142,14 @@ Esse projeto tem como objetivo de criar uma platarforma de Telemedicina Moderna,
 - **Soft delete** para histórico
 
 #### 💓 VITAL_SIGNS (Sinais Vitais)
+
 - **Registro automático**: recorded_at com timestamp
 - **Campos opcionais**: Todos os sinais são opcionais
 - **Vinculação**: Appointment opcional, Patient obrigatório, Doctor opcional
 - **Sem soft delete**: Registros históricos permanecem
 
 #### 📎 MEDICAL_DOCUMENTS (Documentos Médicos)
+
 - **Categorias**: exam, prescription, report, other
 - **Visibilidade**: patient, doctor, shared
 - **Upload**: uploaded_by registra quem fez upload
@@ -139,6 +157,7 @@ Esse projeto tem como objetivo de criar uma platarforma de Telemedicina Moderna,
 - **Soft delete** para histórico
 
 #### 📊 MEDICAL_RECORD_AUDIT_LOGS (Logs de Auditoria)
+
 - **Rastreabilidade completa**: Todas as ações em prontuários são registradas
 - **Campos obrigatórios**: action, patient_id
 - **Metadados**: resource_type, resource_id, ip_address, user_agent
@@ -146,6 +165,7 @@ Esse projeto tem como objetivo de criar uma platarforma de Telemedicina Moderna,
 - **Sem soft delete**: Logs permanecem para auditoria
 
 #### 📋 Regras de Prontuário
+
 - **Acesso restrito**: Apenas médicos que atenderam o paciente podem editar prontuário
 - **Visualização paciente**: Paciente vê apenas itens não privados
 - **Auditoria obrigatória**: Todas as ações geram log de auditoria
@@ -156,18 +176,21 @@ Esse projeto tem como objetivo de criar uma platarforma de Telemedicina Moderna,
 
 ### Módulo de Videoconferência
 
-#### 🏠 VIDEO_CALL_ROOMS (Salas de Videoconferência)
-- **Criação automática**: Salas criadas automaticamente para consultas
-- **Expiração**: Salas expiram automaticamente após período configurado
-- **Vinculação**: Relacionadas com Appointments
-- **Jobs automáticos**: ExpireVideoCallRooms executa limpeza periódica
+#### CALLS (Chamadas de Videoconferência)
 
-#### 📹 VIDEO_CALL_EVENTS (Eventos de Videoconferência)
-- **Rastreamento**: Todos os eventos de videoconferência são registrados
-- **Limpeza automática**: CleanupOldVideoCallEvents remove eventos antigos
-- **Integração**: UpdateAppointmentFromRoom atualiza consulta a partir da sala
+- **Criação automática**: chamadas agendadas são provisionadas na janela configurada
+- **Ad-hoc**: paciente pode solicitar chamada para médico com vínculo recente
+- **Vinculação**: relacionadas com Appointments, Doctors e Patients
+- **Jobs automáticos**: `AutoStartVideoCall`, `EndScheduledVideoCalls` e `EndZombieVideoCalls`
+
+#### ROOMS (Salas SFU)
+
+- **Criação via MediaGateway**: sala criada no SFU e persistida em `rooms`
+- **Token JWT**: entrada na sala depende de token curto emitido pelo Laravel
+- **Encerramento**: sala destruída no gateway quando a chamada termina
 
 #### 📋 Regras de Videoconferência
+
 - **Acesso restrito**: Apenas médico e paciente da consulta podem acessar
 - **Expiração automática**: Salas expiram após término da consulta
 - **Eventos rastreados**: Entrada, saída e ações são registradas
@@ -177,6 +200,7 @@ Esse projeto tem como objetivo de criar uma platarforma de Telemedicina Moderna,
 ### Módulo de Timeline
 
 #### 📅 TIMELINE_EVENTS (Eventos de Timeline)
+
 - **Tipos**: education, course, certificate, project
 - **Período**: start_date obrigatório, end_date opcional (em andamento)
 - **Visibilidade**: is_public controla se aparece no perfil público
@@ -186,6 +210,7 @@ Esse projeto tem como objetivo de criar uma platarforma de Telemedicina Moderna,
 - **Soft delete** para histórico
 
 #### 📋 Regras de Timeline
+
 - **Apenas médicos**: Timeline events são para perfis de médicos
 - **Validação de período**: end_date deve ser posterior a start_date
 - **Ordenação**: Eventos ordenados por order_priority, depois por data
@@ -195,6 +220,7 @@ Esse projeto tem como objetivo de criar uma platarforma de Telemedicina Moderna,
 ### Módulo de Consultas (Atualizado)
 
 #### 📅 APPOINTMENTS (Consultas)
+
 - **Status atualizados**: scheduled, in_progress, completed, no_show, cancelled, rescheduled
 - **Código único**: access_code único para cada consulta
 - **Relacionamentos expandidos**: Agora conecta com múltiplas entidades de prontuário
@@ -202,6 +228,7 @@ Esse projeto tem como objetivo de criar uma platarforma de Telemedicina Moderna,
 - **Integração com prontuário**: Consultas podem ter prescrições, diagnósticos, exames, anotações, atestados, sinais vitais e documentos
 
 #### 📋 Regras de Consulta Atualizadas
+
 - **Prontuário durante consulta**: Médico pode acessar e editar prontuário durante consulta em andamento
 - **Finalização**: Ao finalizar consulta, prontuário é bloqueado para edição (exceto complementos)
 - **Complementos**: Médico pode adicionar complementos após finalização
@@ -210,6 +237,7 @@ Esse projeto tem como objetivo de criar uma platarforma de Telemedicina Moderna,
 ## 🔗 Referências Cruzadas
 
 ### Documentação Relacionada
+
 - **[📋 Visão Geral](../../../index/VisaoGeral.md)** - Índice central da documentação
 - **[📊 Matriz de Rastreabilidade](../../../index/MatrizRequisitos.md)** - Mapeamento requisito → implementação
 - **[📚 Glossário](../../../index/Glossario.md)** - Definições de termos técnicos
@@ -218,6 +246,7 @@ Esse projeto tem como objetivo de criar uma platarforma de Telemedicina Moderna,
 - **[🔐 Autenticação](../../../modules/auth/RegistrationLogic.md)** - Fluxos de registro e login
 
 ### Implementações Relacionadas
+
 - **[User Model](../../app/Models/User.php)** - Entidade base de usuários
 - **[Doctor Model](../../app/Models/Doctor.php)** - Entidade de médicos
 - **[Patient Model](../../app/Models/Patient.php)** - Entidade de pacientes
@@ -225,6 +254,7 @@ Esse projeto tem como objetivo de criar uma platarforma de Telemedicina Moderna,
 - **[Database Migrations](../../../../database/migrations/)** - Estrutura do banco
 
 ### Termos do Glossário
+
 - **[User](../../../index/Glossario.md#u)** - Entidade base do sistema
 - **[Doctor](../../../index/Glossario.md#d)** - Entidade que representa um médico
 - **[Patient](../../../index/Glossario.md#p)** - Entidade que representa um paciente
@@ -239,13 +269,13 @@ Esse projeto tem como objetivo de criar uma platarforma de Telemedicina Moderna,
 - **[VitalSign](../../../index/Glossario.md#v)** - Sinal vital
 - **[MedicalDocument](../../../index/Glossario.md#m)** - Documento médico
 - **[MedicalRecordAuditLog](../../../index/Glossario.md#m)** - Log de auditoria
-- **[VideoCallRoom](../../../index/Glossario.md#v)** - Sala de videoconferência
-- **[VideoCallEvent](../../../index/Glossario.md#v)** - Evento de videoconferência
+- **[Call](../../../index/Glossario.md#v)** - Chamada de videoconferência
+- **[Room](../../../index/Glossario.md#v)** - Sala de mídia no SFU
 - **[TimelineEvent](../../../index/Glossario.md#t)** - Evento de timeline
 - **[LGPD](../../../index/Glossario.md#l)** - Lei Geral de Proteção de Dados
 - **[Soft Delete](../../../index/Glossario.md#s)** - Exclusão lógica para auditoria
 
 ---
 
-*Última atualização: Janeiro 2025*
-*Versão: 2.0*
+_Última atualização: Janeiro 2025_
+_Versão: 2.0_
