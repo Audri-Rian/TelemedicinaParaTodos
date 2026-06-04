@@ -50,7 +50,7 @@ class EndZombieVideoCalls implements ShouldQueue
                         continue;
                     }
 
-                    $call->update([
+                    $call->updateFromSystem([
                         'status' => Call::STATUS_MISSED,
                         'ended_at' => now(),
                     ]);
@@ -87,7 +87,7 @@ class EndZombieVideoCalls implements ShouldQueue
             }
         }
 
-        $call->update([
+        $call->updateFromSystem([
             'status' => Call::STATUS_ENDED,
             'ended_at' => now(),
         ]);

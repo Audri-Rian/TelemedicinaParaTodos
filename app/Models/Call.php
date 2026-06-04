@@ -3,27 +3,34 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Call extends Model
 {
-    use HasUuids;
+    use HasFactory, HasUuids;
 
     protected $fillable = [
         'call_type',
-        'appointment_id',
-        'doctor_id',
-        'patient_id',
-        'status',
-        'requested_at',
-        'accepted_at',
-        'doctor_joined_at',
-        'patient_joined_at',
-        'ended_at',
-        'call_closed_reason',
     ];
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
+    public static function createFromSystem(array $attributes): static
+    {
+        return static::forceCreate($attributes);
+    }
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
+    public function updateFromSystem(array $attributes): bool
+    {
+        return $this->forceFill($attributes)->save();
+    }
 
     protected $casts = [
         'requested_at' => 'datetime',

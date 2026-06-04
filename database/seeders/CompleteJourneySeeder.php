@@ -230,25 +230,23 @@ class CompleteJourneySeeder extends Seeder
             ]
         );
 
-        $call = Call::updateOrCreate(
-            ['appointment_id' => $completedAppointment->id],
-            [
-                'doctor_id' => $doctor->id,
-                'patient_id' => $patient->id,
-                'status' => Call::STATUS_ENDED,
-                'requested_at' => now()->subDay()->addMinutes(4),
-                'accepted_at' => now()->subDay()->addMinutes(5),
-                'ended_at' => now()->subDay()->addMinutes(45),
-            ]
-        );
+        $call = Call::query()->firstOrNew(['appointment_id' => $completedAppointment->id]);
+        $call->forceFill([
+            'call_type' => Call::TYPE_SCHEDULED,
+            'doctor_id' => $doctor->id,
+            'patient_id' => $patient->id,
+            'status' => Call::STATUS_ENDED,
+            'requested_at' => now()->subDay()->addMinutes(4),
+            'accepted_at' => now()->subDay()->addMinutes(5),
+            'ended_at' => now()->subDay()->addMinutes(45),
+        ])->save();
 
-        Room::updateOrCreate(
-            ['call_id' => $call->id],
-            [
-                'room_id' => 'room-demo-'.Str::lower(Str::random(8)),
-                'sfu_node' => 'sfu-node-1',
-            ]
-        );
+        $room = Room::query()->firstOrNew(['call_id' => $call->id]);
+        $room->forceFill([
+            'room_id' => 'room-demo-'.Str::lower(Str::random(8)),
+            'sfu_node' => 'sfu-node-1',
+            'media_ws_url' => 'wss://sfu.demo/ws',
+        ])->save();
 
         $integration = PartnerIntegration::updateOrCreate(
             ['slug' => 'demo-full-integration'],

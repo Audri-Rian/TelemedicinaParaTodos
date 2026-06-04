@@ -77,9 +77,9 @@ class AppointmentVideoSessionController extends Controller
         $role = $user->doctor ? 'doctor' : 'patient';
 
         if ($role === 'doctor' && ! $call->doctor_joined_at) {
-            $call->update(['doctor_joined_at' => now()]);
+            $call->updateFromSystem(['doctor_joined_at' => now()]);
         } elseif ($role === 'patient' && ! $call->patient_joined_at) {
-            $call->update(['patient_joined_at' => now()]);
+            $call->updateFromSystem(['patient_joined_at' => now()]);
         }
 
         $leadMinutes = (int) config('telemedicine.video_call.window_lead_minutes', 10);

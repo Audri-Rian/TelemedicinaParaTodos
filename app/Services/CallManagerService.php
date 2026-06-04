@@ -57,7 +57,7 @@ class CallManagerService
 
                 if ($existing && ! $existing->room) {
                     $room = $this->createRoom($existing);
-                    $existing->update(['accepted_at' => now()]);
+                    $existing->updateFromSystem(['accepted_at' => now()]);
 
                     $this->broadcastAvailable($existing, $appointment);
                     Log::info('VIDEO_CALL_PROVISIONED', ['appointment_id' => $appointment->id, 'call_id' => $existing->id, 'room_id' => $room->room_id, 'call_type' => 'scheduled']);
@@ -65,7 +65,7 @@ class CallManagerService
                     return ['call' => $existing, 'created' => false];
                 }
 
-                $call = Call::create([
+                $call = Call::createFromSystem([
                     'call_type' => Call::TYPE_SCHEDULED,
                     'appointment_id' => $appointment->id,
                     'doctor_id' => $appointment->doctor_id,
@@ -119,7 +119,7 @@ class CallManagerService
             throw new \InvalidArgumentException('Você não tem consulta com este médico nos últimos '.$relationshipDays.' dias.');
         }
 
-        $call = Call::create([
+        $call = Call::createFromSystem([
             'call_type' => Call::TYPE_AD_HOC,
             'appointment_id' => null,
             'doctor_id' => $doctor->id,
@@ -162,7 +162,7 @@ class CallManagerService
 
         $room = $this->createRoom($call);
 
-        $call->update([
+        $call->updateFromSystem([
             'status' => Call::STATUS_ACCEPTED,
             'accepted_at' => now(),
         ]);
@@ -206,7 +206,7 @@ class CallManagerService
             throw new \InvalidArgumentException('Chamada não está em estado solicitado ou tocando.');
         }
 
-        $call->update(['status' => Call::STATUS_REJECTED]);
+        $call->updateFromSystem(['status' => Call::STATUS_REJECTED]);
         $this->invalidateActiveCallCache($call);
         event(new \App\Events\VideoCallRejected($call, $rejectedBy));
 
@@ -223,7 +223,7 @@ class CallManagerService
             throw new \InvalidArgumentException('Chamada não está ativa.');
         }
 
-        $call->update([
+        $call->updateFromSystem([
             'status' => Call::STATUS_ENDED,
             'ended_at' => now(),
             'call_closed_reason' => Call::CLOSED_REASON_ENDED_BY_USER,
@@ -276,7 +276,7 @@ class CallManagerService
             default => Call::CLOSED_REASON_NO_SHOW,
         };
 
-        $call->update([
+        $call->updateFromSystem([
             'status' => Call::STATUS_ENDED,
             'ended_at' => now(),
             'call_closed_reason' => $closedReason,
@@ -357,7 +357,7 @@ class CallManagerService
         /** @var MediaRoomData $roomData */
         $roomData = $this->mediaGateway->createRoom($call->id);
 
-        $room = Room::create([
+        $room = Room::createFromSystem([
             'call_id' => $call->id,
             'room_id' => $roomData->roomId,
             'sfu_node' => $roomData->sfuNode,
