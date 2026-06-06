@@ -122,7 +122,18 @@ const tabs = computed<Array<{ id: TabId; label: string; count: number }>>(() => 
     { id: 'futuras', label: 'Futuras', count: upcomingAppointments.value.length },
 ]);
 
+// Deep-link de tab (ex.: ações rápidas da videochamada abrem ?tab=prescricoes)
+const applyTabFromQuery = () => {
+    if (typeof window === 'undefined') return;
+    const requested = new URLSearchParams(window.location.search).get('tab');
+    if (requested && tabs.value.some((tab) => tab.id === requested)) {
+        activeTab.value = requested as TabId;
+    }
+};
+
 onMounted(() => {
+    applyTabFromQuery();
+
     if (isDoctorMode.value) {
         canAccessDoctorRoute();
         return;

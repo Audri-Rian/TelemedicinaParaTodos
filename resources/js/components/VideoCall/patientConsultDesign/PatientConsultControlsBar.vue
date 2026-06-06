@@ -21,7 +21,6 @@ defineProps<{
     screenSharing: boolean;
     captionsOn: boolean;
     handRaised: boolean;
-    recording: boolean;
     isEnding: boolean;
 }>();
 
@@ -36,11 +35,7 @@ const emit = defineEmits<{
 <template>
     <div class="controls">
         <div class="ctrl-left">
-            <span v-if="recording" class="rec-pill">
-                <span class="rec-dot" />
-                Gravando
-            </span>
-            <span v-else style="display: inline-flex; align-items: center; gap: 6px; color: var(--stage-text-muted)">
+            <span style="display: inline-flex; align-items: center; gap: 6px; color: var(--stage-text-muted)">
                 <Stamp class="h-3.5 w-3.5" />
                 Consulta segura · ponta-a-ponta
             </span>

@@ -31,14 +31,14 @@ class CompleteJourneySeeder extends Seeder
 
     public function run(): void
     {
-        if (app()->isProduction()) {
-            $this->command?->warn('CompleteJourneySeeder ignorado em produção.');
+        if (! app()->environment('local', 'testing')) {
+            $this->command?->warn('CompleteJourneySeeder ignorado fora de local/testing.');
 
             return;
         }
 
         $patientLogin = 'demo.patient@telemedicina.test';
-        $upcomingVideoCallAt = now()->addMinutes(15);
+        $upcomingVideoCallAt = now()->addMinutes(10);
 
         $doctor = Doctor::query()
             ->with('user')

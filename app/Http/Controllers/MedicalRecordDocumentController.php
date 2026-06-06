@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\MedicalDocumentShared;
 use App\Models\MedicalDocument;
 use App\Models\Patient;
 use App\Services\FileStorageManager;
@@ -40,17 +41,19 @@ class MedicalRecordDocumentController extends Controller
     {
         $this->authorize('uploadDocument', $patient);
 
+        $user = $request->user();
+
         $allowedVisibility = [
             MedicalDocument::VISIBILITY_PATIENT,
             MedicalDocument::VISIBILITY_SHARED,
         ];
 
-        if ($request->user()?->isDoctor()) {
+        if ($user?->isDoctor()) {
             $allowedVisibility[] = MedicalDocument::VISIBILITY_DOCTOR;
         }
 
         $validated = $request->validate([
-            'file' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:'.config('telemedicine.uploads.medical_document_max_kb', 10240)],
+            'file' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'mimetypes:application/pdf,image/jpeg,image/png', 'max:'.config('telemedicine.uploads.medical_document_max_kb', 10240)],
             'category' => ['required', Rule::in([
                 MedicalDocument::CATEGORY_EXAM,
                 MedicalDocument::CATEGORY_PRESCRIPTION,
@@ -74,8 +77,8 @@ class MedicalRecordDocumentController extends Controller
         $document = MedicalDocument::create([
             'patient_id' => $patient->id,
             'appointment_id' => $validated['appointment_id'] ?? null,
-            'doctor_id' => $request->user()?->doctor?->id,
-            'uploaded_by' => $request->user()?->id,
+            'doctor_id' => $user?->isDoctor() ? $user->doctor?->id : null,
+            'uploaded_by' => $user?->id,
             'category' => $validated['category'],
             'name' => $validated['name'] ?? $file->getClientOriginalName(),
             'file_path' => $path,
@@ -90,11 +93,15 @@ class MedicalRecordDocumentController extends Controller
         ]);
 
         $this->medicalRecordService->logAccess(
-            $request->user(),
+            $user,
             $patient,
             'upload',
             ['document_id' => $document->id]
         );
+
+        if ($document->appointment_id && $document->visibility !== MedicalDocument::VISIBILITY_DOCTOR) {
+            MedicalDocumentShared::dispatch($document);
+        }
 
         return back()->with('status', 'Documento enviado com sucesso.');
     }
@@ -118,7 +125,7 @@ class MedicalRecordDocumentController extends Controller
                 abort(403);
             }
         } elseif ($user->isDoctor()) {
-            $this->authorize('uploadDocument', $document->patient);
+            $this->authorize('downloadDocument', $document->patient);
 
             if ($document->visibility === MedicalDocument::VISIBILITY_PATIENT) {
                 abort(403);
@@ -134,14 +141,28 @@ class MedicalRecordDocumentController extends Controller
             abort(404);
         }
 
+        $inline = $request->query('disposition') === 'inline' && $this->isInlineSafeMime($document->file_type);
+
         $this->medicalRecordService->logAccess(
             $user,
             $document->patient,
             'download',
-            ['document_id' => $document->id]
+            ['document_id' => $document->id, 'disposition' => $inline ? 'inline' : 'attachment']
         );
 
+        if ($inline) {
+            return $disk->response($document->file_path, $this->resolveDownloadFilename($document), [
+                'X-Content-Type-Options' => 'nosniff',
+            ]);
+        }
+
         return $disk->download($document->file_path, $this->resolveDownloadFilename($document));
+    }
+
+    private function isInlineSafeMime(?string $mime): bool
+    {
+        // HTML/SVG inline executariam script no browser — só PDF e imagens raster são seguros
+        return in_array($mime, ['application/pdf', 'image/jpeg', 'image/png'], true);
     }
 
     public function downloadForPatient(Request $request, Patient $patient, MedicalDocument $document): StreamedResponse

@@ -21,13 +21,15 @@ export interface PatientConsultChecklistItem {
 }
 
 export interface PatientConsultSharedItem {
-    id: number;
+    id: string;
     kind: 'rx' | 'exam';
     title: string;
     summary: string;
     issuedAt: string;
     status: string;
     icon: 'pill' | 'flask';
+    downloadUrl?: string;
+    viewUrl?: string;
 }
 
 export type PatientChatType = 'system' | 'them' | 'me';
@@ -41,12 +43,13 @@ export interface PatientConsultChatMessage {
 }
 
 export interface PatientConsultSharedFile {
-    id: number;
+    id: string;
     name: string;
     size: string;
     from: string;
     when: string;
     kind: 'pdf' | 'img';
+    downloadUrl?: string;
 }
 
 export const MOCK_PATIENT_DOCTOR: PatientConsultDoctor = {
@@ -70,9 +73,10 @@ export const MOCK_PATIENT_MY_NOTES: PatientConsultChecklistItem[] = [
     { id: 2, text: 'Confirmar dose da levotiroxina antes do exame', done: false },
 ];
 
+// Apenas referência de design (não usado em runtime — o overlay recebe documentos reais via props)
 export const MOCK_PATIENT_SHARED_ITEMS: PatientConsultSharedItem[] = [
     {
-        id: 1,
+        id: '1',
         kind: 'rx',
         title: 'Prescrição médica',
         summary: 'Amitriptilina 25 mg · 1 comprimido à noite por 60 dias',
@@ -81,7 +85,7 @@ export const MOCK_PATIENT_SHARED_ITEMS: PatientConsultSharedItem[] = [
         icon: 'pill',
     },
     {
-        id: 2,
+        id: '2',
         kind: 'exam',
         title: 'Solicitação de exame',
         summary: 'Ressonância magnética de crânio · com contraste',
@@ -111,9 +115,10 @@ export const MOCK_PATIENT_CHAT: PatientConsultChatMessage[] = [
     { id: 5, type: 'system', text: 'Você compartilhou um arquivo: diario-cefaleia.pdf' },
 ];
 
+// Apenas referência de design (não usado em runtime — o overlay recebe documentos reais via props)
 export const MOCK_PATIENT_FILES: PatientConsultSharedFile[] = [
-    { id: 1, name: 'prescricao-2026-05-27.pdf', size: '82 KB', from: 'Dr. Renato · agora', when: 'agora', kind: 'pdf' },
-    { id: 2, name: 'solicitacao-rm-cranio.pdf', size: '94 KB', from: 'Dr. Renato · há 3 min', when: 'há 3 min', kind: 'pdf' },
-    { id: 3, name: 'diario-cefaleia.pdf', size: '284 KB', from: 'Você', when: '14:04', kind: 'pdf' },
-    { id: 4, name: 'hemograma-02-04-2026.pdf', size: '1.2 MB', from: 'Tele · Prontuário', when: '02 abr', kind: 'pdf' },
+    { id: '1', name: 'prescricao-2026-05-27.pdf', size: '82 KB', from: 'Dr. Renato · agora', when: 'agora', kind: 'pdf' },
+    { id: '2', name: 'solicitacao-rm-cranio.pdf', size: '94 KB', from: 'Dr. Renato · há 3 min', when: 'há 3 min', kind: 'pdf' },
+    { id: '3', name: 'diario-cefaleia.pdf', size: '284 KB', from: 'Você', when: '14:04', kind: 'pdf' },
+    { id: '4', name: 'hemograma-02-04-2026.pdf', size: '1.2 MB', from: 'Tele · Prontuário', when: '02 abr', kind: 'pdf' },
 ];

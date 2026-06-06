@@ -1,29 +1,24 @@
 <script setup lang="ts">
-import type { ConsultSharedFile } from '@/components/VideoCall/patientConsultDesign/patientConsultDesignData';
-import { Download, FileText, Upload } from 'lucide-vue-next';
+import type { PatientConsultSharedFile } from '@/components/VideoCall/patientConsultDesign/patientConsultDesignData';
+import { Download, FileText } from 'lucide-vue-next';
 
 defineProps<{
-    files: ConsultSharedFile[];
+    files: PatientConsultSharedFile[];
 }>();
+
+const downloadFile = (file: PatientConsultSharedFile) => {
+    if (file.downloadUrl) window.location.href = file.downloadUrl;
+};
 </script>
 
 <template>
     <div class="files">
-        <div
-            style="
-                font-size: 12px;
-                color: var(--muted-foreground);
-                padding: 4px 2px 8px;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            "
-        >
-            <span>{{ files.length }} arquivos · sessão atual + prontuário</span>
-            <button type="button" class="pat-add">
-                <Upload class="mr-1 inline h-3 w-3" />
-                Enviar
-            </button>
+        <div style="font-size: 12px; color: var(--muted-foreground); padding: 4px 2px 8px">
+            <span>{{ files.length }} {{ files.length === 1 ? 'arquivo' : 'arquivos' }} · consulta atual</span>
+        </div>
+
+        <div v-if="files.length === 0" style="padding: 14px; text-align: center; color: var(--muted-foreground); font-size: 12.5px">
+            Documentos que o médico compartilhar durante a consulta aparecem aqui.
         </div>
 
         <div v-for="f in files" :key="f.id" class="file-row">
@@ -34,14 +29,9 @@ defineProps<{
                 <div class="file-name" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{ f.name }}</div>
                 <div class="file-meta">{{ f.size }} · {{ f.from }} · {{ f.when }}</div>
             </div>
-            <button type="button" class="file-dl" title="Baixar">
+            <button type="button" class="file-dl" title="Baixar" :disabled="!f.downloadUrl" @click="downloadFile(f)">
                 <Download class="h-3.5 w-3.5" />
             </button>
-        </div>
-
-        <div class="files-drop">
-            Arraste arquivos aqui para compartilhar com o médico<br />
-            <span style="font-size: 11px">PDF, JPG, PNG · até 25 MB</span>
         </div>
     </div>
 </template>

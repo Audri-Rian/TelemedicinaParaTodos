@@ -7,7 +7,9 @@ import { useInitials } from '@/composables/useInitials';
 import { useVideoCall } from '@/composables/useVideoCall';
 import AppLayout from '@/layouts/AppLayout.vue';
 import * as patientRoutes from '@/routes/patient';
+import { useVideoCallStore } from '@/stores/videoCall';
 import { type BreadcrumbItem } from '@/types';
+import type { CallSharedDocument } from '@/types/call-documents';
 import { Head, Link, usePage } from '@inertiajs/vue3';
 import {
     AlertTriangle,
@@ -35,6 +37,7 @@ interface Appointment {
     formatted_date: string;
     formatted_time: string;
     status: string;
+    shared_documents?: CallSharedDocument[];
 }
 
 interface UserProp {
@@ -55,6 +58,7 @@ type StatusTone = 'live' | 'go' | 'wait' | 'warn' | 'muted';
 const { canAccessPatientRoute } = useRouteGuard();
 const { getInitials } = useInitials();
 const page = usePage();
+const store = useVideoCallStore();
 
 const { callState, currentCall, isLoading, sfu, joinActiveCall, requestCall, endCall } = useVideoCall();
 
@@ -89,6 +93,18 @@ onMounted(() => {
 const selectedAppointment = computed(() => selectedUser.value?.appointment ?? null);
 const hasMultipleAppointments = computed(() => (selectedUser.value?.allAppointments?.length ?? 0) > 1);
 const isInCall = computed(() => sfu.connectionState.value === 'connected');
+
+// Appointment da chamada ativa (store) tem precedência sobre o selecionado na UI
+const activeAppointmentId = computed(() => store.appointmentId ?? selectedAppointment.value?.id ?? null);
+const activeSharedDocuments = computed<CallSharedDocument[]>(() => {
+    const id = activeAppointmentId.value;
+    if (!id) return [];
+    return users.find((user) => user.appointment?.id === id)?.appointment?.shared_documents ?? [];
+});
+const activeDoctorUserId = computed(() => {
+    const id = activeAppointmentId.value;
+    return (id ? users.find((user) => user.appointment?.id === id)?.id : null) ?? selectedUser.value?.id ?? null;
+});
 
 watch(
     () => sfu.connectionState.value,
@@ -180,7 +196,7 @@ const joinVideoCall = async () => {
     if (isLoading.value) return;
 
     if (ctaMode.value === 'join-scheduled') {
-        await joinActiveCall();
+        await joinActiveCall(selectedAppointment.value?.id ?? null);
         return;
     }
 
@@ -218,6 +234,9 @@ const checklist = [
         :doctor-display-name="selectedUser?.name ?? null"
         :patient-display-name="'Você'"
         :chief-complaint="selectedAppointment ? `Consulta em ${selectedAppointment.formatted_date} às ${selectedAppointment.formatted_time}` : null"
+        :appointment-id="activeAppointmentId"
+        :doctor-user-id="activeDoctorUserId"
+        :shared-documents="activeSharedDocuments"
         @toggle-mic="sfu.toggleMic()"
         @toggle-camera="sfu.toggleCamera()"
         @end="handleEndCall"

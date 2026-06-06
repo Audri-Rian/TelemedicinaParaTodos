@@ -47,6 +47,11 @@ class MedicalRecordPolicy
         return $this->doctorCanAccessPatient($user, $patient);
     }
 
+    public function downloadDocument(User $user, Patient $patient): bool
+    {
+        return $this->uploadDocument($user, $patient);
+    }
+
     public function update(User $user, Patient $patient): bool
     {
         return $this->doctorCanAccessPatient($user, $patient);

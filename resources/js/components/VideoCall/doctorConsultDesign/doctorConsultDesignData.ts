@@ -1,40 +1,20 @@
-export interface ConsultPatientVital {
-    label: string;
-    value: string;
-    unit: string;
-}
-
-export interface ConsultPatientMedication {
-    name: string;
-    dose: string;
-}
-
 export interface ConsultPatientHistoryItem {
-    id: number;
+    id: string;
     title: string;
     date: string;
-    who: string;
-    icon: 'act' | 'flask';
+    summary?: string | null;
 }
 
 export interface ConsultPatient {
     name: string;
     initials: string;
-    age: number;
-    gender: string;
-    cpf: string;
-    pronoun: string;
-    bloodType: string;
+    age: number | null;
+    gender: string | null;
+    bloodType: string | null;
     allergies: string[];
-    conditions: string[];
-    medications: ConsultPatientMedication[];
-    vitals: {
-        pa: ConsultPatientVital;
-        fc: ConsultPatientVital;
-        tax: ConsultPatientVital;
-        sat: ConsultPatientVital;
-    };
-    chiefComplaint: string;
+    conditions: string | null;
+    medications: string[];
+    chiefComplaint: string | null;
     history: ConsultPatientHistoryItem[];
 }
 
@@ -49,12 +29,13 @@ export interface ConsultChatMessage {
 }
 
 export interface ConsultSharedFile {
-    id: number;
+    id: string;
     name: string;
     size: string;
     from: string;
     when: string;
     kind: 'pdf' | 'img';
+    downloadUrl?: string;
 }
 
 export interface ConsultSoapNotes {
@@ -64,50 +45,20 @@ export interface ConsultSoapNotes {
     P: string;
 }
 
+// Apenas referência de design (não usado em runtime — o overlay recebe dados reais via props)
 export const MOCK_CONSULT_PATIENT: ConsultPatient = {
     name: 'Mariana Costa Andrade',
     initials: 'MA',
     age: 34,
     gender: 'Feminino',
-    cpf: '***.***.789-22',
-    pronoun: 'ela/dela',
     bloodType: 'O+',
     allergies: ['Dipirona', 'Penicilina'],
-    conditions: ['Hipotireoidismo', 'Enxaqueca crônica'],
-    medications: [
-        { name: 'Levotiroxina sódica', dose: '50 mcg · 1x ao dia (manhã, em jejum)' },
-        { name: 'Sumatriptano', dose: '50 mg · em crise · até 2x/dia' },
-        { name: 'Vitamina D3', dose: '2.000 UI · 1x ao dia' },
-    ],
-    vitals: {
-        pa: { label: 'Pressão arterial', value: '118/76', unit: 'mmHg' },
-        fc: { label: 'Freq. cardíaca', value: '72', unit: 'bpm' },
-        tax: { label: 'Temperatura', value: '36,4', unit: '°C' },
-        sat: { label: 'Saturação O₂', value: '98', unit: '%' },
-    },
+    conditions: 'Hipotireoidismo; enxaqueca crônica.',
+    medications: ['Levotiroxina sódica 50 mcg · 1x ao dia', 'Sumatriptano 50 mg · em crise'],
     chiefComplaint: 'Dor de cabeça há 6 dias, com piora ao fim do dia. Refere náusea associada e fotofobia leve.',
     history: [
-        {
-            id: 1,
-            title: 'Consulta de retorno · Endocrinologia',
-            date: '14 abr 2026',
-            who: 'Dra. Larissa Menezes',
-            icon: 'act',
-        },
-        {
-            id: 2,
-            title: 'Hemograma completo + TSH',
-            date: '02 abr 2026',
-            who: 'Resultado anexado',
-            icon: 'flask',
-        },
-        {
-            id: 3,
-            title: 'Consulta inicial · Neurologia',
-            date: '18 mar 2026',
-            who: 'Dr. Eduardo Saraiva',
-            icon: 'act',
-        },
+        { id: '1', title: 'Consulta finalizada', date: '14/04/2026', summary: 'Retorno · ajuste de dose' },
+        { id: '2', title: 'Consulta finalizada', date: '18/03/2026', summary: 'Consulta inicial' },
     ],
 };
 
@@ -131,11 +82,12 @@ export const MOCK_INITIAL_CHAT: ConsultChatMessage[] = [
     { id: 5, type: 'system', text: 'Mariana compartilhou um arquivo: diario-cefaleia.pdf' },
 ];
 
+// Apenas referência de design (não usado em runtime — o overlay recebe documentos reais via props)
 export const MOCK_SHARED_FILES: ConsultSharedFile[] = [
-    { id: 1, name: 'diario-cefaleia.pdf', size: '284 KB', from: 'Mariana', when: 'agora', kind: 'pdf' },
-    { id: 2, name: 'hemograma-02-04-2026.pdf', size: '1.2 MB', from: 'Tele · Prontuário', when: '02 abr', kind: 'pdf' },
-    { id: 3, name: 'tsh-t4-livre.pdf', size: '412 KB', from: 'Tele · Prontuário', when: '02 abr', kind: 'pdf' },
-    { id: 4, name: 'ressonancia-cranio.jpg', size: '3.4 MB', from: 'Mariana', when: '18 mar', kind: 'img' },
+    { id: '1', name: 'diario-cefaleia.pdf', size: '284 KB', from: 'Mariana', when: 'agora', kind: 'pdf' },
+    { id: '2', name: 'hemograma-02-04-2026.pdf', size: '1.2 MB', from: 'Tele · Prontuário', when: '02 abr', kind: 'pdf' },
+    { id: '3', name: 'tsh-t4-livre.pdf', size: '412 KB', from: 'Tele · Prontuário', when: '02 abr', kind: 'pdf' },
+    { id: '4', name: 'ressonancia-cranio.jpg', size: '3.4 MB', from: 'Mariana', when: '18 mar', kind: 'img' },
 ];
 
 export const QUICK_TEMPLATES_S = ['Refere dor há __ dias', 'Nega febre e calafrios', 'Em uso contínuo de __', 'Nega alergias medicamentosas'];

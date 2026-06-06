@@ -1,12 +1,18 @@
 <script setup lang="ts">
-import {
-    MOCK_INITIAL_NOTES,
-    QUICK_TEMPLATES_O,
-    QUICK_TEMPLATES_S,
-    type ConsultSoapNotes,
-} from '@/components/VideoCall/doctorConsultDesign/doctorConsultDesignData';
-import { FlaskConical, Pill, Plus, Stamp } from 'lucide-vue-next';
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
+import { QUICK_TEMPLATES_O, QUICK_TEMPLATES_S, type ConsultSoapNotes } from '@/components/VideoCall/doctorConsultDesign/doctorConsultDesignData';
+import { useForm } from '@inertiajs/vue3';
+import { FlaskConical, Loader2, Pill, Plus, Save, Stamp } from 'lucide-vue-next';
+import { computed, nextTick, onMounted, ref } from 'vue';
+
+const props = defineProps<{
+    patientId?: string | null;
+    appointmentId?: string | null;
+}>();
+
+const emit = defineEmits<{
+    action: [kind: 'rx' | 'exam' | 'certificate'];
+    saved: [];
+}>();
 
 const SOAP_DEFS = [
     { key: 'S' as const, title: 'Subjetivo', hint: 'Queixa principal, história referida pelo paciente.', placeholder: 'Refere…' },
@@ -15,12 +21,9 @@ const SOAP_DEFS = [
     { key: 'P' as const, title: 'Plano', hint: 'Conduta, prescrições, exames, retorno.', placeholder: 'Conduta…' },
 ];
 
-const notes = ref<ConsultSoapNotes>({ ...MOCK_INITIAL_NOTES });
-const savedAt = ref(new Date());
-let saveTimer: ReturnType<typeof setTimeout> | null = null;
-
-const tick = ref(0);
-let tickId: ReturnType<typeof setInterval> | null = null;
+const notes = ref<ConsultSoapNotes>({ S: '', O: '', A: '', P: '' });
+const dirty = ref(false);
+const savedOnce = ref(false);
 
 const textareaEls: Partial<Record<keyof ConsultSoapNotes, HTMLTextAreaElement>> = {};
 
@@ -41,43 +44,56 @@ const resizeTextareas = () => {
     });
 };
 
-onMounted(() => {
-    tickId = setInterval(() => {
-        tick.value += 1;
-    }, 1000);
-    void nextTick(() => resizeTextareas());
-});
-
-onUnmounted(() => {
-    if (tickId) clearInterval(tickId);
-});
+onMounted(() => void nextTick(() => resizeTextareas()));
 
 const update = (key: keyof ConsultSoapNotes, val: string) => {
     notes.value = { ...notes.value, [key]: val };
-    if (saveTimer) clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => {
-        savedAt.value = new Date();
-    }, 600);
+    dirty.value = true;
     void nextTick(() => resizeTextareas());
 };
 
-const fmt = (d: Date) => {
-    const diff = Math.floor((Date.now() - d.getTime()) / 1000);
-    if (diff < 5) return 'salvo agora';
-    if (diff < 60) return `salvo há ${diff}s`;
-    return `salvo há ${Math.floor(diff / 60)} min`;
+const hasContent = computed(() => (['S', 'O', 'A', 'P'] as const).some((key) => notes.value[key].trim() !== ''));
+const canSave = computed(() => Boolean(props.patientId && props.appointmentId) && hasContent.value);
+
+const form = useForm<{ appointment_id: string; title: string; content: string; category: string }>({
+    appointment_id: '',
+    title: '',
+    content: '',
+    category: 'general',
+});
+
+const buildContent = () =>
+    SOAP_DEFS.map((def) => {
+        const value = notes.value[def.key].trim();
+        return value ? `${def.key} — ${def.title}:\n${value}` : null;
+    })
+        .filter(Boolean)
+        .join('\n\n');
+
+const save = () => {
+    if (!props.patientId || !props.appointmentId || form.processing || !hasContent.value) return;
+
+    form.appointment_id = props.appointmentId;
+    form.title = 'Anotações da teleconsulta (SOAP)';
+    form.content = buildContent();
+
+    // preserveState mantém o overlay/streams vivos durante o redirect do back()
+    form.post(`/doctor/patients/${props.patientId}/medical-record/notes`, {
+        preserveScroll: true,
+        preserveState: true,
+        onSuccess: () => {
+            dirty.value = false;
+            savedOnce.value = true;
+            emit('saved');
+        },
+    });
 };
 
 const saveLabel = computed(() => {
-    void tick.value;
-    return fmt(savedAt.value);
+    if (form.processing) return 'salvando…';
+    if (dirty.value) return savedOnce.value ? 'alterações não salvas' : 'não salvo';
+    return savedOnce.value ? 'salvo no prontuário' : 'novo registro';
 });
-
-watch(notes, () => void nextTick(() => resizeTextareas()), { deep: true });
-
-const emit = defineEmits<{
-    action: [kind: 'rx' | 'exam' | 'certificate'];
-}>();
 
 const templatesFor = (key: keyof ConsultSoapNotes) => {
     if (key === 'S') return QUICK_TEMPLATES_S;
@@ -142,9 +158,21 @@ const insertTemplate = (key: keyof ConsultSoapNotes, text: string) => {
                 <Stamp class="h-3.5 w-3.5" />
                 Emitir atestado
             </button>
-            <button type="button" class="act-btn primary" style="grid-column: 1 / -1" @click="emit('action', 'rx')">
+            <button type="button" class="act-btn" style="grid-column: 1 / -1" @click="emit('action', 'rx')">
                 <Pill class="h-3.5 w-3.5" />
                 Prescrever medicamento
+            </button>
+            <button
+                type="button"
+                class="act-btn primary"
+                style="grid-column: 1 / -1"
+                :disabled="!canSave || form.processing"
+                :title="canSave ? 'Salvar como nota clínica no prontuário' : 'Escreva uma anotação para salvar'"
+                @click="save"
+            >
+                <Loader2 v-if="form.processing" class="h-3.5 w-3.5 animate-spin" />
+                <Save v-else class="h-3.5 w-3.5" />
+                {{ form.processing ? 'Salvando…' : 'Salvar no prontuário' }}
             </button>
         </div>
     </div>

@@ -1,5 +1,8 @@
 <script setup lang="ts">
-import DoctorVideoCallInCallOverlay from '@/components/VideoCall/DoctorVideoCallInCallOverlay.vue';
+import DoctorVideoCallInCallOverlay, {
+    type CallClinicalSummary,
+    type CallPatientHistoryEntry,
+} from '@/components/VideoCall/DoctorVideoCallInCallOverlay.vue';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { useRouteGuard } from '@/composables/auth';
@@ -9,6 +12,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import * as doctorRoutes from '@/routes/doctor';
 import { useVideoCallStore } from '@/stores/videoCall';
 import { type BreadcrumbItem } from '@/types';
+import type { CallSharedDocument } from '@/types/call-documents';
 import { Head, Link, usePage } from '@inertiajs/vue3';
 import {
     AlertTriangle,
@@ -44,8 +48,13 @@ interface AppointmentProp {
     active_call: ActiveCall | null;
     patient: {
         id: number;
+        patient_id: string;
         name: string;
     };
+    chief_complaint?: string | null;
+    clinical_summary?: CallClinicalSummary | null;
+    patient_history?: CallPatientHistoryEntry[];
+    shared_documents?: CallSharedDocument[];
 }
 
 type CtaMode = 'join' | 'join-scheduled' | 'ringing' | 'in-call' | 'ended' | 'waiting' | 'disabled-window';
@@ -74,6 +83,15 @@ onMounted(() => {
 });
 
 const isInCall = computed(() => sfu.connectionState.value === 'connected');
+
+// Appointment da chamada ativa (store) tem precedência sobre o selecionado na UI
+const activeAppointment = computed<AppointmentProp | null>(() => {
+    const activeId = store.appointmentId;
+    if (activeId) {
+        return appointments.find((appointment) => appointment.id === activeId) ?? selectedAppointment.value;
+    }
+    return selectedAppointment.value;
+});
 
 watch(
     () => sfu.connectionState.value,
@@ -113,6 +131,9 @@ const appointmentCtaMode = (appointment: AppointmentProp): CtaMode => {
     // Ad-hoc ativa: entrar
     if (appointment.active_call || (store.isActive && store.appointmentId === appointment.id)) return 'join';
 
+    // In progress sem call provisionada (job só cobre scheduled na janela) — join provisiona via /video/session
+    if (appointment.status === 'in_progress' && appointment.can_start_call) return 'join-scheduled';
+
     if (appointment.can_start_call) return 'waiting';
 
     return 'disabled-window';
@@ -128,7 +149,7 @@ const handleJoinCall = async () => {
 
     // Scheduled: conectar diretamente via token já no store (de /calls/active)
     if (selectedCtaMode.value === 'join-scheduled') {
-        await joinActiveCall();
+        await joinActiveCall(selectedAppointment.value.id);
         return;
     }
 
@@ -226,7 +247,14 @@ const ctaLabel = computed(() => {
         :is-mic-enabled="sfu.isMicEnabled.value"
         :is-camera-enabled="sfu.isCameraEnabled.value"
         :is-ending="isEndingCall"
-        :patient-display-name="selectedAppointment?.patient.name ?? null"
+        :patient-display-name="activeAppointment?.patient.name ?? null"
+        :appointment-id="activeAppointment?.id ?? null"
+        :patient-id="activeAppointment?.patient.patient_id ?? null"
+        :patient-user-id="activeAppointment?.patient.id ?? null"
+        :chief-complaint="activeAppointment?.chief_complaint ?? null"
+        :clinical-summary="activeAppointment?.clinical_summary ?? null"
+        :patient-history="activeAppointment?.patient_history ?? []"
+        :shared-documents="activeAppointment?.shared_documents ?? []"
         @toggle-mic="sfu.toggleMic()"
         @toggle-camera="sfu.toggleCamera()"
         @end="handleEndCall"

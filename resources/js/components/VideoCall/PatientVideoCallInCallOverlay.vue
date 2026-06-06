@@ -1,15 +1,12 @@
 <script setup lang="ts">
 import PatientConsultChatPanel from '@/components/VideoCall/patientConsultDesign/PatientConsultChatPanel.vue';
 import PatientConsultControlsBar from '@/components/VideoCall/patientConsultDesign/PatientConsultControlsBar.vue';
-import type { PatientConsultChatMessage } from '@/components/VideoCall/patientConsultDesign/patientConsultDesignData';
 import {
-    MOCK_PATIENT_CHAT,
     MOCK_PATIENT_DOCTOR,
-    MOCK_PATIENT_FILES,
     MOCK_PATIENT_MY_NOTES,
-    MOCK_PATIENT_SHARED_ITEMS,
     type PatientConsultChecklistItem,
     type PatientConsultDoctor,
+    type PatientConsultSharedFile,
     type PatientConsultSharedItem,
 } from '@/components/VideoCall/patientConsultDesign/patientConsultDesignData';
 import PatientConsultDoctorPanel from '@/components/VideoCall/patientConsultDesign/PatientConsultDoctorPanel.vue';
@@ -19,6 +16,10 @@ import PatientConsultSummaryPanel from '@/components/VideoCall/patientConsultDes
 import PatientConsultTopbar from '@/components/VideoCall/patientConsultDesign/PatientConsultTopbar.vue';
 import PatientConsultTweaksPanel from '@/components/VideoCall/patientConsultDesign/PatientConsultTweaksPanel.vue';
 import PatientConsultVideoStage from '@/components/VideoCall/patientConsultDesign/PatientConsultVideoStage.vue';
+import { useCallChat } from '@/composables/useCallChat';
+import { useCallSharedDocuments } from '@/composables/useCallSharedDocuments';
+import patientMedicalRecordRoutes from '@/routes/patient/medical-records';
+import { CALL_DOCUMENT_CATEGORY_LABELS, formatCallDocumentSize, formatCallDocumentTime, type CallSharedDocument } from '@/types/call-documents';
 import { FileText, MessageSquare, NotebookPen, PanelRight, Stethoscope } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 
@@ -35,8 +36,18 @@ const props = withDefaults(
         doctorDisplayName?: string | null;
         patientDisplayName?: string | null;
         chiefComplaint?: string | null;
+        appointmentId?: string | null;
+        doctorUserId?: string | number | null;
+        sharedDocuments?: CallSharedDocument[];
     }>(),
-    { doctorDisplayName: null, patientDisplayName: null, chiefComplaint: null },
+    {
+        doctorDisplayName: null,
+        patientDisplayName: null,
+        chiefComplaint: null,
+        appointmentId: null,
+        doctorUserId: null,
+        sharedDocuments: () => [],
+    },
 );
 
 const emit = defineEmits<{ toggleMic: []; toggleCamera: []; end: [] }>();
@@ -52,7 +63,6 @@ const tab = ref<(typeof TAB_DEFS)[number]['id']>('summary');
 const sideOpen = ref(true);
 const panelWidth = ref(420);
 const showCaptions = ref(false);
-const showRecording = ref(true);
 const stageView = ref<'doctor-main' | 'patient-main'>('doctor-main');
 const accent = ref('#0f766e');
 
@@ -60,8 +70,6 @@ const screenSharing = ref(false);
 const handRaised = ref(false);
 
 const notes = ref<PatientConsultChecklistItem[]>([...MOCK_PATIENT_MY_NOTES]);
-const sharedItems = ref<PatientConsultSharedItem[]>([...MOCK_PATIENT_SHARED_ITEMS]);
-const messages = ref<PatientConsultChatMessage[]>([...MOCK_PATIENT_CHAT]);
 
 const tweaksOpen = ref(false);
 const endModalOpen = ref(false);
@@ -77,18 +85,27 @@ const doctor = computed<PatientConsultDoctor>(() => ({
 }));
 
 const patientName = computed(() => props.patientDisplayName?.trim() || 'Você');
-const complaint = computed(() => props.chiefComplaint?.trim() || 'Relata dor de cabeça há 6 dias, com piora ao fim do dia e fotofobia leve.');
+const complaint = computed(() => props.chiefComplaint?.trim() || 'Sem registro de queixa para esta consulta.');
+
+const { messages, send: sendChatMessage } = useCallChat({
+    isInCall: () => props.isInCall,
+    otherUserId: () => props.doctorUserId,
+    otherUserName: () => doctor.value.short,
+    appointmentId: () => props.appointmentId,
+});
 
 const chatCount = computed(() => messages.value.filter((m) => m.type !== 'system').length);
 
-const seconds = ref(14 * 60 + 32);
+const seconds = ref(0);
 let elapsedTimer: ReturnType<typeof setInterval> | null = null;
 
 watch(
     () => props.isInCall,
     (v) => {
-        if (v) elapsedTimer = setInterval(() => (seconds.value += 1), 1000);
-        else if (elapsedTimer) {
+        if (v) {
+            seconds.value = 0;
+            elapsedTimer = setInterval(() => (seconds.value += 1), 1000);
+        } else if (elapsedTimer) {
             clearInterval(elapsedTimer);
             elapsedTimer = null;
         }
@@ -143,9 +160,55 @@ const onCtrlToggle = (key: 'mic' | 'cam' | 'screen' | 'captions' | 'hand' | 'mor
     showToast('Mais opções');
 };
 
-const onSummaryAction = (kind: 'download' | 'view' | 'repeat' | 'doubt') => {
-    if (kind === 'download') showToast('Baixando documento…');
-    if (kind === 'view') showToast('Abrindo documento…');
+const { documents: callDocuments } = useCallSharedDocuments({
+    isInCall: () => props.isInCall,
+    appointmentId: () => props.appointmentId,
+    initialDocuments: () => props.sharedDocuments,
+    hiddenVisibility: 'doctor',
+    onNewDocument: (doc) => showToast(`Novo documento compartilhado: ${doc.name}`),
+});
+
+const documentUrls = (doc: CallSharedDocument) => ({
+    downloadUrl: doc.download_url ?? patientMedicalRecordRoutes.documents.download.url({ document: doc.id }),
+    viewUrl: doc.view_url ?? patientMedicalRecordRoutes.documents.download.url({ document: doc.id }, { query: { disposition: 'inline' } }),
+});
+
+const sharedItems = computed<PatientConsultSharedItem[]>(() =>
+    callDocuments.value.map((doc) => ({
+        id: doc.id,
+        kind: doc.category === 'prescription' ? 'rx' : 'exam',
+        icon: doc.category === 'prescription' ? 'pill' : 'flask',
+        title: doc.name,
+        summary: CALL_DOCUMENT_CATEGORY_LABELS[doc.category] ?? 'Documento da consulta',
+        issuedAt: formatCallDocumentTime(doc.created_at),
+        status: 'Disponível para download',
+        ...documentUrls(doc),
+    })),
+);
+
+// Mesmos documentos da consulta também na aba "Arquivos", em formato de lista de arquivos
+const sharedFiles = computed<PatientConsultSharedFile[]>(() =>
+    callDocuments.value.map((doc) => ({
+        id: doc.id,
+        name: doc.name,
+        size: formatCallDocumentSize(doc.file_size),
+        from: CALL_DOCUMENT_CATEGORY_LABELS[doc.category] ?? 'Documento da consulta',
+        when: formatCallDocumentTime(doc.created_at),
+        kind: doc.file_type?.startsWith('image/') ? 'img' : 'pdf',
+        downloadUrl: documentUrls(doc).downloadUrl,
+    })),
+);
+
+const onSummaryAction = (kind: 'download' | 'view' | 'repeat' | 'doubt', item?: PatientConsultSharedItem) => {
+    if (kind === 'download') {
+        if (!item?.downloadUrl) return;
+        showToast('Baixando documento…');
+        window.location.href = item.downloadUrl;
+    }
+    if (kind === 'view') {
+        if (!item?.viewUrl) return;
+        window.open(item.viewUrl, '_blank', 'noopener,noreferrer');
+    }
     if (kind === 'repeat') showToast('Sinalizado: pode repetir, por favor?');
     if (kind === 'doubt') {
         handRaised.value = true;
@@ -169,7 +232,7 @@ const confirmEnd = () => {
         <div v-if="isInCall" ref="roomRef" class="fixed inset-0 z-[60] flex flex-col bg-[var(--stage-bg)]" :style="shellStyle">
             <div class="pcv-patient-consult app flex min-h-0 flex-1 flex-col" :class="{ 'side-closed': !sideOpen }">
                 <div class="app-top shrink-0">
-                    <PatientConsultTopbar :doctor="doctor" :elapsed="elapsed" :recording="showRecording" @open-tweaks="tweaksOpen = true" />
+                    <PatientConsultTopbar :doctor="doctor" :elapsed="elapsed" @open-tweaks="tweaksOpen = true" />
                 </div>
 
                 <div class="app-stage min-h-0">
@@ -221,8 +284,13 @@ const confirmEnd = () => {
                                 @action="onSummaryAction"
                             />
                             <PatientConsultDoctorPanel v-else-if="tab === 'doctor'" :doctor="doctor" @book="showToast('Abrindo agenda do médico…')" />
-                            <PatientConsultChatPanel v-else-if="tab === 'chat'" v-model:messages="messages" :patient-first-name="doctor.short" />
-                            <PatientConsultFilesPanel v-else-if="tab === 'files'" :files="MOCK_PATIENT_FILES" />
+                            <PatientConsultChatPanel
+                                v-else-if="tab === 'chat'"
+                                :messages="messages"
+                                :doctor-first-name="doctor.short"
+                                @send="sendChatMessage"
+                            />
+                            <PatientConsultFilesPanel v-else-if="tab === 'files'" :files="sharedFiles" />
                         </div>
                     </div>
                 </aside>
@@ -234,7 +302,6 @@ const confirmEnd = () => {
                         :screen-sharing="screenSharing"
                         :captions-on="showCaptions"
                         :hand-raised="handRaised"
-                        :recording="showRecording"
                         :is-ending="isEnding"
                         @toggle="onCtrlToggle"
                         @end="endModalOpen = true"
@@ -252,13 +319,11 @@ const confirmEnd = () => {
                 :open="tweaksOpen"
                 :panel-width="panelWidth"
                 :show-captions="showCaptions"
-                :show-recording="showRecording"
                 :stage-view="stageView"
                 :accent="accent"
                 @close="tweaksOpen = false"
                 @update:panel-width="panelWidth = $event"
                 @update:show-captions="showCaptions = $event"
-                @update:show-recording="showRecording = $event"
                 @update:stage-view="stageView = $event"
                 @update:accent="accent = $event"
             />

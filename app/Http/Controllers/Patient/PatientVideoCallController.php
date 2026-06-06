@@ -6,18 +6,23 @@ use App\Http\Controllers\Controller;
 use App\Models\Appointments;
 use App\Models\Call;
 use App\Models\Doctor;
+use App\Models\MedicalDocument;
 use App\Models\Patient;
+use App\Presenters\CallSharedDocumentPresenter;
 use Carbon\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class PatientVideoCallController extends Controller
 {
+    public function __construct(private readonly CallSharedDocumentPresenter $documentPresenter) {}
+
     public function index(): Response
     {
         $user = Auth::user();
-        $patient = Patient::where('user_id', $user->id)->first();
+        $patient = Patient::where('user_id', $user->id)->select(['id'])->first();
 
         if (! $patient) {
             return Inertia::render('Patient/VideoCall', ['users' => []]);
@@ -42,6 +47,7 @@ class PatientVideoCallController extends Controller
             ->where('patient_id', $patient->id)
             ->where('status', '!=', Appointments::STATUS_CANCELLED)
             ->orderBy('scheduled_at', 'desc')
+            ->select(['id', 'doctor_id', 'status', 'scheduled_at'])
             ->get()
             ->groupBy('doctor_id');
 
@@ -178,6 +184,35 @@ class PatientVideoCallController extends Controller
                 ];
             });
 
+        $doctors = $this->attachSharedDocuments($doctors, $patient);
+
         return Inertia::render('Patient/VideoCall', ['users' => $doctors]);
+    }
+
+    private function attachSharedDocuments(Collection $doctors, Patient $patient): Collection
+    {
+        $appointmentIds = $doctors->pluck('appointment.id')->filter()->values();
+
+        $documentsByAppointment = $appointmentIds->isEmpty()
+            ? collect()
+            : MedicalDocument::whereIn('appointment_id', $appointmentIds)
+                ->where('patient_id', $patient->id)
+                ->whereIn('visibility', [MedicalDocument::VISIBILITY_PATIENT, MedicalDocument::VISIBILITY_SHARED])
+                ->orderByDesc('created_at')
+                ->select(['id', 'appointment_id', 'patient_id', 'category', 'name', 'file_type', 'file_size', 'visibility', 'created_at'])
+                ->get()
+                ->groupBy('appointment_id');
+
+        return $doctors->map(function (array $entry) use ($documentsByAppointment) {
+            if ($entry['appointment'] !== null) {
+                $entry['appointment']['shared_documents'] = $documentsByAppointment
+                    ->get($entry['appointment']['id'], collect())
+                    ->map(fn (MedicalDocument $document) => $this->documentPresenter->forPatient($document))
+                    ->values()
+                    ->all();
+            }
+
+            return $entry;
+        });
     }
 }

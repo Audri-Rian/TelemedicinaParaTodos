@@ -41,9 +41,35 @@ export function useVideoCall() {
     /**
      * Conecta (ou reconecta) a uma chamada scheduled já provisionada via /calls/active.
      * Sempre busca token fresco do servidor para evitar expiração JWT.
+     * Sem call provisionada (ex.: consulta in_progress fora da janela do job),
+     * cai no provisionamento idempotente via /video/session.
      */
-    const joinActiveCall = async (): Promise<void> => {
-        if (isLoading.value || !store.callId) return;
+    const joinActiveCall = async (fallbackAppointmentId?: string | null): Promise<void> => {
+        if (isLoading.value) return;
+
+        // Consulta selecionada tem precedência: com múltiplas calls abertas, a call do
+        // store pode ser de OUTRO appointment — provisiona a sala da consulta escolhida
+        if (fallbackAppointmentId && store.appointmentId && store.appointmentId !== fallbackAppointmentId) {
+            console.debug('[VIDEO_CALL] Call ativa é de outro appointment — entrando na consulta selecionada', {
+                storeAppointmentId: store.appointmentId,
+                selectedAppointmentId: fallbackAppointmentId,
+            });
+            await joinVideoSession(fallbackAppointmentId);
+            return;
+        }
+
+        if (!store.callId) {
+            const appointmentId = store.appointmentId ?? fallbackAppointmentId;
+            if (appointmentId) {
+                console.debug('[VIDEO_CALL] Sem call ativa — provisionando via /video/session', { appointmentId });
+                await joinVideoSession(appointmentId);
+                return;
+            }
+            console.warn('[VIDEO_CALL] joinActiveCall() sem callId e sem appointmentId — nada a fazer');
+            toastError('Nenhuma chamada ativa encontrada para esta consulta.');
+            return;
+        }
+
         isLoading.value = true;
 
         const currentState = sfu.getConnectionState();

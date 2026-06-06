@@ -5,7 +5,6 @@ import { Clock, Info, Settings, Stethoscope } from 'lucide-vue-next';
 defineProps<{
     doctor: PatientConsultDoctor;
     elapsed: string;
-    recording: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -31,25 +30,6 @@ const emit = defineEmits<{
         </div>
 
         <div class="top-right">
-            <span
-                v-if="recording"
-                style="
-                    display: inline-flex;
-                    align-items: center;
-                    gap: 7px;
-                    height: 26px;
-                    padding: 0 10px;
-                    border-radius: 999px;
-                    background: rgba(180, 83, 9, 0.14);
-                    border: 1px solid rgba(180, 83, 9, 0.35);
-                    color: #fbbf24;
-                    font-size: 12px;
-                    font-weight: 500;
-                "
-            >
-                <span class="rec-dot" style="background: #f59e0b" />
-                Consulta sendo gravada
-            </span>
             <span class="timer-pill">
                 <Clock class="h-3.5 w-3.5" />
                 {{ elapsed }}

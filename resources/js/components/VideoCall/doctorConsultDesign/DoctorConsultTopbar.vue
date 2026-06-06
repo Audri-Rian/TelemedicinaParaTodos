@@ -4,11 +4,6 @@ import { Clock, Stethoscope } from 'lucide-vue-next';
 defineProps<{
     patientName: string;
     elapsed: string;
-    recording: boolean;
-}>();
-
-const emit = defineEmits<{
-    toggleRecording: [];
 }>();
 </script>
 
@@ -34,16 +29,6 @@ const emit = defineEmits<{
                 <Clock class="h-3.5 w-3.5" />
                 {{ elapsed }}
             </span>
-            <button type="button" class="top-btn outline" @click="emit('toggleRecording')">
-                <template v-if="recording">
-                    <span class="rec-dot" />
-                    Parar gravação
-                </template>
-                <template v-else>
-                    <span style="width: 7px; height: 7px; border-radius: 999px; background: #94a3b8; display: inline-block" />
-                    Iniciar gravação
-                </template>
-            </button>
         </div>
     </header>
 </template>

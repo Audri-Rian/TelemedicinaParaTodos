@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type { ConsultPatient } from '@/components/VideoCall/doctorConsultDesign/doctorConsultDesignData';
-import { Activity, AlertTriangle, ChevronRight, Droplets, FlaskConical, HeartPulse, Thermometer } from 'lucide-vue-next';
+import { Activity, AlertTriangle, ChevronRight } from 'lucide-vue-next';
 
-defineProps<{
+const props = defineProps<{
     patient: ConsultPatient;
 }>();
 
@@ -10,12 +10,16 @@ const emit = defineEmits<{
     openHistory: [];
 }>();
 
-const vitalIcon = (key: string) => {
-    if (key === 'pa') return HeartPulse;
-    if (key === 'fc') return Activity;
-    if (key === 'tax') return Thermometer;
-    return Droplets;
+const GENDER_LABELS: Record<string, string> = {
+    male: 'Masculino',
+    female: 'Feminino',
+    other: 'Outro',
 };
+
+const genderLabel = () => (props.patient.gender ? (GENDER_LABELS[props.patient.gender] ?? props.patient.gender) : null);
+
+const heroMeta = () =>
+    [props.patient.age !== null ? `${props.patient.age} anos` : null, genderLabel()].filter(Boolean).join(' · ') || 'Dados não informados';
 </script>
 
 <template>
@@ -24,10 +28,9 @@ const vitalIcon = (key: string) => {
             <div class="patient-av">{{ patient.initials }}</div>
             <div style="min-width: 0">
                 <h3 class="patient-name">{{ patient.name }}</h3>
-                <div class="patient-meta">{{ patient.age }} anos · {{ patient.gender }} · {{ patient.pronoun }}</div>
-                <div class="patient-meta" style="margin-top: 2px">
-                    Tipo sanguíneo <strong style="color: var(--foreground)">{{ patient.bloodType }}</strong> · CPF
-                    {{ patient.cpf }}
+                <div class="patient-meta">{{ heroMeta() }}</div>
+                <div v-if="patient.bloodType" class="patient-meta" style="margin-top: 2px">
+                    Tipo sanguíneo <strong style="color: var(--foreground)">{{ patient.bloodType }}</strong>
                 </div>
             </div>
         </div>
@@ -38,66 +41,47 @@ const vitalIcon = (key: string) => {
                     <AlertTriangle class="mr-1 inline h-3 w-3" />
                     Alergias
                 </span>
-                <button type="button" class="pat-add">Editar</button>
             </div>
-            <div class="chip-list">
+            <div v-if="patient.allergies.length" class="chip-list">
                 <span v-for="a in patient.allergies" :key="a" class="alert-chip">
                     <AlertTriangle class="h-3 w-3" />
                     {{ a }}
                 </span>
             </div>
+            <div v-else style="font-size: 12.5px; color: var(--muted-foreground)">Nenhuma alergia registrada.</div>
         </div>
 
         <div class="pat-section">
             <div class="pat-head">
-                <span class="pat-title">Condições</span>
-                <button type="button" class="pat-add">Editar</button>
+                <span class="pat-title">Histórico médico</span>
             </div>
-            <div class="chip-list">
-                <span v-for="c in patient.conditions" :key="c" class="neutral-chip">{{ c }}</span>
+            <div v-if="patient.conditions" style="font-size: 13px; line-height: 1.5; color: var(--foreground)">
+                {{ patient.conditions }}
             </div>
+            <div v-else style="font-size: 12.5px; color: var(--muted-foreground)">Nenhuma condição registrada.</div>
         </div>
 
         <div class="pat-section">
             <div class="pat-head">
                 <span class="pat-title">Medicações em uso</span>
-                <button type="button" class="pat-add">+ Adicionar</button>
             </div>
-            <div>
+            <div v-if="patient.medications.length">
                 <div v-for="(m, i) in patient.medications" :key="i" class="med-row">
                     <div class="med-dot" />
                     <div style="min-width: 0">
-                        <div class="med-name">{{ m.name }}</div>
-                        <div class="med-dose">{{ m.dose }}</div>
+                        <div class="med-name">{{ m }}</div>
                     </div>
                 </div>
             </div>
+            <div v-else style="font-size: 12.5px; color: var(--muted-foreground)">Nenhuma medicação registrada.</div>
         </div>
 
         <div class="pat-section">
             <div class="pat-head">
-                <span class="pat-title">Sinais vitais · informados</span>
-                <button type="button" class="pat-add">Atualizar</button>
-            </div>
-            <div class="vitals">
-                <div v-for="key in ['pa', 'fc', 'tax', 'sat'] as const" :key="key" class="vital">
-                    <div class="vital-lbl" style="display: flex; align-items: center; gap: 5px; color: var(--muted-foreground)">
-                        <component :is="vitalIcon(key)" class="h-3.5 w-3.5" />
-                        {{ patient.vitals[key].label }}
-                    </div>
-                    <div class="vital-val">
-                        {{ patient.vitals[key].value }}
-                        <span class="unit">{{ patient.vitals[key].unit }}</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="pat-section">
-            <div class="pat-head">
-                <span class="pat-title">Queixa principal</span>
+                <span class="pat-title">Motivo da consulta</span>
             </div>
             <div
+                v-if="patient.chiefComplaint"
                 style="
                     padding: 12px 14px;
                     border-radius: 10px;
@@ -110,26 +94,29 @@ const vitalIcon = (key: string) => {
             >
                 {{ patient.chiefComplaint }}
             </div>
+            <div v-else style="font-size: 12.5px; color: var(--muted-foreground)">Sem registro de queixa para esta consulta.</div>
         </div>
 
         <div class="pat-section" style="border-bottom: 0">
             <div class="pat-head">
                 <span class="pat-title">Histórico recente</span>
-                <button type="button" class="pat-add" @click="emit('openHistory')">Ver tudo</button>
+                <button type="button" class="pat-add" @click="emit('openHistory')">Ver prontuário</button>
             </div>
-            <div>
+            <div v-if="patient.history.length">
                 <div v-for="h in patient.history" :key="h.id" class="history-row">
                     <div class="ico">
-                        <FlaskConical v-if="h.icon === 'flask'" class="h-3.5 w-3.5" />
-                        <Activity v-else class="h-3.5 w-3.5" />
+                        <Activity class="h-3.5 w-3.5" />
                     </div>
                     <div style="min-width: 0; flex: 1">
                         <div class="h-title">{{ h.title }}</div>
-                        <div class="h-meta">{{ h.date }} · {{ h.who }}</div>
+                        <div class="h-meta">
+                            {{ h.date }}<template v-if="h.summary"> · {{ h.summary }}</template>
+                        </div>
                     </div>
                     <span class="h-chev"><ChevronRight class="h-3.5 w-3.5" /></span>
                 </div>
             </div>
+            <div v-else style="font-size: 12.5px; color: var(--muted-foreground)">Nenhuma consulta anterior com você.</div>
         </div>
     </div>
 </template>

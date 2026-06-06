@@ -32,6 +32,8 @@ return new class extends Migration
             $table->index(['doctor_id', 'category']);
             $table->index(['uploaded_by', 'category']);
             $table->index('visibility');
+            $table->index(['appointment_id', 'visibility']);
+            $table->index('created_at');
         });
     }
 

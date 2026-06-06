@@ -34,13 +34,13 @@
     --info-50: #eff6ff;
     --info-100: #dbeafe;
 
-    /* Stage (dark) tokens */
-    --stage-bg: #0a0f1a;
-    --stage-panel: #0f1626;
-    --stage-elev: #1a2236;
-    --stage-text: #e8ecf3;
-    --stage-text-muted: #95a0b5;
-    --stage-border: #232c43;
+    /* Stage (light) tokens — alinhados à paleta clara do projeto */
+    --stage-bg: #f4f6f8;
+    --stage-panel: #ffffff;
+    --stage-elev: #eef1f4;
+    --stage-text: #0b1220;
+    --stage-text-muted: #64748b;
+    --stage-border: #dde5ea;
 
     --radius: 10px;
     --radius-sm: 6px;
@@ -164,36 +164,6 @@ textarea {
     font-weight: 500;
 }
 
-.rec-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    height: 26px;
-    padding: 0 10px;
-    border-radius: 999px;
-    background: rgba(190, 18, 60, 0.14);
-    border: 1px solid rgba(190, 18, 60, 0.35);
-    color: #fb7185;
-    font-size: 12px;
-    font-weight: 500;
-}
-.rec-dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: #ef4444;
-    animation: recPulse 1.6s ease-in-out infinite;
-}
-@keyframes recPulse {
-    0%,
-    100% {
-        opacity: 1;
-    }
-    50% {
-        opacity: 0.35;
-    }
-}
-
 .timer-pill {
     display: inline-flex;
     align-items: center;
@@ -259,19 +229,19 @@ textarea {
 .stage-tile {
     flex: 1;
     border-radius: 18px;
-    background: linear-gradient(135deg, #1a2236 0%, #0f1626 100%);
+    background: linear-gradient(135deg, #e9eef2 0%, #f5f7f9 100%);
     border: 1px solid var(--stage-border);
     position: relative;
     overflow: hidden;
-    box-shadow: 0 20px 60px -20px rgba(0, 0, 0, 0.6);
+    box-shadow: 0 20px 60px -20px rgba(11, 18, 32, 0.18);
 }
 /* Simulated patient video — soft gradient blob + initials */
 .tile-bg {
     position: absolute;
     inset: 0;
     background:
-        radial-gradient(60% 50% at 35% 35%, rgba(15, 118, 110, 0.35), transparent 70%),
-        radial-gradient(50% 50% at 70% 70%, rgba(29, 78, 216, 0.25), transparent 70%), linear-gradient(135deg, #1a2236 0%, #0a0f1a 100%);
+        radial-gradient(60% 50% at 35% 35%, rgba(15, 118, 110, 0.12), transparent 70%),
+        radial-gradient(50% 50% at 70% 70%, rgba(29, 78, 216, 0.07), transparent 70%), linear-gradient(135deg, #e9eef2 0%, #f4f6f8 100%);
 }
 .tile-avatar {
     position: absolute;
@@ -281,16 +251,16 @@ textarea {
     width: 132px;
     height: 132px;
     border-radius: 50%;
-    background: linear-gradient(140deg, #475569, #1e293b);
-    color: #e8ecf3;
+    background: #e5f1f2;
+    color: #0f6e78;
     display: grid;
     place-items: center;
     font-size: 44px;
     font-weight: 600;
     letter-spacing: 0.01em;
     box-shadow:
-        0 0 0 6px rgba(255, 255, 255, 0.04),
-        0 0 0 8px rgba(255, 255, 255, 0.02);
+        0 0 0 6px rgba(15, 110, 120, 0.08),
+        0 0 0 8px rgba(15, 110, 120, 0.04);
 }
 .tile-label {
     position: absolute;
@@ -305,7 +275,7 @@ textarea {
     background: rgba(10, 15, 26, 0.58);
     border: 1px solid rgba(255, 255, 255, 0.06);
     backdrop-filter: blur(8px);
-    color: var(--stage-text);
+    color: #ffffff;
     font-size: 13px;
     font-weight: 500;
 }
@@ -371,7 +341,7 @@ textarea {
     border-radius: 999px;
     background: rgba(10, 15, 26, 0.58);
     border: 1px solid rgba(255, 255, 255, 0.06);
-    color: var(--stage-text);
+    color: #ffffff;
     font-size: 11.5px;
     font-weight: 500;
     backdrop-filter: blur(8px);
@@ -411,9 +381,9 @@ textarea {
     aspect-ratio: 16 / 11;
     border-radius: 14px;
     overflow: hidden;
-    border: 1.5px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.55);
-    background: #111827;
+    border: 1.5px solid #dde5ea;
+    box-shadow: 0 12px 30px -10px rgba(11, 18, 32, 0.25);
+    background: #e9eef2;
 }
 .self-pip.dragging {
     cursor: grabbing;
@@ -421,7 +391,7 @@ textarea {
 .self-pip-bg {
     position: absolute;
     inset: 0;
-    background: radial-gradient(60% 60% at 50% 40%, rgba(15, 118, 110, 0.35), transparent 70%), linear-gradient(135deg, #1f2937, #0b1220);
+    background: radial-gradient(60% 60% at 50% 40%, rgba(15, 118, 110, 0.12), transparent 70%), linear-gradient(135deg, #e9eef2, #f4f6f8);
 }
 .self-pip-avatar {
     position: absolute;
@@ -450,7 +420,7 @@ textarea {
     background: rgba(10, 15, 26, 0.58);
     backdrop-filter: blur(6px);
     font-size: 11.5px;
-    color: var(--stage-text);
+    color: #ffffff;
 }
 .self-pip-mute {
     position: absolute;
@@ -477,13 +447,13 @@ textarea {
     background: rgba(10, 15, 26, 0.72);
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.06);
-    color: var(--stage-text);
+    color: #ffffff;
     font-size: 14.5px;
     line-height: 1.4;
     text-align: center;
 }
 .caption-bar .speaker {
-    color: var(--stage-text-muted);
+    color: rgba(255, 255, 255, 0.7);
     font-size: 11.5px;
     font-weight: 500;
     text-transform: uppercase;
@@ -544,19 +514,19 @@ textarea {
     position: relative;
 }
 .ctrl-btn:hover {
-    background: #232c43;
+    background: #e6ecf1;
 }
 .ctrl-btn.toggled-off {
-    background: rgba(190, 18, 60, 0.15);
-    color: #fb7185;
+    background: var(--destructive-50);
+    color: var(--destructive);
     border-color: rgba(190, 18, 60, 0.35);
 }
 .ctrl-btn.toggled-off:hover {
-    background: rgba(190, 18, 60, 0.22);
+    background: var(--destructive-100);
 }
 .ctrl-btn.toggled-on {
-    background: rgba(15, 118, 110, 0.18);
-    color: #5eead4;
+    background: rgba(15, 118, 110, 0.12);
+    color: var(--primary-800);
     border-color: rgba(15, 118, 110, 0.45);
 }
 .ctrl-btn .ctrl-caret {
@@ -566,7 +536,7 @@ textarea {
     width: 14px;
     height: 14px;
     border-radius: 4px;
-    background: rgba(255, 255, 255, 0.06);
+    background: rgba(11, 18, 32, 0.06);
     color: var(--stage-text-muted);
     display: grid;
     place-items: center;
@@ -1308,7 +1278,7 @@ textarea {
     border-radius: 10px;
     background: rgba(15, 22, 38, 0.85);
     border: 1px solid rgba(255, 255, 255, 0.08);
-    color: var(--stage-text);
+    color: #ffffff;
     display: grid;
     place-items: center;
     backdrop-filter: blur(6px);
