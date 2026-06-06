@@ -2,6 +2,7 @@
 
 namespace App\Integrations\Http\Middleware;
 
+use App\Http\Support\ErrorPageResponse;
 use App\Models\IntegrationCredential;
 use Closure;
 use Illuminate\Http\Request;
@@ -21,10 +22,15 @@ class AuthenticatePartner
         $token = $request->bearerToken();
 
         if (! $token) {
-            return response()->json([
-                'error' => 'unauthorized',
-                'error_description' => 'Bearer token required.',
-            ], 401);
+            return ErrorPageResponse::make(
+                $request,
+                401,
+                'Bearer token required.',
+                [
+                    'error' => 'unauthorized',
+                    'error_description' => 'Bearer token required.',
+                ],
+            );
         }
 
         $hashedToken = hash('sha256', $token);
@@ -41,19 +47,29 @@ class AuthenticatePartner
                 'ip' => $request->ip(),
             ]);
 
-            return response()->json([
-                'error' => 'invalid_token',
-                'error_description' => 'The access token is invalid.',
-            ], 401);
+            return ErrorPageResponse::make(
+                $request,
+                401,
+                'The access token is invalid.',
+                [
+                    'error' => 'invalid_token',
+                    'error_description' => 'The access token is invalid.',
+                ],
+            );
         }
 
         $partner = $credential->partnerIntegration;
 
         if (! $partner || ! $partner->isActive()) {
-            return response()->json([
-                'error' => 'forbidden',
-                'error_description' => 'Partner integration is not active.',
-            ], 403);
+            return ErrorPageResponse::make(
+                $request,
+                403,
+                'Partner integration is not active.',
+                [
+                    'error' => 'forbidden',
+                    'error_description' => 'Partner integration is not active.',
+                ],
+            );
         }
 
         $request->attributes->set('partner', $partner);

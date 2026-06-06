@@ -33,10 +33,21 @@ class AuthenticatedSessionController extends Controller
     {
         $request->authenticate();
 
-        $request->session()->regenerate();
-
-        // Redirecionar baseado no tipo de usuário
         $user = Auth::user();
+
+        if ($user->hasTwoFactorEnabled()) {
+            Auth::logout();
+
+            $request->session()->put([
+                'two_factor.user_id' => $user->id,
+                'two_factor.remember' => $request->boolean('remember'),
+                'two_factor.pending_at' => now()->timestamp,
+            ]);
+
+            return redirect()->route('two-factor.challenge');
+        }
+
+        $request->session()->regenerate();
 
         if ($user->isDoctor()) {
             return redirect()->intended(route('doctor.dashboard', absolute: false));
@@ -46,7 +57,6 @@ class AuthenticatedSessionController extends Controller
             return redirect()->intended(route('patient.dashboard', absolute: false));
         }
 
-        // Fallback caso não tenha perfil definido
         return redirect()->intended(route('home', absolute: false));
     }
 

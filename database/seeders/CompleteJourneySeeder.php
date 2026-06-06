@@ -38,7 +38,13 @@ class CompleteJourneySeeder extends Seeder
         }
 
         $patientLogin = 'demo.patient@telemedicina.test';
-        $doctor = Doctor::query()->with('user')->first();
+        $upcomingVideoCallAt = now()->addMinutes(15);
+
+        $doctor = Doctor::query()
+            ->with('user')
+            ->whereHas('user', fn ($query) => $query->where('email', DoctorSeeder::DEMO_DOCTOR_EMAIL))
+            ->first();
+
         if ($doctor === null) {
             $this->command?->warn('CompleteJourneySeeder requer DoctorSeeder executado antes.');
 
@@ -86,10 +92,14 @@ class CompleteJourneySeeder extends Seeder
             [
                 'doctor_id' => $doctor->id,
                 'patient_id' => $patient->id,
-                'scheduled_at' => now()->addDays(2),
+                'scheduled_at' => $upcomingVideoCallAt,
                 'status' => Appointments::STATUS_SCHEDULED,
-                'notes' => 'Agendamento futuro para validacao de fluxo de agenda.',
-                'metadata' => ['source' => 'CompleteJourneySeeder', 'kind' => 'agendamento'],
+                'notes' => 'Teleconsulta demo agendada para validacao de videochamada.',
+                'metadata' => [
+                    'source' => 'CompleteJourneySeeder',
+                    'kind' => 'teleconsulta',
+                    'video_call' => true,
+                ],
             ]
         );
 
@@ -415,6 +425,7 @@ class CompleteJourneySeeder extends Seeder
         $this->command?->info('Credenciais de demonstracao (senha: password):');
         $this->command?->line('  Medico: '.DoctorSeeder::DEMO_DOCTOR_EMAIL);
         $this->command?->line('  Paciente: '.$patientLogin);
+        $this->command?->line('  Proxima videochamada demo: '.$upcomingVideoCallAt->format('d/m/Y H:i'));
         $this->command?->line('  Pacientes extras: demo.patient+{1..8}@telemedicina.test');
         $this->command?->newLine();
     }

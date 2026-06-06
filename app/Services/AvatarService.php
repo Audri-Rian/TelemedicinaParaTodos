@@ -4,6 +4,7 @@ namespace App\Services;
 
 use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Intervention\Image\ImageManager;
 use League\Flysystem\Local\LocalFilesystemAdapter;
@@ -57,6 +58,27 @@ class AvatarService
      *
      * @throws \InvalidArgumentException
      */
+    public function storeFromUrl(string $userId, string $url): string
+    {
+        $response = Http::timeout(10)->get($url);
+
+        if (! $response->successful()) {
+            throw new \InvalidArgumentException('Não foi possível baixar a imagem da URL fornecida.');
+        }
+
+        $userDir = "avatars/{$userId}";
+        $filename = Str::uuid().'.jpg';
+        $path = "{$userDir}/{$filename}";
+        $contents = $response->body();
+
+        $this->processAndSaveImage($contents, $path, self::AVATAR_SIZE, self::JPEG_QUALITY);
+
+        $thumbnailPath = "{$userDir}/thumb_{$filename}";
+        $this->processAndSaveImage($contents, $thumbnailPath, self::THUMBNAIL_SIZE, self::THUMBNAIL_QUALITY);
+
+        return $path;
+    }
+
     public function uploadAvatar(string $userId, UploadedFile $file): string
     {
         // Validar arquivo

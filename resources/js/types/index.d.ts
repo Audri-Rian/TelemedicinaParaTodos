@@ -41,13 +41,24 @@ export type AppPageProps<T extends Record<string, unknown> = Record<string, unkn
 };
 
 export interface User {
-    id: number;
+    id: string;
     name: string;
     email: string;
     avatar?: string;
     email_verified_at: string | null;
     created_at: string;
     updated_at: string;
+    /** Presente quando o controller compartilha explicitamente */
+    has_password?: boolean;
+    has_two_factor_enabled?: boolean;
+}
+
+export interface SocialAccount {
+    id: string;
+    provider: string;
+    provider_email: string | null;
+    avatar_url: string | null;
+    linked_at: string | null;
 }
 
 export type BreadcrumbItemType = BreadcrumbItem;

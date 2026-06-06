@@ -21,7 +21,17 @@
             "Bash(openssl rand *)",
             "Bash(npx tsc *)",
             "Bash(grep -E \"\\\\.\\(php|ts|vue|js\\)$\")",
-            "Bash(grep -v \"^$\")"
+            "Bash(grep -v \"^$\")",
+            "Bash(DB_DATABASE=telemedicina_testing APP_ENV=testing php artisan test tests/Feature/VideoCall tests/Unit/VideoCall --no-coverage)",
+            "Bash(php -r \"require 'vendor/autoload.php'; echo class_exists\\('Inertia\\\\Testing\\\\AssertableInertia'\\) ? 'yes' : 'no';\")",
+            "Bash(DB_DATABASE=telemedicina_testing APP_ENV=testing php artisan test tests/Feature/VideoCall/CallControllerTest --no-coverage)",
+            "Bash(DB_DATABASE=telemedicina_testing APP_ENV=testing php artisan test tests/Feature/VideoCall/CallControllerTest.php --no-coverage)",
+            "Bash(DB_DATABASE=telemedicina_testing APP_ENV=testing php artisan test tests/Feature/VideoCall/VideoCallPagesTest.php tests/Feature/VideoCall/AppointmentVideoSessionControllerTest.php tests/Unit/VideoCall/VideoCallPolicyTest.php --no-coverage)",
+            "Bash(composer require *)",
+            "Bash(grep -n 'fillable\\\\|casts\\\\|$table' /home/audri/Github/Audri/TelemedicinaParaTodos/app/Models/Consent.php)",
+            "Bash(./vendor/bin/pint app/Models/SocialAccount.php app/Models/User.php app/Services/SocialAuthService.php app/Services/TwoFactorAuthService.php app/Http/Middleware/EnsureTwoFactorPending.php app/Http/Controllers/Auth/GoogleAuthController.php app/Http/Controllers/Auth/TwoFactorChallengeController.php app/Http/Controllers/Auth/CompletePatientProfileController.php app/Http/Controllers/Settings/TwoFactorController.php app/Http/Controllers/Settings/ConnectedAccountsController.php app/Http/Controllers/Settings/PasswordController.php app/Http/Controllers/Auth/AuthenticatedSessionController.php app/Http/Requests/Auth/CompletePatientProfileRequest.php app/Http/Requests/Auth/TwoFactorChallengeRequest.php app/Http/Requests/Settings/ConfirmTwoFactorRequest.php app/Http/Requests/Settings/CreatePasswordRequest.php)",
+            "Bash(./vendor/bin/pint app/Services/SocialAuthService.php app/Services/AvatarService.php --test)",
+            "Bash(./vendor/bin/pint app/Services/SocialAuthService.php app/Services/AvatarService.php)"
         ]
     }
 }

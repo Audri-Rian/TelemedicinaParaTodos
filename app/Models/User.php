@@ -27,6 +27,9 @@ class User extends Authenticatable
         'has_seen_dashboard_tour',
         'has_seen_doctor_welcome_screen',
         'has_seen_doctor_dashboard_tour',
+        'two_factor_secret',
+        'two_factor_recovery_codes',
+        'two_factor_confirmed_at',
     ];
 
     /**
@@ -37,6 +40,8 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
+        'two_factor_secret',
+        'two_factor_recovery_codes',
     ];
 
     /**
@@ -54,6 +59,9 @@ class User extends Authenticatable
             'has_seen_dashboard_tour' => 'boolean',
             'has_seen_doctor_welcome_screen' => 'boolean',
             'has_seen_doctor_dashboard_tour' => 'boolean',
+            'two_factor_secret' => 'encrypted',
+            'two_factor_recovery_codes' => 'encrypted:array',
+            'two_factor_confirmed_at' => 'datetime',
         ];
     }
 
@@ -165,6 +173,30 @@ class User extends Authenticatable
     public function hasAvatar(): bool
     {
         return ! empty($this->avatar_path);
+    }
+
+    /**
+     * Get the social accounts linked to this user.
+     */
+    public function socialAccounts()
+    {
+        return $this->hasMany(SocialAccount::class);
+    }
+
+    /**
+     * Whether this user has a usable password (not social-only).
+     */
+    public function hasPassword(): bool
+    {
+        return ! is_null($this->password);
+    }
+
+    /**
+     * Whether 2FA is fully enabled (confirmed).
+     */
+    public function hasTwoFactorEnabled(): bool
+    {
+        return ! is_null($this->two_factor_confirmed_at);
     }
 
     /**

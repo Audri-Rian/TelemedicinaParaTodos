@@ -7,6 +7,8 @@ import { edit } from '@/routes/password';
 import { Head, useForm, usePage } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 
+const props = defineProps<{ hasPassword?: boolean }>();
+
 import HeadingSmall from '@/components/HeadingSmall.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,9 +29,16 @@ const page = usePage();
 const auth = computed(() => page.props.auth as { isDoctor?: boolean; role?: string | null } | undefined);
 const isDoctor = computed(() => auth.value?.isDoctor === true || auth.value?.role === 'doctor');
 
-// Criar o formulário usando useForm do Inertia
+const hasPassword = computed(() => props.hasPassword !== false);
+
 const form = useForm({
     current_password: '',
+    password: '',
+    password_confirmation: '',
+});
+
+// Formulário para conta social-only (sem senha atual)
+const createForm = useForm({
     password: '',
     password_confirmation: '',
 });
@@ -83,7 +92,6 @@ const activeSessions = [
     },
 ];
 
-// Função para enviar o formulário
 const submit = () => {
     form.put(updateRoute.url(), {
         preserveScroll: true,
@@ -92,8 +100,20 @@ const submit = () => {
             setTimeout(() => {
                 recentlySuccessful.value = false;
             }, 2000);
-            // Resetar apenas os campos de senha
             form.reset('password', 'password_confirmation', 'current_password');
+        },
+    });
+};
+
+const submitCreate = () => {
+    createForm.post('/settings/password/create', {
+        preserveScroll: true,
+        onSuccess: () => {
+            recentlySuccessful.value = true;
+            setTimeout(() => {
+                recentlySuccessful.value = false;
+            }, 2000);
+            createForm.reset();
         },
     });
 };
@@ -315,6 +335,51 @@ const submit = () => {
                 </section>
             </div>
 
+            <!-- Criar senha (conta social-only) -->
+            <div v-else-if="!hasPassword" class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+                <HeadingSmall title="Criar senha" description="Sua conta foi criada via Google. Defina uma senha para ter mais formas de acesso." />
+                <form @submit.prevent="submitCreate" class="mt-4 space-y-6">
+                    <div class="grid gap-2">
+                        <Label for="create_password" class="text-gray-800">Nova senha</Label>
+                        <Input
+                            id="create_password"
+                            type="password"
+                            v-model="createForm.password"
+                            class="mt-1 block w-full rounded-xl border-primary/30 focus-visible:ring-primary/30"
+                            autocomplete="new-password"
+                            placeholder="Mínimo 8 caracteres"
+                        />
+                        <InputError :message="createForm.errors.password" />
+                    </div>
+                    <div class="grid gap-2">
+                        <Label for="create_password_confirmation" class="text-gray-800">Confirmar senha</Label>
+                        <Input
+                            id="create_password_confirmation"
+                            type="password"
+                            v-model="createForm.password_confirmation"
+                            class="mt-1 block w-full rounded-xl border-primary/30 focus-visible:ring-primary/30"
+                            autocomplete="new-password"
+                            placeholder="Confirmar senha"
+                        />
+                        <InputError :message="createForm.errors.password_confirmation" />
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <Button type="submit" :disabled="createForm.processing" class="rounded-xl bg-primary text-white hover:bg-primary/90">
+                            Criar senha
+                        </Button>
+                        <Transition
+                            enter-active-class="transition ease-in-out"
+                            enter-from-class="opacity-0"
+                            leave-active-class="transition ease-in-out"
+                            leave-to-class="opacity-0"
+                        >
+                            <p v-show="recentlySuccessful" class="text-sm text-neutral-600">Senha criada.</p>
+                        </Transition>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Trocar senha (conta com senha) -->
             <div v-else class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
                 <HeadingSmall
                     title="Senha"

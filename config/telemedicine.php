@@ -426,8 +426,16 @@ return [
     */
 
     'auth' => [
-        // Máximo de tentativas de login antes de bloquear (rate limit).
         'login_max_attempts' => (int) env('AUTH_LOGIN_MAX_ATTEMPTS', 5),
+
+        'two_factor' => [
+            'window' => (int) env('TWO_FACTOR_WINDOW', 1),
+            'recovery_code_count' => (int) env('TWO_FACTOR_RECOVERY_CODE_COUNT', 10),
+        ],
+
+        'social' => [
+            'enabled_for_patients' => (bool) env('SOCIAL_AUTH_ENABLED_FOR_PATIENTS', true),
+        ],
     ],
 
     /*

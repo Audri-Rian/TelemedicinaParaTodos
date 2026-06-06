@@ -29,6 +29,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'doctor' => \App\Http\Middleware\EnsureUserIsDoctor::class,
             'patient' => \App\Http\Middleware\EnsureUserIsPatient::class,
+            'two_factor.pending' => \App\Http\Middleware\EnsureTwoFactorPending::class,
             'audit' => \App\Http\Middleware\AuditAccess::class,
             'partner.auth' => \App\Integrations\Http\Middleware\AuthenticatePartner::class,
             'partner.scope' => \App\Integrations\Http\Middleware\CheckPartnerScope::class,
@@ -42,7 +43,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // Renderizar página de erro customizada para erros HTTP
         $exceptions->render(function (\Symfony\Component\HttpKernel\Exception\HttpExceptionInterface $e, \Illuminate\Http\Request $request) {
             // Verificar se a requisição espera uma resposta JSON (API) ou se é uma rota de API
-            if ($request->expectsJson() || $request->is('api/*')) {
+            if ($request->expectsJson() || $request->wantsJson()) {
                 return response()->json([
                     'message' => $e->getMessage() ?: 'Erro na requisição',
                     'status' => $e->getStatusCode(),
