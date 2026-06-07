@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex">
+    <title>Teste SFU MediaSoup (standalone)</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <h1>Teste SFU MediaSoup</h1>
+    <p class="meta">Cliente standalone — sem Laravel. Preencha a URL do WebSocket e o token (gerado por <code>scripts/generate-token.js</code>).</p>
+
+    <div class="config">
+        <label>URL WebSocket:</label>
+        <input id="wsUrl" type="text" placeholder="ws://127.0.0.1:4443" value="ws://127.0.0.1:4443" />
+        <label>Token JWT:</label>
+        <input id="tokenInput" type="text" placeholder="Token JWT (cole aqui)" />
+    </div>
+
+    <div class="videos">
+        <div>
+            <p class="label">Você</p>
+            <video id="localVideo" autoplay muted playsinline></video>
+        </div>
+        <div>
+            <p class="label">Participantes remotos</p>
+            <div id="remoteVideos"></div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button type="button" id="joinRoom">Entrar na sala</button>
+        <button type="button" id="startCamera">Iniciar câmera</button>
+        <button type="button" id="shareScreen" disabled>Compartilhar tela</button>
+        <button type="button" id="leaveRoom">Sair</button>
+    </div>
+
+    <p class="log-label">Logs de debug</p>
+    <div id="logContainer"></div>
+
+    <script type="module" src="app.js"></script>
+</body>
+</html>
