@@ -67,9 +67,9 @@ jobs:
       - name: Build frontend assets
         working-directory: ${{ env.DEPLOY_ROOT }}
         run: |
-          export PATH="${{ env.COMPOSE_DIR }}/scripts:$PATH"
-          ln -sf php-docker.sh "${{ env.COMPOSE_DIR }}/scripts/php"
           npm ci
+          install -m 755 "${{ env.COMPOSE_DIR }}/scripts/php-docker.sh" "${{ env.COMPOSE_DIR }}/scripts/php"
+          export PATH="${{ env.COMPOSE_DIR }}/scripts:${PATH}"
           npm run build
 
       - name: Run database migrations
