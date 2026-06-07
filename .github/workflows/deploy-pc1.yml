@@ -35,13 +35,15 @@ jobs:
               run --rm --user root --no-deps app \
               chown -R "$(id -u):$(id -g)" /var/www/html/resources/js || true
           fi
-          rsync -a --delete \
+          rsync -a --delete --no-owner --no-group \
             --exclude '.git' \
             --exclude 'node_modules' \
             --exclude 'vendor' \
             --exclude 'storage' \
             --exclude 'bootstrap/cache' \
             --exclude 'public/build' \
+            --exclude 'resources/js/actions' \
+            --exclude 'resources/js/routes' \
             --exclude '.env' \
             --exclude 'deploy/pc1/.env' \
             "$GITHUB_WORKSPACE/" "$DEPLOY_ROOT/"
