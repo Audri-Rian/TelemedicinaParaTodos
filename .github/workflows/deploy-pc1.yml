@@ -1,0 +1,84 @@
+name: Deploy PC1
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-pc1
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy Telemedicina on PC1
+    runs-on: [self-hosted, pc1, telemedicina]
+    env:
+      DEPLOY_ROOT: /home/pc1intelceleron/TelemedicinaParaTodos
+      COMPOSE_DIR: /home/pc1intelceleron/TelemedicinaParaTodos/deploy/pc1
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Sync code to deploy directory
+        run: |
+          set -euo pipefail
+          mkdir -p "$DEPLOY_ROOT/deploy/pc1"
+          if [ -f "$DEPLOY_ROOT/deploy/pc1/.env" ]; then
+            cp "$DEPLOY_ROOT/deploy/pc1/.env" /tmp/telemedicina-pc1.env.bak
+          fi
+          rsync -a --delete \
+            --exclude '.git' \
+            --exclude 'node_modules' \
+            --exclude 'vendor' \
+            --exclude 'storage/logs' \
+            --exclude 'storage/framework/cache/data' \
+            --exclude 'storage/framework/sessions' \
+            --exclude 'storage/framework/views' \
+            --exclude '.env' \
+            --exclude 'deploy/pc1/.env' \
+            "$GITHUB_WORKSPACE/" "$DEPLOY_ROOT/"
+          if [ -f /tmp/telemedicina-pc1.env.bak ]; then
+            mv /tmp/telemedicina-pc1.env.bak "$DEPLOY_ROOT/deploy/pc1/.env"
+          fi
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: ${{ env.DEPLOY_ROOT }}/package-lock.json
+
+      - name: Install PHP dependencies
+        working-directory: ${{ env.COMPOSE_DIR }}
+        run: docker compose run --rm --no-deps app composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev
+
+      - name: Build frontend assets
+        working-directory: ${{ env.DEPLOY_ROOT }}
+        run: |
+          npm ci
+          npm run build
+
+      - name: Run database migrations
+        working-directory: ${{ env.COMPOSE_DIR }}
+        run: docker compose run --rm --no-deps app php artisan migrate --force
+
+      - name: Cache Laravel config and routes
+        working-directory: ${{ env.COMPOSE_DIR }}
+        run: |
+          docker compose run --rm --no-deps app php artisan config:cache
+          docker compose run --rm --no-deps app php artisan route:cache
+          docker compose run --rm --no-deps app php artisan view:cache
+
+      - name: Rebuild and restart stack
+        working-directory: ${{ env.COMPOSE_DIR }}
+        run: |
+          docker compose up -d --build app reverb queue scheduler nginx
+          docker compose ps
+
+      - name: Smoke test
+        working-directory: ${{ env.COMPOSE_DIR }}
+        run: |
+          APP_URL="${APP_URL:-http://127.0.0.1}" ./scripts/smoke-test.sh
