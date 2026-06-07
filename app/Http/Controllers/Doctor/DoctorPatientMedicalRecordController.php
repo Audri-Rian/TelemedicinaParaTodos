@@ -15,6 +15,7 @@ use App\Http\Requests\Doctor\MedicalRecords\UpdateClinicalNoteRequest;
 use App\Http\Requests\Doctor\MedicalRecords\UpdateMedicalCertificateRequest;
 use App\Http\Requests\Doctor\MedicalRecords\UpdatePrescriptionRequest;
 use App\Jobs\GenerateMedicalRecordPDF;
+use App\Jobs\LogMedicalRecordAccessJob;
 use App\Models\Appointments;
 use App\Models\ClinicalNote;
 use App\Models\MedicalCertificate;
@@ -27,6 +28,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 use Throwable;
@@ -51,10 +53,14 @@ class DoctorPatientMedicalRecordController extends Controller
         $filters = $this->extractFilters($request->validated());
         $payload = $this->medicalRecordService->getDoctorPatientMedicalRecord($user->doctor, $patient, $filters);
 
-        $this->medicalRecordService->logAccess($user, $patient, 'view', [
-            'by' => 'doctor',
-            'doctor_id' => $user->doctor->id,
-        ]);
+        $auditKey = "audit:view:doctor:{$user->id}:patient:{$patient->id}";
+        if (! Cache::has($auditKey)) {
+            LogMedicalRecordAccessJob::dispatch($user, $patient, 'view', [
+                'by' => 'doctor',
+                'doctor_id' => $user->doctor->id,
+            ])->onQueue('low');
+            Cache::put($auditKey, true, now()->addMinutes(5));
+        }
 
         $payload['context'] = [
             'viewer' => [
@@ -66,7 +72,7 @@ class DoctorPatientMedicalRecordController extends Controller
 
         $payload['lab_partners'] = Cache::remember(
             "doctor:{$user->doctor->id}:lab-partners",
-            now()->addMinutes(5),
+            now()->addHour(),
             fn () => $user->doctor->partnerIntegrations()
                 ->where('partner_integrations.status', PartnerIntegration::STATUS_ACTIVE)
                 ->where('partner_integrations.type', PartnerIntegration::TYPE_LABORATORY)
@@ -212,6 +218,34 @@ class DoctorPatientMedicalRecordController extends Controller
         return back()->with('status', 'Exame solicitado com sucesso.');
     }
 
+    public function storeExaminationBatch(Request $request, Patient $patient)
+    {
+        $this->authorize('requestExamination', $patient);
+
+        $doctor = $request->user()->doctor;
+
+        $validated = $request->validate([
+            'appointment_id' => ['required', 'exists:appointments,id'],
+            'examinations' => ['required', 'array', 'min:1', 'max:20'],
+            'examinations.*.name' => ['required', 'string', 'max:255'],
+            'examinations.*.type' => ['required', Rule::in(['lab', 'image', 'other'])],
+            'examinations.*.justification' => ['required', 'string'],
+            'examinations.*.instructions' => ['nullable', 'string'],
+            'examinations.*.priority' => ['nullable', Rule::in(['normal', 'urgent'])],
+        ]);
+
+        $appointment = $this->resolveAppointment($validated['appointment_id'], $patient, $doctor->id);
+        $this->authorize('requestExamination', $appointment);
+
+        foreach ($validated['examinations'] as $exam) {
+            $this->medicalRecordService->requestExamination($doctor, $patient, $appointment, $exam);
+        }
+
+        $count = count($validated['examinations']);
+
+        return back()->with('status', $count.' '.($count === 1 ? 'exame solicitado' : 'exames solicitados').' com sucesso.');
+    }
+
     public function storeClinicalNote(StoreClinicalNoteRequest $request, Patient $patient)
     {
         $this->authorize('createNote', $patient);
@@ -350,6 +384,10 @@ class DoctorPatientMedicalRecordController extends Controller
             default => abort(404),
         };
 
+        if ($model->doctor_id !== $user->doctor->id) {
+            abort(403, 'Acesso restrito ao médico responsável pelo registro.');
+        }
+
         $this->medicalRecordService->logAccess($user, $patient, 'view_version_history', [
             'by' => 'doctor',
             'doctor_id' => $user->doctor->id,
@@ -373,6 +411,45 @@ class DoctorPatientMedicalRecordController extends Controller
             ]);
 
         return response()->json(['versions' => $versions]);
+    }
+
+    public function eligibleAppointmentsForDocuments(Request $request, Patient $patient): JsonResponse
+    {
+        $user = $request->user();
+
+        if (! $user?->doctor) {
+            abort(403, 'Apenas médicos podem emitir documentos clínicos.');
+        }
+
+        $this->authorize('view', $patient);
+
+        $completedWindowDays = (int) config('telemedicine.medical_records.document_eligible_completed_days', 30);
+
+        $appointments = Appointments::query()
+            ->where('doctor_id', $user->doctor->id)
+            ->where('patient_id', $patient->id)
+            ->where(function ($query) use ($completedWindowDays) {
+                $query->where('status', Appointments::STATUS_IN_PROGRESS)
+                    ->orWhere(function ($query) {
+                        $query->whereIn('status', [Appointments::STATUS_SCHEDULED, Appointments::STATUS_RESCHEDULED])
+                            ->whereDate('scheduled_at', now()->toDateString());
+                    })
+                    ->orWhere(function ($query) use ($completedWindowDays) {
+                        $query->where('status', Appointments::STATUS_COMPLETED)
+                            ->where('scheduled_at', '>=', now()->subDays($completedWindowDays));
+                    });
+            })
+            ->orderByDesc('scheduled_at')
+            ->get(['id', 'scheduled_at', 'status']);
+
+        return response()->json([
+            'appointments' => $appointments->map(fn (Appointments $appointment) => [
+                'id' => $appointment->id,
+                'scheduled_at' => $appointment->scheduled_at->format('Y-m-d H:i:s'),
+                'label' => $appointment->scheduled_at->format('d/m/Y H:i'),
+                'status' => $appointment->status,
+            ])->values()->all(),
+        ]);
     }
 
     private function extractFilters(array $validated): array

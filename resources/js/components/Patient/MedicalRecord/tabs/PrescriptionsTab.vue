@@ -1,10 +1,11 @@
 <script setup lang="ts">
+import CreatePrescriptionModal from '@/components/Doctor/ClinicalDocuments/CreatePrescriptionModal.vue';
 import EditPrescriptionModal from '@/components/Patient/MedicalRecord/EditPrescriptionModal.vue';
 import EmptyBlock from '@/components/Patient/MedicalRecord/EmptyBlock.vue';
 import VersionHistoryModal from '@/components/Patient/MedicalRecord/VersionHistoryModal.vue';
 import { useFormatters } from '@/composables/useFormatters';
 import type { Prescription } from '@/types/medical-records';
-import { History, Pencil } from 'lucide-vue-next';
+import { History, Pencil, Plus } from 'lucide-vue-next';
 import { ref } from 'vue';
 
 defineProps<{
@@ -17,6 +18,7 @@ const { formatDate, formatStatus } = useFormatters();
 
 const historyTarget = ref<Prescription | null>(null);
 const editTarget = ref<Prescription | null>(null);
+const createOpen = ref(false);
 
 function canEdit(prescription: Prescription): boolean {
     // Block edit if signed/verified — observer handles server-side enforcement
@@ -25,6 +27,17 @@ function canEdit(prescription: Prescription): boolean {
 </script>
 
 <template>
+    <div v-if="patientId" class="mb-4 flex justify-end">
+        <button
+            type="button"
+            class="inline-flex items-center gap-1.5 rounded-lg bg-[#0f6e78] px-3 py-2 text-sm font-black text-white hover:bg-[#0a4f57]"
+            @click="createOpen = true"
+        >
+            <Plus class="h-4 w-4" />
+            Nova prescrição
+        </button>
+    </div>
+
     <div class="grid gap-4 md:grid-cols-2">
         <article v-for="prescription in prescriptions" :key="prescription.id" class="rounded-lg border border-[#dde5ea] bg-white p-4">
             <div class="flex items-start justify-between gap-2">
@@ -66,6 +79,7 @@ function canEdit(prescription: Prescription): boolean {
     </div>
 
     <template v-if="patientId">
+        <CreatePrescriptionModal v-if="createOpen" :is-open="createOpen" :patient-id="patientId" @close="createOpen = false" />
         <EditPrescriptionModal
             v-if="editTarget"
             :is-open="!!editTarget"

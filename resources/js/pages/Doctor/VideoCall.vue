@@ -110,12 +110,17 @@ const selectAppointment = (appointment: AppointmentProp) => {
     isMobileDetail.value = true;
 };
 
+// Janela in_progress expirada: sessão em curso continua, mas novos joins são bloqueados (Q3)
+const isExpiredInProgress = (appointment: AppointmentProp): boolean => appointment.status === 'in_progress' && !appointment.can_start_call;
+
 const appointmentCtaMode = (appointment: AppointmentProp): CtaMode => {
     const isSelected = selectedAppointment.value?.id === appointment.id;
     if (isSelected && isInCall.value) return 'in-call';
     // Chamada aceita no servidor mas SFU não conectado ainda, ou falha (permite retry)
     if (isSelected && (callState.value === 'accepted' || callState.value === 'error')) return 'join-scheduled';
     if (isSelected && callState.value === 'ended') return 'ended';
+
+    if (isExpiredInProgress(appointment)) return 'disabled-window';
 
     // Ad-hoc entrante: médico recebe solicitação
     if (isSelected && callState.value === 'ringing' && store.callType === 'ad_hoc') return 'ringing';
@@ -233,6 +238,7 @@ const ctaLabel = computed(() => {
     if (selectedCtaMode.value === 'in-call') return 'Chamada em andamento';
     if (selectedCtaMode.value === 'ended') return 'Chamada finalizada';
     if (selectedCtaMode.value === 'waiting') return 'Aguardando o horário';
+    if (selectedAppointment.value && isExpiredInProgress(selectedAppointment.value)) return 'Consulta encerrada — janela expirada';
     return 'Fora da janela de tempo';
 });
 </script>
@@ -523,6 +529,13 @@ const ctaLabel = computed(() => {
                                                     <Clock class="mx-auto h-10 w-10 text-[#40e0d0]/70" />
                                                     <p class="mt-3 text-sm font-black">Aguardando o horário</p>
                                                     <p class="mt-1 px-6 text-xs font-semibold text-white/60">A chamada é iniciada automaticamente.</p>
+                                                </div>
+                                                <div v-else-if="isExpiredInProgress(selectedAppointment)" class="text-center">
+                                                    <Clock class="mx-auto h-10 w-10 text-orange-400" />
+                                                    <p class="mt-3 text-sm font-black">Consulta encerrada — janela expirada</p>
+                                                    <p class="mt-1 px-6 text-xs font-semibold text-white/60">
+                                                        O tempo máximo da consulta foi atingido. Novos acessos estão bloqueados.
+                                                    </p>
                                                 </div>
                                                 <div v-else class="text-center">
                                                     <Clock class="mx-auto h-10 w-10 text-gray-400" />

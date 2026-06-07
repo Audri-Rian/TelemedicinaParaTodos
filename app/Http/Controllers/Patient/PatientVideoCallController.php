@@ -47,6 +47,7 @@ class PatientVideoCallController extends Controller
             ->where('patient_id', $patient->id)
             ->where('status', '!=', Appointments::STATUS_CANCELLED)
             ->orderBy('scheduled_at', 'desc')
+            ->limit($appointmentsHistoryLimit * $doctorIds->count())
             ->select(['id', 'doctor_id', 'status', 'scheduled_at'])
             ->get()
             ->groupBy('doctor_id');
@@ -117,8 +118,8 @@ class PatientVideoCallController extends Controller
                     $minutesDiff = (int) round(($scheduledAt->timestamp - $now->timestamp) / 60);
 
                     if ($primaryAppointment->status === Appointments::STATUS_IN_PROGRESS) {
-                        $canStartCall = true;
-                        $timeWindowMessage = 'Consulta em andamento';
+                        $canStartCall = $primaryAppointment->isWithinInProgressWindow();
+                        $timeWindowMessage = $canStartCall ? 'Consulta em andamento' : 'Consulta encerrada — janela expirada';
                     } elseif ($minutesDiff >= -$trailingMinutes && $minutesDiff <= $leadMinutes
                         && in_array($primaryAppointment->status, [Appointments::STATUS_SCHEDULED, Appointments::STATUS_RESCHEDULED])) {
                         $canStartCall = true;

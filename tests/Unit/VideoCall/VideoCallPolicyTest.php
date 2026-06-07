@@ -270,16 +270,30 @@ class VideoCallPolicyTest extends TestCase
         $this->assertFalse($result);
     }
 
-    public function test_can_join_in_progress_appointment_any_time(): void
+    public function test_can_join_in_progress_appointment_within_window(): void
     {
         $appointment = Appointments::factory()->forDoctorAndPatient($this->doctor, $this->patient)->create([
-            'scheduled_at' => Carbon::now()->subHours(2),
+            'scheduled_at' => Carbon::now()->subMinutes(30),
             'status' => Appointments::STATUS_IN_PROGRESS,
         ]);
 
         $result = $this->policy->joinSession($this->doctorUser, $appointment);
 
         $this->assertTrue($result);
+    }
+
+    public function test_cannot_join_in_progress_appointment_past_window(): void
+    {
+        $maxMinutes = (int) config('telemedicine.video_call.in_progress_max_minutes', 120);
+
+        $appointment = Appointments::factory()->forDoctorAndPatient($this->doctor, $this->patient)->create([
+            'scheduled_at' => Carbon::now()->subMinutes($maxMinutes + 10),
+            'status' => Appointments::STATUS_IN_PROGRESS,
+        ]);
+
+        $result = $this->policy->joinSession($this->doctorUser, $appointment);
+
+        $this->assertFalse($result);
     }
 
     public function test_stranger_cannot_join_session(): void

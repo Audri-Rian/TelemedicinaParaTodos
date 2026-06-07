@@ -8,12 +8,13 @@ import DoctorConsultNotesPanel from '@/components/VideoCall/doctorConsultDesign/
 import DoctorConsultPatientPanel from '@/components/VideoCall/doctorConsultDesign/DoctorConsultPatientPanel.vue';
 import DoctorConsultTopbar from '@/components/VideoCall/doctorConsultDesign/DoctorConsultTopbar.vue';
 import DoctorConsultVideoStage from '@/components/VideoCall/doctorConsultDesign/DoctorConsultVideoStage.vue';
+import DoctorVideoCallInCallModal, { type InCallDocumentKind } from '@/components/VideoCall/DoctorVideoCallInCallModal.vue';
 import { useCallChat } from '@/composables/useCallChat';
 import { useCallSharedDocuments } from '@/composables/useCallSharedDocuments';
 import doctorMedicalRecordDocuments from '@/routes/doctor/patients/medical-record/documents';
 import { formatCallDocumentSize, formatCallDocumentTime, type CallSharedDocument } from '@/types/call-documents';
 import { FileText, MessageSquare, NotebookPen, PanelRight, User } from 'lucide-vue-next';
-import { computed, ref, watch } from 'vue';
+import { computed, onUnmounted, ref, watch } from 'vue';
 
 import '../../../css/doctor-consult-video-call-design.css';
 
@@ -152,6 +153,13 @@ watch(
     { immediate: true },
 );
 
+onUnmounted(() => {
+    if (elapsedTimer) {
+        clearInterval(elapsedTimer);
+        elapsedTimer = null;
+    }
+});
+
 const elapsed = computed(() => {
     const mm = Math.floor(seconds.value / 60)
         .toString()
@@ -228,9 +236,25 @@ const openMedicalRecord = (tab?: string) => {
     window.open(`/doctor/patients/${props.patientId}/medical-record${query}`, '_blank', 'noopener,noreferrer');
 };
 
-const onNotesAction = (kind: 'rx' | 'exam' | 'certificate') => {
-    const tabs: Record<typeof kind, string> = { rx: 'prescricoes', exam: 'exames', certificate: 'atestados' };
-    openMedicalRecord(tabs[kind]);
+// Ações rápidas abrem modal dentro da chamada (D2) — sem nova aba, sem derrubar streams
+const documentModalKind = ref<InCallDocumentKind | null>(null);
+
+const onNotesAction = (kind: InCallDocumentKind) => {
+    if (!props.patientId || !props.appointmentId) {
+        showToast('Disponível apenas em chamadas com consulta vinculada');
+        return;
+    }
+    documentModalKind.value = kind;
+};
+
+const onDocumentIssued = (kind: InCallDocumentKind) => {
+    documentModalKind.value = null;
+    const labels: Record<InCallDocumentKind, string> = {
+        rx: 'Prescrição emitida',
+        exam: 'Exame solicitado',
+        certificate: 'Atestado emitido',
+    };
+    showToast(`${labels[kind]} — disponível no prontuário do paciente`);
 };
 
 const handleFullscreen = () => {
@@ -335,6 +359,16 @@ const confirmEnd = () => {
             <div v-if="toast" class="toast">{{ toast.message }}</div>
 
             <DoctorConsultEndModal :open="endModalOpen" @close="endModalOpen = false" @confirm-end="confirmEnd" />
+
+            <DoctorVideoCallInCallModal
+                v-if="documentModalKind && patientId && appointmentId"
+                :open="!!documentModalKind"
+                :kind="documentModalKind"
+                :patient-id="patientId"
+                :appointment-id="appointmentId"
+                @close="documentModalKind = null"
+                @issued="onDocumentIssued"
+            />
         </div>
     </Teleport>
 </template>

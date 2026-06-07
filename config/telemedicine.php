@@ -159,6 +159,11 @@ return [
         // Duração máxima de uma sala ativa (minutos). Evita salas eternas (ad-hoc fallback).
         'room_max_duration_minutes' => (int) env('VIDEO_ROOM_MAX_DURATION_MINUTES', 120),
 
+        // Janela máxima (minutos após scheduled_at) para entrar em consulta in_progress.
+        // Após a janela: join bloqueado e consulta elegível para auto-encerramento
+        // (EndStuckInProgressAppointments). Alinhado a room_max_duration_minutes.
+        'in_progress_max_minutes' => (int) env('VIDEO_CALL_IN_PROGRESS_MAX_MINUTES', 120),
+
         // TTL do JWT de acesso à sala de vídeo (minutos). CallManagerService::generateRoomToken.
         'token_ttl_minutes' => (int) env('VIDEO_CALL_TOKEN_TTL_MINUTES', 10),
 
@@ -224,6 +229,7 @@ return [
 
         // Frequência das rotinas de manutenção operacional.
         'no_show_cron' => env('NO_SHOW_CRON', '*/5 * * * *'),
+        'stuck_in_progress_cron' => env('STUCK_IN_PROGRESS_CRON', '*/5 * * * *'),
         'video_zombie_cleanup_cron' => env('VIDEO_ZOMBIE_CLEANUP_CRON', '*/5 * * * *'),
         'redis_lock_cleanup_cron' => env('REDIS_LOCK_CLEANUP_CRON', '*/15 * * * *'),
 
@@ -341,6 +347,10 @@ return [
 
         // Dias máximos permitidos em atestado médico. StoreMedicalCertificateRequest: max:60.
         'certificate_max_days' => (int) env('MEDICAL_CERTIFICATE_MAX_DAYS', 60),
+
+        // Janela (dias) de consultas completed elegíveis para vínculo de documento clínico
+        // (emissão retroativa — ex.: atestado pós-consulta). Q1 da spec de emissão.
+        'document_eligible_completed_days' => (int) env('DOCUMENT_ELIGIBLE_COMPLETED_DAYS', 30),
 
         // Limite de resultados em buscas de prontuário (performance).
         // MedicalRecordService::take(10) em algumas queries.

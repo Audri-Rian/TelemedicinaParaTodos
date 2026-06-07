@@ -173,18 +173,33 @@ class AppointmentVideoSessionControllerTest extends TestCase
         $response->assertForbidden();
     }
 
-    public function test_can_join_in_progress_appointment_outside_window(): void
+    public function test_can_join_in_progress_appointment_within_max_window(): void
     {
-        // IN_PROGRESS sempre autorizado independente da janela (policy.joinSession)
+        // IN_PROGRESS autorizado até scheduled_at + in_progress_max_minutes (policy.joinSession)
         $appointment = $this->makeAppointmentInWindow([
             'status' => Appointments::STATUS_IN_PROGRESS,
-            'scheduled_at' => Carbon::now()->subHours(2),
+            'scheduled_at' => Carbon::now()->subMinutes(30),
         ]);
 
         $response = $this->actingAs($this->doctorUser)
             ->postJson($this->sessionRoute($appointment));
 
         $response->assertOk();
+    }
+
+    public function test_cannot_join_in_progress_appointment_past_max_window(): void
+    {
+        $maxMinutes = (int) config('telemedicine.video_call.in_progress_max_minutes', 120);
+
+        $appointment = $this->makeAppointmentInWindow([
+            'status' => Appointments::STATUS_IN_PROGRESS,
+            'scheduled_at' => Carbon::now()->subMinutes($maxMinutes + 10),
+        ]);
+
+        $response = $this->actingAs($this->doctorUser)
+            ->postJson($this->sessionRoute($appointment));
+
+        $response->assertForbidden();
     }
 
     public function test_response_includes_window_timestamps(): void

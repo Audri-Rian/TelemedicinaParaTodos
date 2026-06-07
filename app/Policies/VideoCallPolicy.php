@@ -6,6 +6,7 @@ use App\Models\Appointments;
 use App\Models\Call;
 use App\Models\Doctor;
 use App\Models\User;
+use Illuminate\Support\Facades\Log;
 
 class VideoCallPolicy
 {
@@ -86,7 +87,17 @@ class VideoCallPolicy
         }
 
         if ($appointment->status === Appointments::STATUS_IN_PROGRESS) {
-            return true;
+            if ($appointment->isWithinInProgressWindow()) {
+                return true;
+            }
+
+            Log::info('VIDEO_CALL_JOIN_BLOCKED_WINDOW_EXPIRED', [
+                'appointment_id' => $appointment->id,
+                'status' => $appointment->status,
+                'minutes_past_window' => (int) $appointment->inProgressWindowEndsAt()->diffInMinutes(now()),
+            ]);
+
+            return false;
         }
 
         if (! in_array($appointment->status, [Appointments::STATUS_SCHEDULED, Appointments::STATUS_RESCHEDULED], true)) {

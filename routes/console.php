@@ -5,6 +5,7 @@ use App\Integrations\Jobs\SyncExamResults;
 use App\Jobs\AutoStartVideoCall;
 use App\Jobs\CleanExpiredRedisLocks;
 use App\Jobs\EndScheduledVideoCalls;
+use App\Jobs\EndStuckInProgressAppointments;
 use App\Jobs\EndZombieVideoCalls;
 use App\Jobs\MarkNoShowAppointments;
 use App\Jobs\SendAppointmentReminders;
@@ -31,6 +32,12 @@ Schedule::job(new AutoStartVideoCall)
 // Manutenção — marcar consultas vencidas como no_show
 Schedule::job(new MarkNoShowAppointments)
     ->cron(config('telemedicine.maintenance.no_show_cron', '*/5 * * * *'))
+    ->withoutOverlapping()
+    ->onOneServer();
+
+// Manutenção — encerrar consultas in_progress presas além da janela
+Schedule::job(new EndStuckInProgressAppointments)
+    ->cron(config('telemedicine.maintenance.stuck_in_progress_cron', '*/5 * * * *'))
     ->withoutOverlapping()
     ->onOneServer();
 

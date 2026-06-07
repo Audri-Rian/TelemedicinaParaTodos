@@ -1,14 +1,16 @@
 <script setup lang="ts">
+import AppointmentSelect from '@/components/Doctor/ClinicalDocuments/AppointmentSelect.vue';
 import DocumentA4Preview from '@/components/Doctor/DocumentA4Preview.vue';
 import PatientSearchDialog from '@/components/Doctor/PatientSearchDialog.vue';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useEligibleAppointments } from '@/composables/Doctor/useEligibleAppointments';
 import AppLayout from '@/layouts/AppLayout.vue';
 import * as doctorRoutes from '@/routes/doctor';
 import { type BreadcrumbItem } from '@/types';
-import { Head } from '@inertiajs/vue3';
-import { AlertCircle, Pill, Plus, Stethoscope, TestTube2, Trash2, UserRoundSearch, X } from 'lucide-vue-next';
-import { computed, ref } from 'vue';
+import { Head, router } from '@inertiajs/vue3';
+import { AlertCircle, Loader2, Pill, Plus, Stethoscope, TestTube2, Trash2, UserRoundSearch, X } from 'lucide-vue-next';
+import { computed, onMounted, ref, watch } from 'vue';
 
 type DocumentKind = 'rx' | 'cert' | 'exams';
 
@@ -101,48 +103,25 @@ const pendingDocType = ref<DocumentKind | null>(null);
 const drugQuery = ref('');
 const examQuery = ref('');
 
-const rxItems = ref<RxLine[]>([
-    {
-        ...drugCatalog[0],
-        dose: '1 comprimido',
-        via: 'Oral',
-        freq: 'A cada 24 horas, pela manhã',
-        dur: 'Uso contínuo · 90 dias',
-        extra: '',
-    },
-    {
-        ...drugCatalog[1],
-        dose: '1 comprimido',
-        via: 'Oral',
-        freq: 'A cada 24 horas, à noite',
-        dur: '90 dias',
-        extra: 'Reavaliar perfil lipídico em 60 dias',
-    },
-    {
-        ...drugCatalog[5],
-        dose: '1 comprimido',
-        via: 'Oral',
-        freq: 'A cada 24 horas, ao deitar',
-        dur: '30 dias',
-        extra: 'Não interromper abruptamente',
-    },
-]);
+const rxItems = ref<RxLine[]>([]);
 
-const certData = ref<CertForm>({
+const emptyCertData = (): CertForm => ({
     type: 'afastamento',
-    days: '3',
+    days: '1',
     startDate: new Date().toISOString().slice(0, 10),
     startTime: '',
     endTime: '',
-    cid: 'J11.1',
-    body: 'Necessitando de repouso domiciliar e afastamento de suas atividades laborais habituais.',
+    cid: '',
+    body: '',
 });
 
-const examItems = ref<ExamCatalogItem[]>([examCatalog[0], examCatalog[1], examCatalog[2], examCatalog[3], examCatalog[5]]);
+const certData = ref<CertForm>(emptyCertData());
+
+const examItems = ref<ExamCatalogItem[]>([]);
 
 const urgency = ref<'rotina' | 'prioritario' | 'urgente'>('rotina');
-const indication = ref('Acompanhamento de hipertensão arterial sistêmica e dislipidemia. Avaliação metabólica.');
-const fasting = ref('Jejum de 12 horas. Levar a primeira urina da manhã.');
+const indication = ref('');
+const fasting = ref('');
 
 const filteredDrugs = computed(() => {
     const q = drugQuery.value.trim().toLowerCase();
@@ -236,7 +215,161 @@ function selectPatient(p: Patient) {
     showSearchModal.value = false;
 }
 
-const canSubmit = computed(() => !!patient.value);
+const appointmentId = ref('');
+const pendingAppointmentId = ref<string | null>(null);
+const submitting = ref(false);
+const errorMessages = ref<string[]>([]);
+
+const selectedPatientId = computed(() => (patient.value ? String(patient.value.id) : null));
+
+const {
+    appointments: eligibleAppointments,
+    loading: appointmentsLoading,
+    error: appointmentsError,
+    load: loadAppointments,
+} = useEligibleAppointments(selectedPatientId);
+
+function applyPendingAppointment() {
+    if (pendingAppointmentId.value && eligibleAppointments.value.some((a) => a.id === pendingAppointmentId.value)) {
+        appointmentId.value = pendingAppointmentId.value;
+    } else if (eligibleAppointments.value.length === 1) {
+        appointmentId.value = eligibleAppointments.value[0].id;
+    }
+    pendingAppointmentId.value = null;
+}
+
+watch(selectedPatientId, () => {
+    appointmentId.value = '';
+    void loadAppointments().then(applyPendingAppointment);
+});
+
+// Deep-link: ?type=rx|exam|cert&patient={id}&appointment={id}
+onMounted(() => {
+    const params = new URLSearchParams(window.location.search);
+
+    const type = params.get('type');
+    if (type === 'rx') docType.value = 'rx';
+    else if (type === 'cert') docType.value = 'cert';
+    else if (type === 'exam' || type === 'exams') docType.value = 'exams';
+
+    pendingAppointmentId.value = params.get('appointment');
+
+    const patientParam = params.get('patient');
+    const found = patientParam ? patientsCatalog.value.find((p) => String(p.id) === patientParam) : null;
+    if (found && found !== patient.value) {
+        patient.value = found; // watch dispara o load com o pendingAppointmentId
+        return;
+    }
+
+    void loadAppointments().then(applyPendingAppointment);
+});
+
+const canSubmit = computed(() => {
+    if (!patient.value || !appointmentId.value || submitting.value) {
+        return false;
+    }
+    if (docType.value === 'rx') {
+        return rxItems.value.length > 0;
+    }
+    if (docType.value === 'cert') {
+        return certData.value.body.trim() !== '' && certData.value.startDate !== '';
+    }
+    return examItems.value.length > 0 && indication.value.trim() !== '';
+});
+
+const CERT_TYPE_MAP: Record<string, string> = {
+    afastamento: 'absence',
+    comparecimento: 'attendance',
+    aptidao: 'other',
+};
+
+function handleSubmitError(errors: Record<string, string>) {
+    submitting.value = false;
+    errorMessages.value = Object.values(errors);
+    showError.value = true;
+}
+
+function onIssued() {
+    submitting.value = false;
+    showSuccess.value = true;
+
+    if (docType.value === 'rx') {
+        rxItems.value = [];
+    } else if (docType.value === 'cert') {
+        certData.value = emptyCertData();
+    } else {
+        examItems.value = [];
+        indication.value = '';
+        fasting.value = '';
+        urgency.value = 'rotina';
+    }
+}
+
+function submitPrescription() {
+    router.post(
+        `/doctor/patients/${selectedPatientId.value}/medical-record/prescriptions`,
+        {
+            appointment_id: appointmentId.value,
+            medications: rxItems.value.map((it) => ({
+                name: [it.name, it.strength, it.form].filter(Boolean).join(' · '),
+                dosage: [it.dose, it.via].filter(Boolean).join(' · '),
+                frequency: [it.freq, it.dur, it.extra].filter((v) => v && v.trim() !== '').join(' · '),
+            })),
+        },
+        { preserveScroll: true, preserveState: true, onSuccess: onIssued, onError: handleSubmitError },
+    );
+}
+
+function submitCertificate() {
+    const days = parseInt(certData.value.days, 10);
+
+    router.post(
+        `/doctor/patients/${selectedPatientId.value}/medical-record/certificates`,
+        {
+            appointment_id: appointmentId.value,
+            type: CERT_TYPE_MAP[certData.value.type] ?? 'other',
+            start_date: certData.value.startDate,
+            days: Number.isFinite(days) && days > 0 ? days : null,
+            reason: certData.value.cid.trim() ? `CID-10 ${certData.value.cid.trim()} — ${certData.value.body}` : certData.value.body,
+        },
+        { preserveScroll: true, preserveState: true, onSuccess: onIssued, onError: handleSubmitError },
+    );
+}
+
+function submitExams() {
+    router.post(
+        `/doctor/patients/${selectedPatientId.value}/medical-record/examinations/batch`,
+        {
+            appointment_id: appointmentId.value,
+            examinations: examItems.value.map((exam) => ({
+                name: exam.name,
+                type: 'lab',
+                justification: indication.value,
+                instructions: fasting.value.trim() !== '' ? fasting.value : null,
+                priority: urgency.value === 'rotina' ? 'normal' : 'urgent',
+            })),
+        },
+        { preserveScroll: true, preserveState: true, onSuccess: onIssued, onError: handleSubmitError },
+    );
+}
+
+function submitDocument() {
+    if (!canSubmit.value) {
+        return;
+    }
+
+    showError.value = false;
+    errorMessages.value = [];
+    submitting.value = true;
+
+    if (docType.value === 'rx') {
+        submitPrescription();
+    } else if (docType.value === 'cert') {
+        submitCertificate();
+    } else {
+        submitExams();
+    }
+}
 </script>
 
 <template>
@@ -318,7 +451,10 @@ const canSubmit = computed(() => !!patient.value);
                     <AlertCircle class="mt-0.5 size-4 shrink-0" />
                     <div class="min-w-0 flex-1">
                         <p class="font-semibold">Não foi possível salvar o documento</p>
-                        <p class="text-red-800/90">Verifique sua conexão e tente novamente.</p>
+                        <p v-if="errorMessages.length === 0" class="text-red-800/90">Verifique sua conexão e tente novamente.</p>
+                        <ul v-else class="mt-1 list-inside list-disc text-red-800/90">
+                            <li v-for="(message, i) in errorMessages" :key="i">{{ message }}</li>
+                        </ul>
                     </div>
                     <button type="button" class="shrink-0 rounded-lg p-1 text-red-700 hover:bg-red-100" @click="showError = false">
                         <X class="size-4" />
@@ -582,15 +718,28 @@ const canSubmit = computed(() => !!patient.value);
                         </template>
 
                         <div
-                            class="sticky bottom-4 z-10 flex flex-col gap-3 rounded-2xl border border-zinc-200 bg-white/95 p-4 shadow-lg backdrop-blur sm:flex-row sm:items-center sm:justify-between"
+                            class="sticky bottom-4 z-10 flex flex-col gap-3 rounded-2xl border border-zinc-200 bg-white/95 p-4 shadow-lg backdrop-blur"
                         >
-                            <label class="flex cursor-pointer items-center gap-2 text-sm text-zinc-700">
-                                <input v-model="signEnabled" type="checkbox" class="size-4 rounded border-zinc-300 text-teal-600" />
-                                Assinar digitalmente (ICP-Brasil)
-                            </label>
-                            <div class="flex flex-wrap gap-2">
-                                <Button type="button" variant="outline" :disabled="!signEnabled || !canSubmit"> Assinar </Button>
-                                <Button type="button" :disabled="!canSubmit" @click="showSuccess = true"> Gerar e enviar </Button>
+                            <AppointmentSelect
+                                v-if="patient"
+                                v-model="appointmentId"
+                                :appointments="eligibleAppointments"
+                                :loading="appointmentsLoading"
+                                :error="appointmentsError"
+                            />
+                            <p v-else class="text-xs text-amber-700">Selecione um paciente para vincular a consulta.</p>
+
+                            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                <label class="flex cursor-pointer items-center gap-2 text-sm text-zinc-700">
+                                    <input v-model="signEnabled" type="checkbox" class="size-4 rounded border-zinc-300 text-teal-600" />
+                                    Assinar digitalmente (ICP-Brasil)
+                                </label>
+                                <div class="flex flex-wrap gap-2">
+                                    <Button type="button" :disabled="!canSubmit" @click="submitDocument">
+                                        <Loader2 v-if="submitting" class="mr-1.5 size-4 animate-spin" />
+                                        {{ submitting ? 'Enviando…' : 'Gerar e enviar' }}
+                                    </Button>
+                                </div>
                             </div>
                         </div>
                     </section>

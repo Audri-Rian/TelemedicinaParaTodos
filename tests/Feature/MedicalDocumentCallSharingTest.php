@@ -194,7 +194,7 @@ class MedicalDocumentCallSharingTest extends TestCase
         Event::assertDispatched(MedicalDocumentShared::class, function (MedicalDocumentShared $event) {
             $payload = $event->broadcastWith();
 
-            return $event->document->appointment_id === $this->appointment->id
+            return $event->broadcastOn()->name === "private-appointments.{$this->appointment->id}"
                 && ! array_key_exists('file_path', $payload)
                 && ! array_key_exists('description', $payload)
                 && $payload['visibility'] === MedicalDocument::VISIBILITY_SHARED;

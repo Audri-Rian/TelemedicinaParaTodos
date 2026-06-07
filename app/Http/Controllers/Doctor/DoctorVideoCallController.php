@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Doctor;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\LogMedicalRecordAccessJob;
 use App\Models\Appointments;
 use App\Models\Call;
 use App\Models\Doctor;
@@ -71,12 +72,14 @@ class DoctorVideoCallController extends Controller
                 ->get()
                 ->groupBy('appointment_id');
 
+        $patientIds = $appointments->pluck('patient_id')->unique();
         $historyByPatient = $appointments->isEmpty()
             ? collect()
-            : Appointments::whereIn('patient_id', $appointments->pluck('patient_id')->unique())
+            : Appointments::whereIn('patient_id', $patientIds)
                 ->where('doctor_id', $doctor->id)
                 ->where('status', Appointments::STATUS_COMPLETED)
                 ->orderByDesc('scheduled_at')
+                ->limit(5 * $patientIds->count())
                 ->get(['id', 'patient_id', 'scheduled_at', 'status', 'notes'])
                 ->groupBy('patient_id');
 
@@ -87,11 +90,11 @@ class DoctorVideoCallController extends Controller
                 $scheduledAt = Carbon::parse($appointment->scheduled_at);
                 $minutesDiff = (int) round(($scheduledAt->timestamp - $now->timestamp) / 60);
 
-                $canStartCall = $appointment->status === Appointments::STATUS_IN_PROGRESS
-                    || ($minutesDiff >= -$trailingMinutes && $minutesDiff <= $leadMinutes);
+                $canStartCall = ($appointment->status === Appointments::STATUS_IN_PROGRESS && $appointment->isWithinInProgressWindow())
+                    || ($appointment->status !== Appointments::STATUS_IN_PROGRESS && $minutesDiff >= -$trailingMinutes && $minutesDiff <= $leadMinutes);
 
                 if ($appointment->status === Appointments::STATUS_IN_PROGRESS) {
-                    $timeWindowMessage = 'Consulta em andamento';
+                    $timeWindowMessage = $canStartCall ? 'Consulta em andamento' : 'Consulta encerrada — janela expirada';
                 } elseif ($minutesDiff === 0) {
                     $timeWindowMessage = 'Horário da consulta';
                 } elseif ($minutesDiff < 0) {
@@ -112,7 +115,8 @@ class DoctorVideoCallController extends Controller
                 $clinicalSummary = null;
                 if ($canStartCall) {
                     if (! isset($clinicalAccessLogged[$appointment->patient_id])) {
-                        $this->medicalRecordService->logAccess($user, $appointment->patient, 'view', ['source' => 'video_call_panel']);
+                        LogMedicalRecordAccessJob::dispatch($user, $appointment->patient, 'view', ['source' => 'video_call_panel'])
+                            ->onQueue('low');
                         $clinicalAccessLogged[$appointment->patient_id] = true;
                     }
 

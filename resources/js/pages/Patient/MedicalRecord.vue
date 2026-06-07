@@ -182,7 +182,12 @@ watch(() => props.filters, syncFromProps, { deep: true });
                             :empty-text="emptyText"
                             :patient-id="doctorPatientId"
                         />
-                        <ExaminationsTab v-if="activeTab === 'exames'" :examinations="props.examinations ?? []" :empty-text="emptyText" />
+                        <ExaminationsTab
+                            v-if="activeTab === 'exames'"
+                            :examinations="props.examinations ?? []"
+                            :empty-text="emptyText"
+                            :patient-id="doctorPatientId"
+                        />
                         <DocumentsTab
                             v-if="activeTab === 'documentos'"
                             :documents="props.documents ?? []"
