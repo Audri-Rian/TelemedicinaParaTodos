@@ -3,18 +3,16 @@
 namespace App\Http\Controllers\Doctor;
 
 use App\Http\Controllers\Controller;
-use Inertia\Inertia;
-use Inertia\Response;
+use App\Models\Patient;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 
 class PatientDetailsController extends Controller
 {
-    /**
-     * Display patient details.
-     */
-    public function show(string $id): Response
+    public function show(Request $request, Patient $patient): RedirectResponse
     {
-        return Inertia::render('Doctor/PatientDetails', [
-            'patientId' => $id
-        ]);
+        $this->authorize('view', $patient);
+
+        return redirect()->route('doctor.patients.medical-record', $patient);
     }
 }

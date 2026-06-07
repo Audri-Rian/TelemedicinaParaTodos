@@ -35,6 +35,12 @@ return [
         ],
     ],
 
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect' => env('GOOGLE_REDIRECT_URI'),
+    ],
+
     'media_gateway' => [
         'sfu_http_url' => env('SFU_HTTP_URL', ''),
         'sfu_ws_url' => env('SFU_WS_URL', ''),

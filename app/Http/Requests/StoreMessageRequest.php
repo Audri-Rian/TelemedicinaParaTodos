@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Gate;
 
 class StoreMessageRequest extends FormRequest
 {
@@ -11,7 +12,22 @@ class StoreMessageRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return $this->user() !== null;
+        $user = $this->user();
+        if ($user === null) {
+            return false;
+        }
+
+        $receiverId = $this->input('receiver_id');
+        if (!$receiverId) {
+            return true;
+        }
+
+        $appointmentId = $this->input('appointment_id');
+        if ($appointmentId) {
+            return Gate::allows('sendMessageInAppointment', [$appointmentId, $receiverId]);
+        }
+
+        return Gate::allows('sendMessage', $receiverId);
     }
 
     /**

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasClinicalVersioning;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -10,10 +11,15 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Prescription extends Model
 {
+    use HasClinicalVersioning;
+
     /** @use HasFactory<\Database\Factories\PrescriptionFactory> */
     use HasFactory;
+
     use HasUuids;
     use SoftDeletes;
+
+    protected array $versionedFields = ['medications', 'instructions', 'valid_until', 'status'];
 
     protected $fillable = [
         'appointment_id',
@@ -25,6 +31,16 @@ class Prescription extends Model
         'status',
         'metadata',
         'issued_at',
+        'partner_integration_id',
+        'external_id',
+    ];
+
+    protected $guarded = [
+        'signature_status',
+        'verification_code',
+        'signed_at',
+        'digital_signature_hash',
+        'pdf_path',
     ];
 
     protected $casts = [
@@ -32,11 +48,22 @@ class Prescription extends Model
         'metadata' => 'array',
         'issued_at' => 'datetime',
         'valid_until' => 'date',
+        'signed_at' => 'datetime',
     ];
 
     public const STATUS_ACTIVE = 'active';
+
     public const STATUS_EXPIRED = 'expired';
+
     public const STATUS_CANCELLED = 'cancelled';
+
+    public const SIGNATURE_UNSIGNED = 'unsigned';
+
+    public const SIGNATURE_SIGNED = 'signed';
+
+    public const SIGNATURE_VERIFIED = 'verified';
+
+    public const SIGNATURE_INVALID = 'invalid';
 
     public function appointment(): BelongsTo
     {
@@ -51,5 +78,15 @@ class Prescription extends Model
     public function patient(): BelongsTo
     {
         return $this->belongsTo(Patient::class);
+    }
+
+    public function partnerIntegration(): BelongsTo
+    {
+        return $this->belongsTo(PartnerIntegration::class);
+    }
+
+    public function isSigned(): bool
+    {
+        return in_array($this->signature_status, [self::SIGNATURE_SIGNED, self::SIGNATURE_VERIFIED], true);
     }
 }

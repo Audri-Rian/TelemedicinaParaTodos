@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,200..1000;1,200..1000&family=Playwrite+DE+SAS:wght@100..400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Knewave&family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Open+Sans:ital,wght@0,300..800;1,300..800&family=Outfit:wght@100..900&family=Raleway:ital,wght@0,100..900;1,100..900&family=Spline+Sans:wght@300..700;1,700&display=swap');
 @import 'tailwindcss';
 
@@ -81,18 +82,17 @@
 @layer utilities {
     body,
     html {
-        --font-sans:
-            'Nunito', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+        --font-sans: 'Nunito', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
     }
 
     /* Esconder scrollbar mas manter funcionalidade de scroll */
     .scrollbar-hide {
-        -ms-overflow-style: none;  /* IE e Edge */
-        scrollbar-width: none;  /* Firefox */
+        -ms-overflow-style: none; /* IE e Edge */
+        scrollbar-width: none; /* Firefox */
     }
 
     .scrollbar-hide::-webkit-scrollbar {
-        display: none;  /* Chrome, Safari e Opera */
+        display: none; /* Chrome, Safari e Opera */
     }
 
     /* Estilos para o Tour Contextual */
@@ -103,7 +103,9 @@
         outline-offset: 2px !important;
         border-radius: 0.5rem;
         box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2) !important;
-        transition: outline 0.2s ease, box-shadow 0.2s ease;
+        transition:
+            outline 0.2s ease,
+            box-shadow 0.2s ease;
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -120,7 +122,7 @@
     --card-foreground: hsl(0 0% 3.9%);
     --popover: hsl(0 0% 100%);
     --popover-foreground: hsl(0 0% 3.9%);
-    --primary: #40E0D0;
+    --primary: #40e0d0;
     --primary-foreground: hsl(0 0% 9%);
     --secondary: hsl(0 0% 92.1%);
     --secondary-foreground: hsl(0 0% 9%);
@@ -157,7 +159,7 @@
     --card-foreground: hsl(0 0% 98%);
     --popover: hsl(0 0% 3.9%);
     --popover-foreground: hsl(0 0% 98%);
-    --primary: #40E0D0;
+    --primary: #40e0d0;
     --primary-foreground: hsl(0 0% 9%);
     --secondary: hsl(0 0% 14.9%);
     --secondary-foreground: hsl(0 0% 98%);
@@ -192,5 +194,122 @@
     }
     body {
         @apply bg-background text-foreground;
+    }
+}
+
+/* ─── Consultation Detail Design System ─────────────────────── */
+.consultation-page {
+    --cp-bg: #f4f7f7;
+    --cp-surface: #ffffff;
+    --cp-surface-2: #fafbfb;
+    --cp-surface-locked: #f1f4f4;
+
+    --cp-ink-900: #0a1f1e;
+    --cp-ink-800: #14302e;
+    --cp-ink-700: #1f3a38;
+    --cp-ink-600: #355551;
+    --cp-ink-500: #5a726f;
+    --cp-ink-400: #8fa2a0;
+    --cp-ink-300: #b7c5c3;
+    --cp-ink-200: #d7dfde;
+
+    --cp-line: #e3eae9;
+    --cp-line-2: #eef2f1;
+    --cp-line-strong: #c8d4d2;
+
+    --cp-teal-900: #053f3b;
+    --cp-teal-800: #0b5953;
+    --cp-teal-700: #0f766e;
+    --cp-teal-600: #0d9488;
+    --cp-teal-500: #14b8a6;
+    --cp-teal-100: #ccfbf1;
+    --cp-teal-50: #ecfdf8;
+
+    --cp-state-agendada-ink: #355dbf;
+    --cp-state-agendada-soft: #eaf0fc;
+    --cp-state-agendada-line: #c9d7f4;
+    --cp-state-ativa-ink: #0f766e;
+    --cp-state-ativa-soft: #ecfdf8;
+    --cp-state-ativa-line: #b5e6dc;
+    --cp-state-final-ink: #4b5b5a;
+    --cp-state-final-soft: #edf1f0;
+    --cp-state-final-line: #cfd8d7;
+
+    --cp-red-700: #b91c1c;
+    --cp-red-600: #dc2626;
+    --cp-red-50: #fef2f2;
+    --cp-amber-700: #b45309;
+    --cp-amber-600: #d97706;
+    --cp-amber-50: #fef3c7;
+    --cp-green-600: #16a34a;
+    --cp-green-50: #ecfdf5;
+
+    --cp-font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+    --cp-font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+
+    --cp-r-sm: 6px;
+    --cp-r-md: 10px;
+    --cp-r-lg: 14px;
+
+    --cp-shadow-card: 0 1px 0 rgba(15, 41, 39, 0.04), 0 1px 2px rgba(15, 41, 39, 0.04);
+    --cp-shadow-pop: 0 10px 30px -10px rgba(10, 31, 30, 0.18), 0 2px 6px rgba(10, 31, 30, 0.06);
+
+    --cp-accent: var(--cp-state-ativa-ink);
+    --cp-accent-soft: var(--cp-state-ativa-soft);
+    --cp-accent-line: var(--cp-state-ativa-line);
+}
+
+.consultation-page[data-state='agendada'] {
+    --cp-accent: var(--cp-state-agendada-ink);
+    --cp-accent-soft: var(--cp-state-agendada-soft);
+    --cp-accent-line: var(--cp-state-agendada-line);
+}
+.consultation-page[data-state='ativa'] {
+    --cp-accent: var(--cp-state-ativa-ink);
+    --cp-accent-soft: var(--cp-state-ativa-soft);
+    --cp-accent-line: var(--cp-state-ativa-line);
+}
+.consultation-page[data-state='final'] {
+    --cp-accent: var(--cp-state-final-ink);
+    --cp-accent-soft: var(--cp-state-final-soft);
+    --cp-accent-line: var(--cp-state-final-line);
+}
+
+@keyframes cp-shimmer {
+    0%,
+    100% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+}
+@keyframes cp-pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(13, 148, 136, 0.45);
+    }
+    70% {
+        box-shadow: 0 0 0 8px rgba(13, 148, 136, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(13, 148, 136, 0);
+    }
+}
+@keyframes cp-toast-in {
+    from {
+        opacity: 0;
+        transform: translate(-50%, 10px);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, 0);
+    }
+}
+@keyframes cp-drawer-in {
+    from {
+        transform: translateX(100%);
+    }
+    to {
+        transform: translateX(0);
     }
 }

@@ -1,31 +1,31 @@
 <script setup lang="ts">
-import AppLayout from '@/layouts/AppLayout.vue';
-import { type BreadcrumbItem } from '@/types';
-import { Head, Link } from '@inertiajs/vue3';
-import { 
-    Calendar, 
-    FileText, 
-    Activity, 
-    RotateCcw, 
-    FileCheck, 
-    Search, 
-    ChevronDown,
-    Video,
-    Clock,
-    CheckCircle2,
-    MoreVertical,
-    Users
-} from 'lucide-vue-next';
-import * as patientRoutes from '@/routes/patient';
-import { onMounted, onUnmounted, ref, computed, watch } from 'vue';
-import { useRouteGuard } from '@/composables/auth';
-import { usePage } from '@inertiajs/vue3';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Input } from '@/components/ui/input';
-import { useInitials } from '@/composables/useInitials';
 import EmptyState from '@/components/EmptyState.vue';
-import WelcomeScreen from '@/components/onboarding/WelcomeScreen.vue';
 import DashboardTour from '@/components/onboarding/DashboardTour.vue';
+import WelcomeScreen from '@/components/onboarding/WelcomeScreen.vue';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Input } from '@/components/ui/input';
+import { useRouteGuard } from '@/composables/auth';
+import { useInitials } from '@/composables/useInitials';
+import AppLayout from '@/layouts/AppLayout.vue';
+import * as patientRoutes from '@/routes/patient';
+import { type BreadcrumbItem } from '@/types';
+import { Head, Link, usePage } from '@inertiajs/vue3';
+import {
+    Activity,
+    Calendar,
+    CheckCircle2,
+    ChevronDown,
+    Clock,
+    FileCheck,
+    FileText,
+    HelpCircle,
+    MoreVertical,
+    RotateCcw,
+    Search,
+    Users,
+    Video,
+} from 'lucide-vue-next';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 
 // Ref para o container de médicos
 const doctorsContainer = ref<HTMLElement | null>(null);
@@ -115,13 +115,19 @@ const showWelcomeScreen = ref(props.onboarding?.showWelcome ?? false);
 const showTour = ref(props.onboarding?.showTour ?? false);
 
 // Atualizar estados quando props mudarem
-watch(() => props.onboarding?.showWelcome, (newValue) => {
-    showWelcomeScreen.value = newValue ?? false;
-});
+watch(
+    () => props.onboarding?.showWelcome,
+    (newValue) => {
+        showWelcomeScreen.value = newValue ?? false;
+    },
+);
 
-watch(() => props.onboarding?.showTour, (newValue) => {
-    showTour.value = newValue ?? false;
-});
+watch(
+    () => props.onboarding?.showTour,
+    (newValue) => {
+        showTour.value = newValue ?? false;
+    },
+);
 
 const handleStartTour = () => {
     showWelcomeScreen.value = false;
@@ -214,19 +220,16 @@ const nextAppointment = computed<UpcomingAppointment | null>(() => {
 // Filtrar médicos
 const filteredDoctors = computed<Doctor[]>(() => {
     let result = [...props.doctors];
-    
+
     if (searchQuery.value) {
         const query = searchQuery.value.toLowerCase();
-        result = result.filter(doctor => 
-            doctor.name.toLowerCase().includes(query) || 
-            doctor.specialty.toLowerCase().includes(query)
-        );
+        result = result.filter((doctor) => doctor.name.toLowerCase().includes(query) || doctor.specialty.toLowerCase().includes(query));
     }
-    
+
     if (specialtyFilter.value) {
-        result = result.filter(doctor => doctor.specialty === specialtyFilter.value);
+        result = result.filter((doctor) => doctor.specialty === specialtyFilter.value);
     }
-    
+
     return result;
 });
 
@@ -242,53 +245,61 @@ const breadcrumbs: BreadcrumbItem[] = [
     <Head title="Meu Painel" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-6 bg-gray-50">
+        <div class="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl bg-gray-50 p-6">
             <!-- Seção de Boas-vindas e Próxima Consulta -->
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
                 <!-- Seção de Boas-vindas (Esquerda) -->
-                <div class="lg:col-span-2 bg-linear-to-br from-primary/10 to-primary/5 rounded-lg shadow-sm border border-gray-200 p-8">
-                    <div class="flex flex-col h-full justify-between">
+                <div class="rounded-lg border border-gray-200 bg-linear-to-br from-primary/10 to-primary/5 p-8 shadow-sm lg:col-span-2">
+                    <div class="flex h-full flex-col justify-between">
                         <div>
-                            <h1 class="text-3xl font-bold text-gray-900 mb-3">
-                                Olá, {{ authUser?.name?.split(' ')[0] || 'Bem-vindo' }}! 👋
-                            </h1>
-                            <p class="text-lg text-gray-700 mb-4">
-                                Bem-vindo ao <span class="font-semibold text-primary">Telemedicina Para Todos</span>, sua plataforma completa de saúde digital.
+                            <div class="mb-3 flex items-start justify-between gap-4">
+                                <h1 class="text-3xl font-bold text-gray-900">Olá, {{ authUser?.name?.split(' ')[0] || 'Bem-vindo' }}! 👋</h1>
+                                <button
+                                    @click="showTour = true"
+                                    class="flex shrink-0 items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-500 shadow-sm transition-colors hover:border-primary/40 hover:text-primary"
+                                    title="Ver tour do dashboard"
+                                >
+                                    <HelpCircle class="h-4 w-4" />
+                                    Tour
+                                </button>
+                            </div>
+                            <p class="mb-4 text-lg text-gray-700">
+                                Bem-vindo ao <span class="font-semibold text-primary">Telemedicina Para Todos</span>, sua plataforma completa de saúde
+                                digital.
                             </p>
-                            <p class="text-base text-gray-600 mb-6">
-                                Agende consultas online, converse com médicos especialistas e gerencie sua saúde de forma prática e segura, tudo no conforto da sua casa.
+                            <p class="mb-6 text-base text-gray-600">
+                                Agende consultas online, converse com médicos especialistas e gerencie sua saúde de forma prática e segura, tudo no
+                                conforto da sua casa.
                             </p>
 
                             <!-- Lista de Médicos Disponíveis -->
                             <div v-if="doctors.length > 0" class="mb-6" data-tour="medicos-disponiveis">
-                                <h3 class="text-sm font-semibold text-gray-700 mb-3">Médicos Disponíveis Agora:</h3>
-                                <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
-                                    <Link 
+                                <h3 class="mb-3 text-sm font-semibold text-gray-700">Médicos Disponíveis Agora:</h3>
+                                <div class="grid grid-cols-2 gap-3 md:grid-cols-3">
+                                    <Link
                                         v-for="doctor in doctors.slice(0, 6)"
                                         :key="doctor.id"
                                         :href="patientRoutes.searchConsultations()"
-                                        class="bg-white/80 hover:bg-white rounded-lg p-3 border border-gray-200 hover:border-primary/30 hover:shadow-md transition cursor-pointer group">
+                                        class="group cursor-pointer rounded-lg border border-gray-200 bg-white/80 p-3 transition hover:border-primary/30 hover:bg-white hover:shadow-md"
+                                    >
                                         <div class="flex items-center gap-3">
-                                            <Avatar class="w-10 h-10 shrink-0">
-                                                <AvatarImage 
-                                                    v-if="doctor.image" 
-                                                    :src="doctor.image" 
-                                                    :alt="doctor.name" 
-                                                />
-                                                <AvatarFallback class="bg-primary/20 text-gray-900 text-sm group-hover:bg-primary/30 transition" :delay-ms="600">
+                                            <Avatar class="h-10 w-10 shrink-0">
+                                                <AvatarImage v-if="doctor.image" :src="doctor.image" :alt="doctor.name" />
+                                                <AvatarFallback
+                                                    class="bg-primary/20 text-sm text-gray-900 transition group-hover:bg-primary/30"
+                                                    :delay-ms="600"
+                                                >
                                                     {{ getInitials(doctor.name) }}
                                                 </AvatarFallback>
                                             </Avatar>
                                             <div class="min-w-0 flex-1">
-                                                <p class="font-semibold text-gray-900 text-sm truncate">{{ doctor.name }}</p>
-                                                <p class="text-xs text-emerald-700 truncate">{{ doctor.specialty }}</p>
+                                                <p class="truncate text-sm font-semibold text-gray-900">{{ doctor.name }}</p>
+                                                <p class="truncate text-xs text-emerald-700">{{ doctor.specialty }}</p>
                                             </div>
                                         </div>
                                     </Link>
                                 </div>
-                                <p class="text-xs text-gray-500 mt-3 italic">
-                                    Clique em qualquer médico para agendar uma consulta
-                                </p>
+                                <p class="mt-3 text-xs text-gray-500 italic">Clique em qualquer médico para agendar uma consulta</p>
                             </div>
                             <div v-else class="mb-6">
                                 <EmptyState
@@ -303,28 +314,25 @@ const breadcrumbs: BreadcrumbItem[] = [
                                 />
                             </div>
                         </div>
-                        
-                        <Link 
+
+                        <Link
                             :href="patientRoutes.searchConsultations()"
                             data-tour="agendar-consulta"
-                            class="inline-flex items-center justify-center bg-primary hover:bg-primary/90 text-gray-900 font-semibold py-3 px-8 rounded-lg transition shadow-md hover:shadow-lg">
-                            <Calendar class="w-5 h-5 mr-2" />
+                            class="inline-flex items-center justify-center rounded-lg bg-primary px-8 py-3 font-semibold text-gray-900 shadow-md transition hover:bg-primary/90 hover:shadow-lg"
+                        >
+                            <Calendar class="mr-2 h-5 w-5" />
                             <span>Agendar Nova Consulta</span>
                         </Link>
                     </div>
                 </div>
 
                 <!-- Próxima Consulta Section (Direita) -->
-                <div v-if="nextAppointment" class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden" data-tour="proxima-consulta">
+                <div v-if="nextAppointment" class="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm" data-tour="proxima-consulta">
                     <!-- Foto do Médico (Seção Superior) -->
-                    <div class="bg-gray-100 flex justify-center items-center py-4 px-4">
-                        <Avatar class="w-24 h-24 md:w-28 md:h-28">
-                            <AvatarImage 
-                                v-if="nextAppointment.doctor_image" 
-                                :src="nextAppointment.doctor_image" 
-                                :alt="nextAppointment.doctor_name" 
-                            />
-                            <AvatarFallback class="bg-white text-gray-900 text-3xl" :delay-ms="600">
+                    <div class="flex items-center justify-center bg-gray-100 px-4 py-4">
+                        <Avatar class="h-24 w-24 md:h-28 md:w-28">
+                            <AvatarImage v-if="nextAppointment.doctor_image" :src="nextAppointment.doctor_image" :alt="nextAppointment.doctor_name" />
+                            <AvatarFallback class="bg-white text-3xl text-gray-900" :delay-ms="600">
                                 {{ getInitials(nextAppointment.doctor_name) }}
                             </AvatarFallback>
                         </Avatar>
@@ -332,39 +340,38 @@ const breadcrumbs: BreadcrumbItem[] = [
 
                     <!-- Informações da Consulta (Seção Inferior) -->
                     <div class="bg-white p-4">
-                        <p class="text-xs text-gray-500 mb-1">Próxima Consulta</p>
-                        <h2 class="text-xl font-bold text-gray-900 mb-1">
-                            Dr. {{ nextAppointment.doctor_name }}
-                        </h2>
-                        <p class="text-sm text-gray-700 mb-3">
-                            {{ nextAppointment.doctor_specialty || 'Especialista' }} • 
-                            {{ nextAppointment.scheduled_date || nextAppointment.scheduled_at }}, 
+                        <p class="mb-1 text-xs text-gray-500">Próxima Consulta</p>
+                        <h2 class="mb-1 text-xl font-bold text-gray-900">Dr. {{ nextAppointment.doctor_name }}</h2>
+                        <p class="mb-3 text-sm text-gray-700">
+                            {{ nextAppointment.doctor_specialty || 'Especialista' }} •
+                            {{ nextAppointment.scheduled_date || nextAppointment.scheduled_at }},
                             {{ nextAppointment.scheduled_time }}
                             <span>{{ nextAppointment.duration || ' (45 min)' }}</span>
                         </p>
-                        <p class="text-xs text-gray-500 mb-4">
-                            Por videochamada
-                        </p>
+                        <p class="mb-4 text-xs text-gray-500">Por videochamada</p>
 
                         <!-- Botões de Ação -->
                         <div class="flex flex-col gap-2">
-                            <Link 
+                            <Link
                                 :href="patientRoutes.videoCall()"
-                                class="bg-primary hover:bg-primary/90 text-gray-900 font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center space-x-2 text-sm">
-                                <Video class="w-4 h-4" />
+                                class="flex items-center justify-center space-x-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-gray-900 transition hover:bg-primary/90"
+                            >
+                                <Video class="h-4 w-4" />
                                 <span>Entrar na videochamada</span>
                             </Link>
-                            
+
                             <div class="flex gap-2">
-                                <Link 
+                                <Link
                                     :href="patientRoutes.searchConsultations()"
-                                    class="flex-1 bg-primary/20 hover:bg-primary/30 text-gray-900 font-semibold py-2 px-3 rounded-lg transition flex items-center justify-center space-x-1 text-xs">
-                                    <Calendar class="w-3 h-3" />
+                                    class="flex flex-1 items-center justify-center space-x-1 rounded-lg bg-primary/20 px-3 py-2 text-xs font-semibold text-gray-900 transition hover:bg-primary/30"
+                                >
+                                    <Calendar class="h-3 w-3" />
                                     <span>Reagendar</span>
                                 </Link>
-                                
-                                <button 
-                                    class="flex-1 text-gray-600 hover:text-gray-900 font-semibold py-2 px-3 text-xs transition rounded-lg hover:bg-gray-100">
+
+                                <button
+                                    class="flex-1 rounded-lg px-3 py-2 text-xs font-semibold text-gray-600 transition hover:bg-gray-100 hover:text-gray-900"
+                                >
                                     Cancelar
                                 </button>
                             </div>
@@ -373,7 +380,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                 </div>
 
                 <!-- Estado vazio para próxima consulta -->
-                <div v-else class="bg-white rounded-lg shadow-sm border border-gray-200 p-6" data-tour="proxima-consulta">
+                <div v-else class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm" data-tour="proxima-consulta">
                     <EmptyState
                         :icon="Calendar"
                         title="Você ainda não tem consultas agendadas"
@@ -388,64 +395,63 @@ const breadcrumbs: BreadcrumbItem[] = [
             </div>
 
             <!-- Cards de Acesso Rápido -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6" data-tour="documentos-medicos">
-                <Link 
+            <div class="grid grid-cols-1 gap-6 md:grid-cols-3" data-tour="documentos-medicos">
+                <Link
                     :href="patientRoutes.searchConsultations()"
-                    class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition cursor-pointer">
+                    class="cursor-pointer rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition hover:shadow-md"
+                >
                     <div class="flex flex-col items-center text-center">
-                        <div class="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-4">
-                            <RotateCcw class="w-8 h-8 text-gray-700" />
+                        <div class="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100">
+                            <RotateCcw class="h-8 w-8 text-gray-700" />
                         </div>
-                        <h3 class="text-lg font-semibold text-gray-900 mb-2">Histórico de Consultas</h3>
+                        <h3 class="mb-2 text-lg font-semibold text-gray-900">Histórico de Consultas</h3>
                         <p class="text-sm text-gray-600">Veja suas consultas passadas</p>
                     </div>
                 </Link>
 
-                <Link 
+                <Link
                     :href="patientRoutes.medicalRecords()"
-                    class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition cursor-pointer">
+                    class="cursor-pointer rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition hover:shadow-md"
+                >
                     <div class="flex flex-col items-center text-center">
-                        <div class="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-4">
-                            <FileText class="w-8 h-8 text-gray-700" />
+                        <div class="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100">
+                            <FileText class="h-8 w-8 text-gray-700" />
                         </div>
-                        <h3 class="text-lg font-semibold text-gray-900 mb-2">Receitas Prescritas</h3>
+                        <h3 class="mb-2 text-lg font-semibold text-gray-900">Receitas Prescritas</h3>
                         <p class="text-sm text-gray-600">Acesse suas prescrições médicas</p>
                     </div>
                 </Link>
 
-                <Link 
+                <Link
                     :href="patientRoutes.medicalRecords()"
-                    class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition cursor-pointer">
+                    class="cursor-pointer rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition hover:shadow-md"
+                >
                     <div class="flex flex-col items-center text-center">
-                        <div class="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-4">
-                            <FileCheck class="w-8 h-8 text-gray-700" />
+                        <div class="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100">
+                            <FileCheck class="h-8 w-8 text-gray-700" />
                         </div>
-                        <h3 class="text-lg font-semibold text-gray-900 mb-2">Laudos e Exames</h3>
+                        <h3 class="mb-2 text-lg font-semibold text-gray-900">Laudos e Exames</h3>
                         <p class="text-sm text-gray-600">Visualize seus resultados</p>
                     </div>
                 </Link>
             </div>
 
             <!-- Encontrar Médico Section -->
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6" data-tour="encontrar-medico">
-                <h2 class="text-2xl font-bold text-gray-900 mb-6">Encontrar Médico</h2>
-                
+            <div class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm" data-tour="encontrar-medico">
+                <h2 class="mb-6 text-2xl font-bold text-gray-900">Encontrar Médico</h2>
+
                 <!-- Barra de Busca e Filtros -->
-                <div class="flex flex-col md:flex-row gap-4 mb-6">
-                    <div class="flex-1 relative">
-                        <Search class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                        <Input
-                            v-model="searchQuery"
-                            type="text"
-                            placeholder="Buscar por nome ou especial"
-                            class="pl-10 w-full"
-                        />
+                <div class="mb-6 flex flex-col gap-4 md:flex-row">
+                    <div class="relative flex-1">
+                        <Search class="absolute top-1/2 left-3 h-5 w-5 -translate-y-1/2 transform text-gray-400" />
+                        <Input v-model="searchQuery" type="text" placeholder="Buscar por nome ou especial" class="w-full pl-10" />
                     </div>
-                    
+
                     <div class="relative">
-                        <select 
+                        <select
                             v-model="specialtyFilter"
-                            class="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2 pr-10 text-gray-900 focus:ring-2 focus:ring-primary focus:border-transparent cursor-pointer min-w-[180px]">
+                            class="min-w-[180px] cursor-pointer appearance-none rounded-lg border border-gray-300 bg-white px-4 py-2 pr-10 text-gray-900 focus:border-transparent focus:ring-2 focus:ring-primary"
+                        >
                             <option value="">Especialidade</option>
                             <option value="Cardiologista">Cardiologista</option>
                             <option value="Dermatologista">Dermatologista</option>
@@ -453,29 +459,30 @@ const breadcrumbs: BreadcrumbItem[] = [
                             <option value="Pediatra">Pediatra</option>
                             <option value="Ortopedista">Ortopedista</option>
                         </select>
-                        <ChevronDown class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
+                        <ChevronDown class="pointer-events-none absolute top-1/2 right-3 h-5 w-5 -translate-y-1/2 transform text-gray-400" />
                     </div>
-                    
+
                     <div class="relative">
-                        <select 
+                        <select
                             v-model="insuranceFilter"
-                            class="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2 pr-10 text-gray-900 focus:ring-2 focus:ring-primary focus:border-transparent cursor-pointer min-w-[180px]">
+                            class="min-w-[180px] cursor-pointer appearance-none rounded-lg border border-gray-300 bg-white px-4 py-2 pr-10 text-gray-900 focus:border-transparent focus:ring-2 focus:ring-primary"
+                        >
                             <option value="">Convênio</option>
                             <option value="Unimed">Unimed</option>
                             <option value="Amil">Amil</option>
                             <option value="Bradesco">Bradesco</option>
                             <option value="SulAmérica">SulAmérica</option>
                         </select>
-                        <ChevronDown class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
+                        <ChevronDown class="pointer-events-none absolute top-1/2 right-3 h-5 w-5 -translate-y-1/2 transform text-gray-400" />
                     </div>
                 </div>
 
                 <!-- Lista de Médicos -->
-                <div 
-                    v-if="filteredDoctors.length > 0" 
+                <div
+                    v-if="filteredDoctors.length > 0"
                     ref="doctorsContainer"
-                    class="flex gap-4 overflow-x-auto pb-2 scrollbar-hide cursor-grab"
-                    style="scrollbar-width: none; -ms-overflow-style: none;"
+                    class="scrollbar-hide flex cursor-grab gap-4 overflow-x-auto pb-2"
+                    style="scrollbar-width: none; -ms-overflow-style: none"
                     @mousedown="handleMouseDown"
                     @mouseleave="handleMouseLeave"
                     @mouseup="handleMouseUp"
@@ -483,26 +490,23 @@ const breadcrumbs: BreadcrumbItem[] = [
                 >
                     <!-- Médicos dinâmicos -->
                     <template v-for="doctor in filteredDoctors.slice(0, 6)" :key="doctor.id">
-                        <div class="shrink-0 bg-white rounded-lg p-4 min-w-[280px] border border-gray-200 hover:shadow-md transition">
+                        <div class="min-w-[280px] shrink-0 rounded-lg border border-gray-200 bg-white p-4 transition hover:shadow-md">
                             <div class="flex items-center gap-4">
-                                <Avatar class="w-16 h-16 shrink-0">
-                                    <AvatarImage 
-                                        v-if="doctor.image" 
-                                        :src="doctor.image" 
-                                        :alt="doctor.name" 
-                                    />
-                                    <AvatarFallback class="bg-primary/20 text-gray-900 text-lg" :delay-ms="600">
+                                <Avatar class="h-16 w-16 shrink-0">
+                                    <AvatarImage v-if="doctor.image" :src="doctor.image" :alt="doctor.name" />
+                                    <AvatarFallback class="bg-primary/20 text-lg text-gray-900" :delay-ms="600">
                                         {{ getInitials(doctor.name) }}
                                     </AvatarFallback>
                                 </Avatar>
-                                <div class="flex-1 min-w-0">
-                                    <h3 class="font-bold text-gray-900 mb-1">{{ doctor.name }}</h3>
+                                <div class="min-w-0 flex-1">
+                                    <h3 class="mb-1 font-bold text-gray-900">{{ doctor.name }}</h3>
                                     <p class="text-sm text-emerald-700">{{ doctor.specialty }}</p>
                                 </div>
-                                <Link 
+                                <Link
                                     :href="patientRoutes.searchConsultations()"
-                                    class="shrink-0 bg-primary/30 hover:bg-primary/40 text-gray-900 p-3 rounded-lg transition flex items-center justify-center">
-                                    <Calendar class="w-5 h-5" />
+                                    class="flex shrink-0 items-center justify-center rounded-lg bg-primary/30 p-3 text-gray-900 transition hover:bg-primary/40"
+                                >
+                                    <Calendar class="h-5 w-5" />
                                 </Link>
                             </div>
                         </div>
@@ -524,29 +528,30 @@ const breadcrumbs: BreadcrumbItem[] = [
             </div>
 
             <!-- Lembretes & Dicas de Saúde -->
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
                 <!-- Lembretes -->
-                <div class="lg:col-span-2 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                    <h2 class="text-2xl font-bold text-gray-900 mb-6">Lembretes & Dicas de Saúde</h2>
-                    
+                <div class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm lg:col-span-2">
+                    <h2 class="mb-6 text-2xl font-bold text-gray-900">Lembretes & Dicas de Saúde</h2>
+
                     <div class="space-y-4">
-                        <div 
-                            v-for="reminder in reminders.slice(0, 2)" 
+                        <div
+                            v-for="reminder in reminders.slice(0, 2)"
                             :key="reminder.id"
-                            class="flex items-center gap-4 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition">
+                            class="flex items-center gap-4 rounded-lg border border-gray-200 p-4 transition hover:bg-gray-50"
+                        >
                             <div class="shrink-0">
-                                <Clock v-if="reminder.icon === 'medication'" class="w-6 h-6 text-gray-700" />
-                                <CheckCircle2 v-else-if="reminder.icon === 'exam'" class="w-6 h-6 text-emerald-600" />
-                                <CheckCircle2 v-else class="w-6 h-6 text-gray-700" />
+                                <Clock v-if="reminder.icon === 'medication'" class="h-6 w-6 text-gray-700" />
+                                <CheckCircle2 v-else-if="reminder.icon === 'exam'" class="h-6 w-6 text-emerald-600" />
+                                <CheckCircle2 v-else class="h-6 w-6 text-gray-700" />
                             </div>
                             <div class="flex-1">
                                 <p class="font-medium text-gray-900">{{ reminder.title }}</p>
-                                <p v-if="reminder.time || reminder.message" class="text-sm text-gray-600 mt-1">
+                                <p v-if="reminder.time || reminder.message" class="mt-1 text-sm text-gray-600">
                                     {{ reminder.time || reminder.message }}
                                 </p>
                             </div>
                             <button class="shrink-0 text-gray-400 hover:text-gray-600">
-                                <MoreVertical class="w-5 h-5" />
+                                <MoreVertical class="h-5 w-5" />
                             </button>
                         </div>
 
@@ -563,29 +568,22 @@ const breadcrumbs: BreadcrumbItem[] = [
                 </div>
 
                 <!-- Dica de Saúde -->
-                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                    <h3 class="text-xl font-semibold text-gray-900 mb-4">Dica de Saúde</h3>
-                    
+                <div class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+                    <h3 class="mb-4 text-xl font-semibold text-gray-900">Dica de Saúde</h3>
+
                     <div v-if="healthTips.length > 0" class="space-y-4">
-                        <div 
-                            v-for="tip in healthTips.slice(0, 1)" 
-                            :key="tip.id"
-                            class="space-y-3">
-                            <div v-if="tip.image" class="w-full h-48 bg-gray-100 rounded-lg overflow-hidden">
-                                <img 
-                                    :src="tip.image" 
-                                    :alt="tip.title"
-                                    class="w-full h-full object-cover"
-                                />
+                        <div v-for="tip in healthTips.slice(0, 1)" :key="tip.id" class="space-y-3">
+                            <div v-if="tip.image" class="h-48 w-full overflow-hidden rounded-lg bg-gray-100">
+                                <img :src="tip.image" :alt="tip.title" class="h-full w-full object-cover" />
                             </div>
-                            <div v-else class="w-full h-48 bg-linear-to-br from-primary/20 to-primary/5 rounded-lg flex items-center justify-center">
-                                <Activity class="w-16 h-16 text-primary/50" />
+                            <div v-else class="flex h-48 w-full items-center justify-center rounded-lg bg-linear-to-br from-primary/20 to-primary/5">
+                                <Activity class="h-16 w-16 text-primary/50" />
                             </div>
                             <h4 class="font-semibold text-gray-900">{{ tip.title }}</h4>
-                            <p class="text-sm text-gray-600 line-clamp-3">{{ tip.description }}</p>
+                            <p class="line-clamp-3 text-sm text-gray-600">{{ tip.description }}</p>
                         </div>
                     </div>
-                    
+
                     <!-- Estado vazio para dicas de saúde -->
                     <EmptyState
                         v-else
@@ -606,11 +604,6 @@ const breadcrumbs: BreadcrumbItem[] = [
             @start-tour="handleStartTour"
             @close="handleWelcomeClose"
         />
-        <DashboardTour
-            :show="showTour"
-            @complete="handleTourComplete"
-            @close="handleTourClose"
-        />
+        <DashboardTour :show="showTour" @complete="handleTourComplete" @close="handleTourClose" />
     </AppLayout>
 </template>
-

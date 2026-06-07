@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
+use App\Casts\TolerantEncryptedCast;
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Carbon\Carbon;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Patient extends Model
 {
@@ -32,6 +33,9 @@ class Patient extends Model
         'status',
         'consent_telemedicine',
         'last_consultation_at',
+        'cns',
+        'cpf',
+        'mother_name',
     ];
 
     protected $casts = [
@@ -40,15 +44,21 @@ class Patient extends Model
         'weight' => 'decimal:2',
         'consent_telemedicine' => 'boolean',
         'last_consultation_at' => 'datetime',
+        'cpf' => TolerantEncryptedCast::class,
+        'cns' => TolerantEncryptedCast::class,
     ];
 
     // Constantes para enums
     public const STATUS_ACTIVE = 'active';
+
     public const STATUS_INACTIVE = 'inactive';
+
     public const STATUS_BLOCKED = 'blocked';
 
     public const GENDER_MALE = 'male';
+
     public const GENDER_FEMALE = 'female';
+
     public const GENDER_OTHER = 'other';
 
     public const BLOOD_TYPES = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
@@ -124,7 +134,7 @@ class Patient extends Model
     {
         $maxDate = Carbon::now()->subYears($minAge);
         $minDate = Carbon::now()->subYears($maxAge + 1);
-        
+
         $query->whereBetween('date_of_birth', [$minDate, $maxDate]);
     }
 
@@ -147,64 +157,95 @@ class Patient extends Model
 
     public function getFormattedHeightAttribute(): string
     {
-        if (!$this->height) return 'Não informado';
-        
+        if (! $this->height) {
+            return 'Não informado';
+        }
+
         $meters = $this->height / 100;
-        return number_format($meters, 2, ',', '.') . ' m';
+
+        return number_format($meters, 2, ',', '.').' m';
     }
 
     public function getFormattedWeightAttribute(): string
     {
-        return $this->weight 
-            ? number_format($this->weight, 1, ',', '.') . ' kg'
+        return $this->weight
+            ? number_format($this->weight, 1, ',', '.').' kg'
             : 'Não informado';
     }
 
     public function getFormattedPhoneNumberAttribute(): string
     {
-        if (!$this->phone_number) return 'Não informado';
-        
+        if (! $this->phone_number) {
+            return 'Não informado';
+        }
+
         // Formatação brasileira: (11) 99999-9999
         $phone = preg_replace('/[^0-9]/', '', $this->phone_number);
-        
+
         if (strlen($phone) === 11) {
-            return '(' . substr($phone, 0, 2) . ') ' . 
-                   substr($phone, 2, 5) . '-' . 
+            return '('.substr($phone, 0, 2).') '.
+                   substr($phone, 2, 5).'-'.
                    substr($phone, 7);
         }
-        
+
         return $this->phone_number;
     }
 
     public function getFormattedDateOfBirthAttribute(): string
     {
-        return $this->date_of_birth 
+        return $this->date_of_birth
             ? $this->date_of_birth->format('d/m/Y')
             : 'Não informado';
     }
 
     public function getBmiAttribute(): ?float
     {
-        if (!$this->height || !$this->weight) return null;
-        
+        if (! $this->height || ! $this->weight) {
+            return null;
+        }
+
         $heightInMeters = $this->height / 100;
+
         return round($this->weight / ($heightInMeters * $heightInMeters), 2);
     }
 
     public function getBmiCategoryAttribute(): ?string
     {
         $bmi = $this->bmi;
-        if (!$bmi) return null;
+        if (! $bmi) {
+            return null;
+        }
 
-        if ($bmi < 18.5) return 'Abaixo do peso';
-        if ($bmi < 25) return 'Peso normal';
-        if ($bmi < 30) return 'Sobrepeso';
-        if ($bmi < 35) return 'Obesidade grau I';
-        if ($bmi < 40) return 'Obesidade grau II';
+        if ($bmi < 18.5) {
+            return 'Abaixo do peso';
+        }
+        if ($bmi < 25) {
+            return 'Peso normal';
+        }
+        if ($bmi < 30) {
+            return 'Sobrepeso';
+        }
+        if ($bmi < 35) {
+            return 'Obesidade grau I';
+        }
+        if ($bmi < 40) {
+            return 'Obesidade grau II';
+        }
+
         return 'Obesidade grau III';
     }
 
     // Mutators
+    public function setCpfAttribute($value): void
+    {
+        $this->attributes['cpf'] = $value ? preg_replace('/[^0-9]/', '', $value) : null;
+    }
+
+    public function setCnsAttribute($value): void
+    {
+        $this->attributes['cns'] = $value ? preg_replace('/[^0-9]/', '', $value) : null;
+    }
+
     public function setPhoneNumberAttribute($value): void
     {
         $this->attributes['phone_number'] = $value ? preg_replace('/[^0-9]/', '', $value) : null;
@@ -238,7 +279,7 @@ class Patient extends Model
         parent::boot();
 
         static::creating(function ($patient) {
-            if (!$patient->status) {
+            if (! $patient->status) {
                 $patient->status = self::STATUS_ACTIVE;
             }
         });

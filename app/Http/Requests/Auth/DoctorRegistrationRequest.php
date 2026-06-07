@@ -45,6 +45,8 @@ class DoctorRegistrationRequest extends FormRequest
                 'regex:/^[A-Z0-9]+$/',
                 Rule::unique(Doctor::class)
             ],
+            'cns' => ['nullable', 'string', 'regex:/^\d{15}$/'],
+            'cbo' => ['nullable', 'string', 'regex:/^\d{6}$/'],
             'specializations' => 'required|array|min:1',
             'specializations.*' => [
                 'required',
@@ -73,6 +75,8 @@ class DoctorRegistrationRequest extends FormRequest
             'specializations.*.required' => 'Especialização inválida.',
             'specializations.*.uuid' => 'Especialização deve ser um UUID válido.',
             'specializations.*.exists' => 'Especialização selecionada não existe.',
+            'cns.regex' => 'O CNS deve conter exatamente 15 dígitos numéricos.',
+            'cbo.regex' => 'O CBO deve conter exatamente 6 dígitos numéricos.',
         ];
     }
 
@@ -87,6 +91,8 @@ class DoctorRegistrationRequest extends FormRequest
             'password' => 'senha',
             'password_confirmation' => 'confirmação da senha',
             'crm' => 'CRM',
+            'cns' => 'CNS',
+            'cbo' => 'CBO',
             'specializations' => 'especializações',
         ];
     }

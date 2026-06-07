@@ -14,14 +14,17 @@ return new class extends Migration
         Schema::create('patients', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->foreignUuid('user_id')->unique()->constrained();
-            
+
             // Informações pessoais
             $table->enum('gender', ['male', 'female', 'other']);
             $table->date('date_of_birth');
             $table->string('phone_number', 20);
+            $table->string('cns', 15)->nullable();
+            $table->string('cpf', 11)->nullable();
+            $table->string('mother_name')->nullable();
             $table->string('emergency_contact', 100)->nullable();
             $table->string('emergency_phone', 20)->nullable();
-            
+
             // Informações médicas
             $table->text('medical_history')->nullable();
             $table->text('allergies')->nullable();
@@ -31,21 +34,22 @@ return new class extends Migration
             $table->decimal('weight', 5, 2)->nullable(); // em kg
             $table->string('insurance_provider', 100)->nullable();
             $table->string('insurance_number', 50)->nullable();
-            
+
             // Status e controle
             $table->enum('status', ['active', 'inactive', 'blocked'])->default('active');
             $table->boolean('consent_telemedicine')->default(false);
             $table->timestamp('last_consultation_at')->nullable();
-            
+
             $table->timestamps();
             $table->softDeletes();
-            
+
             // Indexes para performance
+            $table->index('cns');
+            $table->index('cpf');
             $table->index(['gender', 'status']);
             $table->index('date_of_birth');
             $table->index('last_consultation_at');
             $table->index('created_at');
-
 
         });
     }

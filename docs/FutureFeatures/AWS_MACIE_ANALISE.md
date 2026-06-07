@@ -59,12 +59,12 @@ Após o exercício do "direito ao esquecimento" (LGPD), verificar automaticament
 
 ## Prioridade Sugerida
 
-| Prioridade | Feature                        | Complexidade | Impacto   |
-| ---------- | ------------------------------ | ------------ | --------- |
-| 1          | Log Sanitizer para PII         | Baixa        | Alto      |
-| 2          | Data Classification nos Models | Baixa        | Alto      |
-| 3          | DLP nos Uploads                | Média        | Médio     |
-| 4          | Validação de Anonimização      | Média        | Médio     |
+| Prioridade | Feature                        | Complexidade | Impacto     |
+| ---------- | ------------------------------ | ------------ | ----------- |
+| 1          | Log Sanitizer para PII         | Baixa        | Alto        |
+| 2          | Data Classification nos Models | Baixa        | Alto        |
+| 3          | DLP nos Uploads                | Média        | Médio       |
+| 4          | Validação de Anonimização      | Média        | Médio       |
 | 5          | Amazon Macie (se AWS + S3)     | Baixa        | Situacional |
 
 ## Referências

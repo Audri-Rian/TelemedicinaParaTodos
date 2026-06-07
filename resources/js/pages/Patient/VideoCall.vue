@@ -1,361 +1,603 @@
 <script setup lang="ts">
-import AppLayout from '@/layouts/AppLayout.vue';
-import { Head, usePage } from '@inertiajs/vue3';
-import { type BreadcrumbItem } from '@/types';
-import { ref, onMounted } from 'vue';
-import axios from 'axios';
-import * as patientRoutes from '@/routes/patient';
-import * as appointmentsRoutes from '@/routes/appointments';
+import PatientVideoCallInCallOverlay from '@/components/VideoCall/PatientVideoCallInCallOverlay.vue';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
 import { useRouteGuard } from '@/composables/auth';
+import { useInitials } from '@/composables/useInitials';
+import { useVideoCall } from '@/composables/useVideoCall';
+import AppLayout from '@/layouts/AppLayout.vue';
+import * as patientRoutes from '@/routes/patient';
+import { useVideoCallStore } from '@/stores/videoCall';
+import { type BreadcrumbItem } from '@/types';
+import type { CallSharedDocument } from '@/types/call-documents';
+import { Head, Link, usePage } from '@inertiajs/vue3';
+import {
+    AlertTriangle,
+    Calendar,
+    Check,
+    Clock,
+    FileText,
+    Home,
+    Loader2,
+    Mic,
+    MonitorUp,
+    Phone,
+    RefreshCw,
+    ShieldCheck,
+    Video,
+    VideoOff,
+    Wifi,
+    WifiOff,
+} from 'lucide-vue-next';
+import { computed, onMounted, ref, watch } from 'vue';
 
-const { canAccessPatientRoute } = useRouteGuard();
-
-const breadcrumbs: BreadcrumbItem[] = [
-    {
-        title: 'Dashboard',
-        href: patientRoutes.dashboard().url,
-    },
-    {
-        title: 'Videoconferência',
-        href: patientRoutes.videoCall().url,
-    },
-];
-
-// Interfaces TypeScript
 interface Appointment {
     id: string;
     scheduled_at: string;
     formatted_date: string;
     formatted_time: string;
     status: string;
+    shared_documents?: CallSharedDocument[];
 }
 
-interface User {
+interface UserProp {
     id: number;
+    doctor_id?: string;
     name: string;
-    email: string;
     hasAppointment?: boolean;
     canStartCall?: boolean;
     appointment?: Appointment | null;
+    allAppointments?: Appointment[];
     timeWindowMessage?: string | null;
+    hasActiveScheduledCall?: boolean;
+    hasRecentConsultation?: boolean;
 }
 
-interface AuthUser {
-    user: User;
-}
+type StatusTone = 'live' | 'go' | 'wait' | 'warn' | 'muted';
 
-// Props e dados da página
+const { canAccessPatientRoute } = useRouteGuard();
+const { getInitials } = useInitials();
 const page = usePage();
-const auth = page.props.auth as AuthUser;
-const users = page.props.users as User[] || [];
+const store = useVideoCallStore();
 
-// Estados locais para UI (videoconferência P2P removida; SFU em desenvolvimento — ver docs/videocall/)
-const selectedUser = ref<User | null>(null);
+const { callState, currentCall, isLoading, sfu, joinActiveCall, requestCall, endCall } = useVideoCall();
 
-const startBackendAppointment = async (): Promise<boolean> => {
-    if (!selectedUser.value?.appointment?.id) {
-        return false;
-    }
+const users = ((page.props.users as UserProp[]) || []).map((user) => ({
+    ...user,
+    allAppointments: user.allAppointments ?? [],
+}));
 
-    try {
-        await axios.post(appointmentsRoutes.start.url({ appointment: selectedUser.value.appointment.id }));
-        selectedUser.value = {
-            ...selectedUser.value,
-            appointment: {
-                ...selectedUser.value.appointment,
-                status: 'in_progress',
-            },
-            canStartCall: true,
-            timeWindowMessage: 'Consulta em andamento',
-        };
+const selectedUser = ref<UserProp | null>(users[0] ?? null);
+const isMobileDetail = ref(false);
+const isEndingCall = ref(false);
+const connectionLost = ref(false);
 
-        return true;
-    } catch (error: any) {
-        const message = error?.response?.data?.message;
-        if (message) {
-            alert(message);
-        }
-        return false;
-    }
-};
+const breadcrumbs: BreadcrumbItem[] = [
+    { title: 'Dashboard', href: patientRoutes.dashboard().url },
+    { title: 'Videoconferência', href: patientRoutes.videoCall().url },
+];
 
-const finalizeBackendAppointment = async () => {
-    if (!selectedUser.value?.appointment?.id) {
-        return;
-    }
-
-    try {
-        await axios.post(appointmentsRoutes.end.url({ appointment: selectedUser.value.appointment.id }));
-        selectedUser.value = {
-            ...selectedUser.value,
-            appointment: selectedUser.value.appointment
-                ? {
-                    ...selectedUser.value.appointment,
-                    status: 'completed',
-                }
-                : null,
-            canStartCall: false,
-            timeWindowMessage: 'Consulta finalizada',
-        };
-    } catch {
-        // silencioso
-    }
-};
-
-// Função para atualizar o agendamento selecionado
-const updateSelectedAppointment = () => {
-    if (!selectedUser.value?.allAppointments) return;
-    
-    const selectedId = selectedUser.value.appointment.id;
-    const newAppointment = selectedUser.value.allAppointments.find(apt => apt.id === selectedId);
-    
-    if (newAppointment) {
-        selectedUser.value.appointment = { ...newAppointment };
-        // Atualizar status baseado na nova consulta selecionada
-        updateAppointmentStatus(newAppointment);
-    }
-};
-
-// Função para atualizar status da consulta
-const updateAppointmentStatus = (appointment: any) => {
-    if (!selectedUser.value) return;
-    
-    const now = new Date();
-    const scheduledAt = new Date(appointment.scheduled_at);
-    const diffMinutes = Math.round((scheduledAt.getTime() - now.getTime()) / (1000 * 60));
-    
-    if (appointment.status === 'in_progress') {
-        selectedUser.value.canStartCall = true;
-        selectedUser.value.timeWindowMessage = 'Consulta em andamento';
-    } else if (appointment.status === 'completed') {
-        selectedUser.value.canStartCall = false;
-        selectedUser.value.timeWindowMessage = 'Consulta finalizada';
-    } else if (appointment.status === 'no_show') {
-        selectedUser.value.canStartCall = false;
-        selectedUser.value.timeWindowMessage = 'Consulta não comparecida';
-    } else if (['scheduled', 'rescheduled'].includes(appointment.status)) {
-        if (diffMinutes >= -10 && diffMinutes <= 10) {
-            selectedUser.value.canStartCall = true;
-            if (diffMinutes < 0) {
-                selectedUser.value.timeWindowMessage = `Tempo restante: ${Math.abs(diffMinutes)} min`;
-            } else if (diffMinutes === 0) {
-                selectedUser.value.timeWindowMessage = 'Horário da consulta';
-            } else {
-                selectedUser.value.timeWindowMessage = `Início em ${diffMinutes} min`;
-            }
-        } else {
-            selectedUser.value.canStartCall = false;
-            if (diffMinutes < -10) {
-                selectedUser.value.timeWindowMessage = 'Janela de tempo expirada';
-            } else {
-                const daysUntil = Math.floor(diffMinutes / (24 * 60));
-                if (daysUntil > 0) {
-                    selectedUser.value.timeWindowMessage = `Agendado para ${daysUntil} ${daysUntil === 1 ? 'dia' : 'dias'}`;
-                } else {
-                    const hoursUntil = Math.floor(diffMinutes / 60);
-                    selectedUser.value.timeWindowMessage = `Início em ${hoursUntil} ${hoursUntil === 1 ? 'hora' : 'horas'}`;
-                }
-            }
-        }
-    }
-};
-
-// Função para obter label do status
-const getStatusLabel = (status: string): string => {
-    const statusLabels: Record<string, string> = {
-        'scheduled': 'Agendado',
-        'rescheduled': 'Reagendado',
-        'in_progress': 'Em andamento',
-        'completed': 'Finalizado',
-        'cancelled': 'Cancelado',
-        'no_show': 'Não compareceu'
-    };
-    return statusLabels[status] || status;
+const preselectAppointmentFromQuery = () => {
+    if (typeof window === 'undefined') return;
+    const appointmentId = new URLSearchParams(window.location.search).get('appointment');
+    if (!appointmentId) return;
+    const matchedUser = users.find((user) => user.appointment?.id === appointmentId || user.allAppointments?.some((a) => a.id === appointmentId));
+    if (matchedUser) selectUser(matchedUser);
 };
 
 onMounted(() => {
     canAccessPatientRoute();
+    preselectAppointmentFromQuery();
 });
+
+const selectedAppointment = computed(() => selectedUser.value?.appointment ?? null);
+const hasMultipleAppointments = computed(() => (selectedUser.value?.allAppointments?.length ?? 0) > 1);
+const isInCall = computed(() => sfu.connectionState.value === 'connected');
+
+// Appointment da chamada ativa (store) tem precedência sobre o selecionado na UI
+const activeAppointmentId = computed(() => store.appointmentId ?? selectedAppointment.value?.id ?? null);
+const activeSharedDocuments = computed<CallSharedDocument[]>(() => {
+    const id = activeAppointmentId.value;
+    if (!id) return [];
+    return users.find((user) => user.appointment?.id === id)?.appointment?.shared_documents ?? [];
+});
+const activeDoctorUserId = computed(() => {
+    const id = activeAppointmentId.value;
+    return (id ? users.find((user) => user.appointment?.id === id)?.id : null) ?? selectedUser.value?.id ?? null;
+});
+
+watch(
+    () => sfu.connectionState.value,
+    (state, prev) => {
+        if (prev === 'connected' && state === 'closed') {
+            connectionLost.value = true;
+        }
+        if (state === 'connected') {
+            connectionLost.value = false;
+        }
+    },
+);
+
+const selectUser = (user: UserProp) => {
+    selectedUser.value = user;
+    isMobileDetail.value = true;
+};
+
+const updateSelectedAppointment = () => {
+    if (!selectedUser.value?.allAppointments || !selectedUser.value.appointment) return;
+    const newAppointment = selectedUser.value.allAppointments.find((a) => a.id === selectedUser.value?.appointment?.id);
+    if (newAppointment) selectedUser.value.appointment = { ...newAppointment };
+};
+
+const getStatusLabel = (status: string): string => {
+    const labels: Record<string, string> = {
+        scheduled: 'Agendado',
+        rescheduled: 'Reagendado',
+        in_progress: 'Em andamento',
+        completed: 'Finalizado',
+        cancelled: 'Cancelado',
+        no_show: 'Não compareceu',
+    };
+    return labels[status] || status;
+};
+
+const statusTone = (user: UserProp | null): StatusTone => {
+    if (!user?.hasAppointment || !user.appointment) return 'muted';
+    if (user.appointment.status === 'in_progress') return 'live';
+    if (user.canStartCall || user.hasActiveScheduledCall) return 'go';
+    if (['completed'].includes(user.appointment.status)) return 'muted';
+    if (['no_show'].includes(user.appointment.status) || user.timeWindowMessage?.includes('expirada')) return 'warn';
+    return 'wait';
+};
+
+const statusClasses = (tone: StatusTone) => {
+    const map: Record<StatusTone, string> = {
+        live: 'bg-rose-50 text-rose-700',
+        go: 'bg-emerald-50 text-emerald-700',
+        wait: 'bg-amber-50 text-amber-700',
+        warn: 'bg-orange-50 text-orange-700',
+        muted: 'bg-gray-100 text-gray-600',
+    };
+    return map[tone];
+};
+
+const statusDotClasses = (tone: StatusTone) => {
+    const map: Record<StatusTone, string> = {
+        live: 'bg-rose-500 animate-pulse',
+        go: 'bg-emerald-500',
+        wait: 'bg-amber-500',
+        warn: 'bg-orange-500',
+        muted: 'bg-gray-400',
+    };
+    return map[tone];
+};
+
+// Modo CTA baseado em tipo de chamada disponível
+const ctaMode = computed<'join-scheduled' | 'calling' | 'in-call' | 'ended' | 'waiting' | 'ad-hoc-available' | 'ad-hoc-calling'>(() => {
+    if (isInCall.value) return 'in-call';
+    if (callState.value === 'ended') return 'ended';
+    if (callState.value === 'calling' || callState.value === 'ringing') return 'ad-hoc-calling';
+
+    // Chamada aceita pelo servidor mas SFU não conectado, ou falha de conexão (permite retry)
+    if (callState.value === 'accepted' || callState.value === 'error') return 'join-scheduled';
+
+    if (selectedUser.value?.hasActiveScheduledCall || (selectedUser.value?.canStartCall && selectedUser.value.hasAppointment)) {
+        return 'join-scheduled';
+    }
+
+    if (selectedUser.value?.hasRecentConsultation && selectedUser.value.doctor_id) {
+        return 'ad-hoc-available';
+    }
+
+    return 'waiting';
+});
+
+const joinVideoCall = async () => {
+    if (isLoading.value) return;
+
+    if (ctaMode.value === 'join-scheduled') {
+        await joinActiveCall(selectedAppointment.value?.id ?? null);
+        return;
+    }
+
+    if (ctaMode.value === 'ad-hoc-available' && selectedUser.value?.doctor_id) {
+        await requestCall(selectedUser.value.doctor_id);
+        return;
+    }
+};
+
+const handleEndCall = async () => {
+    if (!currentCall.value || isEndingCall.value) return;
+    isEndingCall.value = true;
+    await endCall(currentCall.value.callId);
+    isEndingCall.value = false;
+};
+
+const checklist = [
+    { label: 'Câmera e microfone permitidos', description: 'Verifique permissões do navegador antes da consulta.', icon: Mic, ok: true },
+    { label: 'Conexão estável', description: 'Prefira Wi-Fi ou conexão cabeada.', icon: Wifi, ok: true },
+    { label: 'Documento ou exames em mãos', description: 'Tenha arquivos e resultados por perto.', icon: FileText, ok: false },
+    { label: 'Ambiente privado', description: 'Use um local reservado e bem iluminado.', icon: Home, ok: false },
+];
 </script>
 
 <template>
-    <Head title="Videoconferência Médica" />
-    
+    <Head title="Videoconferência" />
+
+    <PatientVideoCallInCallOverlay
+        :is-in-call="isInCall"
+        :local-stream="sfu.localStream.value"
+        :remote-streams="sfu.remoteStreams.value"
+        :is-mic-enabled="sfu.isMicEnabled.value"
+        :is-camera-enabled="sfu.isCameraEnabled.value"
+        :is-ending="isEndingCall"
+        :doctor-display-name="selectedUser?.name ?? null"
+        :patient-display-name="'Você'"
+        :chief-complaint="selectedAppointment ? `Consulta em ${selectedAppointment.formatted_date} às ${selectedAppointment.formatted_time}` : null"
+        :appointment-id="activeAppointmentId"
+        :doctor-user-id="activeDoctorUserId"
+        :shared-documents="activeSharedDocuments"
+        @toggle-mic="sfu.toggleMic()"
+        @toggle-camera="sfu.toggleCamera()"
+        @end="handleEndCall"
+    />
+
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex h-full flex-1 flex-col overflow-hidden" style="height: 90vh;">
-            <!-- Tela Inicial - Seleção de Médico -->
-            <div class="flex-1 flex bg-gray-50">
-                <!-- Sidebar com Médicos -->
-                <div class="w-80 bg-white border-r border-gray-200 flex flex-col">
-                    <div class="p-6 border-b border-gray-200">
-                        <h2 class="text-xl font-bold text-gray-900">Médicos Disponíveis</h2>
-                        <p class="text-sm text-gray-600 mt-1">Selecione um médico para iniciar a consulta</p>
-                    </div>
-                    <div class="flex-1 overflow-y-auto p-4 space-y-2">
-                        <div
-                            v-for="user in users"
-                            :key="user.id"
-                            @click="selectedUser = user"
-                            :class="[
-                                'flex items-center p-3 rounded-lg cursor-pointer transition-all',
-                                user.id === selectedUser?.id 
-                                    ? 'bg-primary text-gray-900 shadow-md' 
-                                    : 'hover:bg-gray-100'
-                            ]"
-                        >
-                            <div :class="[
-                                'w-12 h-12 rounded-full flex items-center justify-center font-semibold',
-                                user.id === selectedUser?.id 
-                                    ? 'bg-primary text-white' 
-                                    : 'bg-primary/20 text-primary'
-                            ]">
-                                {{ user.name?.charAt(0)?.toUpperCase() || 'M' }}
+        <div class="flex min-h-0 flex-1 bg-[#f4f6f8] p-0 text-gray-950">
+            <div class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-[#dde5ea] bg-white shadow-sm">
+                <header class="border-b border-[#dde5ea] px-5 py-4">
+                    <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                        <div>
+                            <div
+                                class="inline-flex items-center gap-2 rounded-full border border-[#dde5ea] bg-[#f4f6f8] px-3 py-1 text-xs font-black text-gray-600"
+                            >
+                                <ShieldCheck class="h-3.5 w-3.5 text-[#0f6e78]" />
+                                Sala segura de teleconsulta
                             </div>
-                            <div class="ml-3 flex-1">
-                                <div :class="[
-                                    'font-semibold',
-                                    user.id === selectedUser?.id ? 'text-gray-900' : 'text-gray-900'
-                                ]">{{ user.name }}</div>
-                                <div class="text-sm text-gray-500">{{ user.email }}</div>
-                                <!-- Badge de Agendamento -->
-                                <div v-if="user.hasAppointment" class="flex items-center gap-1 mt-1">
-                                    <span :class="[
-                                        'text-xs px-2 py-0.5 rounded-full',
-                                        user.canStartCall 
-                                            ? 'bg-green-100 text-green-700' 
-                                            : 'bg-yellow-100 text-yellow-700'
-                                    ]">
-                                        {{ user.timeWindowMessage || 'Agendado' }}
+                            <h1 class="mt-2 text-3xl font-black text-gray-950">Videoconferência</h1>
+                            <p class="mt-1 text-sm font-semibold text-gray-600">
+                                Selecione o médico vinculado à consulta e revise o agendamento antes de entrar.
+                            </p>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 sm:flex">
+                            <div class="rounded-lg border border-[#dde5ea] bg-[#f4f6f8] px-4 py-2">
+                                <p class="text-[11px] font-black text-gray-500 uppercase">Médicos</p>
+                                <p class="text-xl font-black text-gray-950">{{ users.length }}</p>
+                            </div>
+                            <div class="rounded-lg border border-[#dde5ea] bg-[#e5f1f2] px-4 py-2">
+                                <p class="text-[11px] font-black text-gray-500 uppercase">Janela</p>
+                                <p class="text-xl font-black text-gray-950">10 min</p>
+                            </div>
+                            <Button as-child class="col-span-2 h-11 bg-[#0f6e78] font-black text-white hover:bg-[#0a4f57] sm:col-span-1">
+                                <Link :href="patientRoutes.historyConsultations()">Minhas consultas</Link>
+                            </Button>
+                        </div>
+                    </div>
+                </header>
+
+                <div class="grid min-h-0 flex-1 lg:grid-cols-[380px_minmax(0,1fr)]">
+                    <aside class="min-h-0 flex-col border-r border-[#dde5ea] bg-white" :class="isMobileDetail ? 'hidden lg:flex' : 'flex'">
+                        <div class="border-b border-[#dde5ea] p-4">
+                            <h2 class="text-lg font-black text-gray-950">Médicos vinculados</h2>
+                            <p class="mt-1 text-sm font-semibold text-gray-500">Consultas ativas, futuras e recentes.</p>
+                        </div>
+                        <div class="min-h-0 flex-1 overflow-y-auto p-3">
+                            <div v-if="users.length === 0" class="flex h-full flex-col items-center justify-center px-6 text-center">
+                                <VideoOff class="h-12 w-12 text-gray-300" />
+                                <h3 class="mt-4 text-lg font-black text-gray-950">Nenhuma consulta encontrada</h3>
+                                <p class="mt-2 text-sm font-medium text-gray-500">Agende uma consulta para habilitar a sala de vídeo.</p>
+                                <Button as-child class="mt-5 bg-teal-500 font-black text-gray-950 hover:bg-teal-400">
+                                    <Link :href="patientRoutes.searchConsultations()">Buscar consulta</Link>
+                                </Button>
+                            </div>
+
+                            <button
+                                v-for="user in users"
+                                v-else
+                                :key="user.id"
+                                type="button"
+                                class="mb-2 flex w-full items-center gap-3 rounded-lg border p-3 text-left transition hover:border-[#0f6e78]/30 hover:bg-[#f4f6f8]"
+                                :class="selectedUser?.id === user.id ? 'border-[#0f6e78] bg-[#e5f1f2]' : 'border-[#e6ebee] bg-white'"
+                                @click="selectUser(user)"
+                            >
+                                <Avatar class="h-12 w-12 border border-[#dde5ea]">
+                                    <AvatarFallback class="bg-[#e5f1f2] text-sm font-black text-[#0f6e78]">
+                                        {{ getInitials(user.name) }}
+                                    </AvatarFallback>
+                                </Avatar>
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex items-center justify-between gap-2">
+                                        <h3 class="truncate text-sm font-black text-gray-950">{{ user.name }}</h3>
+                                        <Check v-if="selectedUser?.id === user.id" class="h-4 w-4 shrink-0 text-[#0f6e78]" />
+                                    </div>
+                                    <span
+                                        class="mt-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-black"
+                                        :class="statusClasses(statusTone(user))"
+                                    >
+                                        <span class="h-1.5 w-1.5 rounded-full" :class="statusDotClasses(statusTone(user))" />
+                                        {{ user.timeWindowMessage || (user.hasAppointment ? 'Agendado' : 'Sem agendamento') }}
                                     </span>
                                 </div>
-                                <div v-else class="text-xs text-gray-400 mt-1">
-                                    Sem agendamento
-                                </div>
-                            </div>
-                            <svg v-if="user.id === selectedUser?.id" class="w-5 h-5 text-gray-900" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
-                            </svg>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Área Central de Seleção -->
-                <div class="flex-1 flex flex-col items-center justify-center bg-gray-50">
-                    <div v-if="!selectedUser" class="text-center">
-                        <div class="w-24 h-24 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-6">
-                            <svg class="w-12 h-12 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                            </svg>
-                        </div>
-                        <h3 class="text-2xl font-bold text-gray-900 mb-2">Videoconferência Médica</h3>
-                        <p class="text-gray-600 mb-4">Selecione um médico da lista ao lado para iniciar sua consulta</p>
-                        <div class="mt-4 p-3 bg-gray-100 rounded-lg max-w-md">
-                            <p class="text-xs text-gray-600 text-center">
-                                <strong>Importante:</strong> É necessário ter um agendamento para iniciar a chamada.<br/>
-                                A chamada só pode ser iniciada 10 minutos antes ou depois do horário agendado.
-                            </p>
-                        </div>
-                    </div>
-                    <div v-else class="text-center max-w-md">
-                        <div class="w-24 h-24 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-6">
-                            <div class="w-20 h-20 bg-primary rounded-full flex items-center justify-center">
-                                <span class="text-gray-900 font-bold text-2xl">
-                                    {{ selectedUser.name?.charAt(0)?.toUpperCase() || 'M' }}
-                                </span>
-                            </div>
-                        </div>
-                        <h3 class="text-2xl font-bold text-gray-900 mb-2">{{ selectedUser.name }}</h3>
-                        <p class="text-gray-600 mb-4">{{ selectedUser.email }}</p>
-                        
-                        <!-- Informações de Agendamento -->
-                        <div v-if="selectedUser.hasAppointment && selectedUser.appointment" class="mb-6 p-4 bg-white rounded-lg border border-gray-200 shadow-sm">
-                            <div class="flex items-center justify-center gap-2 mb-2">
-                                <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                </svg>
-                                <span class="font-semibold text-gray-900">Agendamento</span>
-                            </div>
-
-                            <!-- Seletor de consulta se houver múltiplas -->
-                            <div v-if="selectedUser.allAppointments && selectedUser.allAppointments.length > 1" class="mb-3">
-                                <label class="block text-sm font-medium text-gray-700 mb-1">
-                                    Selecionar consulta ({{ selectedUser.allAppointments.length }} consultas):
-                                </label>
-                                <select 
-                                    v-model="selectedUser.appointment.id"
-                                    @change="updateSelectedAppointment"
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                                >
-                                    <option 
-                                        v-for="apt in selectedUser.allAppointments" 
-                                        :key="apt.id" 
-                                        :value="apt.id"
-                                    >
-                                        {{ apt.formatted_date }} às {{ apt.formatted_time }} - {{ getStatusLabel(apt.status) }}
-                                    </option>
-                                </select>
-                            </div>
-
-                            <p class="text-sm text-gray-700 mb-1">
-                                <strong>Data:</strong> {{ selectedUser.appointment.formatted_date }}
-                            </p>
-                            <p class="text-sm text-gray-700 mb-2">
-                                <strong>Horário:</strong> {{ selectedUser.appointment.formatted_time }}
-                            </p>
-                            <div :class="[
-                                'inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium',
-                                selectedUser.canStartCall 
-                                    ? 'bg-green-100 text-green-700' 
-                                    : 'bg-yellow-100 text-yellow-700'
-                            ]">
-                                <svg v-if="selectedUser.canStartCall" class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                                </svg>
-                                <svg v-else class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
-                                </svg>
-                                {{ selectedUser.timeWindowMessage || 'Status do agendamento' }}
-                            </div>
-                        </div>
-                        
-                        <!-- Mensagem quando não tem agendamento -->
-                        <div v-else class="mb-6 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-                            <div class="flex items-center justify-center gap-2 mb-2">
-                                <svg class="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                                </svg>
-                                <span class="font-semibold text-yellow-800">Atenção</span>
-                            </div>
-                            <p class="text-sm text-yellow-700">
-                                Você precisa ter um agendamento com este médico para iniciar a chamada.
-                            </p>
-                        </div>
-                        
-                        <div class="flex flex-col gap-3 items-center">
-                            <button
-                                disabled
-                                class="px-8 py-3 rounded-lg font-semibold shadow-lg flex items-center gap-2 bg-gray-300 text-gray-500 cursor-not-allowed"
-                                title="Videoconferência em migração para nova tecnologia (SFU). Em breve."
-                            >
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                                </svg>
-                                Videoconferência em atualização
                             </button>
                         </div>
-                        
-                        <!-- Informações sobre a janela de tempo -->
-                        <div class="mt-6 p-3 bg-gray-100 rounded-lg">
-                            <p class="text-xs text-gray-600 text-center">
-                                <strong>Lembrete:</strong> A chamada só pode ser iniciada na janela de tempo permitida<br/>
-                                (10 minutos antes ou depois do horário agendado)
-                            </p>
+                    </aside>
+
+                    <main class="min-h-0 flex-col bg-[#f4f6f8]" :class="selectedUser ? 'flex' : 'hidden lg:flex'">
+                        <div v-if="!selectedUser" class="flex flex-1 items-center justify-center px-6 text-center">
+                            <div class="max-w-md">
+                                <div class="mx-auto grid h-20 w-20 place-items-center rounded-2xl bg-[#e5f1f2] text-[#0f6e78]">
+                                    <Video class="h-10 w-10" />
+                                </div>
+                                <h2 class="mt-5 text-2xl font-black text-gray-950">Selecione uma consulta</h2>
+                                <p class="mt-2 text-sm font-semibold text-gray-600">
+                                    Escolha um médico da lista para revisar horário, status e checklist pré-chamada.
+                                </p>
+                            </div>
                         </div>
-                    </div>
+
+                        <template v-else>
+                            <div class="flex items-center gap-3 border-b border-[#dde5ea] bg-white px-4 py-3 lg:hidden">
+                                <Button variant="outline" class="h-9 border-[#dde5ea] px-3 font-extrabold" @click="isMobileDetail = false">
+                                    Voltar
+                                </Button>
+                                <p class="truncate text-sm font-black text-gray-950">{{ selectedUser.name }}</p>
+                            </div>
+
+                            <div class="min-h-0 flex-1 overflow-y-auto p-4 lg:p-5">
+                                <div class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
+                                    <section class="space-y-5">
+                                        <div v-if="connectionLost" class="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4">
+                                            <WifiOff class="h-5 w-5 shrink-0 text-amber-700" />
+                                            <div>
+                                                <h3 class="font-black text-amber-900">Conexão interrompida</h3>
+                                                <p class="mt-1 text-sm font-semibold text-amber-800">
+                                                    A chamada foi desconectada. Clique em "Reconectar à sala" para retomar.
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div class="rounded-lg border border-[#dde5ea] bg-white p-5 shadow-sm">
+                                            <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                                                <div class="flex gap-4">
+                                                    <Avatar class="h-16 w-16 border border-[#dde5ea]">
+                                                        <AvatarFallback class="bg-[#e5f1f2] text-lg font-black text-[#0f6e78]">
+                                                            {{ getInitials(selectedUser.name) }}
+                                                        </AvatarFallback>
+                                                    </Avatar>
+                                                    <div>
+                                                        <p class="text-xs font-black text-gray-500 uppercase">Médico selecionado</p>
+                                                        <h2 class="mt-1 text-2xl font-black text-gray-950">{{ selectedUser.name }}</h2>
+                                                        <span
+                                                            class="mt-3 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-black"
+                                                            :class="statusClasses(statusTone(selectedUser))"
+                                                        >
+                                                            <span class="h-2 w-2 rounded-full" :class="statusDotClasses(statusTone(selectedUser))" />
+                                                            {{ selectedUser.timeWindowMessage || 'Status do agendamento' }}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <div class="rounded-lg border border-[#dde5ea] bg-[#f4f6f8] px-4 py-3">
+                                                    <p class="text-[11px] font-black text-gray-500 uppercase">Status da chamada</p>
+                                                    <p class="mt-1 flex items-center gap-2 text-sm font-black text-gray-700">
+                                                        <Loader2
+                                                            v-if="callState === 'calling' || callState === 'ringing'"
+                                                            class="h-4 w-4 animate-spin"
+                                                        />
+                                                        <RefreshCw v-else-if="callState === 'accepted'" class="h-4 w-4 text-emerald-600" />
+                                                        <Video v-else class="h-4 w-4" />
+                                                        {{
+                                                            callState === 'calling'
+                                                                ? 'Aguardando médico...'
+                                                                : callState === 'ringing'
+                                                                  ? 'Chamando...'
+                                                                  : callState === 'rejected'
+                                                                    ? 'Chamada recusada'
+                                                                    : callState === 'ended'
+                                                                      ? 'Chamada encerrada'
+                                                                      : callState === 'error'
+                                                                        ? 'Erro na chamada'
+                                                                        : 'Disponível'
+                                                        }}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="rounded-lg border border-[#dde5ea] bg-white p-5 shadow-sm">
+                                            <div class="mb-4 flex items-center gap-2">
+                                                <Calendar class="h-5 w-5 text-[#0f6e78]" />
+                                                <h2 class="text-lg font-black text-gray-950">Agendamento</h2>
+                                            </div>
+
+                                            <template v-if="selectedUser.hasAppointment && selectedAppointment">
+                                                <label v-if="hasMultipleAppointments" class="mb-4 block space-y-2">
+                                                    <span class="text-sm font-extrabold text-gray-700">Selecionar consulta</span>
+                                                    <select
+                                                        v-model="selectedUser.appointment!.id"
+                                                        class="h-11 w-full rounded-lg border border-[#dde5ea] bg-white px-3 text-sm font-semibold text-gray-800 outline-none focus:border-[#0f6e78] focus:ring-2 focus:ring-[#0f6e78]/20"
+                                                        @change="updateSelectedAppointment"
+                                                    >
+                                                        <option
+                                                            v-for="appointment in selectedUser.allAppointments"
+                                                            :key="appointment.id"
+                                                            :value="appointment.id"
+                                                        >
+                                                            {{ appointment.formatted_date }} às {{ appointment.formatted_time }} -
+                                                            {{ getStatusLabel(appointment.status) }}
+                                                        </option>
+                                                    </select>
+                                                </label>
+
+                                                <div class="grid gap-3 sm:grid-cols-3">
+                                                    <div class="rounded-lg border border-[#e6ebee] bg-[#f7f8f9] p-4">
+                                                        <p class="text-[11px] font-black text-gray-500 uppercase">Data</p>
+                                                        <p class="mt-1 text-lg font-black text-gray-950">{{ selectedAppointment.formatted_date }}</p>
+                                                    </div>
+                                                    <div class="rounded-lg border border-[#e6ebee] bg-[#f7f8f9] p-4">
+                                                        <p class="text-[11px] font-black text-gray-500 uppercase">Horário</p>
+                                                        <p class="mt-1 text-lg font-black text-gray-950">{{ selectedAppointment.formatted_time }}</p>
+                                                    </div>
+                                                    <div class="rounded-lg border border-[#e6ebee] bg-[#f7f8f9] p-4">
+                                                        <p class="text-[11px] font-black text-gray-500 uppercase">Situação</p>
+                                                        <p class="mt-1 text-lg font-black text-gray-950">
+                                                            {{ getStatusLabel(selectedAppointment.status) }}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </template>
+
+                                            <div v-else class="rounded-lg border border-amber-100 bg-amber-50 p-4">
+                                                <div class="flex gap-3">
+                                                    <AlertTriangle class="h-5 w-5 shrink-0 text-amber-700" />
+                                                    <div>
+                                                        <h3 class="font-black text-amber-900">Sem agendamento com este médico</h3>
+                                                        <p class="mt-1 text-sm font-semibold text-amber-800">
+                                                            É necessário ter uma consulta marcada para entrar na videochamada.
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="rounded-lg border border-[#dde5ea] bg-white p-5 shadow-sm">
+                                            <h2 class="text-lg font-black text-gray-950">Antes de entrar</h2>
+                                            <p class="mt-1 text-sm font-semibold text-gray-500">
+                                                Revise permissões e ambiente para evitar interrupções.
+                                            </p>
+                                            <div class="mt-4 grid gap-3 md:grid-cols-2">
+                                                <div
+                                                    v-for="item in checklist"
+                                                    :key="item.label"
+                                                    class="flex gap-3 rounded-lg border border-[#e6ebee] bg-[#f7f8f9] p-3"
+                                                >
+                                                    <span
+                                                        class="grid h-9 w-9 shrink-0 place-items-center rounded-lg"
+                                                        :class="
+                                                            item.ok
+                                                                ? 'bg-emerald-50 text-emerald-700'
+                                                                : 'bg-white text-gray-500 ring-1 ring-[#dde5ea]'
+                                                        "
+                                                    >
+                                                        <Check v-if="item.ok" class="h-4 w-4" />
+                                                        <component :is="item.icon" v-else class="h-4 w-4" />
+                                                    </span>
+                                                    <div>
+                                                        <p class="text-sm font-black text-gray-950">{{ item.label }}</p>
+                                                        <p class="mt-0.5 text-xs font-semibold text-gray-500">{{ item.description }}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </section>
+
+                                    <aside class="space-y-4">
+                                        <div class="rounded-lg border border-[#dde5ea] bg-white p-5 shadow-sm">
+                                            <div class="grid aspect-video place-items-center rounded-lg bg-[#0b2030] text-white">
+                                                <div v-if="ctaMode === 'in-call'" class="text-center">
+                                                    <RefreshCw class="mx-auto h-10 w-10 animate-spin text-[#40e0d0]" />
+                                                    <p class="mt-3 text-sm font-black">Chamada em andamento</p>
+                                                </div>
+                                                <div v-else-if="ctaMode === 'ended'" class="text-center">
+                                                    <VideoOff class="mx-auto h-10 w-10 text-gray-400" />
+                                                    <p class="mt-3 text-sm font-black">Chamada finalizada</p>
+                                                </div>
+                                                <div v-else-if="ctaMode === 'ad-hoc-calling'" class="text-center">
+                                                    <Loader2 class="mx-auto h-10 w-10 animate-spin text-[#40e0d0]" />
+                                                    <p class="mt-3 text-sm font-black">Aguardando médico...</p>
+                                                </div>
+                                                <div v-else-if="ctaMode === 'join-scheduled'" class="text-center">
+                                                    <WifiOff v-if="connectionLost" class="mx-auto h-10 w-10 text-amber-400" />
+                                                    <Video v-else class="mx-auto h-10 w-10 text-[#40e0d0]" />
+                                                    <p class="mt-3 text-sm font-black">
+                                                        {{ connectionLost ? 'Conexão interrompida' : 'Consulta disponível' }}
+                                                    </p>
+                                                    <p class="mt-1 px-6 text-xs font-semibold text-white/60">
+                                                        {{ connectionLost ? 'Clique para reconectar à sala.' : 'Sala pronta. Clique para entrar.' }}
+                                                    </p>
+                                                </div>
+                                                <div v-else-if="ctaMode === 'ad-hoc-available'" class="text-center">
+                                                    <Phone class="mx-auto h-10 w-10 text-[#40e0d0]" />
+                                                    <p class="mt-3 text-sm font-black">Ligar para médico</p>
+                                                    <p class="mt-1 px-6 text-xs font-semibold text-white/60">Chamada fora do horário agendado.</p>
+                                                </div>
+                                                <div v-else class="text-center">
+                                                    <Clock class="mx-auto h-10 w-10 text-[#40e0d0]/70" />
+                                                    <p class="mt-3 text-sm font-black">Aguardando o horário</p>
+                                                    <p class="mt-1 px-6 text-xs font-semibold text-white/60">
+                                                        A chamada abre 10 min antes do horário agendado.
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            <button
+                                                type="button"
+                                                class="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-lg border-none px-4 text-sm font-black disabled:cursor-not-allowed"
+                                                :class="
+                                                    ctaMode === 'join-scheduled' || ctaMode === 'ad-hoc-available'
+                                                        ? 'bg-teal-500 text-gray-950 hover:bg-teal-400'
+                                                        : ctaMode === 'in-call'
+                                                          ? 'bg-emerald-100 text-emerald-800'
+                                                          : 'cursor-not-allowed bg-gray-200 text-gray-500'
+                                                "
+                                                :disabled="(ctaMode !== 'join-scheduled' && ctaMode !== 'ad-hoc-available') || isLoading"
+                                                @click="joinVideoCall"
+                                            >
+                                                <Loader2 v-if="isLoading || ctaMode === 'ad-hoc-calling'" class="h-4 w-4 animate-spin" />
+                                                <Video v-else-if="ctaMode === 'join-scheduled'" class="h-4 w-4" />
+                                                <Phone v-else-if="ctaMode === 'ad-hoc-available'" class="h-4 w-4" />
+                                                <Video v-else-if="ctaMode === 'in-call'" class="h-4 w-4" />
+                                                <VideoOff v-else-if="ctaMode === 'ended'" class="h-4 w-4" />
+                                                <Clock v-else class="h-4 w-4" />
+                                                {{
+                                                    isLoading
+                                                        ? 'Aguarde...'
+                                                        : ctaMode === 'ad-hoc-calling'
+                                                          ? 'Aguardando médico...'
+                                                          : ctaMode === 'join-scheduled'
+                                                            ? connectionLost
+                                                                ? 'Reconectar à sala'
+                                                                : 'Entrar na consulta'
+                                                            : ctaMode === 'ad-hoc-available'
+                                                              ? 'Ligar para médico'
+                                                              : ctaMode === 'in-call'
+                                                                ? 'Chamada em andamento'
+                                                                : ctaMode === 'ended'
+                                                                  ? 'Chamada finalizada'
+                                                                  : 'Aguardando o horário'
+                                                }}
+                                            </button>
+                                            <p v-if="ctaMode === 'waiting'" class="mt-2 text-center text-xs font-semibold text-gray-500">
+                                                A chamada abre 10 minutos antes/depois do horário.
+                                            </p>
+                                        </div>
+
+                                        <div class="rounded-lg border border-[#dde5ea] bg-white p-5 shadow-sm">
+                                            <h2 class="flex items-center gap-2 text-base font-black text-gray-950">
+                                                <MonitorUp class="h-4 w-4 text-[#0f6e78]" />
+                                                Orientações rápidas
+                                            </h2>
+                                            <ul class="mt-3 space-y-3 text-sm font-semibold text-gray-600">
+                                                <li class="flex gap-2">
+                                                    <span class="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#0f6e78]" />
+                                                    A consulta agendada abre automaticamente na janela de 10 minutos.
+                                                </li>
+                                                <li class="flex gap-2">
+                                                    <span class="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#0f6e78]" />
+                                                    Use um local privado e mantenha documentos próximos.
+                                                </li>
+                                                <li class="flex gap-2">
+                                                    <span class="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#0f6e78]" />
+                                                    Permita câmera e microfone no navegador quando solicitado.
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </aside>
+                                </div>
+                            </div>
+                        </template>
+                    </main>
                 </div>
             </div>
         </div>
-
     </AppLayout>
 </template>
-

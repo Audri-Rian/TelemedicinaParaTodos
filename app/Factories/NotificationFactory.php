@@ -11,15 +11,13 @@ class NotificationFactory
     /**
      * Criar uma notificação padronizada
      *
-     * @param NotificationType $type
-     * @param array $metadata Dados contextuais (appointment_id, doctor_name, etc.)
-     * @param User|string $user User model ou user_id
-     * @return Notification
+     * @param  array  $metadata  Dados contextuais (appointment_id, doctor_name, etc.)
+     * @param  User|string  $user  User model ou user_id
      */
     public static function make(NotificationType $type, array $metadata, User|string $user): Notification
     {
         $userId = $user instanceof User ? $user->id : $user;
-        
+
         // Obter título e mensagem baseado no tipo
         [$title, $message] = self::getTitleAndMessage($type, $metadata);
 
@@ -35,8 +33,6 @@ class NotificationFactory
     /**
      * Obter título e mensagem baseado no tipo de notificação
      *
-     * @param NotificationType $type
-     * @param array $metadata
      * @return array [title, message]
      */
     private static function getTitleAndMessage(NotificationType $type, array $metadata): array
@@ -70,32 +66,44 @@ class NotificationFactory
                 'Lembrete de Consulta',
                 self::formatAppointmentReminderMessage($metadata),
             ],
+            NotificationType::EXAM_RESULT_RECEIVED => [
+                'Resultado de Exame Recebido',
+                self::formatExamResultReceivedMessage($metadata),
+            ],
         };
     }
 
     private static function formatAppointmentCreatedMessage(array $metadata): string
     {
-        $doctorName = $metadata['doctor_name'] ?? 'Médico';
+        $doctorName = $metadata['doctor_name'] ?? null;
+        $patientName = $metadata['patient_name'] ?? null;
         $scheduledAt = $metadata['scheduled_at'] ?? 'data não informada';
-        
+
         if (is_string($scheduledAt) && strtotime($scheduledAt)) {
             $scheduledAt = date('d/m/Y H:i', strtotime($scheduledAt));
         }
-        
-        return "Sua consulta com Dr(a). {$doctorName} foi agendada para {$scheduledAt}.";
+
+        if (is_string($patientName) && trim($patientName) !== '' && ! $doctorName) {
+            return "Sua consulta com paciente {$patientName} foi agendada para {$scheduledAt}.";
+        }
+
+        $resolvedDoctorName = $doctorName ?? 'Médico';
+
+        return "Sua consulta com Dr(a). {$resolvedDoctorName} foi agendada para {$scheduledAt}.";
     }
 
     private static function formatAppointmentCancelledMessage(array $metadata): string
     {
         $doctorName = $metadata['doctor_name'] ?? 'Médico';
         $reason = $metadata['reason'] ?? null;
-        
+
         $message = "Sua consulta com Dr(a). {$doctorName} foi cancelada.";
-        
-        if ($reason) {
-            $message .= " Motivo: {$reason}";
+
+        if (is_string($reason) && trim($reason) !== '') {
+            $safeReason = strip_tags($reason);
+            $message .= " Motivo: {$safeReason}";
         }
-        
+
         return $message;
     }
 
@@ -104,20 +112,21 @@ class NotificationFactory
         $doctorName = $metadata['doctor_name'] ?? 'Médico';
         $oldDate = $metadata['old_scheduled_at'] ?? 'data anterior';
         $newDate = $metadata['new_scheduled_at'] ?? 'nova data';
-        
+
         if (is_string($oldDate) && strtotime($oldDate)) {
             $oldDate = date('d/m/Y H:i', strtotime($oldDate));
         }
         if (is_string($newDate) && strtotime($newDate)) {
             $newDate = date('d/m/Y H:i', strtotime($newDate));
         }
-        
+
         return "Sua consulta com Dr(a). {$doctorName} foi reagendada de {$oldDate} para {$newDate}.";
     }
 
     private static function formatPrescriptionIssuedMessage(array $metadata): string
     {
         $doctorName = $metadata['doctor_name'] ?? 'Médico';
+
         return "Dr(a). {$doctorName} emitiu uma nova prescrição para você.";
     }
 
@@ -125,13 +134,36 @@ class NotificationFactory
     {
         $doctorName = $metadata['doctor_name'] ?? 'Médico';
         $examinationName = $metadata['examination_name'] ?? 'exame';
+
         return "Dr(a). {$doctorName} solicitou o exame: {$examinationName}.";
     }
 
     private static function formatMedicalCertificateIssuedMessage(array $metadata): string
     {
         $doctorName = $metadata['doctor_name'] ?? 'Médico';
+
         return "Dr(a). {$doctorName} emitiu um atestado médico para você.";
+    }
+
+    private static function formatExamResultReceivedMessage(array $metadata): string
+    {
+        $examinationName = $metadata['examination_name'] ?? 'exame';
+        $partnerName = $metadata['partner_name'] ?? null;
+        $patientName = $metadata['patient_name'] ?? null;
+
+        if ($patientName) {
+            // Notificação para o médico
+            $message = "O resultado do exame \"{$examinationName}\" do paciente {$patientName} foi recebido";
+        } else {
+            // Notificação para o paciente
+            $message = "O resultado do seu exame \"{$examinationName}\" está disponível";
+        }
+
+        if ($partnerName) {
+            $message .= " via {$partnerName}";
+        }
+
+        return $message.'.';
     }
 
     private static function formatAppointmentReminderMessage(array $metadata): string
@@ -139,19 +171,17 @@ class NotificationFactory
         $doctorName = $metadata['doctor_name'] ?? 'Médico';
         $scheduledAt = $metadata['scheduled_at'] ?? 'data não informada';
         $timeUntil = $metadata['time_until'] ?? null;
-        
+
         if (is_string($scheduledAt) && strtotime($scheduledAt)) {
             $scheduledAt = date('d/m/Y H:i', strtotime($scheduledAt));
         }
-        
+
         $message = "Lembrete: Você tem uma consulta com Dr(a). {$doctorName} em {$scheduledAt}.";
-        
+
         if ($timeUntil) {
             $message .= " Faltam {$timeUntil}.";
         }
-        
+
         return $message;
     }
 }
-
-

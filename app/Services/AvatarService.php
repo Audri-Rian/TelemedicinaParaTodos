@@ -2,13 +2,19 @@
 
 namespace App\Services;
 
+use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Intervention\Image\ImageManager;
+use League\Flysystem\Local\LocalFilesystemAdapter;
 
 class AvatarService
 {
+    public function __construct(
+        private readonly FileStorageManager $fileStorageManager,
+    ) {}
+
     /**
      * Tamanho padrão do avatar (largura e altura)
      */
@@ -46,29 +52,56 @@ class AvatarService
     /**
      * Upload e processamento de avatar
      *
-     * @param string $userId ID do usuário
-     * @param UploadedFile $file Arquivo enviado
+     * @param  string  $userId  ID do usuário
+     * @param  UploadedFile  $file  Arquivo enviado
      * @return string Caminho do avatar salvo
+     *
      * @throws \InvalidArgumentException
      */
+    public function storeFromUrl(string $userId, string $url): string
+    {
+        $response = Http::timeout(10)->get($url);
+
+        if (! $response->successful()) {
+            throw new \InvalidArgumentException('Não foi possível baixar a imagem da URL fornecida.');
+        }
+
+        $userDir = "avatars/{$userId}";
+        $filename = Str::uuid().'.jpg';
+        $path = "{$userDir}/{$filename}";
+        $contents = $response->body();
+
+        $this->processAndSaveImage($contents, $path, self::AVATAR_SIZE, self::JPEG_QUALITY);
+
+        $thumbnailPath = "{$userDir}/thumb_{$filename}";
+        $this->processAndSaveImage($contents, $thumbnailPath, self::THUMBNAIL_SIZE, self::THUMBNAIL_QUALITY);
+
+        return $path;
+    }
+
     public function uploadAvatar(string $userId, UploadedFile $file): string
     {
         // Validar arquivo
         $this->validateFile($file);
+        $contents = file_get_contents($file->getRealPath());
+
+        if (! is_string($contents)) {
+            throw new \InvalidArgumentException('Não foi possível ler a imagem enviada.');
+        }
 
         // Criar diretório do usuário se não existir
         $userDir = "avatars/{$userId}";
-        
+
         // Gerar nome único para o arquivo
-        $filename = Str::uuid() . '.jpg';
+        $filename = Str::uuid().'.jpg';
         $path = "{$userDir}/{$filename}";
 
         // Processar e salvar imagem principal
-        $this->processAndSaveImage($file, $path, self::AVATAR_SIZE, self::JPEG_QUALITY);
+        $this->processAndSaveImage($contents, $path, self::AVATAR_SIZE, self::JPEG_QUALITY);
 
         // Criar e salvar thumbnail
         $thumbnailPath = "{$userDir}/thumb_{$filename}";
-        $this->processAndSaveImage($file, $thumbnailPath, self::THUMBNAIL_SIZE, self::THUMBNAIL_QUALITY);
+        $this->processAndSaveImage($contents, $thumbnailPath, self::THUMBNAIL_SIZE, self::THUMBNAIL_QUALITY);
 
         return $path;
     }
@@ -76,8 +109,7 @@ class AvatarService
     /**
      * Deletar avatar do usuário
      *
-     * @param string $avatarPath Caminho do avatar
-     * @return bool
+     * @param  string  $avatarPath  Caminho do avatar
      */
     public function deleteAvatar(string $avatarPath): bool
     {
@@ -85,7 +117,7 @@ class AvatarService
             return false;
         }
 
-        $disk = Storage::disk('public');
+        $disk = $this->publicImagesDisk();
 
         // Deletar imagem principal
         if ($disk->exists($avatarPath)) {
@@ -104,8 +136,8 @@ class AvatarService
     /**
      * Obter URL do avatar
      *
-     * @param string|null $avatarPath Caminho do avatar
-     * @param bool $thumbnail Se deve retornar thumbnail
+     * @param  string|null  $avatarPath  Caminho do avatar
+     * @param  bool  $thumbnail  Se deve retornar thumbnail
      * @return string|null URL do avatar ou null se não existir
      */
     public function getAvatarUrl(?string $avatarPath, bool $thumbnail = false): ?string
@@ -115,39 +147,33 @@ class AvatarService
         }
 
         $path = $thumbnail ? $this->getThumbnailPath($avatarPath) : $avatarPath;
-        $disk = Storage::disk('public');
+        $disk = $this->publicImagesDisk();
 
-        if (!$disk->exists($path)) {
+        if (! $disk->exists($path)) {
             return null;
         }
 
         // Obter URL do disco
         $url = $disk->url($path);
-        
+
         // Se a URL contém 'localhost' sem porta, adicionar porta 8000
         if (str_contains($url, 'http://localhost/') || str_contains($url, 'http://localhost/storage')) {
             $url = str_replace('http://localhost', 'http://localhost:8000', $url);
         }
-        
+
         // Se a URL não começar com http, construir URL completa
-        if (!str_starts_with($url, 'http')) {
+        if (! str_starts_with($url, 'http')) {
             $baseUrl = rtrim(config('app.url', 'http://localhost:8000'), '/');
-            $url = $baseUrl . '/' . ltrim($url, '/');
+            $url = $baseUrl.'/'.ltrim($url, '/');
         }
-        
+
         return $url;
     }
 
     /**
      * Processar e salvar imagem usando Intervention Image
-     *
-     * @param UploadedFile $file
-     * @param string $path
-     * @param int $size
-     * @param int $quality
-     * @return void
      */
-    private function processAndSaveImage(UploadedFile $file, string $path, int $size, int $quality): void
+    private function processAndSaveImage(string $contents, string $path, int $size, int $quality): void
     {
         try {
             // Criar instância do ImageManager
@@ -159,26 +185,26 @@ class AvatarService
             } else {
                 throw new \RuntimeException(
                     'Nenhum driver de imagem disponível (GD ou Imagick). '
-                    . 'Para upload de avatar, habilite a extensão GD no PHP: em php.ini descomente "extension=gd" e reinicie o servidor.'
+                    .'Para upload de avatar, habilite a extensão GD no PHP: em php.ini descomente "extension=gd" e reinicie o servidor.'
                 );
             }
-            
+
             // Carregar e processar imagem
-            $image = $manager->read($file->getRealPath());
-            
+            $image = $manager->read($contents);
+
             // Fazer crop e redimensionamento para tamanho quadrado
             // O método cover() faz crop centralizado automaticamente
             $image->cover($size, $size);
-            
+
             // Converter para JPEG e aplicar qualidade
             $encoded = $image->toJpeg($quality);
-            
+
             // Salvar no storage
-            $disk = Storage::disk('public');
+            $disk = $this->publicImagesDisk();
             $disk->put($path, $encoded->toString());
         } catch (\Exception $e) {
             throw new \InvalidArgumentException(
-                'Não foi possível processar a imagem: ' . $e->getMessage()
+                'Não foi possível processar a imagem: '.$e->getMessage()
             );
         }
     }
@@ -186,14 +212,12 @@ class AvatarService
     /**
      * Validar arquivo enviado
      *
-     * @param UploadedFile $file
-     * @return void
      * @throws \InvalidArgumentException
      */
     private function validateFile(UploadedFile $file): void
     {
         // Validar tipo MIME
-        if (!in_array($file->getMimeType(), self::ALLOWED_MIME_TYPES)) {
+        if (! in_array($file->getMimeType(), self::ALLOWED_MIME_TYPES)) {
             throw new \InvalidArgumentException(
                 'Formato de imagem inválido. Apenas JPEG, PNG e WebP são permitidos.'
             );
@@ -214,15 +238,44 @@ class AvatarService
     }
 
     /**
-     * Obter caminho do thumbnail a partir do caminho do avatar
+     * Resolver o caminho completo no disco para servir um avatar.
      *
-     * @param string $avatarPath
-     * @return string
+     * @return array{path: string, mimeType: string}|null
+     */
+    public function resolveAvatarFile(string $userId, string $filename): ?array
+    {
+        $filename = basename($filename);
+        $userId = basename($userId);
+
+        $path = "avatars/{$userId}/{$filename}";
+        $disk = $this->publicImagesDisk();
+
+        if (! $disk->exists($path)) {
+            return null;
+        }
+
+        if (! $disk->getAdapter() instanceof LocalFilesystemAdapter) {
+            return null;
+        }
+
+        return [
+            'path' => $disk->path($path),
+            'mimeType' => $disk->mimeType($path),
+        ];
+    }
+
+    private function publicImagesDisk(): FilesystemAdapter
+    {
+        return $this->fileStorageManager->disk(FileStorageManager::DOMAIN_PUBLIC_IMAGES);
+    }
+
+    /**
+     * Obter caminho do thumbnail a partir do caminho do avatar
      */
     private function getThumbnailPath(string $avatarPath): string
     {
         $pathInfo = pathinfo($avatarPath);
-        return $pathInfo['dirname'] . '/thumb_' . $pathInfo['basename'];
+
+        return $pathInfo['dirname'].'/thumb_'.$pathInfo['basename'];
     }
 }
-

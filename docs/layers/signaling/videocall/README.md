@@ -1,98 +1,51 @@
-# 📹 Módulo de Videochamadas
+# Módulo de Videochamadas
 
-Este módulo implementa o sistema de videoconferência em tempo real para consultas médicas.
+Este diretório documenta a camada de sinalização de negócio das videochamadas. A implementação vigente usa **MediaSoup como SFU** para mídia e **Laravel Reverb** apenas para eventos de estado da chamada.
 
-## 📁 Arquivos
+## Arquivos
 
-- **[🔧 Implementação de Videochamadas](VideoCallImplementation.md)** - Sistema de vídeo em tempo real
-- **[📋 Tarefas de Videochamadas](VideoCallTasks.md)** - Checklist de implementação
+- [VideoCallImplementation.md](VideoCallImplementation.md) - implementação atual com `Call`, `Room`, MediaGateway, Reverb e SFU.
+- [VideoCallTasks.md](VideoCallTasks.md) - checklist operacional e técnico do módulo atual.
+- [../../../videocall/TESTE_SFU_MEDIASOUP.md](../../../videocall/TESTE_SFU_MEDIASOUP.md) - guia de teste do SFU.
+- [../../../videocall/MIGRACAO_P2P_PARA_MEDIASOUP.md](../../../videocall/MIGRACAO_P2P_PARA_MEDIASOUP.md) - histórico da migração P2P -> SFU.
 
-## 🎯 Funcionalidades
+## Funcionalidades
 
-### Videochamada
-- **Conexão P2P** usando WebRTC
-- **Sinalização** via WebSockets (Laravel Reverb)
-- **Estabelecimento** de conexão segura
-- **Controle** de mídia (áudio/vídeo)
+- Chamadas agendadas provisionadas automaticamente na janela do appointment.
+- Chamadas ad-hoc de paciente para médico com validação de vínculo recente.
+- Aceite, rejeição e encerramento por rotas autenticadas.
+- Tokens JWT curtos para entrada no SFU.
+- Estado global no frontend via Pinia e sincronização entre abas.
+- Transporte de mídia via WebRTC/MediaSoup, sem PeerJS.
 
-### Integração
-- **Solicitação** de chamada
-- **Aceite/Rejeição** da chamada
-- **Status** em tempo real
-- **Eventos** de conexão
+## Componentes técnicos
 
-### Recursos
-- **PeerJS** para WebRTC
-- **Canais privados** para sinalização
-- **Eventos customizados** para controle
-- **Interface responsiva** para dispositivos
+| Área             | Arquivos principais                                                                                                                            |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| Backend          | `app/Services/CallManagerService.php`, `app/Http/Controllers/CallController.php`, `app/Http/Controllers/AppointmentVideoSessionController.php` |
+| Gateway de mídia | `app/Contracts/MediaGatewayInterface.php`, `app/Services/MediaGatewayHttp.php`, `app/Services/MediaGatewayStub.php`                            |
+| Eventos          | `app/Events/VideoCallAvailable.php`, `VideoCallRequested.php`, `VideoCallAccepted.php`, `VideoCallRejected.php`, `VideoCallEnded.php`          |
+| Jobs             | `app/Jobs/AutoStartVideoCall.php`, `EndScheduledVideoCalls.php`, `EndZombieVideoCalls.php`                                                     |
+| Frontend         | `resources/js/composables/useVideoCall.ts`, `useVideoCallSession.ts`, `useSfu.ts`, `resources/js/stores/videoCall.ts`                          |
+| Mídia            | `resources/js/services/video-call-media/SfuVideoMediaProvider.ts`, `mediasoup-client`                                                          |
 
-## 🔗 Relacionamentos
+## Fluxo resumido
 
-### Dependências
-- **[📜 Regras do Sistema](../../architecture-governance/requirements/SystemRules.md)** - Regras de videoconferência
-- **[🏗️ Arquitetura](../../architecture-governance/Architecture/Arquitetura.md)** - Padrões de real-time
-- **[📊 Matriz de Requisitos](../../../index/MatrizRequisitos.md)** - RF004, RF012
+1. Laravel cria ou localiza uma `Call`.
+2. Laravel cria uma `Room` no SFU via MediaGateway.
+3. Laravel emite evento Reverb para avisar os participantes.
+4. Frontend busca token em `/calls/active` ou `/appointments/{appointment}/video/session`.
+5. Frontend conecta no WebSocket do SFU com JWT.
+6. MediaSoup negocia transports e encaminha áudio/vídeo.
+7. Encerramento limpa estado frontend, atualiza `calls` e destrói sala no gateway quando aplicável.
 
-### Implementações
-- **[VideoCall Controller](../../../../app/Http/Controllers/VideoCall/VideoCallController.php)** - Controlador principal
-- **[VideoCall Events](../../../../app/Events/)** - Eventos de sinalização e sala
-- **[VideoCall Models](../../../../app/Models/)** - VideoCallRoom, VideoCallEvent
-- **[VideoCall Jobs](../../../../app/Jobs/)** - Limpeza e expiração automática
-- **[Broadcasting Config](../../../../config/broadcasting.php)** - Configuração WebSockets
-- **[Frontend Components](../../../../resources/js/components/)** - Interface de vídeo
+## Requisitos implementados
 
-## 🏗️ Arquitetura
+- **RF004** - Realizar consultas online por videoconferência.
+- **RF012** - Videoconferência em tempo real.
 
-### Fluxo de Videochamada
-1. **Solicitação** → Usuário solicita chamada
-2. **Evento** → RequestVideoCall disparado
-3. **Notificação** → Destinatário notificado
-4. **Resposta** → Aceite/rejeição
-5. **Conexão** → WebRTC P2P estabelecido
+## Status
 
-### Componentes Técnicos
-- **PeerJS** - Wrapper WebRTC
-- **Laravel Reverb** - Servidor WebSockets
-- **Echo.js** - Cliente WebSocket
-- **WebRTC** - Conexão P2P
+Implementação atual: **SFU MediaSoup**.
 
-## 📊 Requisitos Implementados
-
-- **RF004** - Realizar Consultas Online (Videoconferência) ✅
-- **RF012** - Videoconferência de Consultas (Tempo Real) ✅
-
-## 🚧 Status de Implementação
-
-### ✅ Implementado
-- Eventos de sinalização (RequestVideoCall, RequestVideoCallStatus)
-- Eventos de sala (VideoCallRoomCreated, VideoCallRoomExpired, VideoCallUserJoined, VideoCallUserLeft)
-- Configuração WebSockets (Laravel Reverb)
-- Salas de videoconferência (VideoCallRoom)
-- Eventos de videoconferência (VideoCallEvent)
-- Jobs automáticos (CleanupOldVideoCallEvents, ExpireVideoCallRooms, UpdateAppointmentFromRoom)
-- Integração completa com consultas (Appointments)
-- Interface de vídeo P2P (PeerJS)
-- Controles de mídia (áudio/vídeo)
-
-### 🔄 Em Desenvolvimento
-- Melhorias de UX na interface
-- Dashboard de métricas de videoconferência
-
-### 📋 Planejado
-- **Migração para MediaSoup (SFU):** Remoção do P2P (PeerJS), WebSocket próprio para sinalização de mídia, recriação do backend e frontend. Ver **[Migração P2P → MediaSoup](../../../videocall/MIGRACAO_P2P_PARA_MEDIASOUP.md)**.
-- Gravação de consultas
-- Compartilhamento de tela
-- Testes de integração completos
-
-## 🧪 Testes
-
-- **VideoCall Tests** - 📋 Planejado
-- **Cobertura**: Eventos, conexões, interface
-- **Cenários**: Estabelecimento, falhas, diferentes dispositivos
-
----
-
-*Última atualização: Janeiro 2025*
-*Versão: 2.0*
-*Localização: `docs/layers/signaling/videocall/` (Camada de Sinalização)*
+PeerJS/P2P foi removido da arquitetura vigente. Referências a P2P devem ficar restritas aos documentos históricos de migração.

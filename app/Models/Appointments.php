@@ -2,12 +2,12 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Database\Eloquent\Builder;
-use Carbon\Carbon;
 
 class Appointments extends Model
 {
@@ -35,10 +35,15 @@ class Appointments extends Model
 
     // Constantes para status
     public const STATUS_SCHEDULED = 'scheduled';
+
     public const STATUS_IN_PROGRESS = 'in_progress';
+
     public const STATUS_COMPLETED = 'completed';
+
     public const STATUS_NO_SHOW = 'no_show';
+
     public const STATUS_CANCELLED = 'cancelled';
+
     public const STATUS_RESCHEDULED = 'rescheduled';
 
     // Relacionamentos
@@ -94,6 +99,21 @@ class Appointments extends Model
         return $this->hasMany(MedicalCertificate::class, 'appointment_id');
     }
 
+    // Janela máxima de entrada em consulta in_progress (D3 — gating centralizado:
+    // VideoCallPolicy, controllers de videochamada e EndStuckInProgressAppointments).
+    public function inProgressWindowEndsAt(): Carbon
+    {
+        $maxMinutes = (int) config('telemedicine.video_call.in_progress_max_minutes', 120);
+
+        return $this->scheduled_at->copy()->addMinutes($maxMinutes);
+    }
+
+    public function isWithinInProgressWindow(): bool
+    {
+        return $this->status === self::STATUS_IN_PROGRESS
+            && Carbon::now()->lessThanOrEqualTo($this->inProgressWindowEndsAt());
+    }
+
     /**
      * Helper method para criar log de evento
      */
@@ -146,14 +166,14 @@ class Appointments extends Model
     {
         $query->whereBetween('scheduled_at', [
             Carbon::now()->startOfWeek(),
-            Carbon::now()->endOfWeek()
+            Carbon::now()->endOfWeek(),
         ]);
     }
 
     public function scopeUpcoming(Builder $query): void
     {
         $query->where('scheduled_at', '>', Carbon::now())
-              ->whereIn('status', [self::STATUS_SCHEDULED, self::STATUS_RESCHEDULED]);
+            ->whereIn('status', [self::STATUS_SCHEDULED, self::STATUS_RESCHEDULED]);
     }
 
     public function scopePast(Builder $query): void
@@ -169,10 +189,10 @@ class Appointments extends Model
     // Accessors essenciais
     public function getDurationAttribute(): ?int
     {
-        if (!$this->started_at || !$this->ended_at) {
+        if (! $this->started_at || ! $this->ended_at) {
             return null;
         }
-        
+
         return $this->started_at->diffInMinutes($this->ended_at);
     }
 
@@ -180,17 +200,17 @@ class Appointments extends Model
     {
         $duration = $this->duration;
         $fallbackMinutes = (int) config('telemedicine.display.appointment_duration_fallback_minutes', 45);
-        if (!$duration) {
-            return $fallbackMinutes . 'min';
+        if (! $duration) {
+            return $fallbackMinutes.'min';
         }
-        
+
         $hours = floor($duration / 60);
         $minutes = $duration % 60;
-        
+
         if ($hours > 0) {
             return "{$hours}h {$minutes}min";
         }
-        
+
         return "{$minutes}min";
     }
 

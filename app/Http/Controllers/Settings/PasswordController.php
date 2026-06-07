@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Settings;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Settings\CreatePasswordRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -17,7 +18,21 @@ class PasswordController extends Controller
      */
     public function edit(): Response
     {
-        return Inertia::render('settings/Password');
+        return Inertia::render('settings/Password', [
+            'hasPassword' => (bool) auth()->user()->hasPassword(),
+        ]);
+    }
+
+    /**
+     * Create a password for a social-only account.
+     */
+    public function store(CreatePasswordRequest $request): RedirectResponse
+    {
+        $request->user()->update([
+            'password' => Hash::make($request->validated('password')),
+        ]);
+
+        return back()->with('status', 'Senha criada com sucesso.');
     }
 
     /**

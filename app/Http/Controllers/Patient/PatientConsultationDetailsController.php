@@ -27,11 +27,6 @@ class PatientConsultationDetailsController extends Controller
         $appointment->load(['doctor.user', 'doctor.specializations', 'patient.user', 'logs.user']);
 
         $patient = Auth::user()->patient;
-
-        if (!$patient || $appointment->patient_id !== $patient->id) {
-            abort(403, 'Você não tem permissão para visualizar esta consulta.');
-        }
-
         $formattedAppointment = [
             'id' => $appointment->id,
             'status' => $appointment->status,

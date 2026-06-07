@@ -3,8 +3,6 @@
 namespace App\Console\Commands;
 
 use App\Models\Doctor;
-use App\Models\AvailabilitySlot;
-use App\Models\ServiceLocation;
 use Illuminate\Console\Command;
 
 class ClearDoctorAvailability extends Command
@@ -35,24 +33,33 @@ class ClearDoctorAvailability extends Command
         $all = $this->option('all');
         $confirm = $this->option('confirm');
 
-        if (!$doctorId && !$all) {
+        if (! $doctorId && ! $all) {
             $this->error('Você deve especificar --doctor-id=ID ou --all');
+
             return 1;
         }
 
         if ($all && $doctorId) {
             $this->error('Não é possível usar --doctor-id e --all ao mesmo tempo');
+
             return 1;
         }
 
         // Buscar médicos
+        $doctorQuery = null;
         if ($all) {
-            $doctors = Doctor::all();
+            $doctorQuery = Doctor::query()
+                ->select(['id', 'user_id'])
+                ->with('user:id,name');
             $message = 'todos os médicos';
         } else {
-            $doctor = Doctor::find($doctorId);
-            if (!$doctor) {
+            $doctor = Doctor::query()
+                ->select(['id', 'user_id'])
+                ->with('user:id,name')
+                ->find($doctorId);
+            if (! $doctor) {
                 $this->error("Médico com ID {$doctorId} não encontrado");
+
                 return 1;
             }
             $doctors = collect([$doctor]);
@@ -60,41 +67,56 @@ class ClearDoctorAvailability extends Command
         }
 
         // Confirmar operação
-        if (!$confirm) {
-            if (!$this->confirm("Tem certeza que deseja limpar a disponibilidade de {$message}?")) {
+        if (! $confirm) {
+            if (! $this->confirm("Tem certeza que deseja limpar a disponibilidade de {$message}?")) {
                 $this->info('Operação cancelada.');
+
                 return 0;
             }
         }
 
         $totalSlots = 0;
         $totalLocations = 0;
+        $processedDoctors = 0;
 
-        foreach ($doctors as $doctor) {
+        $processDoctor = function (Doctor $doctor) use (&$processedDoctors, &$totalLocations, &$totalSlots): void {
             $this->info("Limpando disponibilidade do médico: {$doctor->user->name}");
 
             // Contar slots antes de deletar
             $slotsCount = $doctor->availabilitySlots()->count();
             $locationsCount = $doctor->serviceLocations()->count();
 
-            // Deletar slots de disponibilidade
-            $doctor->availabilitySlots()->delete();
-            
-            // Deletar locais de atendimento
-            $doctor->serviceLocations()->delete();
+            $blockedCount = $doctor->blockedDates()->withTrashed()->count();
 
-            // Limpar availability_schedule (campo legacy)
+            $doctor->availabilitySlots()->withTrashed()->forceDelete();
+            $doctor->blockedDates()->withTrashed()->forceDelete();
+            $doctor->serviceLocations()->withTrashed()->forceDelete();
+
             $doctor->update(['availability_schedule' => null]);
 
             $totalSlots += $slotsCount;
             $totalLocations += $locationsCount;
+            $processedDoctors++;
 
             $this->line("  - {$slotsCount} slots de disponibilidade removidos");
+            $this->line("  - {$blockedCount} datas bloqueadas removidas");
             $this->line("  - {$locationsCount} locais de atendimento removidos");
+        };
+
+        if ($all && $doctorQuery) {
+            $doctorQuery->chunkById(100, function ($doctors) use ($processDoctor) {
+                foreach ($doctors as $doctor) {
+                    $processDoctor($doctor);
+                }
+            });
+        } else {
+            foreach ($doctors as $doctor) {
+                $processDoctor($doctor);
+            }
         }
 
-        $this->info("✅ Operação concluída!");
-        $this->info("Total: {$totalSlots} slots e {$totalLocations} locais removidos de {$doctors->count()} médico(s)");
+        $this->info('✅ Operação concluída!');
+        $this->info("Total: {$totalSlots} slots e {$totalLocations} locais removidos de {$processedDoctors} médico(s)");
 
         return 0;
     }

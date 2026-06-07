@@ -3,44 +3,33 @@
 namespace App\Http\Controllers\Doctor;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\LogMedicalRecordAccessJob;
 use App\Models\Appointments;
 use App\Services\MedicalRecordService;
-use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
-use Inertia\Response;
 
 class DoctorConsultationDetailController extends Controller
 {
     public function __construct(
         private readonly MedicalRecordService $medicalRecordService,
-    ) {
-    }
+    ) {}
 
     public function show(Request $request, Appointments $appointment)
     {
+        $this->authorize('view', $appointment);
+
         $user = $request->user();
-
-        if (!$user?->doctor) {
-            abort(403, 'Apenas médicos podem acessar consultas.');
-        }
-
-        // Verificar se o médico é responsável pela consulta
-        if ($appointment->doctor_id !== $user->doctor->id) {
-            abort(403, 'Você não tem permissão para acessar esta consulta.');
-        }
-
+        $doctor = $user->doctor ?? abort(403);
         $appointment->load([
             'patient.user',
             'doctor.user',
-            'doctor.specializations',
             'prescriptions',
-            'examinations',
+            'examinations.partnerIntegration',
             'diagnoses',
             'clinicalNotes',
             'vitalSigns',
-            'medicalDocuments',
         ]);
 
         $patient = $appointment->patient;
@@ -66,14 +55,21 @@ class DoctorConsultationDetailController extends Controller
             'height' => $patient->height,
             'weight' => $patient->weight,
             'bmi' => $patient->bmi,
+            'phone' => $patient->phone_number ?? null,
+            'email' => $patient->user->email ?? null,
+            'emergency_contact' => $patient->emergency_contact ?? null,
+            'emergency_phone' => $patient->emergency_phone ?? null,
+            'insurance_provider' => $patient->insurance_provider ?? null,
         ];
 
         // Últimas consultas para histórico (limite configurável)
         $recentLimit = (int) config('telemedicine.consultation_detail.recent_history_limit', 3);
+        $doctorName = $appointment->doctor->user->name ?? null;
         $recentConsultations = Appointments::where('patient_id', $patient->id)
-            ->where('doctor_id', $user->doctor->id)
+            ->where('doctor_id', $doctor->id)
             ->where('id', '!=', $appointment->id)
             ->where('status', Appointments::STATUS_COMPLETED)
+            ->select(['id', 'scheduled_at', 'metadata'])
             ->orderByDesc('scheduled_at')
             ->limit($recentLimit)
             ->get()
@@ -82,6 +78,7 @@ class DoctorConsultationDetailController extends Controller
                 'date' => $apt->scheduled_at->format('d/m/Y'),
                 'diagnosis' => $apt->metadata['diagnosis'] ?? null,
                 'cid10' => $apt->metadata['cid10'] ?? null,
+                'doctor' => $doctorName,
             ]);
 
         // Dados da consulta atual
@@ -93,7 +90,6 @@ class DoctorConsultationDetailController extends Controller
             'ended_at' => $appointment->ended_at?->toIso8601String(),
             'status' => $appointment->status,
             'notes' => $appointment->notes,
-            'metadata' => $metadata,
             // Dados clínicos da consulta (SOAP - sem anamnese)
             'chief_complaint' => $metadata['chief_complaint'] ?? '',
             'physical_exam' => $metadata['physical_exam'] ?? '',
@@ -114,6 +110,13 @@ class DoctorConsultationDetailController extends Controller
                 'type' => $e->type,
                 'status' => $e->status,
                 'priority' => $e->metadata['priority'] ?? 'normal',
+                'source' => $e->source ?? 'internal',
+                'partner' => $e->partnerIntegration ? [
+                    'id' => $e->partnerIntegration->id,
+                    'name' => $e->partnerIntegration->name,
+                ] : null,
+                'results' => $e->results,
+                'completed_at' => $e->completed_at?->toIso8601String(),
             ]),
             'diagnoses' => $appointment->diagnoses->map(fn ($d) => [
                 'id' => $d->id,
@@ -143,12 +146,21 @@ class DoctorConsultationDetailController extends Controller
             ]),
         ];
 
+        LogMedicalRecordAccessJob::dispatch(
+            $user,
+            $patient,
+            'view',
+            ['appointment_id' => $appointment->id],
+            $request->ip(),
+            $request->userAgent(),
+        )->onQueue('low');
+
         // Se for requisição AJAX explícita (não do Inertia), retornar JSON
         // O Inertia sempre envia o header X-Inertia, então verificamos se NÃO é Inertia
         $isInertiaRequest = $request->header('X-Inertia') !== null || $request->header('X-Inertia-Version') !== null;
-        
+
         // Só retornar JSON se for AJAX explícito E não for Inertia E quiser JSON
-        if (!$isInertiaRequest && $request->ajax() && $request->wantsJson()) {
+        if (! $isInertiaRequest && $request->ajax() && $request->wantsJson()) {
             return response()->json([
                 'appointment' => $consultationData,
                 'patient' => $patientSummary,
@@ -162,20 +174,18 @@ class DoctorConsultationDetailController extends Controller
             'recent_consultations' => $recentConsultations,
             'mode' => $isInProgress ? 'in_progress' : ($isCompleted ? 'completed' : 'scheduled'),
             'elapsed_time' => $elapsedTime,
-            'can_edit' => true, // Sempre permitir edição
-            'can_complement' => true, // Sempre permitir complementação
+            'can_edit' => $isInProgress,
+            'can_complement' => $isCompleted,
+            'doctor_name' => $appointment->doctor->user->name ?? null,
         ]);
     }
 
     public function start(Request $request, Appointments $appointment)
     {
+        $this->authorize('start', $appointment);
+
         $user = $request->user();
-
-        if ($appointment->doctor_id !== $user->doctor->id) {
-            abort(403);
-        }
-
-        if ($appointment->status !== Appointments::STATUS_SCHEDULED && 
+        if ($appointment->status !== Appointments::STATUS_SCHEDULED &&
             $appointment->status !== Appointments::STATUS_RESCHEDULED) {
             return back()->withErrors(['status' => 'Apenas consultas agendadas podem ser iniciadas.']);
         }
@@ -195,12 +205,9 @@ class DoctorConsultationDetailController extends Controller
 
     public function saveDraft(Request $request, Appointments $appointment)
     {
+        $this->authorize('saveDraft', $appointment);
+
         $user = $request->user();
-
-        if ($appointment->doctor_id !== $user->doctor->id) {
-            abort(403);
-        }
-
         // Permitir edição mesmo quando consulta está finalizada
 
         $validated = $request->validate([
@@ -209,14 +216,15 @@ class DoctorConsultationDetailController extends Controller
             'diagnosis' => ['nullable', 'string', 'max:500'],
             'cid10' => ['nullable', 'string', 'max:10'],
             'instructions' => ['nullable', 'string', 'max:2000'],
+            'notes' => ['nullable', 'string', 'max:5000'],
         ]);
 
         $metadata = $appointment->metadata ?? [];
-        $metadata = array_merge($metadata, $validated);
+        $metadata = array_merge($metadata, array_diff_key($validated, ['notes' => null]));
 
         $appointment->update([
             'metadata' => $metadata,
-            'notes' => $request->input('notes'),
+            'notes' => $validated['notes'] ?? $appointment->notes,
         ]);
 
         $appointment->logEvent('draft_saved', [
@@ -239,17 +247,15 @@ class DoctorConsultationDetailController extends Controller
 
     public function finalize(Request $request, Appointments $appointment)
     {
+        $this->authorize('end', $appointment);
+
         $user = $request->user();
-
-        if ($appointment->doctor_id !== $user->doctor->id) {
-            abort(403);
-        }
-
         if ($appointment->status !== Appointments::STATUS_IN_PROGRESS) {
             return back()->withErrors(['status' => 'Apenas consultas em andamento podem ser finalizadas.']);
         }
 
         // Validação de campos essenciais
+        $appointment->loadMissing('diagnoses');
         $metadata = $appointment->metadata ?? [];
         $errors = [];
 
@@ -261,7 +267,7 @@ class DoctorConsultationDetailController extends Controller
             $errors['diagnosis'] = 'Diagnóstico é obrigatório.';
         }
 
-        if (!empty($errors)) {
+        if (! empty($errors)) {
             return back()->withErrors($errors);
         }
 
@@ -293,12 +299,9 @@ class DoctorConsultationDetailController extends Controller
 
     public function complement(Request $request, Appointments $appointment)
     {
+        $this->authorize('complement', $appointment);
+
         $user = $request->user();
-
-        if ($appointment->doctor_id !== $user->doctor->id) {
-            abort(403);
-        }
-
         if ($appointment->status !== Appointments::STATUS_COMPLETED) {
             return back()->withErrors(['status' => 'Apenas consultas finalizadas podem ser complementadas.']);
         }
@@ -310,7 +313,7 @@ class DoctorConsultationDetailController extends Controller
         ]);
 
         $metadata = $appointment->metadata ?? [];
-        if (!empty($validated['complementary_notes'])) {
+        if (! empty($validated['complementary_notes'])) {
             $metadata['complementary_notes'] = $validated['complementary_notes'];
             $metadata['complementary_notes_added_at'] = now()->toIso8601String();
             $metadata['complementary_notes_added_by'] = $user->id;
@@ -331,18 +334,14 @@ class DoctorConsultationDetailController extends Controller
 
     public function generatePdf(Request $request, Appointments $appointment)
     {
+        $this->authorize('generateConsultationPdf', $appointment);
+
         $user = $request->user();
-
-        if ($appointment->doctor_id !== $user->doctor->id) {
-            abort(403);
-        }
-
         $result = $this->medicalRecordService->generateConsultationPdf($appointment, $user);
 
-        return response()->download(
-            storage_path("app/public/{$result['path']}"),
-            $result['filename']
-        );
+        $disk = Storage::disk($result['disk_domain']);
+        abort_unless($disk->exists($result['path']), 404);
+
+        return $disk->download($result['path'], $result['filename']);
     }
 }
-

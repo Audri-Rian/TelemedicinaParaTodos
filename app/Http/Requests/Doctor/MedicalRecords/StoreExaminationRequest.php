@@ -15,14 +15,13 @@ class StoreExaminationRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'appointment_id' => ['required', 'exists:appointments,id'],
+            'appointment_id' => ['nullable', 'exists:appointments,id'],
             'name' => ['required', 'string', 'max:255'],
             'type' => ['required', Rule::in(['lab', 'image', 'other'])],
             'justification' => ['required', 'string'],
             'instructions' => ['nullable', 'string'],
             'priority' => ['nullable', Rule::in(['normal', 'urgent'])],
+            'partner_integration_id' => ['nullable', 'uuid', 'exists:partner_integrations,id'],
         ];
     }
 }
-
-

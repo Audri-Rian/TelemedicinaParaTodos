@@ -4,7 +4,7 @@ namespace App\Policies;
 
 use App\Models\Patient;
 use App\Models\User;
-use App\Services\MedicalRecordService;
+use App\Services\MedicalRecordAccessService;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class MedicalRecordPolicy
@@ -12,9 +12,8 @@ class MedicalRecordPolicy
     use HandlesAuthorization;
 
     public function __construct(
-        private readonly MedicalRecordService $medicalRecordService,
-    ) {
-    }
+        private readonly MedicalRecordAccessService $accessService,
+    ) {}
 
     public function viewAny(User $user): bool
     {
@@ -48,6 +47,11 @@ class MedicalRecordPolicy
         return $this->doctorCanAccessPatient($user, $patient);
     }
 
+    public function downloadDocument(User $user, Patient $patient): bool
+    {
+        return $this->uploadDocument($user, $patient);
+    }
+
     public function update(User $user, Patient $patient): bool
     {
         return $this->doctorCanAccessPatient($user, $patient);
@@ -60,7 +64,7 @@ class MedicalRecordPolicy
 
     public function issuePrescription(User $user, Patient $patient): bool
     {
-        return $this->doctorCanAccessPatient($user, $patient) && !empty($user->doctor?->crm);
+        return $this->doctorCanAccessPatient($user, $patient) && ! empty($user->doctor?->crm);
     }
 
     public function requestExamination(User $user, Patient $patient): bool
@@ -75,7 +79,7 @@ class MedicalRecordPolicy
 
     public function issueCertificate(User $user, Patient $patient): bool
     {
-        return $this->doctorCanAccessPatient($user, $patient) && !empty($user->doctor?->crm);
+        return $this->doctorCanAccessPatient($user, $patient) && ! empty($user->doctor?->crm);
     }
 
     public function registerVitalSigns(User $user, Patient $patient): bool
@@ -88,6 +92,20 @@ class MedicalRecordPolicy
         return $this->doctorCanAccessPatient($user, $patient);
     }
 
+    public function updateClinicalRecord(User $user, Patient $patient): bool
+    {
+        return $this->doctorCanAccessPatient($user, $patient);
+    }
+
+    public function viewVersionHistory(User $user, Patient $patient): bool
+    {
+        if ($user->id === $patient->user_id) {
+            return true;
+        }
+
+        return $this->doctorCanAccessPatient($user, $patient);
+    }
+
     public function updatePersonalData(User $user, Patient $patient): bool
     {
         return $user->id === $patient->user_id;
@@ -95,10 +113,10 @@ class MedicalRecordPolicy
 
     protected function doctorCanAccessPatient(User $user, Patient $patient): bool
     {
-        if (!$user->doctor) {
+        if (! $user->doctor) {
             return false;
         }
 
-        return $this->medicalRecordService->canDoctorViewPatientRecord($user->doctor, $patient);
+        return $this->accessService->canDoctorViewPatientRecord($user->doctor, $patient);
     }
 }

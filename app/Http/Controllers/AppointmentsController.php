@@ -12,6 +12,7 @@ use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 use OpenApi\Attributes as OA;
@@ -20,8 +21,7 @@ class AppointmentsController extends Controller
 {
     public function __construct(
         private AppointmentService $appointmentService
-    ) {
-    }
+    ) {}
 
     /**
      * Listar appointments com filtros
@@ -30,35 +30,46 @@ class AppointmentsController extends Controller
     {
         $this->authorize('viewAny', Appointments::class);
 
-        $user = $request->user();
+        $user = $request->user()->loadMissing(['doctor', 'patient']);
         $filters = [];
 
-        // Aplicar filtros baseados no tipo de usuário
         if ($user->isDoctor()) {
             $filters['doctor_id'] = $user->doctor->id;
         } elseif ($user->isPatient()) {
             $filters['patient_id'] = $user->patient->id;
         }
 
-        // Filtros da query string
-        if ($request->has('status')) {
-            $filters['status'] = $request->get('status');
-        }
+        $validStatuses = [
+            Appointments::STATUS_SCHEDULED,
+            Appointments::STATUS_RESCHEDULED,
+            Appointments::STATUS_IN_PROGRESS,
+            Appointments::STATUS_COMPLETED,
+            Appointments::STATUS_CANCELLED,
+            Appointments::STATUS_NO_SHOW,
+        ];
 
-        if ($request->has('date_from')) {
-            $filters['date_from'] = $request->get('date_from');
-        }
+        $queryFilters = $request->validate([
+            'status' => ['nullable', Rule::in($validStatuses)],
+            'date_from' => ['nullable', 'date'],
+            'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
+            'upcoming' => ['nullable', 'boolean'],
+            'past' => ['nullable', 'boolean'],
+        ]);
 
-        if ($request->has('date_to')) {
-            $filters['date_to'] = $request->get('date_to');
+        if (! empty($queryFilters['status'])) {
+            $filters['status'] = $queryFilters['status'];
         }
-
-        if ($request->has('upcoming')) {
-            $filters['upcoming'] = $request->boolean('upcoming');
+        if (! empty($queryFilters['date_from'])) {
+            $filters['date_from'] = $queryFilters['date_from'];
         }
-
-        if ($request->has('past')) {
-            $filters['past'] = $request->boolean('past');
+        if (! empty($queryFilters['date_to'])) {
+            $filters['date_to'] = $queryFilters['date_to'];
+        }
+        if (isset($queryFilters['upcoming'])) {
+            $filters['upcoming'] = (bool) $queryFilters['upcoming'];
+        }
+        if (isset($queryFilters['past'])) {
+            $filters['past'] = (bool) $queryFilters['past'];
         }
 
         $appointments = $this->appointmentService->list($filters);
@@ -78,10 +89,11 @@ class AppointmentsController extends Controller
 
         try {
             $data = $request->validated();
+            $data['patient_id'] = $request->user()->loadMissing('patient')->patient->id;
             $appointment = $this->appointmentService->create($data, $request->user());
 
             $user = $request->user();
-            
+
             // Redirecionar baseado no tipo de usuário
             if ($user->isPatient()) {
                 return redirect()
@@ -92,7 +104,7 @@ class AppointmentsController extends Controller
                     ->route('appointments.show', $appointment)
                     ->with('success', 'Agendamento criado com sucesso.');
             }
-            
+
             // Fallback para rota genérica
             return redirect()
                 ->route('appointments.show', $appointment)
@@ -162,7 +174,7 @@ class AppointmentsController extends Controller
 
         $success = $this->appointmentService->start($appointment, auth()->id());
 
-        if (!$success) {
+        if (! $success) {
             return response()->json([
                 'message' => 'Não foi possível iniciar a consulta.',
             ], 422);
@@ -170,7 +182,7 @@ class AppointmentsController extends Controller
 
         return response()->json([
             'message' => 'Consulta iniciada com sucesso.',
-            'appointment' => $appointment->fresh(),
+            'appointment' => $appointment->refresh(),
         ]);
     }
 
@@ -183,7 +195,7 @@ class AppointmentsController extends Controller
 
         $success = $this->appointmentService->end($appointment, auth()->id());
 
-        if (!$success) {
+        if (! $success) {
             return response()->json([
                 'message' => 'Não foi possível finalizar a consulta.',
             ], 422);
@@ -191,7 +203,7 @@ class AppointmentsController extends Controller
 
         return response()->json([
             'message' => 'Consulta finalizada com sucesso.',
-            'appointment' => $appointment->fresh(),
+            'appointment' => $appointment->refresh(),
         ]);
     }
 
@@ -202,10 +214,10 @@ class AppointmentsController extends Controller
     {
         $this->authorize('cancel', $appointment);
 
-        $reason = $request->input('reason');
+        $reason = $request->validate(['reason' => ['nullable', 'string', 'max:500']])['reason'] ?? null;
         $success = $this->appointmentService->cancel($appointment, $reason, auth()->id());
 
-        if (!$success) {
+        if (! $success) {
             return response()->json([
                 'message' => 'Não foi possível cancelar a consulta.',
             ], 422);
@@ -227,7 +239,7 @@ class AppointmentsController extends Controller
         $newDateTime = Carbon::parse($request->validated()['scheduled_at']);
         $success = $this->appointmentService->reschedule($appointment, $newDateTime, auth()->id());
 
-        if (!$success) {
+        if (! $success) {
             return response()->json([
                 'message' => 'Não foi possível reagendar a consulta. Verifique se não há conflito de horário.',
             ], 422);
@@ -263,13 +275,13 @@ class AppointmentsController extends Controller
     public function availability(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'doctor_id' => ['required', 'exists:doctors,id'],
+            'doctor_id' => ['required', 'uuid'],
             'date' => ['required', 'date', 'after_or_equal:today'],
         ]);
 
         $doctor = Doctor::findOrFail($validated['doctor_id']);
 
-        if (!$doctor->isActive()) {
+        if (! $doctor->isActive()) {
             return response()->json([
                 'message' => 'Médico não está ativo.',
                 'doctor_id' => $doctor->id,
@@ -296,6 +308,7 @@ class AppointmentsController extends Controller
         }
 
         $existingAppointments = Appointments::query()
+            ->select('scheduled_at')
             ->where('doctor_id', $doctor->id)
             ->whereDate('scheduled_at', $date->toDateString())
             ->whereIn('status', [
@@ -308,25 +321,26 @@ class AppointmentsController extends Controller
             ->all();
 
         // Filtrar slots ocupados e slots passados (se for hoje)
-        $availableSlots = array_filter($daySchedule['slots'], function($slot) use ($existingAppointments, $date, $now) {
+        $availableSlots = array_filter($daySchedule['slots'], function ($slot) use ($existingAppointments, $date, $now) {
             // Remover slots ocupados
             if (in_array($slot, $existingAppointments)) {
                 return false;
             }
-            
+
             // Se for hoje, remover apenas slots que já passaram
             if ($date->isToday()) {
                 try {
-                    $slotDateTime = Carbon::createFromFormat('Y-m-d H:i', $date->format('Y-m-d') . ' ' . $slot);
+                    $slotDateTime = Carbon::createFromFormat('Y-m-d H:i', $date->format('Y-m-d').' '.$slot);
                     // Mostrar slots que são no futuro (pelo menos 5 minutos à frente)
                     $minAllowedTime = $now->copy()->addMinutes(5);
+
                     return $slotDateTime->greaterThan($minAllowedTime);
                 } catch (\Exception $e) {
                     // Se houver erro ao criar a data, manter o slot
                     return true;
                 }
             }
-            
+
             return true;
         });
 

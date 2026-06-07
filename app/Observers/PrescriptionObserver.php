@@ -4,6 +4,7 @@ namespace App\Observers;
 
 use App\Events\PrescriptionIssued;
 use App\Models\Prescription;
+use Illuminate\Validation\ValidationException;
 
 class PrescriptionObserver
 {
@@ -22,6 +23,36 @@ class PrescriptionObserver
     public function updated(Prescription $prescription): void
     {
         //
+    }
+
+    public function updating(Prescription $prescription): void
+    {
+        if (! $prescription->isSigned()) {
+            return;
+        }
+
+        $lockedFields = [
+            'medications',
+            'instructions',
+            'valid_until',
+            'issued_at',
+            'doctor_id',
+            'patient_id',
+            'appointment_id',
+        ];
+
+        $dirtyLockedFields = array_values(array_filter(
+            $lockedFields,
+            fn (string $field): bool => $prescription->isDirty($field),
+        ));
+
+        if ($dirtyLockedFields === []) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'prescription' => 'Prescrição assinada não pode ter conteúdo alterado.',
+        ]);
     }
 
     /**

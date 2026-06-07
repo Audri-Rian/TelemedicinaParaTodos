@@ -1,25 +1,48 @@
 <?php
 
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
+use App\Http\Controllers\Auth\CompletePatientProfileController;
 use App\Http\Controllers\Auth\ConfirmablePasswordController;
+use App\Http\Controllers\Auth\DoctorRegistrationController;
 use App\Http\Controllers\Auth\EmailVerificationNotificationController;
 use App\Http\Controllers\Auth\EmailVerificationPromptController;
+use App\Http\Controllers\Auth\GoogleAuthController;
 use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
-use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\PatientRegistrationController;
-use App\Http\Controllers\Auth\DoctorRegistrationController;
+use App\Http\Controllers\Auth\RegisteredUserController;
+use App\Http\Controllers\Auth\TwoFactorChallengeController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
+
+// Google OAuth — acessível por guest e por usuário autenticado (intent de link)
+Route::get('auth/google/redirect', [GoogleAuthController::class, 'redirect'])
+    ->middleware('guest')
+    ->name('auth.google.redirect');
+
+Route::get('auth/google/callback', [GoogleAuthController::class, 'callback'])
+    ->name('auth.google.callback');
+
+// 2FA challenge — estado pending-2fa (guest + EnsureTwoFactorPending)
+Route::middleware(['guest', 'two_factor.pending'])->group(function () {
+    Route::get('auth/two-factor/challenge', [TwoFactorChallengeController::class, 'create'])
+        ->name('two-factor.challenge');
+
+    Route::post('auth/two-factor/challenge', [TwoFactorChallengeController::class, 'store'])
+        ->middleware('throttle:6,1');
+});
+
+// Complete patient profile — autenticado mas sem patient
+Route::middleware('auth')->group(function () {
+    Route::get('register/patient/complete', [CompletePatientProfileController::class, 'create'])
+        ->name('register.patient.complete');
+
+    Route::post('register/patient/complete', [CompletePatientProfileController::class, 'store']);
+});
 
 Route::middleware('guest')->group(function () {
     Route::get('register', [RegisteredUserController::class, 'create'])
         ->name('register');
-
-    Route::get('register/select', function () {
-        return Inertia::render('auth/RegisterSelect');
-    })->name('register.select');
 
     Route::get('register/patient', [PatientRegistrationController::class, 'create'])
         ->name('register.patient');

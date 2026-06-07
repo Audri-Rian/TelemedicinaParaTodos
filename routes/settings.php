@@ -1,16 +1,20 @@
 <?php
 
 use App\Http\Controllers\Settings\BugReportController;
+use App\Http\Controllers\Settings\ConnectedAccountsController;
+use App\Http\Controllers\Settings\DigitalSignatureController;
 use App\Http\Controllers\Settings\PasswordController;
 use App\Http\Controllers\Settings\ProfileController;
+use App\Http\Controllers\Settings\TwoFactorController;
 use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
 
 Route::middleware('auth')->group(function () {
     Route::redirect('settings', '/settings/profile');
 
     Route::get('settings/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('settings/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::patch('settings/profile', [ProfileController::class, 'update'])
+        ->middleware('throttle:10,1')
+        ->name('profile.update');
     Route::delete('settings/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     Route::get('settings/password', [PasswordController::class, 'edit'])->name('password.edit');
@@ -20,6 +24,45 @@ Route::middleware('auth')->group(function () {
         ->name('password.update');
 
     Route::get('settings/bug-report', [BugReportController::class, 'index'])->name('bug-report.index');
+
+    // Assinatura digital (apenas médicos) — fluxo de ativação MOCK até o provedor real existir
+    Route::middleware('doctor')->group(function () {
+        Route::get('settings/digital-signature', [DigitalSignatureController::class, 'show'])
+            ->name('digital-signature.show');
+        Route::post('settings/digital-signature/activate', [DigitalSignatureController::class, 'activate'])
+            ->middleware('throttle:6,1')
+            ->name('digital-signature.activate');
+    });
+
+    // 2FA settings
+    Route::get('settings/two-factor', [TwoFactorController::class, 'show'])->name('two-factor.show');
+    Route::post('settings/two-factor/enable', [TwoFactorController::class, 'enable'])
+        ->middleware('password.confirm')
+        ->name('two-factor.enable');
+    Route::post('settings/two-factor/confirm', [TwoFactorController::class, 'confirm'])
+        ->middleware('password.confirm')
+        ->name('two-factor.confirm');
+    Route::delete('settings/two-factor', [TwoFactorController::class, 'destroy'])
+        ->middleware('password.confirm')
+        ->name('two-factor.destroy');
+    Route::post('settings/two-factor/recovery-codes', [TwoFactorController::class, 'regenerateRecoveryCodes'])
+        ->middleware('password.confirm')
+        ->name('two-factor.recovery-codes.regenerate');
+
+    // Contas conectadas
+    Route::get('settings/connected-accounts', [ConnectedAccountsController::class, 'show'])
+        ->name('connected-accounts.show');
+    Route::post('settings/connected-accounts/google', [ConnectedAccountsController::class, 'redirectToGoogle'])
+        ->middleware('password.confirm')
+        ->name('connected-accounts.google.redirect');
+    Route::delete('settings/connected-accounts/google', [ConnectedAccountsController::class, 'destroyGoogle'])
+        ->middleware('password.confirm')
+        ->name('connected-accounts.google.destroy');
+
+    // Criar senha (conta social-only)
+    Route::post('settings/password/create', [PasswordController::class, 'store'])
+        ->middleware('throttle:6,1')
+        ->name('password.create');
 });
 
 // Rotas de avatar

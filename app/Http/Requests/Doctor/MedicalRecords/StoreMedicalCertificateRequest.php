@@ -15,15 +15,13 @@ class StoreMedicalCertificateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'appointment_id' => ['required', 'exists:appointments,id'],
+            'appointment_id' => ['nullable', 'exists:appointments,id'],
             'type' => ['required', Rule::in(['absence', 'attendance', 'disability', 'other'])],
             'start_date' => ['required', 'date'],
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
-            'days' => ['nullable', 'integer', 'min:1', 'max:' . config('telemedicine.medical_records.certificate_max_days', 60)],
+            'days' => ['nullable', 'integer', 'min:1', 'max:'.config('telemedicine.medical_records.certificate_max_days', 60)],
             'reason' => ['required', 'string'],
             'restrictions' => ['nullable', 'string'],
         ];
     }
 }
-
-

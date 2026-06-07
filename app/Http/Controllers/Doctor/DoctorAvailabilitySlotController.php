@@ -5,13 +5,14 @@ namespace App\Http\Controllers\Doctor;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Doctor\StoreAvailabilitySlotRequest;
 use App\Http\Requests\Doctor\UpdateAvailabilitySlotRequest;
-use App\Models\Doctor;
 use App\Models\AvailabilitySlot;
+use App\Models\Doctor;
 use App\Services\AvailabilityService;
 use App\Services\Doctor\ScheduleService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use OpenApi\Attributes as OA;
 
 class DoctorAvailabilitySlotController extends Controller
@@ -27,10 +28,8 @@ class DoctorAvailabilitySlotController extends Controller
      */
     public function store(StoreAvailabilitySlotRequest $request, Doctor $doctor): JsonResponse
     {
-        // Autorização
-        if (auth()->user()->doctor->id !== $doctor->id) {
-            abort(403, 'Você não tem permissão para criar slots para este médico.');
-        }
+        Gate::authorize('manageDoctorSchedule', $doctor);
+        $this->authorize('create', AvailabilitySlot::class);
 
         $validated = $request->validated();
 
@@ -44,7 +43,7 @@ class DoctorAvailabilitySlotController extends Controller
             $validated['location_id'] ?? null
         );
 
-        if (!$hasConflict) {
+        if (! $hasConflict) {
             return response()->json([
                 'success' => false,
                 'message' => 'Conflito de horário detectado. Já existe um slot configurado neste período.',
@@ -100,10 +99,9 @@ class DoctorAvailabilitySlotController extends Controller
      */
     public function update(UpdateAvailabilitySlotRequest $request, Doctor $doctor, AvailabilitySlot $slot): JsonResponse
     {
-        // Autorização: médico só pode atualizar seus próprios slots
-        if (auth()->user()->doctor->id !== $doctor->id || $slot->doctor_id !== $doctor->id) {
-            abort(403, 'Você não tem permissão para atualizar este slot.');
-        }
+        Gate::authorize('manageDoctorSchedule', $doctor);
+        abort_if((string) $slot->doctor_id !== (string) $doctor->id, 403);
+        $this->authorize('update', $slot);
 
         $validated = $request->validated();
 
@@ -112,14 +110,14 @@ class DoctorAvailabilitySlotController extends Controller
             $startTime = $validated['start_time'] ?? $slot->start_time;
             $endTime = $validated['end_time'] ?? $slot->end_time;
             $dayOfWeek = $validated['day_of_week'] ?? $slot->day_of_week;
-            $specificDate = isset($validated['specific_date']) 
-                ? Carbon::parse($validated['specific_date']) 
+            $specificDate = isset($validated['specific_date'])
+                ? Carbon::parse($validated['specific_date'])
                 : $slot->specific_date;
             $locationId = $validated['location_id'] ?? $slot->location_id;
 
             // Validar duração mínima (config: telemedicine.availability.slot_min_duration_minutes)
-            $start = Carbon::createFromFormat('H:i:s', $startTime . ':00');
-            $end = Carbon::createFromFormat('H:i:s', $endTime . ':00');
+            $start = Carbon::createFromFormat('H:i:s', $startTime.':00');
+            $end = Carbon::createFromFormat('H:i:s', $endTime.':00');
             $diffInMinutes = $start->diffInMinutes($end);
             $minMinutes = (int) config('telemedicine.availability.slot_min_duration_minutes', 60);
 
@@ -140,7 +138,7 @@ class DoctorAvailabilitySlotController extends Controller
                 $slot->id // Excluir o próprio slot
             );
 
-            if (!$hasConflict) {
+            if (! $hasConflict) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Conflito de horário detectado. Já existe outro slot configurado neste período.',
@@ -179,10 +177,9 @@ class DoctorAvailabilitySlotController extends Controller
      */
     public function destroy(Doctor $doctor, AvailabilitySlot $slot): JsonResponse
     {
-        // Autorização: médico só pode deletar seus próprios slots
-        if (auth()->user()->doctor->id !== $doctor->id || $slot->doctor_id !== $doctor->id) {
-            abort(403, 'Você não tem permissão para deletar este slot.');
-        }
+        Gate::authorize('manageDoctorSchedule', $doctor);
+        abort_if((string) $slot->doctor_id !== (string) $doctor->id, 403);
+        $this->authorize('delete', $slot);
 
         $slot->delete();
 
@@ -231,4 +228,3 @@ class DoctorAvailabilitySlotController extends Controller
         ], 200);
     }
 }
-

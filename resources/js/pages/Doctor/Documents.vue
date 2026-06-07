@@ -1,10 +1,52 @@
 <script setup lang="ts">
+import PatientSelect from '@/components/Doctor/ClinicalDocuments/PatientSelect.vue';
+import DocumentA4Preview from '@/components/Doctor/DocumentA4Preview.vue';
+import PatientSearchDialog from '@/components/Doctor/PatientSearchDialog.vue';
+import SignatureGatingBanner from '@/components/Doctor/SignatureGatingBanner.vue';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useEligiblePatients } from '@/composables/Doctor/useEligiblePatients';
 import AppLayout from '@/layouts/AppLayout.vue';
 import * as doctorRoutes from '@/routes/doctor';
 import { type BreadcrumbItem } from '@/types';
-import { Head } from '@inertiajs/vue3';
-import { ChevronDown, Search, Plus } from 'lucide-vue-next';
-import { ref } from 'vue';
+import type { DoctorSignatureState, EligibleDocumentPatient } from '@/types/clinical-documents';
+import { Head, router, usePage } from '@inertiajs/vue3';
+import { AlertCircle, Loader2, Pill, Plus, ShieldCheck, Stethoscope, TestTube2, Trash2, UserRoundSearch, X } from 'lucide-vue-next';
+import { computed, onMounted, ref, watch } from 'vue';
+
+type DocumentKind = 'rx' | 'cert' | 'exams';
+
+type Patient = EligibleDocumentPatient;
+
+type DrugCatalogItem = {
+    id: number;
+    name: string;
+    strength: string;
+    form: string;
+    controlled?: boolean;
+    ctrl?: string;
+};
+
+type RxLine = DrugCatalogItem & {
+    dose: string;
+    via: string;
+    freq: string;
+    dur: string;
+    extra: string;
+};
+
+type ExamCatalogItem = { code: string; name: string };
+
+type CertForm = {
+    type: string;
+    days: string;
+    startDate: string;
+    startTime: string;
+    endTime: string;
+    cid: string;
+    body: string;
+    restrictions: string;
+};
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -13,303 +55,790 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
     {
         title: 'Documentos',
-        href: '/doctor/documents',
+        href: doctorRoutes.documents().url,
     },
 ];
 
-// Dados reativos
-const selectedTab = ref('prescricao');
-const selectedPatient = ref('');
-const medicationSearch = ref('');
+const {
+    patients: eligiblePatients,
+    relationshipDays,
+    loading: patientsLoading,
+    error: patientsError,
+    load: loadEligiblePatients,
+} = useEligiblePatients();
 
-// Lista de pacientes mock
-const patients = ref([
-    'Ana Beatriz Silva',
-    'Carlos Mendes',
-    'Sofia Almeida',
-    'João Silva',
-    'Mariana Costa',
-    'Ricardo Santos'
-]);
+const patientsCatalog = computed<Patient[]>(() => eligiblePatients.value);
 
-// Lista de medicamentos mock
-const medications = ref([
-    {
-        id: 1,
-        name: 'Ibuprofeno',
-        dosage: '200mg',
-        route: 'Oral',
-        instructions: 'Tomar 1 comp. a cada 6 horas'
-    },
-    {
-        id: 2,
-        name: 'Paracetamol',
-        dosage: '500mg',
-        route: 'Oral',
-        instructions: 'Tomar 1 comp. a cada 8 horas'
-    },
-    {
-        id: 3,
-        name: 'Amoxicilina',
-        dosage: '500mg',
-        route: 'Oral',
-        instructions: 'Tomar 1 cápsula a cada 12 horas'
+const page = usePage();
+const signature = computed(() => (page.props.auth as { signature?: DoctorSignatureState | null })?.signature ?? null);
+const issuanceBlocked = computed(() => signature.value !== null && signature.value.required && !signature.value.active);
+
+const drugCatalog: DrugCatalogItem[] = [
+    { id: 1, name: 'Losartana potássica', strength: '50 mg', form: 'Comprimido', controlled: false },
+    { id: 2, name: 'Atorvastatina cálcica', strength: '20 mg', form: 'Comprimido', controlled: false },
+    { id: 3, name: 'Metformina', strength: '850 mg', form: 'Comprimido', controlled: false },
+    { id: 4, name: 'Clonazepam', strength: '2 mg', form: 'Comprimido', controlled: true, ctrl: 'B1' },
+    { id: 5, name: 'Omeprazol', strength: '20 mg', form: 'Cápsula', controlled: false },
+    { id: 6, name: 'Amitriptilina', strength: '25 mg', form: 'Comprimido', controlled: true, ctrl: 'C1' },
+];
+
+const examCatalog: ExamCatalogItem[] = [
+    { code: '40304361', name: 'Hemograma completo' },
+    { code: '40302580', name: 'Glicemia de jejum' },
+    { code: '40301630', name: 'Creatinina' },
+    { code: '40304370', name: 'Perfil lipídico' },
+    { code: '40308391', name: 'TSH' },
+    { code: '40316521', name: 'TGO / TGP' },
+];
+
+const docType = ref<DocumentKind>('rx');
+const patient = ref<Patient | null>(null);
+const showSearchModal = ref(false);
+const drugSearchOpen = ref(false);
+const examSearchOpen = ref(false);
+const showSuccess = ref(false);
+const showError = ref(false);
+const showDraftWarn = ref(false);
+const pendingDocType = ref<DocumentKind | null>(null);
+const drugQuery = ref('');
+const examQuery = ref('');
+
+const rxItems = ref<RxLine[]>([]);
+const rxInstructions = ref('');
+const rxValidUntil = ref('');
+
+const emptyCertData = (): CertForm => ({
+    type: 'afastamento',
+    days: '1',
+    startDate: new Date().toISOString().slice(0, 10),
+    startTime: '',
+    endTime: '',
+    cid: '',
+    body: '',
+    restrictions: '',
+});
+
+const certData = ref<CertForm>(emptyCertData());
+
+const examItems = ref<ExamCatalogItem[]>([]);
+
+const urgency = ref<'rotina' | 'prioritario' | 'urgente'>('rotina');
+const indication = ref('');
+const fasting = ref('');
+
+const filteredDrugs = computed(() => {
+    const q = drugQuery.value.trim().toLowerCase();
+    if (!q) {
+        return drugCatalog;
     }
-]);
+    return drugCatalog.filter((d) => d.name.toLowerCase().includes(q));
+});
 
-// Medicamentos selecionados para a prescrição
-const selectedMedications = ref([
-    {
-        id: 1,
-        name: 'Ibuprofeno',
-        dosage: '200mg',
-        route: 'Oral',
-        instructions: 'Tomar 1 comp. a cada 6 horas'
-    },
-    {
-        id: 2,
-        name: 'Paracetamol',
-        dosage: '500mg',
-        route: 'Oral',
-        instructions: 'Tomar 1 comp. a cada 8 horas'
-    },
-    {
-        id: 3,
-        name: 'Amoxicilina',
-        dosage: '500mg',
-        route: 'Oral',
-        instructions: 'Tomar 1 cápsula a cada 12 horas'
+const filteredExams = computed(() => {
+    const q = examQuery.value.trim().toLowerCase();
+    if (!q) {
+        return examCatalog;
     }
-]);
+    return examCatalog.filter((e) => e.name.toLowerCase().includes(q) || e.code.includes(q));
+});
 
-// Funções
-const addMedication = (medication: any) => {
-    if (!selectedMedications.value.find(m => m.id === medication.id)) {
-        selectedMedications.value.push(medication);
+const hasDraftChanges = computed(() => {
+    if (docType.value === 'rx') {
+        return rxItems.value.length > 0 || rxInstructions.value.trim().length > 0 || rxValidUntil.value !== '';
     }
-};
+    if (docType.value === 'cert') {
+        // Compara com o estado pristine — defaults (dias = 1, data de hoje) não contam como rascunho
+        const pristine = emptyCertData();
+        return (Object.keys(pristine) as (keyof CertForm)[]).some((key) => certData.value[key] !== pristine[key]);
+    }
+    return examItems.value.length > 0 || indication.value.trim() !== '' || fasting.value.trim() !== '';
+});
 
-const removeMedication = (id: number) => {
-    selectedMedications.value = selectedMedications.value.filter(m => m.id !== id);
-};
+function requestDocType(next: DocumentKind) {
+    if (next === docType.value) {
+        return;
+    }
+    if (hasDraftChanges.value) {
+        pendingDocType.value = next;
+        showDraftWarn.value = true;
+        return;
+    }
+    docType.value = next;
+}
 
-const getCurrentDate = () => {
-    return new Date().toLocaleDateString('pt-BR', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric'
+function confirmDiscardDraft() {
+    if (pendingDocType.value) {
+        docType.value = pendingDocType.value;
+        pendingDocType.value = null;
+    }
+    showDraftWarn.value = false;
+}
+
+function cancelTabSwitch() {
+    pendingDocType.value = null;
+    showDraftWarn.value = false;
+}
+
+function saveDraftAndSwitch() {
+    showDraftWarn.value = false;
+    if (pendingDocType.value) {
+        docType.value = pendingDocType.value;
+        pendingDocType.value = null;
+    }
+}
+
+function addDrugFromCatalog(d: DrugCatalogItem) {
+    rxItems.value.push({
+        ...d,
+        dose: '1 comprimido',
+        via: 'Oral',
+        freq: 'Conforme orientação médica',
+        dur: '30 dias',
+        extra: '',
     });
+    drugQuery.value = '';
+}
+
+function removeRx(i: number) {
+    rxItems.value = rxItems.value.filter((_, idx) => idx !== i);
+}
+
+function addExam(e: ExamCatalogItem) {
+    if (examItems.value.some((x) => x.code === e.code)) {
+        return;
+    }
+    examItems.value.push(e);
+    examQuery.value = '';
+}
+
+function removeExam(i: number) {
+    examItems.value = examItems.value.filter((_, idx) => idx !== i);
+}
+
+function selectPatient(p: Patient) {
+    patient.value = p;
+    showSearchModal.value = false;
+}
+
+const submitting = ref(false);
+const errorMessages = ref<string[]>([]);
+
+const selectedPatientId = computed(() => patient.value?.id ?? null);
+
+function onPatientSelected(id: string) {
+    patient.value = patientsCatalog.value.find((p) => p.id === id) ?? null;
+}
+
+// O paciente selecionado pode sair da lista de elegíveis após um reload (janela expirou)
+watch(patientsCatalog, (catalog) => {
+    if (patient.value && !catalog.some((p) => p.id === patient.value!.id)) {
+        patient.value = null;
+    }
+});
+
+// Deep-link: ?type=rx|exam|cert&patient={id} — a consulta é resolvida automaticamente no backend
+onMounted(() => {
+    const params = new URLSearchParams(window.location.search);
+
+    const type = params.get('type');
+    if (type === 'rx') docType.value = 'rx';
+    else if (type === 'cert') docType.value = 'cert';
+    else if (type === 'exam' || type === 'exams') docType.value = 'exams';
+
+    const patientParam = params.get('patient');
+
+    void loadEligiblePatients().then(() => {
+        if (patientParam) {
+            const found = patientsCatalog.value.find((p) => p.id === patientParam);
+            if (found) {
+                patient.value = found;
+            }
+        }
+    });
+});
+
+const canSubmit = computed(() => {
+    if (!patient.value || submitting.value || issuanceBlocked.value) {
+        return false;
+    }
+    if (docType.value === 'rx') {
+        return rxItems.value.length > 0;
+    }
+    if (docType.value === 'cert') {
+        return certData.value.body.trim() !== '' && certData.value.startDate !== '';
+    }
+    return examItems.value.length > 0 && indication.value.trim() !== '';
+});
+
+const CERT_TYPE_MAP: Record<string, string> = {
+    afastamento: 'absence',
+    comparecimento: 'attendance',
+    aptidao: 'other',
 };
+
+function handleSubmitError(errors: Record<string, string>) {
+    submitting.value = false;
+    errorMessages.value = Object.values(errors);
+    showError.value = true;
+}
+
+function onIssued() {
+    submitting.value = false;
+    showSuccess.value = true;
+
+    if (docType.value === 'rx') {
+        rxItems.value = [];
+        rxInstructions.value = '';
+        rxValidUntil.value = '';
+    } else if (docType.value === 'cert') {
+        certData.value = emptyCertData();
+    } else {
+        examItems.value = [];
+        indication.value = '';
+        fasting.value = '';
+        urgency.value = 'rotina';
+    }
+}
+
+// Sem appointment_id: o backend resolve a consulta elegível do par médico↔paciente
+function submitPrescription() {
+    router.post(
+        `/doctor/patients/${selectedPatientId.value}/medical-record/prescriptions`,
+        {
+            medications: rxItems.value.map((it) => ({
+                name: [it.name, it.strength, it.form].filter(Boolean).join(' · '),
+                dosage: [it.dose, it.via].filter(Boolean).join(' · '),
+                frequency: [it.freq, it.dur, it.extra].filter((v) => v && v.trim() !== '').join(' · '),
+            })),
+            instructions: rxInstructions.value.trim() !== '' ? rxInstructions.value : null,
+            valid_until: rxValidUntil.value !== '' ? rxValidUntil.value : null,
+        },
+        { preserveScroll: true, preserveState: true, onSuccess: onIssued, onError: handleSubmitError },
+    );
+}
+
+function submitCertificate() {
+    const days = parseInt(certData.value.days, 10);
+
+    router.post(
+        `/doctor/patients/${selectedPatientId.value}/medical-record/certificates`,
+        {
+            type: CERT_TYPE_MAP[certData.value.type] ?? 'other',
+            start_date: certData.value.startDate,
+            days: Number.isFinite(days) && days > 0 ? days : null,
+            reason: certData.value.cid.trim() ? `CID-10 ${certData.value.cid.trim()} — ${certData.value.body}` : certData.value.body,
+            restrictions: certData.value.restrictions.trim() !== '' ? certData.value.restrictions : null,
+        },
+        { preserveScroll: true, preserveState: true, onSuccess: onIssued, onError: handleSubmitError },
+    );
+}
+
+function submitExams() {
+    router.post(
+        `/doctor/patients/${selectedPatientId.value}/medical-record/examinations/batch`,
+        {
+            examinations: examItems.value.map((exam) => ({
+                name: exam.name,
+                type: 'lab',
+                justification: indication.value,
+                instructions: fasting.value.trim() !== '' ? fasting.value : null,
+                priority: urgency.value === 'rotina' ? 'normal' : 'urgent',
+            })),
+        },
+        { preserveScroll: true, preserveState: true, onSuccess: onIssued, onError: handleSubmitError },
+    );
+}
+
+function submitDocument() {
+    if (!canSubmit.value) {
+        return;
+    }
+
+    showError.value = false;
+    errorMessages.value = [];
+    submitting.value = true;
+
+    if (docType.value === 'rx') {
+        submitPrescription();
+    } else if (docType.value === 'cert') {
+        submitCertificate();
+    } else {
+        submitExams();
+    }
+}
 </script>
 
 <template>
-    <Head title="Emissão de Documentos" />
+    <Head title="Emissão de documentos — Telemedicina Para Todos" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-6 bg-gray-50">
-            <!-- Header -->
-            <div class="flex flex-col gap-1">
-                <h1 class="text-3xl font-bold text-gray-900">Emissão de Documentos</h1>
-            </div>
-
-            <!-- Navigation Tabs -->
-            <div class="flex gap-8 border-b border-gray-200">
-                <button 
-                    @click="selectedTab = 'prescricao'"
-                    :class="[
-                        'pb-3 text-lg font-medium transition-colors',
-                        selectedTab === 'prescricao' 
-                            ? 'text-primary border-b-2 border-primary' 
-                            : 'text-gray-600 hover:text-gray-900'
-                    ]"
-                >
-                    Prescrição
-                </button>
-                <button 
-                    @click="selectedTab = 'atestado'"
-                    :class="[
-                        'pb-3 text-lg font-medium transition-colors',
-                        selectedTab === 'atestado' 
-                            ? 'text-primary border-b-2 border-primary' 
-                            : 'text-gray-600 hover:text-gray-900'
-                    ]"
-                >
-                    Atestado
-                </button>
-                <button 
-                    @click="selectedTab = 'exames'"
-                    :class="[
-                        'pb-3 text-lg font-medium transition-colors',
-                        selectedTab === 'exames' 
-                            ? 'text-primary border-b-2 border-primary' 
-                            : 'text-gray-600 hover:text-gray-900'
-                    ]"
-                >
-                    Pedido de Exames
-                </button>
-            </div>
-
-            <!-- Form Section -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <!-- Patient Selection -->
-                <div class="space-y-2">
-                    <label class="text-sm font-medium text-gray-700">Paciente</label>
-                    <div class="relative">
-                        <select 
-                            v-model="selectedPatient"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent appearance-none bg-white"
-                        >
-                            <option value="">Selecione o paciente</option>
-                            <option v-for="patient in patients" :key="patient" :value="patient">
-                                {{ patient }}
-                            </option>
-                        </select>
-                        <ChevronDown class="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                    </div>
-                </div>
-
-                <!-- Medication Search -->
-                <div class="space-y-2">
-                    <label class="text-sm font-medium text-gray-700">Buscar medicamento</label>
-                    <div class="relative">
-                        <Search class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                        <input
-                            v-model="medicationSearch"
-                            type="text"
-                            placeholder="Ex: Ibuprofeno"
-                            class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                        />
-                    </div>
-                </div>
-            </div>
-
-            <!-- Medication List Table -->
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-                <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-primary/10">
-                            <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    MEDICAMENTO
-                                </th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    DOSAGEM
-                                </th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    VIA
-                                </th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    INSTRUÇÕES
-                                </th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    AÇÃO
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody class="bg-white divide-y divide-gray-200">
-                            <tr v-for="medication in selectedMedications" :key="medication.id" class="hover:bg-gray-50">
-                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                    {{ medication.name }}
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {{ medication.dosage }}
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {{ medication.route }}
-                                </td>
-                                <td class="px-6 py-4 text-sm text-gray-500">
-                                    {{ medication.instructions }}
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-red-600">
-                                    <button 
-                                        @click="removeMedication(medication.id)"
-                                        class="hover:text-red-800 transition-colors"
-                                    >
-                                        Remover
-                                    </button>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Available Medications (for adding) -->
-            <div v-if="medicationSearch" class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                <h3 class="text-sm font-medium text-gray-700 mb-3">Medicamentos encontrados:</h3>
-                <div class="space-y-2">
-                    <div 
-                        v-for="medication in medications.filter(m => 
-                            m.name.toLowerCase().includes(medicationSearch.toLowerCase())
-                        )" 
-                        :key="medication.id"
-                        class="flex items-center justify-between p-3 border border-gray-200 rounded-lg"
-                    >
-                        <div>
-                            <span class="font-medium">{{ medication.name }}</span>
-                            <span class="text-gray-500 ml-2">{{ medication.dosage }} - {{ medication.route }}</span>
+        <div class="min-h-svh w-full bg-[#f5f5f0] text-zinc-900 antialiased">
+            <header class="sticky top-0 z-20 border-b border-zinc-200/80 bg-[#f5f5f0]/95 backdrop-blur">
+                <div class="flex w-full flex-wrap items-center justify-between gap-3 px-3 py-3 sm:px-4 lg:px-6">
+                    <div class="flex min-w-0 flex-1 items-center gap-3">
+                        <div class="min-w-0">
+                            <h1 class="truncate text-base font-bold tracking-tight sm:text-lg">Emissão de documentos</h1>
+                            <p class="hidden text-xs text-zinc-500 sm:block">
+                                Receituário, atestado e pedido de exames com pré-visualização em tempo real.
+                            </p>
                         </div>
-                        <button 
-                            @click="addMedication(medication)"
-                            class="flex items-center gap-1 bg-primary hover:bg-primary/90 text-gray-900 px-3 py-1 rounded-lg text-sm font-medium transition-colors"
+                    </div>
+
+                    <div class="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
+                        <div
+                            v-if="patient"
+                            class="flex max-w-full min-w-0 items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 py-1.5 text-sm"
                         >
-                            <Plus class="w-3 h-3" />
-                            Adicionar
-                        </button>
+                            <span class="truncate font-medium text-zinc-800">{{ patient.name }}</span>
+                            <button
+                                type="button"
+                                class="shrink-0 text-xs font-semibold text-teal-700 underline-offset-2 hover:underline"
+                                @click="showSearchModal = true"
+                            >
+                                Trocar
+                            </button>
+                        </div>
+                        <Button v-else type="button" variant="outline" size="sm" class="gap-1.5" @click="showSearchModal = true">
+                            <UserRoundSearch class="size-4" />
+                            Selecionar paciente
+                        </Button>
+                        <a
+                            href="/doctor/documents/history"
+                            class="inline-flex items-center rounded-xl border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 sm:text-sm"
+                        >
+                            Histórico de documentos
+                        </a>
+
+                        <div class="flex rounded-xl border border-zinc-200 bg-white p-0.5">
+                            <button
+                                type="button"
+                                class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold sm:text-sm"
+                                :class="docType === 'rx' ? 'bg-zinc-900 text-white' : 'text-zinc-600 hover:bg-zinc-50'"
+                                @click="requestDocType('rx')"
+                            >
+                                <Pill class="size-3.5 sm:size-4" />
+                                Receita
+                            </button>
+                            <button
+                                type="button"
+                                class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold sm:text-sm"
+                                :class="docType === 'cert' ? 'bg-zinc-900 text-white' : 'text-zinc-600 hover:bg-zinc-50'"
+                                @click="requestDocType('cert')"
+                            >
+                                <Stethoscope class="size-3.5 sm:size-4" />
+                                Atestado
+                            </button>
+                            <button
+                                type="button"
+                                class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold sm:text-sm"
+                                :class="docType === 'exams' ? 'bg-zinc-900 text-white' : 'text-zinc-600 hover:bg-zinc-50'"
+                                @click="requestDocType('exams')"
+                            >
+                                <TestTube2 class="size-3.5 sm:size-4" />
+                                Exames
+                            </button>
+                        </div>
                     </div>
                 </div>
-            </div>
+            </header>
 
-            <!-- Preview Section -->
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Pré-visualização</h3>
-                
-                <div class="bg-white border border-gray-300 rounded-lg p-6 max-w-2xl">
-                    <h4 class="text-xl font-bold text-gray-900 mb-4">Prescrição Médica</h4>
-                    
-                    <div class="space-y-2 mb-6">
-                        <p class="text-gray-700">
-                            <span class="font-medium">Paciente:</span> 
-                            <span class="bg-primary/20 px-2 py-1 rounded text-gray-900 font-medium">
-                                {{ selectedPatient || 'Ana Beatriz Silva' }}
-                            </span>
-                        </p>
-                        <p class="text-gray-700">
-                            <span class="font-medium">Data:</span> 
-                            <span class="bg-primary/20 px-2 py-1 rounded text-gray-900 font-medium">
-                                {{ getCurrentDate() }}
-                            </span>
-                        </p>
-                    </div>
+            <div class="w-full px-3 py-5 sm:px-4 lg:px-6">
+                <SignatureGatingBanner class="mb-4" />
 
-                    <div class="space-y-2 mb-6">
-                        <p class="font-medium text-gray-900">Medicamentos prescritos:</p>
-                        <ul class="space-y-1">
-                            <li 
-                                v-for="medication in selectedMedications" 
-                                :key="medication.id"
-                                class="text-gray-700"
-                            >
-                                - {{ medication.name }} {{ medication.dosage }}: {{ medication.instructions }}
-                            </li>
+                <div v-if="showError" class="mb-4 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
+                    <AlertCircle class="mt-0.5 size-4 shrink-0" />
+                    <div class="min-w-0 flex-1">
+                        <p class="font-semibold">Não foi possível salvar o documento</p>
+                        <p v-if="errorMessages.length === 0" class="text-red-800/90">Verifique sua conexão e tente novamente.</p>
+                        <ul v-else class="mt-1 list-inside list-disc text-red-800/90">
+                            <li v-for="(message, i) in errorMessages" :key="i">{{ message }}</li>
                         </ul>
                     </div>
+                    <button type="button" class="shrink-0 rounded-lg p-1 text-red-700 hover:bg-red-100" @click="showError = false">
+                        <X class="size-4" />
+                    </button>
+                </div>
 
-                    <div class="border-t border-gray-200 pt-4">
-                        <p class="text-gray-900 font-medium">Dr. Ricardo Almeida</p>
-                    </div>
+                <div class="grid items-start gap-7 lg:grid-cols-[minmax(0,1fr)_minmax(0,580px)]">
+                    <section class="flex min-w-0 flex-col gap-4">
+                        <!-- Receita -->
+                        <div v-if="docType === 'rx'" class="space-y-4 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-5">
+                            <div class="flex flex-wrap items-center justify-between gap-2">
+                                <h2 class="text-sm font-bold text-zinc-900">Medicamentos</h2>
+                                <Button type="button" variant="outline" size="sm" class="gap-1" @click="drugSearchOpen = !drugSearchOpen">
+                                    <Plus class="size-4" />
+                                    {{ drugSearchOpen ? 'Fechar catálogo' : 'Adicionar do catálogo' }}
+                                </Button>
+                            </div>
+
+                            <div v-if="drugSearchOpen" class="rounded-xl border border-zinc-200 bg-zinc-50/80 p-3">
+                                <input
+                                    v-model="drugQuery"
+                                    type="search"
+                                    placeholder="Buscar por nome…"
+                                    class="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm ring-teal-500/30 outline-none placeholder:text-zinc-400 focus:ring-2"
+                                />
+                                <ul class="mt-2 max-h-48 space-y-1 overflow-y-auto text-sm">
+                                    <li
+                                        v-for="d in filteredDrugs"
+                                        :key="d.id"
+                                        class="flex items-center justify-between gap-2 rounded-lg border border-transparent px-2 py-1.5 hover:border-zinc-200 hover:bg-white"
+                                    >
+                                        <span class="min-w-0 font-medium text-zinc-800">{{ d.name }} · {{ d.strength }}</span>
+                                        <Button type="button" size="sm" variant="secondary" class="shrink-0" @click="addDrugFromCatalog(d)">
+                                            Adicionar
+                                        </Button>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <div class="space-y-3">
+                                <div v-for="(it, i) in rxItems" :key="`${it.id}-${i}`" class="rounded-xl border border-zinc-200 bg-zinc-50/50 p-3">
+                                    <div class="mb-2 flex flex-wrap items-start justify-between gap-2">
+                                        <div>
+                                            <p class="text-sm font-bold text-zinc-900">{{ it.name }} · {{ it.strength }} · {{ it.form }}</p>
+                                            <span
+                                                v-if="it.controlled"
+                                                class="mt-1 inline-block rounded bg-[#fbeeda] px-1.5 py-px text-[10px] font-extrabold text-amber-900"
+                                            >
+                                                LISTA {{ it.ctrl }}
+                                            </span>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            class="rounded-lg p-1.5 text-zinc-500 hover:bg-red-50 hover:text-red-600"
+                                            @click="removeRx(i)"
+                                        >
+                                            <Trash2 class="size-4" />
+                                        </button>
+                                    </div>
+                                    <div class="grid gap-2 sm:grid-cols-2">
+                                        <label class="block text-xs font-medium text-zinc-600">
+                                            Dose
+                                            <input
+                                                v-model="it.dose"
+                                                type="text"
+                                                class="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-2 py-1.5 text-sm ring-teal-500/30 outline-none focus:ring-2"
+                                            />
+                                        </label>
+                                        <label class="block text-xs font-medium text-zinc-600">
+                                            Via
+                                            <input
+                                                v-model="it.via"
+                                                type="text"
+                                                class="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-2 py-1.5 text-sm ring-teal-500/30 outline-none focus:ring-2"
+                                            />
+                                        </label>
+                                        <label class="block text-xs font-medium text-zinc-600 sm:col-span-2">
+                                            Frequência
+                                            <input
+                                                v-model="it.freq"
+                                                type="text"
+                                                class="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-2 py-1.5 text-sm ring-teal-500/30 outline-none focus:ring-2"
+                                            />
+                                        </label>
+                                        <label class="block text-xs font-medium text-zinc-600 sm:col-span-2">
+                                            Duração
+                                            <input
+                                                v-model="it.dur"
+                                                type="text"
+                                                class="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-2 py-1.5 text-sm ring-teal-500/30 outline-none focus:ring-2"
+                                            />
+                                        </label>
+                                        <label class="block text-xs font-medium text-zinc-600 sm:col-span-2">
+                                            Observações
+                                            <input
+                                                v-model="it.extra"
+                                                type="text"
+                                                class="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-2 py-1.5 text-sm ring-teal-500/30 outline-none focus:ring-2"
+                                            />
+                                        </label>
+                                    </div>
+                                </div>
+                                <p
+                                    v-if="!rxItems.length"
+                                    class="rounded-xl border border-dashed border-zinc-300 py-8 text-center text-sm text-zinc-500"
+                                >
+                                    Nenhum medicamento. Use o catálogo para adicionar.
+                                </p>
+                            </div>
+
+                            <div class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_180px]">
+                                <label class="block text-xs font-medium text-zinc-600">
+                                    Instruções gerais
+                                    <textarea
+                                        v-model="rxInstructions"
+                                        rows="2"
+                                        class="mt-1 w-full resize-y rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm ring-teal-500/30 outline-none placeholder:text-zinc-400 focus:ring-2"
+                                        placeholder="Ex.: uso contínuo, retornar em 30 dias…"
+                                    />
+                                </label>
+                                <label class="block text-xs font-medium text-zinc-600">
+                                    Válida até
+                                    <input
+                                        v-model="rxValidUntil"
+                                        type="date"
+                                        class="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-2 py-2 text-sm ring-teal-500/30 outline-none focus:ring-2"
+                                    />
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Atestado -->
+                        <div v-else-if="docType === 'cert'" class="space-y-4 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-5">
+                            <h2 class="text-sm font-bold text-zinc-900">Conteúdo do atestado</h2>
+                            <div class="grid gap-3 sm:grid-cols-2">
+                                <label class="block text-xs font-medium text-zinc-600">
+                                    Tipo
+                                    <select
+                                        v-model="certData.type"
+                                        class="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-2 py-2 text-sm ring-teal-500/30 outline-none focus:ring-2"
+                                    >
+                                        <option value="afastamento">Afastamento</option>
+                                        <option value="comparecimento">Comparecimento</option>
+                                        <option value="aptidao">Aptidão</option>
+                                    </select>
+                                </label>
+                                <label class="block text-xs font-medium text-zinc-600">
+                                    Dias
+                                    <input
+                                        v-model="certData.days"
+                                        type="text"
+                                        inputmode="numeric"
+                                        class="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-2 py-2 text-sm ring-teal-500/30 outline-none focus:ring-2"
+                                    />
+                                </label>
+                                <label class="block text-xs font-medium text-zinc-600">
+                                    Início (data)
+                                    <input
+                                        v-model="certData.startDate"
+                                        type="date"
+                                        class="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-2 py-2 text-sm ring-teal-500/30 outline-none focus:ring-2"
+                                    />
+                                </label>
+                                <label class="block text-xs font-medium text-zinc-600">
+                                    CID-10
+                                    <input
+                                        v-model="certData.cid"
+                                        type="text"
+                                        class="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-2 py-2 font-mono text-sm ring-teal-500/30 outline-none focus:ring-2"
+                                    />
+                                </label>
+                                <template v-if="certData.type === 'comparecimento'">
+                                    <label class="block text-xs font-medium text-zinc-600">
+                                        Horário de início
+                                        <input
+                                            v-model="certData.startTime"
+                                            type="time"
+                                            class="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-2 py-2 text-sm ring-teal-500/30 outline-none focus:ring-2"
+                                        />
+                                    </label>
+                                    <label class="block text-xs font-medium text-zinc-600">
+                                        Horário de término
+                                        <input
+                                            v-model="certData.endTime"
+                                            type="time"
+                                            class="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-2 py-2 text-sm ring-teal-500/30 outline-none focus:ring-2"
+                                        />
+                                    </label>
+                                </template>
+                            </div>
+                            <label class="block text-xs font-medium text-zinc-600">
+                                Texto livre
+                                <textarea
+                                    v-model="certData.body"
+                                    rows="5"
+                                    class="mt-1 w-full resize-y rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm ring-teal-500/30 outline-none placeholder:text-zinc-400 focus:ring-2"
+                                />
+                            </label>
+                            <label class="block text-xs font-medium text-zinc-600">
+                                Restrições / recomendações
+                                <textarea
+                                    v-model="certData.restrictions"
+                                    rows="2"
+                                    class="mt-1 w-full resize-y rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm ring-teal-500/30 outline-none placeholder:text-zinc-400 focus:ring-2"
+                                    placeholder="Ex.: evitar esforço físico, repouso relativo…"
+                                />
+                            </label>
+                        </div>
+
+                        <!-- Exames -->
+                        <div v-else class="space-y-4 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-5">
+                            <div class="flex flex-wrap items-center justify-between gap-2">
+                                <h2 class="text-sm font-bold text-zinc-900">Exames solicitados</h2>
+                                <Button type="button" variant="outline" size="sm" class="gap-1" @click="examSearchOpen = !examSearchOpen">
+                                    <Plus class="size-4" />
+                                    {{ examSearchOpen ? 'Fechar catálogo' : 'Adicionar do catálogo' }}
+                                </Button>
+                            </div>
+
+                            <div v-if="examSearchOpen" class="rounded-xl border border-zinc-200 bg-zinc-50/80 p-3">
+                                <input
+                                    v-model="examQuery"
+                                    type="search"
+                                    placeholder="Código ou nome…"
+                                    class="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm ring-teal-500/30 outline-none placeholder:text-zinc-400 focus:ring-2"
+                                />
+                                <ul class="mt-2 max-h-48 space-y-1 overflow-y-auto text-sm">
+                                    <li
+                                        v-for="e in filteredExams"
+                                        :key="e.code"
+                                        class="flex items-center justify-between gap-2 rounded-lg border border-transparent px-2 py-1.5 hover:border-zinc-200 hover:bg-white"
+                                    >
+                                        <span class="font-mono text-xs text-zinc-500">{{ e.code }}</span>
+                                        <span class="min-w-0 flex-1 font-medium text-zinc-800">{{ e.name }}</span>
+                                        <Button type="button" size="sm" variant="secondary" class="shrink-0" @click="addExam(e)"> Adicionar </Button>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <ul class="space-y-2">
+                                <li
+                                    v-for="(e, i) in examItems"
+                                    :key="e.code"
+                                    class="flex items-center justify-between gap-2 rounded-xl border border-zinc-200 bg-zinc-50/50 px-3 py-2 text-sm"
+                                >
+                                    <span
+                                        ><span class="font-mono text-xs text-zinc-500">{{ e.code }}</span> {{ e.name }}</span
+                                    >
+                                    <button
+                                        type="button"
+                                        class="rounded-lg p-1.5 text-zinc-500 hover:bg-red-50 hover:text-red-600"
+                                        @click="removeExam(i)"
+                                    >
+                                        <Trash2 class="size-4" />
+                                    </button>
+                                </li>
+                            </ul>
+                            <p
+                                v-if="!examItems.length"
+                                class="rounded-xl border border-dashed border-zinc-300 py-6 text-center text-sm text-zinc-500"
+                            >
+                                Nenhum exame na lista.
+                            </p>
+
+                            <fieldset class="space-y-2">
+                                <legend class="text-xs font-semibold text-zinc-600">Urgência</legend>
+                                <div class="flex flex-wrap gap-2">
+                                    <label
+                                        v-for="u in ['rotina', 'prioritario', 'urgente'] as const"
+                                        :key="u"
+                                        class="inline-flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition"
+                                        :class="
+                                            urgency === u
+                                                ? 'border-zinc-900 bg-zinc-900 text-white'
+                                                : 'border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50'
+                                        "
+                                    >
+                                        <input v-model="urgency" type="radio" class="sr-only" :value="u" />
+                                        {{ u === 'rotina' ? 'Rotina' : u === 'prioritario' ? 'Prioritário' : 'Urgente' }}
+                                    </label>
+                                </div>
+                            </fieldset>
+
+                            <label class="block text-xs font-medium text-zinc-600">
+                                Indicação clínica
+                                <textarea
+                                    v-model="indication"
+                                    rows="3"
+                                    class="mt-1 w-full resize-y rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm ring-teal-500/30 outline-none focus:ring-2"
+                                />
+                            </label>
+                            <label class="block text-xs font-medium text-zinc-600">
+                                Preparo / jejum
+                                <textarea
+                                    v-model="fasting"
+                                    rows="2"
+                                    class="mt-1 w-full resize-y rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm ring-teal-500/30 outline-none focus:ring-2"
+                                />
+                            </label>
+                        </div>
+
+                        <div
+                            class="sticky bottom-4 z-10 flex flex-col gap-3 rounded-2xl border border-zinc-200 bg-white/95 p-4 shadow-lg backdrop-blur"
+                        >
+                            <PatientSelect
+                                :model-value="selectedPatientId ?? ''"
+                                :patients="eligiblePatients"
+                                :relationship-days="relationshipDays"
+                                :loading="patientsLoading"
+                                :error="patientsError"
+                                @update:model-value="onPatientSelected"
+                            />
+                            <p v-if="patient" class="text-xs text-zinc-500">
+                                A consulta de vínculo é resolvida automaticamente (consulta ativa, de hoje ou a mais recente concluída).
+                            </p>
+
+                            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                <span v-if="signature?.active" class="inline-flex items-center gap-1.5 text-sm font-medium text-teal-700">
+                                    <ShieldCheck class="size-4" />
+                                    Assinatura digital ativa
+                                </span>
+                                <span v-else class="inline-flex items-center gap-1.5 text-sm text-zinc-500"> Assinatura digital não integrada </span>
+                                <div class="flex flex-wrap gap-2">
+                                    <Button
+                                        type="button"
+                                        :disabled="!canSubmit"
+                                        :title="issuanceBlocked ? 'Integre sua assinatura digital para emitir documentos.' : undefined"
+                                        @click="submitDocument"
+                                    >
+                                        <Loader2 v-if="submitting" class="mr-1.5 size-4 animate-spin" />
+                                        {{ submitting ? 'Enviando…' : 'Gerar e enviar' }}
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <aside class="min-w-0 lg:sticky lg:top-20 lg:self-start">
+                        <DocumentA4Preview
+                            :doc-type="docType"
+                            :patient="patient"
+                            :rx-items="rxItems"
+                            :rx-instructions="rxInstructions"
+                            :rx-valid-until="rxValidUntil"
+                            :cert-data="certData"
+                            :exam-items="examItems"
+                            :urgency="urgency"
+                            :indication="indication"
+                            :fasting="fasting"
+                        />
+                    </aside>
                 </div>
             </div>
-
-            <!-- Action Buttons -->
-            <div class="flex justify-end gap-3">
-                <button class="bg-primary/20 hover:bg-primary/30 text-gray-900 font-semibold px-6 py-2 rounded-lg transition-colors">
-                    Assinar Digitalmente
-                </button>
-                <button class="bg-primary hover:bg-primary/90 text-gray-900 font-semibold px-6 py-2 rounded-lg transition-colors">
-                    Gerar e Enviar para o Paciente
-                </button>
-            </div>
         </div>
+
+        <PatientSearchDialog
+            v-model:open="showSearchModal"
+            :patients="patientsCatalog"
+            :selected-patient-id="patient?.id ?? null"
+            @select="selectPatient"
+        />
+
+        <Dialog v-model:open="showDraftWarn">
+            <DialogContent class="sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Rascunho não salvo</DialogTitle>
+                    <DialogDescription> Você tem alterações neste documento. Deseja continuar trocando o tipo? </DialogDescription>
+                </DialogHeader>
+                <DialogFooter class="gap-2 sm:justify-end">
+                    <Button type="button" variant="outline" @click="cancelTabSwitch">Cancelar</Button>
+                    <Button type="button" variant="secondary" @click="saveDraftAndSwitch">Salvar rascunho e continuar</Button>
+                    <Button type="button" variant="destructive" @click="confirmDiscardDraft">Descartar alterações</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        <Dialog v-model:open="showSuccess">
+            <DialogContent class="text-center sm:max-w-sm">
+                <DialogHeader>
+                    <DialogTitle>Documento gerado</DialogTitle>
+                    <DialogDescription v-if="patient"> {{ patient.name }} receberá o arquivo na área do paciente. </DialogDescription>
+                </DialogHeader>
+                <DialogFooter class="sm:justify-center">
+                    <Button type="button" @click="showSuccess = false">Fechar</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     </AppLayout>
 </template>

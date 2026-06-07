@@ -2,15 +2,42 @@
 import NavFooter from '@/components/NavFooter.vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
-import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarInput, SidebarGroup, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
+import {
+    Sidebar,
+    SidebarContent,
+    SidebarFooter,
+    SidebarGroup,
+    SidebarHeader,
+    SidebarInput,
+    SidebarMenu,
+    SidebarMenuButton,
+    SidebarMenuItem,
+} from '@/components/ui/sidebar';
+import { useAuth } from '@/composables/auth';
+import * as doctorRoutes from '@/routes/doctor';
+import * as integrationRoutes from '@/routes/doctor/integrations';
+import * as patientRoutes from '@/routes/patient';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/vue3';
-import { Calendar, CalendarClock, Home, Activity, Monitor, Users, History, FileText, MessageCircle, Search, Video, Stethoscope, Bug } from 'lucide-vue-next';
-import AppLogo from './AppLogo.vue';
-import { useAuth } from '@/composables/auth';
+import {
+    Activity,
+    Bug,
+    Building2,
+    Calendar,
+    FileClock,
+    FileText,
+    History,
+    Home,
+    LayoutGrid,
+    MessageCircle,
+    Plug2,
+    Search,
+    Stethoscope,
+    Users,
+    Video,
+} from 'lucide-vue-next';
 import { computed, ref } from 'vue';
-import * as doctorRoutes from '@/routes/doctor';
-import * as patientRoutes from '@/routes/patient';
+import AppLogo from './AppLogo.vue';
 
 const { isDoctor, isPatient } = useAuth();
 
@@ -18,36 +45,37 @@ const { isDoctor, isPatient } = useAuth();
 const searchQuery = ref('');
 
 // Navegação para Médicos
-const doctorNavItems = computed<NavItem[]>(() => [
+const doctorNavItems: NavItem[] = [
     {
         title: 'Dashboard',
         href: doctorRoutes.dashboard(),
         icon: Home,
+        tourId: 'nav-dashboard',
     },
     {
         title: 'Agenda',
-        href: doctorRoutes.appointments(),
+        href: doctorRoutes.schedule(),
         icon: Calendar,
-    },
-    {
-        title: 'Disponibilidade',
-        href: doctorRoutes.availability(),
-        icon: CalendarClock,
+        activePathPrefix: doctorRoutes.schedule().url,
+        tourId: 'nav-agenda',
     },
     {
         title: 'Pacientes',
         href: '/doctor/patients',
         icon: Users,
+        tourId: 'nav-pacientes',
     },
     {
-        title: 'Consultas',
-        href: doctorRoutes.consultations(),
-        icon: Monitor,
+        title: 'Videoconferência',
+        href: doctorRoutes.videoCall(),
+        icon: Video,
+        tourId: 'nav-video',
     },
     {
         title: 'Mensagens',
         href: '/doctor/messages',
         icon: MessageCircle,
+        tourId: 'nav-mensagens',
     },
     {
         title: 'Histórico',
@@ -58,50 +86,94 @@ const doctorNavItems = computed<NavItem[]>(() => [
         title: 'Documentos',
         href: '/doctor/documents',
         icon: FileText,
+        activePathPrefix: '/doctor/documents',
+        tourId: 'nav-documentos',
+        children: [
+            {
+                title: 'Emissão',
+                href: '/doctor/documents',
+                icon: FileText,
+            },
+            {
+                title: 'Histórico',
+                href: '/doctor/documents/history',
+                icon: FileClock,
+            },
+        ],
     },
-]);
+    {
+        title: 'Integrações',
+        href: doctorRoutes.integrations(),
+        icon: Plug2,
+        activePathPrefix: doctorRoutes.integrations().url,
+        tourId: 'nav-integracoes',
+        children: [
+            {
+                title: 'Hub de Integrações',
+                href: doctorRoutes.integrations(),
+                icon: LayoutGrid,
+            },
+            {
+                title: 'Gerenciar Parceiros',
+                href: integrationRoutes.partners(),
+                icon: Building2,
+            },
+            {
+                title: 'Conectar Parceiro',
+                href: integrationRoutes.connect(),
+                icon: Plug2,
+            },
+        ],
+    },
+];
 
 // Navegação para Pacientes
-const patientNavItems = computed<NavItem[]>(() => [
+const patientNavItems: NavItem[] = [
     {
         title: 'Dashboard',
         href: patientRoutes.dashboard(),
         icon: Home,
+        tourId: 'nav-dashboard',
     },
     {
         title: 'Pesquisar Médicos',
         href: patientRoutes.searchConsultations(),
         icon: Stethoscope,
-    },
-    {
-        title: 'Mensagens',
-        href: patientRoutes.messages(),
-        icon: MessageCircle,
+        tourId: 'nav-pesquisar',
     },
     {
         title: 'Videoconferência',
         href: patientRoutes.videoCall(),
         icon: Video,
+        tourId: 'nav-video',
+    },
+    {
+        title: 'Mensagens',
+        href: patientRoutes.messages(),
+        icon: MessageCircle,
+        tourId: 'nav-mensagens',
     },
     {
         title: 'Histórico de Consultas',
         href: patientRoutes.historyConsultations(),
         icon: History,
+        tourId: 'nav-historico',
     },
     {
         title: 'Prontuário',
         href: patientRoutes.medicalRecords(),
         icon: Activity,
+        tourId: 'nav-prontuario',
     },
-]);
+];
 
 // Selecionar navegação baseada no role
 const mainNavItems = computed(() => {
     if (isDoctor.value) {
-        return doctorNavItems.value;
+        return doctorNavItems;
     }
     if (isPatient.value) {
-        return patientNavItems.value;
+        return patientNavItems;
     }
     return [];
 });
@@ -143,12 +215,8 @@ const dashboardLink = computed(() => {
         <SidebarContent>
             <SidebarGroup>
                 <div class="relative">
-                    <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                    <SidebarInput 
-                        v-model="searchQuery"
-                        placeholder="Buscar..."
-                        class="pl-9"
-                    />
+                    <Search class="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <SidebarInput v-model="searchQuery" placeholder="Buscar..." class="pl-9" />
                 </div>
             </SidebarGroup>
             <NavMain :items="mainNavItems" />

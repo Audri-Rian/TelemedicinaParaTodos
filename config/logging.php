@@ -127,6 +127,14 @@ return [
             'path' => storage_path('logs/laravel.log'),
         ],
 
+        'integration' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/integration.log'),
+            'level' => env('INTEGRATION_LOG_LEVEL', 'debug'),
+            'days' => env('INTEGRATION_LOG_DAYS', env('LOG_DAILY_DAYS', 14)),
+            'replace_placeholders' => true,
+        ],
+
     ],
 
 ];

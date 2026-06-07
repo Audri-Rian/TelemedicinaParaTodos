@@ -2,6 +2,7 @@ import { computed } from 'vue';
 import { router } from '@inertiajs/vue3';
 import { useRealTimeValidation, type ValidationRule } from '../useRealTimeValidation';
 import { useRateLimit } from '../useRateLimit';
+import { useToast } from '../useToast';
 import { usePatientFormValidation } from './usePatientFormValidation';
 
 /**
@@ -38,7 +39,8 @@ const initialData: PatientRegistrationData = {
  * Focado apenas nos campos obrigatórios para criação da conta
  */
 export function usePatientRegistration() {
-  const { 
+  const toast = useToast();
+  const {
     nameValidation,
     emailValidation,
     passwordValidation,
@@ -94,19 +96,64 @@ export function usePatientRegistration() {
     return null;
   });
 
+  const fieldLabels: Record<keyof PatientRegistrationData, string> = {
+    name: 'nome completo',
+    email: 'e-mail',
+    password: 'senha',
+    password_confirmation: 'confirmação de senha',
+    date_of_birth: 'data de nascimento',
+    phone_number: 'telefone',
+    gender: 'gênero',
+    consent_telemedicine: 'termos de telemedicina'
+  };
+
+  const describeInvalidFields = (): string => {
+    const invalidKeys = (Object.keys(fields.value) as Array<keyof PatientRegistrationData>)
+      .filter((k) => fields.value[k].errors.length > 0);
+
+    if (!invalidKeys.length) return '';
+
+    const labels = invalidKeys.map((k) => fieldLabels[k]);
+    if (labels.length === 1) return labels[0];
+    if (labels.length === 2) return `${labels[0]} e ${labels[1]}`;
+    return `${labels.slice(0, -1).join(', ')} e ${labels[labels.length - 1]}`;
+  };
+
   // Função para submeter formulário de registro
   const submitForm = async (): Promise<boolean> => {
-    if (!canSubmit.value) {
+    // 1. Rate limit já bloqueado
+    if (rateLimit.isBlocked.value) {
+      toast.error(rateLimit.getErrorMessage(), {
+        title: 'Limite de tentativas atingido',
+      });
       return false;
     }
 
-    // Verifica rate limit
+    // 2. Validações client-side falharam
+    if (!isFormValid.value) {
+      validateAll();
+      const invalid = describeInvalidFields();
+      toast.warning(
+        invalid
+          ? `Revise ${invalid} antes de enviar.`
+          : 'Preencha os campos obrigatórios antes de enviar.',
+        { title: 'Formulário incompleto' },
+      );
+      return false;
+    }
+
+    // 3. Já está submetendo
+    if (isSubmitting.value) {
+      return false;
+    }
+
+    // 4. Registrar tentativa. A validação já foi feita no passo #2 — não
+    // chamamos validateAll() de novo pois consumiria uma tentativa do rate
+    // limit sem realmente tentar submeter.
     if (!rateLimit.recordAttempt()) {
-      return false;
-    }
-
-    // Validação final
-    if (!validateAll()) {
+      toast.error(rateLimit.getErrorMessage(), {
+        title: 'Limite de tentativas atingido',
+      });
       return false;
     }
 
@@ -116,7 +163,10 @@ export function usePatientRegistration() {
         isSubmitting.value = true;
       },
       onSuccess: () => {
-        // Sucesso - o Laravel já redireciona para dashboard
+        toast.success('Bem-vindo(a)! Redirecionando para seu painel...', {
+          title: 'Conta criada',
+          durationMs: 3000,
+        });
         resetForm();
         rateLimit.reset();
         return true;
@@ -126,12 +176,21 @@ export function usePatientRegistration() {
         Object.keys(errors).forEach(field => {
           const fieldKey = field as keyof PatientRegistrationData;
           if (fields.value[fieldKey]) {
-            fields.value[fieldKey].errors = Array.isArray(errors[field]) 
-              ? errors[field] 
+            fields.value[fieldKey].errors = Array.isArray(errors[field])
+              ? errors[field]
               : [errors[field]];
             fields.value[fieldKey].touched = true;
           }
         });
+
+        const firstError = Object.values(errors)[0];
+        const message = Array.isArray(firstError) ? firstError[0] : firstError;
+        toast.error(
+          typeof message === 'string' && message
+            ? message
+            : 'Não foi possível concluir o registro. Verifique os campos destacados.',
+          { title: 'Falha no registro' },
+        );
         return false;
       },
       onFinish: () => {
@@ -162,20 +221,20 @@ export function usePatientRegistration() {
     // Dados do formulário
     formData,
     fields,
-    
+
     // Estado
     isSubmitting,
     hasErrors,
     isFormValid,
     canSubmit,
-    
+
     // Erros
     allErrors,
     submitError,
-    
+
     // Rate limiting
     rateLimit: rateLimit.getStatus(),
-    
+
     // Funções
     updateField,
     touchField,

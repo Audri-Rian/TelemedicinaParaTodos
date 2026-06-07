@@ -1,15 +1,9 @@
 <script setup lang="ts">
-import { computed } from 'vue';
 import { Button } from '@/components/ui/button';
+import { Link } from '@inertiajs/vue3';
+import { computed } from 'vue';
 
-type AppointmentStatus =
-    | 'scheduled'
-    | 'in_progress'
-    | 'completed'
-    | 'cancelled'
-    | 'rescheduled'
-    | 'no_show'
-    | string;
+type AppointmentStatus = 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'rescheduled' | 'no_show' | string;
 
 type AppointmentPermissions = {
     start?: boolean;
@@ -17,24 +11,32 @@ type AppointmentPermissions = {
     reschedule?: boolean;
 };
 
-const props = withDefaults(defineProps<{
-    appointment: {
-        id?: string;
-        status: AppointmentStatus;
-        can?: AppointmentPermissions;
-    };
-    loadingStart?: boolean;
-    loadingCancel?: boolean;
-    loadingReschedule?: boolean;
-    showReschedule?: boolean;
-    class?: string;
-}>(), {
-    loadingStart: false,
-    loadingCancel: false,
-    loadingReschedule: false,
-    showReschedule: true,
-    class: '',
-});
+const props = withDefaults(
+    defineProps<{
+        appointment: {
+            id?: string;
+            status: AppointmentStatus;
+            can?: AppointmentPermissions;
+        };
+        loadingStart?: boolean;
+        loadingCancel?: boolean;
+        loadingReschedule?: boolean;
+        showReschedule?: boolean;
+        /** Quando informado, o botão de início redireciona em vez de emitir `start` (não inicia a consulta na API). */
+        startHref?: string | null;
+        startLabel?: string;
+        class?: string;
+    }>(),
+    {
+        loadingStart: false,
+        loadingCancel: false,
+        loadingReschedule: false,
+        showReschedule: true,
+        startHref: null,
+        startLabel: 'Iniciar chamada',
+        class: '',
+    },
+);
 
 const emit = defineEmits<{
     (event: 'start'): void;
@@ -73,14 +75,13 @@ const canReschedule = computed(() => {
 
 <template>
     <div :class="['flex flex-wrap gap-2', props.class]">
-        <Button
-            v-if="canStart"
-            class="bg-primary hover:bg-primary/90 text-gray-900"
-            :disabled="loadingStart"
-            @click="emit('start')"
-        >
+        <Button v-if="canStart && startHref" as-child class="bg-primary text-gray-900 hover:bg-primary/90">
+            <Link :href="startHref">{{ startLabel }}</Link>
+        </Button>
+
+        <Button v-else-if="canStart" class="bg-primary text-gray-900 hover:bg-primary/90" :disabled="loadingStart" @click="emit('start')">
             <span v-if="loadingStart">Iniciando...</span>
-            <span v-else>Iniciar Consulta</span>
+            <span v-else>{{ startLabel }}</span>
         </Button>
 
         <Button

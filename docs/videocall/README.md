@@ -1,22 +1,23 @@
 # Documentação de Videochamadas
 
-Este diretório concentra a documentação do módulo de **videochamadas**, incluindo o plano de migração de P2P para MediaSoup.
+Este diretório concentra documentos de apoio do módulo de **videochamadas**. A implementação vigente está em **MediaSoup/SFU**; os documentos de P2P são históricos de migração.
 
 ## Documentos
 
-| Documento | Descrição |
-|-----------|-----------|
-| **[MIGRACAO_P2P_PARA_MEDIASOUP.md](MIGRACAO_P2P_PARA_MEDIASOUP.md)** | Índice da migração: remoção do P2P e adoção do MediaSoup (SFU); aponta para os dois documentos abaixo. |
-| **[REMOVER_E_MANTER_P2P.md](REMOVER_E_MANTER_P2P.md)** | Apenas inventário: o que **remover** e o que **manter** ao sair do P2P (backend, frontend, avaliar). |
-| **[IMPLEMENTACAO_SFU_MEDIASOUP.md](IMPLEMENTACAO_SFU_MEDIASOUP.md)** | Nova implementação do SFU: arquitetura, fluxo, o que construir (Laravel, MediaSoup Node, Vue) e checklist. |
+| Documento                                                            | Descrição                                                                                                                                               |
+| -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **[TESTE_SFU_MEDIASOUP.md](TESTE_SFU_MEDIASOUP.md)**                 | Guia de teste integrado/standalone do SFU.                                                                                                              |
+| **[MIGRACAO_P2P_PARA_MEDIASOUP.md](MIGRACAO_P2P_PARA_MEDIASOUP.md)** | Histórico da migração: remoção do P2P e adoção do MediaSoup.                                                                                            |
+| **[REMOVER_E_MANTER_P2P.md](REMOVER_E_MANTER_P2P.md)**               | Inventário histórico do que saiu do modelo P2P.                                                                                                         |
+| **[IMPLEMENTACAO_SFU_MEDIASOUP.md](IMPLEMENTACAO_SFU_MEDIASOUP.md)** | Plano original da implementação SFU; a implementação corrente e mais fiel ao código está em `../layers/signaling/videocall/VideoCallImplementation.md`. |
 
 ## Contexto
 
-- **Estado atual (antes da migração):** Videochamada 1:1 via PeerJS (P2P) e sinalização via Laravel Reverb (`RequestVideoCall`, `RequestVideoCallStatus` com `peerId`).
-- **Estado alvo:** MediaSoup como SFU; sinalização de mídia por WebSocket próprio do servidor MediaSoup; Laravel/Reverb apenas para ciclo de vida da chamada (solicitar, aceitar, rejeitar, encerrar) e regras de negócio (appointment, políticas). Backend e frontend de videochamada recriados.
+- **Estado atual:** MediaSoup como SFU; sinalização de mídia por WebSocket próprio do SFU; Laravel/Reverb apenas para ciclo de vida da chamada e regras de negócio.
+- **Modelo atual:** `calls` para negócio, `rooms` para sala no SFU, JWT curto emitido pelo Laravel.
 
 ## Outros documentos relacionados
 
 - [Camada de Mídia](../layers/media/README.md) — responsabilidades de transporte de mídia (WebRTC/SFU).
-- [Camada de Sinalização — Videochamada](../layers/signaling/videocall/README.md) — implementação atual (P2P) e tarefas.
+- [Camada de Sinalização — Videochamada](../layers/signaling/videocall/README.md) — implementação atual SFU e tarefas.
 - [Visão Geral do Projeto](../index/VisaoGeral.md) — índice geral da documentação.

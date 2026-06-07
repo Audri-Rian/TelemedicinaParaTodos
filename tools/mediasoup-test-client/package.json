@@ -1,6 +1,7 @@
 {
   "name": "mediasoup-test-client",
   "private": true,
+  "type": "module",
   "description": "Cliente standalone de teste do SFU MediaSoup (sem Laravel)",
   "scripts": {
     "token": "node scripts/generate-token.js"

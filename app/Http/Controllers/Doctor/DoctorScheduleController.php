@@ -5,16 +5,82 @@ namespace App\Http\Controllers\Doctor;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Doctor\StoreScheduleConfigRequest;
 use App\Models\Doctor;
+use App\Services\Doctor\AvailabilityTimelineService;
 use App\Services\Doctor\ScheduleService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class DoctorScheduleController extends Controller
 {
     public function __construct(
-        protected ScheduleService $scheduleService
+        protected ScheduleService $scheduleService,
+        protected AvailabilityTimelineService $timelineService
     ) {}
+
+    public function index(Request $request): Response|RedirectResponse
+    {
+        $doctor = auth()->user()?->doctor;
+
+        if (! $doctor) {
+            return redirect()->route('doctor.dashboard');
+        }
+
+        $tab = in_array($request->query('tab'), ['configure', 'overview'], true)
+            ? $request->query('tab')
+            : 'configure';
+
+        $overviewData = null;
+        $overviewProps = function () use ($doctor, &$overviewData): array {
+            if ($overviewData !== null) {
+                return $overviewData;
+            }
+
+            $overview = $this->timelineService->getOverview($doctor);
+
+            return $overviewData = [
+                'timeline' => $overview['timeline'],
+                'summary' => $overview['summary'],
+                'meta' => $overview['window'],
+                'locations' => $overview['locations'],
+            ];
+        };
+        $overview = $tab === 'overview' ? $overviewProps() : null;
+
+        return Inertia::render('Doctor/Schedule', [
+            'scheduleConfig' => $tab === 'configure'
+                ? $this->scheduleService->getScheduleConfig($doctor)
+                : Inertia::optional(fn () => $this->scheduleService->getScheduleConfig($doctor)),
+            'timeline' => $tab === 'overview'
+                ? $overview['timeline']
+                : Inertia::optional(fn () => $overviewProps()['timeline']),
+            'summary' => $tab === 'overview'
+                ? $overview['summary']
+                : Inertia::optional(fn () => $overviewProps()['summary']),
+            'meta' => $tab === 'overview'
+                ? $overview['meta']
+                : Inertia::optional(fn () => $overviewProps()['meta']),
+            'locations' => $tab === 'overview'
+                ? $overview['locations']
+                : Inertia::optional(fn () => $overviewProps()['locations']),
+            'initialTab' => $tab,
+            'requireConsultationFeeToCreateSlot' => (bool) config('telemedicine.availability.require_consultation_fee_to_create_slot', true),
+        ]);
+    }
+
+    public function redirect(string $tab = 'configure'): RedirectResponse
+    {
+        $doctor = auth()->user()?->doctor;
+
+        if (! $doctor) {
+            return redirect()->route('doctor.dashboard');
+        }
+
+        return redirect()->route('doctor.schedule', ['tab' => $tab]);
+    }
 
     /**
      * Carregar configuração completa da agenda do médico
@@ -22,15 +88,12 @@ class DoctorScheduleController extends Controller
      */
     public function show(Doctor $doctor): JsonResponse|Response
     {
-        // Autorização: médico só pode ver sua própria agenda
-        if (auth()->user()->doctor->id !== $doctor->id) {
-            abort(403, 'Você não tem permissão para acessar esta agenda.');
-        }
+        Gate::authorize('manageDoctorSchedule', $doctor);
 
         $config = $this->scheduleService->getScheduleConfig($doctor);
 
         // Se for requisição Inertia (página web)
-        if (request()->expectsJson() && !request()->wantsJson()) {
+        if (request()->expectsJson() && ! request()->wantsJson()) {
             return Inertia::render('Doctor/ScheduleManagement', [
                 'scheduleConfig' => $config,
             ]);
@@ -49,10 +112,7 @@ class DoctorScheduleController extends Controller
      */
     public function save(StoreScheduleConfigRequest $request, Doctor $doctor): JsonResponse
     {
-        // Autorização: médico só pode salvar sua própria agenda
-        if (auth()->user()->doctor->id !== $doctor->id) {
-            abort(403, 'Você não tem permissão para alterar esta agenda.');
-        }
+        Gate::authorize('manageDoctorSchedule', $doctor);
 
         try {
             $config = $this->scheduleService->saveScheduleConfig($doctor, $request->validated());
@@ -63,11 +123,12 @@ class DoctorScheduleController extends Controller
                 'data' => $config,
             ], 200);
         } catch (\Exception $e) {
+            \Log::error('Schedule save failed', ['doctor_id' => $doctor->id, 'error' => $e->getMessage()]);
+
             return response()->json([
                 'success' => false,
-                'message' => 'Erro ao salvar configuração: ' . $e->getMessage(),
+                'message' => 'Erro ao salvar configuração. Tente novamente.',
             ], 422);
         }
     }
 }
-

@@ -1,5 +1,13 @@
 <?php
 
+use App\Integrations\Jobs\ProcessIntegrationQueue;
+use App\Integrations\Jobs\SyncExamResults;
+use App\Jobs\AutoStartVideoCall;
+use App\Jobs\CleanExpiredRedisLocks;
+use App\Jobs\EndScheduledVideoCalls;
+use App\Jobs\EndStuckInProgressAppointments;
+use App\Jobs\EndZombieVideoCalls;
+use App\Jobs\MarkNoShowAppointments;
 use App\Jobs\SendAppointmentReminders;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -10,5 +18,67 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 // Agendar envio de lembretes de consultas (frequência em config/telemedicine.php)
-Schedule::job(new SendAppointmentReminders())
-    ->cron(config('telemedicine.reminders.schedule_cron', '0 * * * *'));
+Schedule::job(new SendAppointmentReminders)
+    ->cron(config('telemedicine.reminders.schedule_cron', '0 * * * *'))
+    ->withoutOverlapping()
+    ->onOneServer();
+
+// Videochamada — iniciar automaticamente consultas na janela de tempo
+Schedule::job(new AutoStartVideoCall)
+    ->everyMinute()
+    ->withoutOverlapping()
+    ->onOneServer();
+
+// Manutenção — marcar consultas vencidas como no_show
+Schedule::job(new MarkNoShowAppointments)
+    ->cron(config('telemedicine.maintenance.no_show_cron', '*/5 * * * *'))
+    ->withoutOverlapping()
+    ->onOneServer();
+
+// Manutenção — encerrar consultas in_progress presas além da janela
+Schedule::job(new EndStuckInProgressAppointments)
+    ->cron(config('telemedicine.maintenance.stuck_in_progress_cron', '*/5 * * * *'))
+    ->withoutOverlapping()
+    ->onOneServer();
+
+// Videochamada — encerrar salas scheduled fora da janela
+Schedule::job(new EndScheduledVideoCalls)
+    ->everyMinute()
+    ->withoutOverlapping()
+    ->onOneServer();
+
+// Manutenção — finalizar chamadas ad-hoc presas/zumbis
+Schedule::job(new EndZombieVideoCalls)
+    ->cron(config('telemedicine.maintenance.video_zombie_cleanup_cron', '*/5 * * * *'))
+    ->withoutOverlapping()
+    ->onOneServer();
+
+// Manutenção — limpar locks Redis órfãos configurados
+Schedule::job(new CleanExpiredRedisLocks)
+    ->cron(config('telemedicine.maintenance.redis_lock_cleanup_cron', '*/15 * * * *'))
+    ->withoutOverlapping()
+    ->onOneServer();
+
+// Interoperabilidade — sync de resultados de exames (pull de laboratórios)
+Schedule::job(new SyncExamResults)
+    ->cron(config('integrations.sync.exam_results_cron', '*/15 * * * *'))
+    ->withoutOverlapping()
+    ->onOneServer();
+
+// Interoperabilidade — processar fila de retry
+Schedule::job(new ProcessIntegrationQueue)
+    ->cron(config('integrations.sync.retry_queue_cron', '*/5 * * * *'))
+    ->withoutOverlapping()
+    ->onOneServer();
+
+// Storage — healthcheck por domínio para monitoramento operacional
+Schedule::command('storage:health-check --fail-on-error')
+    ->cron(config('telemedicine.storage.healthcheck_cron', '*/5 * * * *'))
+    ->withoutOverlapping()
+    ->onOneServer();
+
+// Storage — limpeza automática por retenção (inicialmente lgpd_exports=7 dias)
+Schedule::command('storage:cleanup-expired')
+    ->cron(config('telemedicine.storage.retention_cleanup_cron', '0 2 * * *'))
+    ->withoutOverlapping()
+    ->onOneServer();

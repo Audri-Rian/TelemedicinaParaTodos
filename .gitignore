@@ -20,8 +20,19 @@ Homestead.yaml
 npm-debug.log
 yarn-error.log
 /auth.json
+/.credenciais
 /.fleet
 /.idea
 /.nova
 /.vscode
 /.zed
+
+mediasoup-server/
+tools/mediasoup-test-client/
+
+# Claude Code — local state
+.claude/settings.local.json
+.claude/projects/
+
+# ESLint cache
+.eslintcache

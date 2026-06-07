@@ -12,11 +12,11 @@ services:
       MYSQL_PASSWORD: secret
       MYSQL_ROOT_PASSWORD: root_secret
     ports:
-      - "3306:3306"
+      - '3306:3306'
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot_secret"]
+      test: ['CMD', 'mysqladmin', 'ping', '-h', 'localhost', '-u', 'root', '-proot_secret']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -34,11 +34,11 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: secret
     ports:
-      - "5432:5432"
+      - '5432:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -51,11 +51,11 @@ services:
     container_name: telemedicina_redis
     restart: always
     ports:
-      - "6379:6379"
+      - '6379:6379'
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ['CMD', 'redis-cli', 'ping']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -72,15 +72,53 @@ services:
       RABBITMQ_DEFAULT_PASS: secret
       RABBITMQ_DEFAULT_VHOST: /
     ports:
-      - "5672:5672"
-      - "15672:15672"
+      - '5672:5672'
+      - '15672:15672'
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "check_running"]
+      test: ['CMD', 'rabbitmq-diagnostics', 'check_running']
       interval: 10s
       timeout: 5s
       retries: 5
+
+  # ===================================
+  # MinIO (S3 local)
+  # ===================================
+  minio:
+    image: minio/minio:latest
+    container_name: telemedicina_minio
+    restart: always
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+
+  minio-init:
+    image: minio/mc:latest
+    container_name: telemedicina_minio_init
+    depends_on:
+      - minio
+    restart: 'no'
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      MINIO_APP_USER: ${MINIO_APP_USER:-telemedicina-app}
+      MINIO_APP_PASSWORD: ${MINIO_APP_PASSWORD:-telemedicina-app-secret}
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set local http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD}; do sleep 2; done;
+      mc mb --ignore-existing local/telemedicina-private;
+      mc mb --ignore-existing local/telemedicina-public;
+      mc anonymous set download local/telemedicina-public;
+      mc admin user add local $${MINIO_APP_USER} $${MINIO_APP_PASSWORD} || true;
+      mc admin policy attach local readwrite --user $${MINIO_APP_USER} || true;
+      "
 
   # ===================================
   # Aplicação Laravel (PHP-FPM)
@@ -102,7 +140,7 @@ services:
       - .:/var/www/html
     environment:
       APP_ENV: local
-      APP_DEBUG: "true"
+      APP_DEBUG: 'true'
       APP_KEY: base64:Vr23j63EFvgERAmlx3eUK4dwSNdCrvmyeYMerRPUD5s=
       APP_URL: http://localhost
 
@@ -139,15 +177,21 @@ services:
       SESSION_LIFETIME: 120
 
       # Reverb (WebSocket) — cliente conecta em REVERB_HOST:REVERB_PORT (ex. localhost:8080)
-      BROADCAST_CONNECTION: reverb
-      REVERB_APP_ID: telemedicina-app
-      REVERB_APP_KEY: telemedicina-key
-      REVERB_APP_SECRET: telemedicina-secret
-      REVERB_HOST: localhost
-      REVERB_PORT: 8080
-      REVERB_SCHEME: http
-      REVERB_SERVER_HOST: 0.0.0.0
-      REVERB_SERVER_PORT: 8080
+      BROADCAST_CONNECTION: ${BROADCAST_CONNECTION:-reverb}
+      REVERB_APP_ID: ${REVERB_APP_ID:-telemedicina-app}
+      REVERB_APP_KEY: ${REVERB_APP_KEY:-telemedicina-key}
+      REVERB_APP_SECRET: ${REVERB_APP_SECRET:-telemedicina-secret}
+      REVERB_HOST: ${REVERB_HOST:-localhost}
+      REVERB_PORT: ${REVERB_PORT:-8080}
+      REVERB_SCHEME: ${REVERB_SCHEME:-http}
+      REVERB_SERVER_HOST: ${REVERB_SERVER_HOST:-0.0.0.0}
+      REVERB_SERVER_PORT: ${REVERB_SERVER_PORT:-8080}
+
+      # SFU MediaSoup
+      SFU_HTTP_URL: ${SFU_HTTP_URL:-}
+      SFU_WS_URL: ${SFU_WS_URL:-}
+      SFU_JWT_SECRET: ${SFU_JWT_SECRET:-}
+      SFU_API_SECRET: ${SFU_API_SECRET:-}
 
     command: >
       sh -c "php artisan migrate --force && exec php-fpm"
@@ -169,21 +213,21 @@ services:
     volumes:
       - .:/var/www/html
     environment:
-      APP_ENV: local
-      APP_KEY: base64:Vr23j63EFvgERAmlx3eUK4dwSNdCrvmyeYMerRPUD5s=
-      REVERB_SERVER_HOST: 0.0.0.0
-      REVERB_SERVER_PORT: 8080
-      REVERB_APP_ID: telemedicina-app
-      REVERB_APP_KEY: telemedicina-key
-      REVERB_APP_SECRET: telemedicina-secret
-      REVERB_HOST: localhost
-      REVERB_PORT: 8080
-      REVERB_SCHEME: http
+      APP_ENV: ${APP_ENV:-local}
+      APP_KEY: ${APP_KEY:-base64:Vr23j63EFvgERAmlx3eUK4dwSNdCrvmyeYMerRPUD5s=}
+      REVERB_SERVER_HOST: ${REVERB_SERVER_HOST:-0.0.0.0}
+      REVERB_SERVER_PORT: ${REVERB_SERVER_PORT:-8080}
+      REVERB_APP_ID: ${REVERB_APP_ID:-telemedicina-app}
+      REVERB_APP_KEY: ${REVERB_APP_KEY:-telemedicina-key}
+      REVERB_APP_SECRET: ${REVERB_APP_SECRET:-telemedicina-secret}
+      REVERB_HOST: ${REVERB_HOST:-localhost}
+      REVERB_PORT: ${REVERB_PORT:-8080}
+      REVERB_SCHEME: ${REVERB_SCHEME:-http}
       REDIS_HOST: redis
       REDIS_PORT: 6379
     command: php artisan reverb:start
     ports:
-      - "8080:8080"
+      - '${REVERB_SERVER_PORT:-8080}:${REVERB_SERVER_PORT:-8080}'
 
   # ===================================
   # Nginx (porta 80 → proxy para PHP-FPM)
@@ -193,7 +237,7 @@ services:
     container_name: telemedicina_nginx
     restart: always
     ports:
-      - "80:80"
+      - '80:80'
     volumes:
       - .:/var/www/html:ro
       - ./docker/nginx/conf.d:/etc/nginx/conf.d:ro
@@ -208,4 +252,6 @@ volumes:
   redis_data:
     driver: local
   rabbitmq_data:
+    driver: local
+  minio_data:
     driver: local

@@ -10,17 +10,19 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
-use Inertia\Inertia;
-use Inertia\Response;
 
 class RegisteredUserController extends Controller
 {
     /**
-     * Show the registration page.
+     * Redireciona para a página de registro de paciente.
+     *
+     * A rota genérica /register foi mantida para retrocompatibilidade
+     * (links externos, redes sociais), mas o fluxo padrão hoje é o de
+     * pacientes. Médicos devem usar /register/doctor diretamente.
      */
-    public function create(): Response
+    public function create(): RedirectResponse
     {
-        return Inertia::render('auth/RegisterSelect');
+        return to_route('register.patient');
     }
 
     /**

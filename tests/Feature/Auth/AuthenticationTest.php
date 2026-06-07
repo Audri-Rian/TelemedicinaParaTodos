@@ -18,6 +18,22 @@ class AuthenticationTest extends TestCase
         $response->assertStatus(200);
     }
 
+    public function test_login_screen_stores_safe_redirect_query_as_intended_url(): void
+    {
+        $this->get('/login?redirect='.rawurlencode('/api/documentation'))
+            ->assertStatus(200);
+
+        $this->assertSame('/api/documentation', session('url.intended'));
+    }
+
+    public function test_login_screen_ignores_open_redirect_in_redirect_query(): void
+    {
+        $this->get('/login?redirect='.rawurlencode('//evil.example/phish'))
+            ->assertStatus(200);
+
+        $this->assertFalse(session()->has('url.intended'));
+    }
+
     public function test_users_can_authenticate_using_the_login_screen()
     {
         $doctor = Doctor::factory()->create();

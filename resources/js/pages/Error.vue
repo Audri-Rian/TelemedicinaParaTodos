@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import { Link, usePage } from '@inertiajs/vue3';
-import { Button } from '@/components/ui/button';
 import AppLogoIcon from '@/components/AppLogoIcon.vue';
-import { home } from '@/routes';
+import { Button } from '@/components/ui/button';
 import { useAuth, useRoleRoutes } from '@/composables/auth';
-import { Home, ArrowLeft, MessageCircle, Search, Calendar, Heart } from 'lucide-vue-next';
+import { home, login } from '@/routes';
 import badDoctorImage from '@images/baddoctor.png';
+import { Link, usePage } from '@inertiajs/vue3';
+import { ArrowLeft, Calendar, Heart, Home, LogIn, MessageCircle, Search } from 'lucide-vue-next';
+import { computed } from 'vue';
 
 const page = usePage();
 const { isAuthenticated } = useAuth();
@@ -21,17 +21,26 @@ const message = computed(() => (page.props as any).message || 'Algo deu errado')
 
 // Configurações por tipo de erro
 const errorConfig = computed(() => {
-    const configs: Record<number, {
-        title: string;
-        description: string;
-        icon: string;
-        color: string;
-    }> = {
+    const configs: Record<
+        number,
+        {
+            title: string;
+            description: string;
+            icon: string;
+            color: string;
+        }
+    > = {
         404: {
             title: 'Ops! Página não encontrada 😢',
             description: 'Não conseguimos encontrar a página que você procurava. Ela pode ter sido movida ou removida.',
             icon: '🔍',
             color: 'text-blue-600',
+        },
+        401: {
+            title: 'Autenticação necessária',
+            description: 'Você precisa estar autenticado para acessar este recurso. Faça login para continuar.',
+            icon: '🔐',
+            color: 'text-amber-600',
         },
         403: {
             title: 'Acesso negado 🚫',
@@ -53,7 +62,8 @@ const errorConfig = computed(() => {
         },
         500: {
             title: 'Ops! Algo deu errado 😢',
-            description: 'Encontramos um problema técnico. Nossa equipe foi notificada e está trabalhando para resolver. Tente novamente em alguns instantes.',
+            description:
+                'Encontramos um problema técnico. Nossa equipe foi notificada e está trabalhando para resolver. Tente novamente em alguns instantes.',
             icon: '⚠️',
             color: 'text-red-600',
         },
@@ -71,6 +81,22 @@ const errorConfig = computed(() => {
 // Ações contextuais baseadas no tipo de usuário
 const quickActions = computed(() => {
     const actions = [];
+
+    if (status.value === 401 && !isAuthenticated.value) {
+        actions.push({
+            label: 'Fazer Login',
+            href: login().url,
+            icon: LogIn,
+            primary: true,
+        });
+        actions.push({
+            label: 'Voltar ao Início',
+            href: home().url,
+            icon: Home,
+        });
+
+        return actions;
+    }
 
     if (isAuthenticated.value) {
         actions.push({
@@ -97,7 +123,7 @@ const quickActions = computed(() => {
                     label: 'Meus Registros',
                     href: '/patient/medical-records',
                     icon: Heart,
-                }
+                },
             );
         }
 
@@ -113,7 +139,7 @@ const quickActions = computed(() => {
                     label: 'Mensagens',
                     href: '/doctor/messages',
                     icon: MessageCircle,
-                }
+                },
             );
         }
     } else {
@@ -148,70 +174,56 @@ const goBack = () => {
 </script>
 
 <template>
-    <div class="min-h-svh bg-gradient-to-br from-background via-background to-muted/20 relative overflow-hidden">
+    <div class="relative min-h-svh overflow-hidden bg-gradient-to-br from-background via-background to-muted/20">
         <!-- Elementos decorativos de fundo -->
-        <div class="absolute inset-0 overflow-hidden pointer-events-none">
-            <div
-                class="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl animate-pulse"
-            ></div>
-            <div
-                class="absolute bottom-1/4 right-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl animate-pulse"
-                style="animation-delay: 1s;"
-            ></div>
+        <div class="pointer-events-none absolute inset-0 overflow-hidden">
+            <div class="absolute top-1/4 left-1/4 h-96 w-96 animate-pulse rounded-full bg-primary/5 blur-3xl"></div>
+            <div class="absolute right-1/4 bottom-1/4 h-96 w-96 animate-pulse rounded-full bg-primary/5 blur-3xl" style="animation-delay: 1s"></div>
         </div>
         <!-- Header com logo -->
-        <div class="absolute left-4 md:left-8 top-4 md:top-8 z-10">
-            <Link
-                :href="home().url"
-                class="group flex items-center gap-2 md:gap-4 font-medium transition-all duration-300 hover:scale-105"
-            >
+        <div class="absolute top-4 left-4 z-10 md:top-8 md:left-8">
+            <Link :href="home().url" class="group flex items-center gap-2 font-medium transition-all duration-300 hover:scale-105 md:gap-4">
                 <div
-                    class="flex h-12 w-12 md:h-14 md:w-18 items-center justify-center rounded-lg md:rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 shadow-lg backdrop-blur-sm border border-white/20 group-hover:shadow-xl group-hover:from-primary/30 group-hover:to-primary/20 transition-all duration-300"
+                    class="flex h-12 w-12 items-center justify-center rounded-lg border border-white/20 bg-gradient-to-br from-primary/20 to-primary/10 shadow-lg backdrop-blur-sm transition-all duration-300 group-hover:from-primary/30 group-hover:to-primary/20 group-hover:shadow-xl md:h-14 md:w-18 md:rounded-xl"
                 >
-                    <AppLogoIcon
-                        class="fill-current text-primary group-hover:text-primary/90 transition-colors duration-300"
-                    />
+                    <AppLogoIcon class="fill-current text-primary transition-colors duration-300 group-hover:text-primary/90" />
                 </div>
                 <div class="flex flex-col">
-                    <span
-                        class="text-sm md:text-xl font-bold text-gray-800 group-hover:text-primary transition-colors duration-300"
-                    >
+                    <span class="text-sm font-bold text-gray-800 transition-colors duration-300 group-hover:text-primary md:text-xl">
                         Telemedicina para Todos
                     </span>
-                    <span class="text-xs text-gray-500 font-medium hidden md:block">
-                        Cuidando da sua saúde
-                    </span>
+                    <span class="hidden text-xs font-medium text-gray-500 md:block"> Cuidando da sua saúde </span>
                 </div>
             </Link>
         </div>
 
         <!-- Conteúdo principal centralizado -->
         <div class="flex min-h-svh flex-col items-center justify-center gap-8 p-6 md:p-10">
-            <div class="w-full max-w-4xl mx-auto text-center space-y-6">
+            <div class="mx-auto w-full max-w-4xl space-y-6 text-center">
                 <!-- Imagem e código do erro lado a lado -->
-                <div class="flex flex-col lg:flex-row items-center justify-center gap-8 lg:gap-12">
+                <div class="flex flex-col items-center justify-center gap-8 lg:flex-row lg:gap-12">
                     <!-- Imagem do médico -->
                     <div class="relative flex-shrink-0">
                         <div class="relative">
                             <!-- Gradiente de fundo animado -->
                             <div
-                                class="absolute inset-0 bg-gradient-to-br from-primary/20 via-primary/10 to-primary/5 rounded-full blur-3xl animate-pulse"
+                                class="absolute inset-0 animate-pulse rounded-full bg-gradient-to-br from-primary/20 via-primary/10 to-primary/5 blur-3xl"
                             ></div>
-                            
+
                             <!-- Container da imagem com efeitos visuais -->
                             <div
-                                class="relative z-10 flex items-center justify-center p-4 md:p-6 rounded-full bg-gradient-to-br from-muted/50 to-muted/30 backdrop-blur-sm border-2 border-dashed border-muted-foreground/20 shadow-lg"
+                                class="relative z-10 flex items-center justify-center rounded-full border-2 border-dashed border-muted-foreground/20 bg-gradient-to-br from-muted/50 to-muted/30 p-4 shadow-lg backdrop-blur-sm md:p-6"
                             >
                                 <img
                                     :src="badDoctorImage"
                                     alt="Erro"
-                                    class="w-48 h-48 md:w-64 md:h-64 lg:w-72 lg:h-72 object-contain drop-shadow-2xl animate-bounce-slow"
+                                    class="animate-bounce-slow h-48 w-48 object-contain drop-shadow-2xl md:h-64 md:w-64 lg:h-72 lg:w-72"
                                 />
                             </div>
-                            
+
                             <!-- Decorativo: ícone pequeno no canto -->
                             <div
-                                class="absolute -top-4 -right-4 w-16 h-16 md:w-20 md:h-20 flex items-center justify-center rounded-full bg-gradient-to-br from-destructive/20 to-destructive/10 backdrop-blur-sm border-2 border-destructive/20 shadow-lg"
+                                class="absolute -top-4 -right-4 flex h-16 w-16 items-center justify-center rounded-full border-2 border-destructive/20 bg-gradient-to-br from-destructive/20 to-destructive/10 shadow-lg backdrop-blur-sm md:h-20 md:w-20"
                             >
                                 <span class="text-2xl md:text-3xl">{{ errorConfig.icon }}</span>
                             </div>
@@ -222,14 +234,14 @@ const goBack = () => {
                     <div class="flex-1 space-y-4 text-center lg:text-left">
                         <div class="space-y-2">
                             <h1
-                                class="text-6xl md:text-8xl lg:text-9xl font-bold bg-gradient-to-r from-primary via-primary/80 to-primary/60 bg-clip-text text-transparent leading-none"
+                                class="bg-gradient-to-r from-primary via-primary/80 to-primary/60 bg-clip-text text-6xl leading-none font-bold text-transparent md:text-8xl lg:text-9xl"
                             >
                                 {{ status }}
                             </h1>
-                            <h2 class="text-2xl md:text-3xl lg:text-4xl font-bold text-foreground">
+                            <h2 class="text-2xl font-bold text-foreground md:text-3xl lg:text-4xl">
                                 {{ errorConfig.title }}
                             </h2>
-                            <p class="text-base md:text-lg lg:text-xl text-muted-foreground max-w-lg mx-auto lg:mx-0">
+                            <p class="mx-auto max-w-lg text-base text-muted-foreground md:text-lg lg:mx-0 lg:text-xl">
                                 {{ errorConfig.description }}
                             </p>
                         </div>
@@ -237,48 +249,28 @@ const goBack = () => {
                 </div>
 
                 <!-- Mensagem técnica opcional (apenas em desenvolvimento) -->
-                <div
-                    v-if="message && isDev"
-                    class="mt-4 p-4 bg-muted/50 rounded-lg border border-dashed border-muted-foreground/20"
-                >
-                    <p class="text-sm text-muted-foreground font-mono break-all">
+                <div v-if="message && isDev" class="mt-4 rounded-lg border border-dashed border-muted-foreground/20 bg-muted/50 p-4">
+                    <p class="font-mono text-sm break-all text-muted-foreground">
                         {{ message }}
                     </p>
                 </div>
 
                 <!-- Ações rápidas -->
-                <div class="flex flex-col sm:flex-row gap-3 justify-center items-center pt-4">
+                <div class="flex flex-col items-center justify-center gap-3 pt-4 sm:flex-row">
                     <template v-for="(action, index) in quickActions" :key="index">
-                        <Button
-                            v-if="index === 0 && action.primary"
-                            :href="action.href"
-                            as-child
-                            size="lg"
-                        >
+                        <Button v-if="index === 0 && action.primary" :href="action.href" as-child size="lg">
                             <Link>
                                 <component :is="action.icon" class="size-4" />
                                 {{ action.label }}
                             </Link>
                         </Button>
-                        <Button
-                            v-else-if="index === 0"
-                            :href="action.href"
-                            as-child
-                            variant="default"
-                            size="lg"
-                        >
+                        <Button v-else-if="index === 0" :href="action.href" as-child variant="default" size="lg">
                             <Link>
                                 <component :is="action.icon" class="size-4" />
                                 {{ action.label }}
                             </Link>
                         </Button>
-                        <Button
-                            v-else
-                            :href="action.href"
-                            as-child
-                            variant="outline"
-                            size="lg"
-                        >
+                        <Button v-else :href="action.href" as-child variant="outline" size="lg">
                             <Link>
                                 <component :is="action.icon" class="size-4" />
                                 {{ action.label }}
@@ -286,22 +278,15 @@ const goBack = () => {
                         </Button>
                     </template>
 
-                    <Button
-                        v-if="canGoBack"
-                        @click="goBack"
-                        variant="ghost"
-                        size="lg"
-                    >
+                    <Button v-if="canGoBack" @click="goBack" variant="ghost" size="lg">
                         <ArrowLeft class="size-4" />
                         Voltar
                     </Button>
                 </div>
 
                 <!-- Link de suporte -->
-                <div class="pt-8 border-t border-border">
-                    <p class="text-sm text-muted-foreground mb-3">
-                        Precisa de ajuda? Entre em contato com nosso suporte
-                    </p>
+                <div class="border-t border-border pt-8">
+                    <p class="mb-3 text-sm text-muted-foreground">Precisa de ajuda? Entre em contato com nosso suporte</p>
                     <Button variant="link" size="sm" as-child>
                         <Link href="mailto:suporte@telemedicinaparatodos.com.br">
                             <MessageCircle class="size-4" />
@@ -316,7 +301,8 @@ const goBack = () => {
 
 <style scoped>
 @keyframes bounce-slow {
-    0%, 100% {
+    0%,
+    100% {
         transform: translateY(0);
     }
     50% {
@@ -328,4 +314,3 @@ const goBack = () => {
     animation: bounce-slow 3s ease-in-out infinite;
 }
 </style>
-

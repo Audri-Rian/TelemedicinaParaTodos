@@ -1,7 +1,7 @@
 // Uso: node scripts/generate-token.js
 // Múltiplos usuários: ROOM_ID=<id> TEST_USER_ID=user_2 node scripts/generate-token.js
 // Requer: npm install jsonwebtoken (fetch nativo no Node 18+)
-const jwt = require('jsonwebtoken');
+import jwt from 'jsonwebtoken';
 
 const HTTP_URL = process.env.SFU_HTTP_URL || 'http://127.0.0.1:3000';
 const WS_URL = process.env.SFU_WS_URL || 'ws://127.0.0.1:4443';

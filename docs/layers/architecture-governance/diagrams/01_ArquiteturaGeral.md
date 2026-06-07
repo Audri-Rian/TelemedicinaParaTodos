@@ -11,7 +11,7 @@ graph TB
         B[Componentes UI]
         C[Composables]
         D[Laravel Echo]
-        E[PeerJS WebRTC]
+        E[mediasoup-client WebRTC]
     end
 
     subgraph "Backend - Laravel 12"
@@ -27,6 +27,7 @@ graph TB
     subgraph "Comunicação em Tempo Real"
         M[Laravel Reverb]
         N[WebSocket Server]
+        T[MediaSoup SFU]
     end
 
     subgraph "Banco de Dados"
@@ -44,7 +45,7 @@ graph TB
     B --> A
     C --> A
     D --> M
-    E --> M
+    E --> T
     F --> G
     G --> H
     H --> O
@@ -54,6 +55,7 @@ graph TB
     L --> F
     M --> N
     N --> D
+    T --> E
     G --> Q
     G --> R
     G --> S
@@ -71,26 +73,31 @@ graph TB
 ## Camadas da Arquitetura
 
 ### 1. Camada de Apresentação (Frontend)
+
 - **Vue.js 3** com Composition API
 - **Inertia.js** para integração SPA
 - **Tailwind CSS 4** para estilização
 - **Reka UI** como biblioteca de componentes
 - **Laravel Echo** para eventos em tempo real
-- **PeerJS** para videoconferência WebRTC
+- **mediasoup-client** para videoconferência WebRTC via SFU
 
 ### 2. Camada de Aplicação (Backend)
+
 - **Controllers**: Recebem requisições HTTP e retornam respostas Inertia
 - **Services**: Contêm a lógica de negócio principal
 - **Models**: Entidades de domínio com Eloquent ORM
 - **Policies**: Autorização e permissões
 
 ### 3. Camada de Infraestrutura
+
 - **Laravel Reverb**: Servidor WebSocket para comunicação em tempo real
+- **MediaSoup SFU**: Servidor de mídia e sinalização técnica WebRTC
 - **Queue System**: Processamento assíncrono de jobs
 - **Cache**: Redis para cache e sessões
 - **Storage**: Sistema de arquivos para documentos médicos
 
 ### 4. Camada de Dados
+
 - **MySQL/PostgreSQL**: Banco de dados relacional principal
 - **Redis**: Cache e filas de processamento
 
@@ -110,7 +117,8 @@ graph TB
 3. **WebSocket**: Cliente recebe via Laravel Echo
 4. **Atualização**: Interface é atualizada automaticamente
 
+Para videochamadas, Reverb propaga apenas eventos de negócio. A mídia e a negociação técnica WebRTC usam o WebSocket do SFU MediaSoup.
+
 ---
 
-*Última atualização: Janeiro 2025*
-
+_Última atualização: Janeiro 2025_

@@ -123,6 +123,10 @@ return [
         // Janela de dias para disponibilidade/agendamento de médicos em telas de agenda.
         // Usado em: AvailabilityTimelineService, ScheduleConsultationController, DoctorPerfilController.
         'timeline_window_days' => (int) env('AVAILABILITY_TIMELINE_WINDOW_DAYS', 30),
+
+        // Exige que o médico tenha valor da consulta definido para criar novos slots.
+        // Usado em: StoreAvailabilitySlotRequest e UI de ScheduleManagement.
+        'require_consultation_fee_to_create_slot' => (bool) env('AVAILABILITY_REQUIRE_CONSULTATION_FEE', true),
     ],
 
     /*
@@ -136,14 +140,38 @@ return [
     */
 
     'video_call' => [
-        // Minutos de inatividade para encerrar sala "zumbi".
-        'room_inactive_minutes' => env('VIDEO_ROOM_INACTIVE_MINUTES', 60),
+        // Minutos ANTES do scheduled_at para abrir a sala (chamada agendada).
+        // Unificado com appointment.lead_minutes — agenda e sala abrem juntos.
+        'window_lead_minutes' => (int) env('VIDEO_CALL_WINDOW_LEAD_MINUTES', 10),
 
-        // Duração máxima de uma sala ativa (minutos). Evita salas eternas.
-        'room_max_duration_minutes' => env('VIDEO_ROOM_MAX_DURATION_MINUTES', 120),
+        // Minutos APÓS o scheduled_at para encerrar a sala (chamada agendada).
+        'window_trailing_minutes' => (int) env('VIDEO_CALL_WINDOW_TRAILING_MINUTES', 10),
 
-        // Janela para iniciar videoconferência: usa appointment.lead_minutes e trailing_minutes.
-        // DoctorConsultationsController, PatientVideoCallController.
+        // Duração máxima em minutos de chamadas ad-hoc. EndZombieVideoCalls usa este valor.
+        'ad_hoc_max_duration_minutes' => (int) env('VIDEO_CALL_ADHOC_MAX_MINUTES', 60),
+
+        // Janela de elegibilidade ad-hoc: paciente só liga se tiver consulta nos últimos N dias.
+        'ad_hoc_relationship_days' => (int) env('VIDEO_CALL_ADHOC_RELATIONSHIP_DAYS', 7),
+
+        // Minutos de inatividade para encerrar sala "zumbi" (ad-hoc apenas).
+        'room_inactive_minutes' => (int) env('VIDEO_ROOM_INACTIVE_MINUTES', 60),
+
+        // Duração máxima de uma sala ativa (minutos). Evita salas eternas (ad-hoc fallback).
+        'room_max_duration_minutes' => (int) env('VIDEO_ROOM_MAX_DURATION_MINUTES', 120),
+
+        // Janela máxima (minutos após scheduled_at) para entrar em consulta in_progress.
+        // Após a janela: join bloqueado e consulta elegível para auto-encerramento
+        // (EndStuckInProgressAppointments). Alinhado a room_max_duration_minutes.
+        'in_progress_max_minutes' => (int) env('VIDEO_CALL_IN_PROGRESS_MAX_MINUTES', 120),
+
+        // TTL do JWT de acesso à sala de vídeo (minutos). CallManagerService::generateRoomToken.
+        'token_ttl_minutes' => (int) env('VIDEO_CALL_TOKEN_TTL_MINUTES', 10),
+
+        // Habilita o módulo de videochamada. Exige SFU_JWT_SECRET quando true.
+        'enabled' => (bool) env('VIDEO_CALL_ENABLED', true),
+
+        // Exige healthcheck do SFU antes de aceitar chamadas (fail-closed). Provider=sfu apenas.
+        'require_sfu_health' => (bool) env('VIDEO_CALL_REQUIRE_SFU_HEALTH', true),
     ],
 
     /*
@@ -195,6 +223,105 @@ return [
 
         // Idade máxima (minutos) de locks órfãos para limpeza. T 11.5.
         'lock_cleanup_max_age_minutes' => env('LOCK_CLEANUP_MAX_AGE_MINUTES', 60),
+
+        // Tolerância após scheduled_at para marcar consulta como no_show.
+        'no_show_grace_minutes' => (int) env('NO_SHOW_GRACE_MINUTES', 15),
+
+        // Frequência das rotinas de manutenção operacional.
+        'no_show_cron' => env('NO_SHOW_CRON', '*/5 * * * *'),
+        'stuck_in_progress_cron' => env('STUCK_IN_PROGRESS_CRON', '*/5 * * * *'),
+        'video_zombie_cleanup_cron' => env('VIDEO_ZOMBIE_CLEANUP_CRON', '*/5 * * * *'),
+        'redis_lock_cleanup_cron' => env('REDIS_LOCK_CLEANUP_CRON', '*/15 * * * *'),
+
+        // Apenas locks com metadados próprios são elegíveis para limpeza.
+        'lock_key_patterns' => env('LOCK_KEY_PATTERNS')
+            ? array_map('trim', explode(',', env('LOCK_KEY_PATTERNS')))
+            : ['telemedicine:lock:*', 'appointment_lock:*', 'video_call_lock:*'],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Storage
+    |--------------------------------------------------------------------------
+    |
+    | Discos por tipo de arquivo. Use discos privados para dados médicos/LGPD.
+    |
+    */
+
+    'storage' => [
+        'public_images_disk' => env('PUBLIC_IMAGES_DISK', 'public'),
+        'healthcheck_cron' => env('STORAGE_HEALTHCHECK_CRON', '*/5 * * * *'),
+        'retention_cleanup_cron' => env('STORAGE_RETENTION_CLEANUP_CRON', '0 2 * * *'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | File Domains (Storage por domínio de arquivo)
+    |--------------------------------------------------------------------------
+    |
+    | Catálogo central para roteamento de arquivos por domínio de negócio.
+    | Cada domínio define disco, path base, visibilidade, retenção e healthcheck.
+    |
+    */
+    'file_domains' => [
+        'public_images' => [
+            'disk' => env('PUBLIC_IMAGES_DISK', 'public'),
+            'base_path' => env('FILE_DOMAIN_PUBLIC_IMAGES_PATH', 'public/images'),
+            'visibility' => 'public',
+            // Null = remoção apenas por ação de negócio (troca/remoção de avatar).
+            'retention_days' => null,
+            'healthcheck_enabled' => true,
+        ],
+        'medical_documents' => [
+            'disk' => env('MEDICAL_DOCUMENTS_DISK', env('MEDICAL_RECORDS_DISK', 'local')),
+            'base_path' => env('FILE_DOMAIN_MEDICAL_DOCUMENTS_PATH', 'medical/documents'),
+            'visibility' => 'private',
+            'retention_days' => null,
+            'healthcheck_enabled' => true,
+        ],
+        'lgpd_exports' => [
+            'disk' => env('LGPD_EXPORTS_DISK', env('MEDICAL_RECORDS_DISK', 'local')),
+            'base_path' => env('FILE_DOMAIN_LGPD_EXPORTS_PATH', 'lgpd/exports'),
+            'visibility' => 'private',
+            'retention_days' => (int) env('FILE_DOMAIN_LGPD_EXPORTS_RETENTION_DAYS', 7),
+            'healthcheck_enabled' => true,
+        ],
+        'prescriptions' => [
+            'disk' => env('PRESCRIPTIONS_DISK', env('MEDICAL_RECORDS_DISK', 'local')),
+            'base_path' => env('FILE_DOMAIN_PRESCRIPTIONS_PATH', 'medical/prescriptions'),
+            'visibility' => 'private',
+            'retention_days' => null,
+            'healthcheck_enabled' => true,
+        ],
+        'certificates' => [
+            'disk' => env('CERTIFICATES_DISK', env('MEDICAL_RECORDS_DISK', 'local')),
+            'base_path' => env('FILE_DOMAIN_CERTIFICATES_PATH', 'medical/certificates'),
+            'visibility' => 'private',
+            'retention_days' => null,
+            'healthcheck_enabled' => true,
+        ],
+        'chat_attachments' => [
+            'disk' => env('CHAT_ATTACHMENTS_DISK', env('MEDICAL_RECORDS_DISK', 'local')),
+            'base_path' => env('FILE_DOMAIN_CHAT_ATTACHMENTS_PATH', 'chat/attachments'),
+            'visibility' => 'private',
+            'retention_days' => null,
+            'healthcheck_enabled' => true,
+        ],
+        'integration_documents' => [
+            'disk' => env('INTEGRATION_DOCUMENTS_DISK', env('MEDICAL_RECORDS_DISK', 'local')),
+            'base_path' => env('FILE_DOMAIN_INTEGRATION_DOCUMENTS_PATH', 'integrations/documents'),
+            'visibility' => 'private',
+            'retention_days' => null,
+            'healthcheck_enabled' => true,
+        ],
+        'video_recordings' => [
+            'disk' => env('VIDEO_RECORDINGS_DISK', env('MEDICAL_RECORDS_DISK', 'local')),
+            'base_path' => env('FILE_DOMAIN_VIDEO_RECORDINGS_PATH', 'calls/recordings'),
+            'visibility' => 'private',
+            // Mantido sem expurgo automático no MVP; pronto para regra futura por contrato.
+            'retention_days' => null,
+            'healthcheck_enabled' => true,
+        ],
     ],
 
     /*
@@ -208,12 +335,28 @@ return [
     */
 
     'medical_records' => [
+        // Disco privado para documentos clínicos, prontuários, PDFs e uploads médicos.
+        'disk' => env('MEDICAL_RECORDS_DISK', env('MEDICAL_DOCUMENTS_DISK', 'local')),
+
+        // Disco privado para exportações de dados pessoais LGPD.
+        'lgpd_exports_disk' => env('LGPD_EXPORTS_DISK', env('MEDICAL_RECORDS_DISK', env('MEDICAL_DOCUMENTS_DISK', 'local'))),
+
         // Dias padrão de validade de prescrição quando valid_until não informado.
         // MedicalRecordService::createPrescription: now()->addDays(30).
         'prescription_default_validity_days' => (int) env('PRESCRIPTION_DEFAULT_VALIDITY_DAYS', 30),
 
         // Dias máximos permitidos em atestado médico. StoreMedicalCertificateRequest: max:60.
         'certificate_max_days' => (int) env('MEDICAL_CERTIFICATE_MAX_DAYS', 60),
+
+        // Janela (dias) de consultas completed elegíveis para vínculo de documento clínico
+        // (emissão retroativa — ex.: atestado pós-consulta). Q1 da spec de emissão.
+        'document_eligible_completed_days' => (int) env('DOCUMENT_ELIGIBLE_COMPLETED_DAYS', 30),
+
+        // Janela (dias) de relacionamento médico↔paciente para o hub de emissão de documentos.
+        // Filtra quais PACIENTES aparecem como elegíveis e governa a resolução automática
+        // de consulta (completed) quando o hub emite sem appointment_id. Convive com a
+        // janela de 30d acima — que segue valendo para vínculo explícito nas tabs/in-call.
+        'document_eligible_relationship_days' => (int) env('DOCUMENT_ELIGIBLE_RELATIONSHIP_DAYS', 10),
 
         // Limite de resultados em buscas de prontuário (performance).
         // MedicalRecordService::take(10) em algumas queries.
@@ -224,6 +367,10 @@ return [
 
         // Tamanho do código de verificação de atestado médico. MedicalRecordService::generateVerificationCode.
         'verification_code_length' => (int) env('MEDICAL_CERTIFICATE_VERIFICATION_CODE_LENGTH', 10),
+
+        // Conexão/fila usadas na geração assíncrona de exportação de prontuário.
+        'export_queue_connection' => env('MEDICAL_RECORD_EXPORT_QUEUE_CONNECTION', env('QUEUE_CONNECTION', 'database')),
+        'export_queue_name' => env('MEDICAL_RECORD_EXPORT_QUEUE_NAME', 'default'),
     ],
 
     /*
@@ -275,6 +422,15 @@ return [
         'list_limit' => env('NOTIFICATION_LIST_LIMIT', 10),
     ],
 
+    'push' => [
+        'enabled' => (bool) env('PUSH_ENABLED', false),
+        'vapid_public_key' => env('VAPID_PUBLIC_KEY'),
+        'vapid_private_key' => env('VAPID_PRIVATE_KEY'),
+        'vapid_subject' => env('VAPID_SUBJECT'),
+        'ttl_seconds' => (int) env('PUSH_TTL_SECONDS', 3600),
+        'timeout_seconds' => (int) env('PUSH_TIMEOUT_SECONDS', 10),
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Auth & Security
@@ -286,8 +442,16 @@ return [
     */
 
     'auth' => [
-        // Máximo de tentativas de login antes de bloquear (rate limit).
         'login_max_attempts' => (int) env('AUTH_LOGIN_MAX_ATTEMPTS', 5),
+
+        'two_factor' => [
+            'window' => (int) env('TWO_FACTOR_WINDOW', 1),
+            'recovery_code_count' => (int) env('TWO_FACTOR_RECOVERY_CODE_COUNT', 10),
+        ],
+
+        'social' => [
+            'enabled_for_patients' => (bool) env('SOCIAL_AUTH_ENABLED_FOR_PATIENTS', true),
+        ],
     ],
 
     /*
@@ -430,5 +594,59 @@ return [
         // Janela padrão em dias para geração de relatórios de acesso.
         // Usado em: DataAccessReportController.
         'report_window_days' => (int) env('LGPD_REPORT_WINDOW_DAYS', 30),
+        'access_report_max_logs' => (int) env('LGPD_ACCESS_REPORT_MAX_LOGS', 1000),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Digital Signature (CFM Res. 2.314/2022 — Art. 8, ICP-Brasil)
+    |--------------------------------------------------------------------------
+    |
+    | Driver de assinatura digital de prescrições e atestados.
+    |
+    | - 'null': dev/staging. Hash SHA-256 + verification_code aleatório.
+    |           NÃO TEM VALIDADE LEGAL CFM/ICP-Brasil.
+    | - 'icp_brasil': produção. Requer contrato com provedor (Soluti, Certisign,
+    |                 Safeweb) e implementação completa de IcpBrasilSignatureDriver.
+    |
+    | Ver: app/Services/Signatures/, app/Contracts/DigitalSignatureDriver.php
+    |
+    */
+
+    'signature' => [
+        // Driver de assinatura: 'null' (dev), 'a1_local' (prod A1 PFX), 'icp_brasil' (legado/stub).
+        // 'a1_local' usa PadesEmbedder + A1PdfSigner com certificado PFX local.
+        'driver' => env('SIGNATURE_DRIVER', 'null'),
+
+        // Gating de emissão: exige doctors.digital_signature_status = active para emitir
+        // Rx/atestado/exame (hub, tabs e in-call — checagem única na AppointmentPolicy).
+        // Default TRUE; a env existe apenas como botão de emergência para rollback.
+        'require_for_issuance' => (bool) env('SIGNATURE_REQUIRE_FOR_ISSUANCE', true),
+
+        // Configuração do driver A1 local (PAdES com certificado PFX/PKCS#12).
+        // NUNCA commitar o arquivo PFX nem a senha. Usar cofre (Vault, Secrets Manager).
+        'a1_pdf' => [
+            'pfx_path' => env('SIGNATURE_A1_PFX_PATH'),
+            'pfx_password' => env('SIGNATURE_A1_PFX_PASSWORD', ''),
+            'cert_fingerprint' => env('SIGNATURE_A1_CERT_FINGERPRINT'),
+            'trusted_ca_path' => env('SIGNATURE_A1_TRUSTED_CA_PATH'),
+            'require_doctor_name_match' => env('SIGNATURE_A1_REQUIRE_DOCTOR_NAME_MATCH', true),
+        ],
+
+        // Legado: parâmetros do driver icp_brasil (stub) — substituir pelo a1_pdf acima.
+        'icp_brasil' => [
+            'provider' => env('ICP_PROVIDER'),
+            'certificate_path' => env('ICP_CERT_PATH'),
+            'certificate_password' => env('ICP_CERT_PASSWORD'),
+            'api_endpoint' => env('ICP_API_ENDPOINT'),
+            'api_key' => env('ICP_API_KEY'),
+        ],
+
+        // URL base para link de verificação pública impresso no PDF.
+        // Ex.: https://app.example/verify/{code}
+        'verification_url_template' => env(
+            'SIGNATURE_VERIFICATION_URL_TEMPLATE',
+            '/verify/{code}',
+        ),
     ],
 ];

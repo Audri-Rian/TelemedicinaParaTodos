@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasClinicalVersioning;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -10,10 +11,15 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class ClinicalNote extends Model
 {
+    use HasClinicalVersioning;
+
     /** @use HasFactory<\Database\Factories\ClinicalNoteFactory> */
     use HasFactory;
+
     use HasUuids;
     use SoftDeletes;
+
+    protected array $versionedFields = ['title', 'content', 'is_private', 'category', 'tags'];
 
     protected $fillable = [
         'appointment_id',
@@ -36,9 +42,13 @@ class ClinicalNote extends Model
     ];
 
     public const CATEGORY_GENERAL = 'general';
+
     public const CATEGORY_DIAGNOSIS = 'diagnosis';
+
     public const CATEGORY_TREATMENT = 'treatment';
+
     public const CATEGORY_FOLLOW_UP = 'follow_up';
+
     public const CATEGORY_OTHER = 'other';
 
     public function appointment(): BelongsTo
@@ -61,5 +71,3 @@ class ClinicalNote extends Model
         return $this->belongsTo(self::class, 'parent_id');
     }
 }
-
-

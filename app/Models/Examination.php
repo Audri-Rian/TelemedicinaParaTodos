@@ -27,6 +27,11 @@ class Examination extends Model
         'attachment_url',
         'status',
         'metadata',
+        'partner_integration_id',
+        'external_id',
+        'external_accession',
+        'source',
+        'received_from_partner_at',
     ];
 
     protected $casts = [
@@ -34,6 +39,7 @@ class Examination extends Model
         'completed_at' => 'datetime',
         'results' => 'array',
         'metadata' => 'array',
+        'received_from_partner_at' => 'datetime',
     ];
 
     public const TYPE_LAB = 'lab';
@@ -44,6 +50,10 @@ class Examination extends Model
     public const STATUS_IN_PROGRESS = 'in_progress';
     public const STATUS_COMPLETED = 'completed';
     public const STATUS_CANCELLED = 'cancelled';
+
+    public const SOURCE_INTERNAL = 'internal';
+    public const SOURCE_INTEGRATION = 'integration';
+    public const SOURCE_MANUAL_UPLOAD = 'manual_upload';
 
     public function appointment(): BelongsTo
     {
@@ -58,5 +68,15 @@ class Examination extends Model
     public function patient(): BelongsTo
     {
         return $this->belongsTo(Patient::class);
+    }
+
+    public function partnerIntegration(): BelongsTo
+    {
+        return $this->belongsTo(PartnerIntegration::class);
+    }
+
+    public function isFromIntegration(): bool
+    {
+        return $this->source === self::SOURCE_INTEGRATION;
     }
 }

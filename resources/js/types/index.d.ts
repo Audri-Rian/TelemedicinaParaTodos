@@ -10,11 +10,27 @@ export interface BreadcrumbItem {
     href: string;
 }
 
+/** Item de submenu na sidebar (ex.: workspace com filhos). */
+export interface NavSubItem {
+    title: string;
+    href: NonNullable<InertiaLinkProps['href']>;
+    icon?: LucideIcon;
+}
+
 export interface NavItem {
     title: string;
     href: NonNullable<InertiaLinkProps['href']>;
     icon?: LucideIcon;
     isActive?: boolean;
+    /** Se definido, renderiza submenu indentado abaixo do item pai. */
+    children?: NavSubItem[];
+    /**
+     * Prefixo de URL para manter o pai destacado em qualquer subrota.
+     * Padrão: caminho do `href` do pai (ex.: /doctor/integrations).
+     */
+    activePathPrefix?: string;
+    /** ID para o tour de onboarding (ex.: "nav-dashboard"). Usado como data-tour no elemento. */
+    tourId?: string;
 }
 
 export type AppPageProps<T extends Record<string, unknown> = Record<string, unknown>> = T & {
@@ -25,13 +41,24 @@ export type AppPageProps<T extends Record<string, unknown> = Record<string, unkn
 };
 
 export interface User {
-    id: number;
+    id: string;
     name: string;
     email: string;
     avatar?: string;
     email_verified_at: string | null;
     created_at: string;
     updated_at: string;
+    /** Presente quando o controller compartilha explicitamente */
+    has_password?: boolean;
+    has_two_factor_enabled?: boolean;
+}
+
+export interface SocialAccount {
+    id: string;
+    provider: string;
+    provider_email: string | null;
+    avatar_url: string | null;
+    linked_at: string | null;
 }
 
 export type BreadcrumbItemType = BreadcrumbItem;

@@ -1,6 +1,6 @@
 # 💾 Modelo de Dados
 
-*Documento em: `docs/layers/persistence/database/` (Camada de Persistência)*
+_Documento em: `docs/layers/persistence/database/` (Camada de Persistência)_
 
 Esta pasta contém a documentação sobre a estrutura do banco de dados, relacionamentos e migrações.
 
@@ -26,6 +26,7 @@ Esta documentação define **como** os dados são estruturados e relacionados:
 ## 🏗️ Estrutura do Banco
 
 ### Entidades Principais
+
 - **Users** - Entidade base (polimórfica)
 - **Doctors** - Médicos cadastrados
 - **Patients** - Pacientes cadastrados
@@ -33,6 +34,7 @@ Esta documentação define **como** os dados são estruturados e relacionados:
 - **Specializations** - Especialidades médicas
 
 ### Entidades de Prontuário
+
 - **Prescriptions** - Prescrições médicas digitais
 - **Diagnoses** - Diagnósticos com CID-10
 - **Examinations** - Exames solicitados
@@ -43,18 +45,22 @@ Esta documentação define **como** os dados são estruturados e relacionados:
 - **MedicalRecordAuditLogs** - Logs de auditoria
 
 ### Entidades de Agenda
+
 - **ServiceLocations** - Locais de atendimento
 - **AvailabilitySlots** - Slots de disponibilidade
 - **BlockedDates** - Datas bloqueadas
 
 ### Entidades de Videoconferência
-- **VideoCallRooms** - Salas de videoconferência
-- **VideoCallEvents** - Eventos de videoconferência
+
+- **Calls** - Chamadas de vídeo de negócio
+- **Rooms** - Salas de mídia no SFU
 
 ### Entidades de Timeline
+
 - **TimelineEvents** - Eventos de timeline profissional
 
 ### Relacionamentos
+
 - **1:1** User ↔ Doctor/Patient
 - **1:N** Doctor ↔ Appointments, Prescriptions, Diagnoses, Examinations, ClinicalNotes, MedicalCertificates, VitalSigns, MedicalDocuments
 - **1:N** Patient ↔ Appointments, Prescriptions, Diagnoses, Examinations, ClinicalNotes, MedicalCertificates, VitalSigns, MedicalDocuments, MedicalRecordAuditLogs
@@ -71,5 +77,5 @@ Esta documentação define **como** os dados são estruturados e relacionados:
 
 ---
 
-*Última atualização: Janeiro 2025*
-*Versão: 2.0*
+_Última atualização: Janeiro 2025_
+_Versão: 2.0_

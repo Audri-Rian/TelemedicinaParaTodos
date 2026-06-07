@@ -8,13 +8,13 @@ class StorePrescriptionRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        return $this->user()?->doctor !== null;
     }
 
     public function rules(): array
     {
         return [
-            'appointment_id' => ['required', 'exists:appointments,id'],
+            'appointment_id' => ['nullable', 'exists:appointments,id'],
             'medications' => ['required', 'array', 'min:1'],
             'medications.*.name' => ['required', 'string', 'max:255'],
             'medications.*.dosage' => ['nullable', 'string', 'max:255'],
@@ -24,5 +24,3 @@ class StorePrescriptionRequest extends FormRequest
         ];
     }
 }
-
-

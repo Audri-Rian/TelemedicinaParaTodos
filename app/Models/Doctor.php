@@ -2,14 +2,14 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Doctor extends Model
 {
@@ -23,8 +23,11 @@ class Doctor extends Model
         'license_number',
         'license_expiry_date',
         'status',
+        'digital_signature_status',
         'availability_schedule',
         'consultation_fee',
+        'cns',
+        'cbo',
     ];
 
     protected $casts = [
@@ -37,8 +40,21 @@ class Doctor extends Model
 
     // Constantes para status
     public const STATUS_ACTIVE = 'active';
+
     public const STATUS_INACTIVE = 'inactive';
+
     public const STATUS_SUSPENDED = 'suspended';
+
+    // Constantes para status de assinatura digital
+    public const SIGNATURE_NOT_INTEGRATED = 'not_integrated';
+
+    public const SIGNATURE_PENDING = 'pending';
+
+    public const SIGNATURE_ACTIVE = 'active';
+
+    public const SIGNATURE_EXPIRED = 'expired';
+
+    public const SIGNATURE_REVOKED = 'revoked';
 
     // Relacionamento com User
     public function user()
@@ -50,7 +66,7 @@ class Doctor extends Model
     public function specializations()
     {
         return $this->belongsToMany(Specialization::class, 'doctor_specialization')
-                    ->withTimestamps();
+            ->withTimestamps();
     }
 
     // Relacionamento com ServiceLocation
@@ -111,6 +127,21 @@ class Doctor extends Model
         return $this->hasMany(\App\Models\Doctor\BlockedDate::class, 'doctor_id');
     }
 
+    public function partnerIntegrations(): BelongsToMany
+    {
+        return $this->belongsToMany(PartnerIntegration::class, 'doctor_partner_integrations')
+            ->withPivot([
+                'integration_mode',
+                'perm_send_orders',
+                'perm_receive_results',
+                'perm_webhook',
+                'perm_patient_data',
+                'connected_by',
+                'connected_at',
+            ])
+            ->withTimestamps();
+    }
+
     // Scopes para filtros
     public function scopeActive(Builder $query): void
     {
@@ -131,14 +162,14 @@ class Doctor extends Model
     public function scopeBySpecializationName(Builder $query, string $specializationName): void
     {
         $query->whereHas('specializations', function ($specializationQuery) use ($specializationName) {
-            $specializationQuery->where('name', 'like', '%' . $specializationName . '%');
+            $specializationQuery->where('name', 'like', '%'.$specializationName.'%');
         });
     }
 
     public function scopeAvailable(Builder $query): void
     {
         $query->where('status', self::STATUS_ACTIVE)
-              ->whereNotNull('availability_schedule');
+            ->whereNotNull('availability_schedule');
     }
 
     // Métodos de verificação
@@ -157,6 +188,11 @@ class Doctor extends Model
         return $this->specializations()->exists();
     }
 
+    public function hasActiveDigitalSignature(): bool
+    {
+        return $this->digital_signature_status === self::SIGNATURE_ACTIVE;
+    }
+
     public function isLicenseExpired(): bool
     {
         return $this->license_expiry_date && $this->license_expiry_date < now();
@@ -164,9 +200,9 @@ class Doctor extends Model
 
     public function isAvailable(): bool
     {
-        return $this->isActive() && 
-               $this->availability_schedule && 
-               !$this->isLicenseExpired();
+        return $this->isActive() &&
+               $this->availability_schedule &&
+               ! $this->isLicenseExpired();
     }
 
     // Accessors
@@ -177,14 +213,14 @@ class Doctor extends Model
 
     public function getFormattedConsultationFeeAttribute(): string
     {
-        return $this->consultation_fee 
-            ? 'R$ ' . number_format((float) $this->consultation_fee, 2, ',', '.')
+        return $this->consultation_fee
+            ? 'R$ '.number_format((float) $this->consultation_fee, 2, ',', '.')
             : 'Não informado';
     }
 
     public function getFormattedLicenseExpiryDateAttribute(): string
     {
-        return $this->license_expiry_date 
+        return $this->license_expiry_date
             ? Carbon::parse($this->license_expiry_date)->format('d/m/Y')
             : 'Não informado';
     }
@@ -198,6 +234,16 @@ class Doctor extends Model
     public function setCrmAttribute($value): void
     {
         $this->attributes['crm'] = strtoupper(trim($value));
+    }
+
+    public function setCnsAttribute($value): void
+    {
+        $this->attributes['cns'] = $value ? strtoupper(trim($value)) : null;
+    }
+
+    public function setCboAttribute($value): void
+    {
+        $this->attributes['cbo'] = $value ? strtoupper(trim($value)) : null;
     }
 
     // Validações
@@ -216,7 +262,7 @@ class Doctor extends Model
         parent::boot();
 
         static::creating(function ($doctor) {
-            if (!$doctor->status) {
+            if (! $doctor->status) {
                 $doctor->status = self::STATUS_ACTIVE;
             }
         });

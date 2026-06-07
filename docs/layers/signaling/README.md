@@ -1,76 +1,81 @@
-## 🔔 Camada de Sinalização (Signaling Layer)
+## Camada de Sinalização (Signaling Layer)
 
-Responsável por **orquestrar comunicação em tempo real**, sem trafegar mídia diretamente. Aqui vivem:
+Responsável por orquestrar comunicação em tempo real sem trafegar mídia diretamente.
 
-- Eventos de videoconferência (pedido/aceite/estado da chamada).
-- Mensagens em tempo real (chat médico–paciente).
-- Presença e estado de sessões.
-- Integração com **Laravel Reverb**, **Laravel Echo** e canais privados.
+No módulo de videochamada atual, esta camada usa **Laravel Reverb/Echo** para eventos de negócio. A sinalização técnica de WebRTC/MediaSoup acontece no **WebSocket do SFU**, fora do Reverb.
 
-### 🎯 Responsabilidades
+### Responsabilidades
 
-- Gerenciar **ciclos de vida de sessão**: início, aceite, encerramento, expiração.
-- Garantir que somente usuários autorizados recebam eventos (channels privados + policies).
-- Propagar mudanças de estado de domínio para o frontend via broadcasting.
-- Suportar **retries**, reconexão e idempotência de eventos críticos.
+- Avisar disponibilidade de chamada agendada.
+- Entregar solicitação, aceite, rejeição e encerramento de chamadas ad-hoc.
+- Garantir canais privados por usuário.
+- Propagar mudanças de estado para o frontend.
+- Manter eventos pequenos e idempotentes.
 
-### 🧩 Tecnologias Envolvidas
+### Tecnologias envolvidas
 
-- **Laravel Reverb** – Servidor WebSocket.
-- **Laravel Broadcasting / Events** – `RequestVideoCall`, `RequestVideoCallStatus`, `MessageSent`, `VideoCallRoomCreated`, `VideoCallRoomExpired`, etc.
-- **Laravel Echo** – Cliente JS para escutar canais privados.
-- **Redis / PubSub** (quando configurado) – Fan-out de eventos entre processos.
+- **Laravel Reverb** - servidor WebSocket da aplicação.
+- **Laravel Broadcasting / Events** - eventos `VideoCallAvailable`, `VideoCallRequested`, `VideoCallAccepted`, `VideoCallRejected`, `VideoCallEnded` e eventos de mensagens.
+- **Laravel Echo** - cliente JS para escutar canais privados.
+- **Redis/queues** quando configurados para fan-out e execução assíncrona.
 
-### 📂 Documentos Relacionados
+### Documentos relacionados
 
-- Videoconferência – sinalização:
-  - `../videocall/README.md` (módulo de videochamadas – visão geral).
-  - `../videocall/VideoCallTasks.md` (fluxo de request/accept/status via eventos).
-  - `../videocall/VideoCallImplementation.md` (detalhes de fluxo P2P + eventos).
-  - `../../diagrams/04_FluxoVideoconferencia.md` (sequence diagram com Reverb + PeerJS).
-- Mensagens (chat):
-  - `../messages/README.md` (sistema de mensagens, canais `messages.{id}`, evento `MessageSent`).
-- Arquitetura de comunicação:
-  - `../../Architecture/Arquitetura.md` → seção “Sistema de Eventos e Broadcasting”.
-  - `../../diagrams/01_ArquiteturaGeral.md` e `../../diagrams/07_ArquiteturaCamadas.md`.
+- Videochamada:
+    - `videocall/README.md`
+    - `videocall/VideoCallImplementation.md`
+    - `videocall/VideoCallTasks.md`
+    - `../media/README.md`
+- Mensagens:
+    - `messages/README.md`
+- Arquitetura:
+    - `../architecture-governance/Architecture/Arquitetura.md`
+    - `../architecture-governance/diagrams/01_ArquiteturaGeral.md`
+    - `../architecture-governance/diagrams/07_ArquiteturaCamadas.md`
 
-> Observação: os arquivos permanecem fisicamente em `docs/modules` e `docs/diagrams`; esta camada atua como índice arquitetural.
+### Fluxos típicos
 
-### 🔄 Fluxos Típicos
+#### Videochamada agendada
 
-- **VideoCall**:
-  1. `VideoCallController` chama evento `RequestVideoCall`.
-  2. Evento é broadcastado para canal privado `video-call.{patientId}`.
-  3. Paciente aceita → `RequestVideoCallStatus` broadcastado para `video-call.{doctorId}`.
-  4. Ambos trocam `peerId` via eventos e estabelecem P2P pela camada de mídia.
+1. `AutoStartVideoCall` encontra consultas dentro da janela.
+2. `CallManagerService` provisiona `Call` e `Room`.
+3. Laravel dispara `VideoCallAvailable` para `video-call.{doctorUserId}` e `video-call.{patientUserId}`.
+4. Frontend faz bootstrap em `/calls/active` ou entra via `/appointments/{appointment}/video/session`.
+5. Frontend conecta ao SFU com token JWT. A negociação WebRTC não passa pelo Reverb.
 
-- **Mensagens**:
-  1. `MessageService::sendMessage` valida, persiste e dispara `MessageSent`.
-  2. Evento é broadcastado em `messages.{sender_id}` e `messages.{receiver_id}`.
-  3. Frontend escuta via Echo (`private('messages.{id}')`) e atualiza o chat em tempo real.
+#### Videochamada ad-hoc
 
-### 🤝 Dependências com Outras Camadas
+1. Paciente cria chamada em `POST /calls`.
+2. Laravel dispara `VideoCallRequested` para o médico.
+3. Médico aceita ou rejeita.
+4. Ao aceitar, Laravel cria a `Room`, gera token do SFU e dispara `VideoCallAccepted`.
+5. Participantes conectam ao SFU.
+6. Encerramento dispara `VideoCallEnded` para limpar estado dos participantes.
 
-- **Depende de**:
-  - Camada de Persistência (para ler/gravar `VideoCallRoom`, `VideoCallEvent`, `Message`, `Appointments`).
-  - Camada de Arquitetura & Governança (regras de negócio em `SystemRules.md`, políticas de acesso).
-- **É consumida por**:
-  - Camada de Mídia (usa sinalização para trocar `peerId` e estados de chamada).
-  - Camada de Apresentação (Vue/Echo consomem eventos para atualizar UI).
+#### Mensagens
 
-### 📈 Boas Práticas e Escalabilidade
+1. Serviço de mensagens valida, persiste e dispara `MessageSent`.
+2. Evento é broadcastado em canais privados dos participantes.
+3. Frontend atualiza a conversa em tempo real.
 
-- Usar **eventos pequenos e específicos** (não enviar payloads gigantes via WebSocket).
-- Projetar eventos como **idempotentes** (reprodução não deve quebrar estado).
-- Centralizar regras de autorização em **Policies** + `routes/channels.php`.
-- Para alta escala:
-  - Usar Redis como backend de broadcasting.
-  - Escalar workers de Reverb horizontalmente.
-  - Medir taxa de eventos e latência com métricas (ex.: Prometheus + Grafana / CloudWatch).
+### Dependências com outras camadas
 
-### 🔮 Evoluções Futuras
+- **Persistência:** lê/grava `calls`, `rooms`, `messages`, `appointments`.
+- **Domínio:** usa services, policies e FormRequests.
+- **Mídia:** apenas entrega estado e dados de entrada; a mídia usa o SFU.
+- **Apresentação:** Vue/Echo consome eventos para atualizar UI.
 
-- Adicionar **eventos de presença** (online/offline/em chamada).
-- Integrar notificações push (Web Push / mobile) usando mesma semântica de eventos.
-- Desacoplar sinalização de videoconferência para um **serviço dedicado de signaling** (microserviço ou função serverless) se a carga de videochamadas crescer muito.
+### Boas práticas e escala
 
+- Não trafegar SDP, ICE, `peerId` ou payloads grandes pelo Reverb.
+- Não enviar PII desnecessária em eventos.
+- Centralizar autorização em policies e `routes/channels.php`.
+- Tratar eventos como idempotentes.
+- Monitorar latência e taxa de eventos em Reverb separadamente das métricas do SFU.
+
+### Evoluções futuras
+
+- Presença online/em chamada.
+- Push notification para chamadas recebidas.
+- Healthcheck e failover de SFU antes de aceitar chamada.
+- Métricas de entrega de eventos de negócio.

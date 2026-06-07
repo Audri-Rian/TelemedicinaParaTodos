@@ -2,16 +2,23 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Room extends Model
 {
-    protected $fillable = [
-        'call_id',
-        'room_id',
-        'sfu_node',
-    ];
+    use HasFactory;
+
+    protected $fillable = [];
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
+    public static function createFromSystem(array $attributes): static
+    {
+        return static::forceCreate($attributes);
+    }
 
     public function call(): BelongsTo
     {

@@ -6,6 +6,7 @@ Esta pasta contém toda a documentação necessária para configurar e executar 
 
 - **[🚀 Guia de Instalação](Start.md)** - Configuração do ambiente de desenvolvimento
 - **[⚙️ Regras do Cursor](CursorRulesGuide.md)** - Configurações do ambiente de desenvolvimento
+- **[🔐 Estratégia de Ambientes](EnvironmentStrategy.md)** - Padrão de `.env` e checklist de secrets
 
 ## 🎯 Propósito
 
@@ -24,17 +25,20 @@ Estes documentos guiam através de:
 ## 🚀 Requisitos do Sistema
 
 ### Backend
+
 - **PHP 8.2+**
 - **Composer**
 - **MySQL 8.0+** ou **SQLite**
 - **Laravel 11**
 
 ### Frontend
+
 - **Node.js 18+**
 - **NPM** ou **Yarn**
 - **Vue.js 3**
 
 ### Ferramentas
+
 - **Git**
 - **Editor** (VS Code/Cursor recomendado)
 - **Docker** (opcional, para Laravel Sail)
@@ -42,6 +46,7 @@ Estes documentos guiam através de:
 ## 📊 Ambiente de Desenvolvimento
 
 ### Opção 1: Instalação Local
+
 1. Clone o repositório
 2. Instale dependências PHP: `composer install`
 3. Instale dependências JS: `npm install`
@@ -49,6 +54,7 @@ Estes documentos guiam através de:
 5. Execute migrações e seeders
 
 ### Opção 2: Docker (Laravel Sail)
+
 1. Clone o repositório
 2. Execute `./vendor/bin/sail up`
 3. Configure banco de dados
@@ -57,12 +63,16 @@ Estes documentos guiam através de:
 ## 🔧 Configurações
 
 ### Variáveis de Ambiente
+
 - **APP_ENV** - Ambiente (local, staging, production)
 - **DB_CONNECTION** - Tipo de banco (mysql, sqlite)
-- **BROADCAST_DRIVER** - Driver de broadcasting (reverb)
+- **BROADCAST_CONNECTION** - Broadcasting (log ou reverb)
+- **CACHE_STORE** - Cache (database, file ou redis)
+- **QUEUE_CONNECTION** - Filas (database ou redis)
 - **VITE_APP_NAME** - Nome da aplicação
 
 ### Editor
+
 - **Cursor Rules** - Configurações específicas
 - **ESLint** - Linting JavaScript/TypeScript
 - **Prettier** - Formatação de código
@@ -89,5 +99,4 @@ npm run build
 
 ---
 
-*Última atualização: Dezembro 2024*
-
+_Última atualização: Dezembro 2024_

@@ -45,32 +45,48 @@ export function useRealTimeValidation<T extends Record<string, any>>(
     };
   });
 
+  const getFieldLabel = (fieldName: keyof T): string => {
+    // Suporta snake_case, camelCase e mistos → gera Title Case.
+    // Ex.: 'first_name' → 'First Name'; 'firstName' → 'First Name'.
+    const withSpaces = String(fieldName)
+      .replace(/_/g, ' ')
+      .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    return withSpaces
+      .split(' ')
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  };
+
   // Validação individual de campo
   const validateField = (fieldName: keyof T, value: any): string[] => {
     const field = fields.value[fieldName];
     const rules = field.rules;
     const errors: string[] = [];
+    const fieldLabel = getFieldLabel(fieldName);
 
     // Required
     if (rules.required && (!value || (typeof value === 'string' && value.trim() === ''))) {
-      errors.push(`${String(fieldName)} é obrigatório`);
+      errors.push(`${fieldLabel} é obrigatório`);
     }
 
     // Min length
     if (rules.min && value && value.length < rules.min) {
-      errors.push(`${String(fieldName)} deve ter pelo menos ${rules.min} caracteres`);
+      errors.push(`${fieldLabel} deve ter pelo menos ${rules.min} caracteres`);
     }
 
     // Max length
     if (rules.max && value && value.length > rules.max) {
-      errors.push(`${String(fieldName)} deve ter no máximo ${rules.max} caracteres`);
+      errors.push(`${fieldLabel} deve ter no máximo ${rules.max} caracteres`);
     }
 
     // Email
     if (rules.email && value) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(value)) {
-        errors.push(`${String(fieldName)} deve ser um email válido`);
+        errors.push(`${fieldLabel} deve ser um email válido`);
       }
     }
 
@@ -78,7 +94,7 @@ export function useRealTimeValidation<T extends Record<string, any>>(
     if (rules.confirmed && value) {
       const confirmField = fields.value[rules.confirmed as keyof T];
       if (confirmField && value !== confirmField.value) {
-        errors.push(`${String(fieldName)} deve ser igual a ${String(rules.confirmed)}`);
+        errors.push(`${fieldLabel} deve ser igual a ${getFieldLabel(rules.confirmed as keyof T)}`);
       }
     }
 
@@ -86,7 +102,7 @@ export function useRealTimeValidation<T extends Record<string, any>>(
     if (rules.date && value) {
       const date = new Date(value);
       if (isNaN(date.getTime())) {
-        errors.push(`${String(fieldName)} deve ser uma data válida`);
+        errors.push(`${fieldLabel} deve ser uma data válida`);
       }
     }
 
@@ -95,7 +111,7 @@ export function useRealTimeValidation<T extends Record<string, any>>(
       const fieldDate = new Date(value);
       const beforeDate = rules.before === 'today' ? new Date() : new Date(rules.before);
       if (fieldDate >= beforeDate) {
-        errors.push(`${String(fieldName)} deve ser anterior a ${rules.before}`);
+        errors.push(`${fieldLabel} deve ser anterior a ${rules.before}`);
       }
     }
 
@@ -104,13 +120,13 @@ export function useRealTimeValidation<T extends Record<string, any>>(
       const fieldDate = new Date(value);
       const afterDate = rules.after === 'today' ? new Date() : new Date(rules.after);
       if (fieldDate <= afterDate) {
-        errors.push(`${String(fieldName)} deve ser posterior a ${rules.after}`);
+        errors.push(`${fieldLabel} deve ser posterior a ${rules.after}`);
       }
     }
 
     // Pattern
     if (rules.pattern && value && !rules.pattern.test(value)) {
-      errors.push(`${String(fieldName)} tem formato inválido`);
+      errors.push(`${fieldLabel} tem formato inválido`);
     }
 
     // Custom validation

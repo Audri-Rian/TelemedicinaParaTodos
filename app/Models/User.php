@@ -10,7 +10,7 @@ use Illuminate\Notifications\Notifiable;
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, HasUuids;
+    use HasFactory, HasUuids, Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -27,6 +27,9 @@ class User extends Authenticatable
         'has_seen_dashboard_tour',
         'has_seen_doctor_welcome_screen',
         'has_seen_doctor_dashboard_tour',
+        'two_factor_secret',
+        'two_factor_recovery_codes',
+        'two_factor_confirmed_at',
     ];
 
     /**
@@ -37,6 +40,8 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
+        'two_factor_secret',
+        'two_factor_recovery_codes',
     ];
 
     /**
@@ -54,6 +59,9 @@ class User extends Authenticatable
             'has_seen_dashboard_tour' => 'boolean',
             'has_seen_doctor_welcome_screen' => 'boolean',
             'has_seen_doctor_dashboard_tour' => 'boolean',
+            'two_factor_secret' => 'encrypted',
+            'two_factor_recovery_codes' => 'encrypted:array',
+            'two_factor_confirmed_at' => 'datetime',
         ];
     }
 
@@ -106,6 +114,14 @@ class User extends Authenticatable
     }
 
     /**
+     * Get the push subscriptions associated with the user.
+     */
+    public function pushSubscriptions()
+    {
+        return $this->hasMany(PushSubscription::class);
+    }
+
+    /**
      * Check if the user is a doctor.
      */
     public function isDoctor(): bool
@@ -129,23 +145,22 @@ class User extends Authenticatable
         if ($this->isDoctor()) {
             return 'doctor';
         }
-        
+
         if ($this->isPatient()) {
             return 'patient';
         }
-        
+
         return 'user';
     }
 
     /**
      * Get the avatar URL.
      *
-     * @param bool $thumbnail Se deve retornar thumbnail
-     * @return string|null
+     * @param  bool  $thumbnail  Se deve retornar thumbnail
      */
     public function getAvatarUrl(bool $thumbnail = false): ?string
     {
-        if (!$this->avatar_path) {
+        if (! $this->avatar_path) {
             return null;
         }
 
@@ -154,12 +169,34 @@ class User extends Authenticatable
 
     /**
      * Check if user has an avatar.
-     *
-     * @return bool
      */
     public function hasAvatar(): bool
     {
-        return !empty($this->avatar_path);
+        return ! empty($this->avatar_path);
+    }
+
+    /**
+     * Get the social accounts linked to this user.
+     */
+    public function socialAccounts()
+    {
+        return $this->hasMany(SocialAccount::class);
+    }
+
+    /**
+     * Whether this user has a usable password (not social-only).
+     */
+    public function hasPassword(): bool
+    {
+        return ! is_null($this->password);
+    }
+
+    /**
+     * Whether 2FA is fully enabled (confirmed).
+     */
+    public function hasTwoFactorEnabled(): bool
+    {
+        return ! is_null($this->two_factor_confirmed_at);
     }
 
     /**
@@ -189,6 +226,7 @@ class User extends Authenticatable
         if ($this->isPatient()) {
             return $this->patient->appointments();
         }
+
         return null;
     }
 
@@ -203,6 +241,7 @@ class User extends Authenticatable
         if ($this->isDoctor()) {
             return $this->doctor->prescriptions();
         }
+
         return null;
     }
 
@@ -214,6 +253,7 @@ class User extends Authenticatable
         if ($this->isPatient()) {
             return $this->patient->examinations();
         }
+
         return null;
     }
 
@@ -225,6 +265,7 @@ class User extends Authenticatable
         if ($this->isPatient()) {
             return $this->patient->medicalCertificates();
         }
+
         return null;
     }
 
@@ -251,7 +292,7 @@ class User extends Authenticatable
     {
         return Message::where(function ($query) {
             $query->where('sender_id', $this->id)
-                  ->orWhere('receiver_id', $this->id);
+                ->orWhere('receiver_id', $this->id);
         });
     }
 }

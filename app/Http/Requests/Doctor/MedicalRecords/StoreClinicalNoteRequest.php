@@ -22,9 +22,7 @@ class StoreClinicalNoteRequest extends FormRequest
             'category' => ['nullable', Rule::in(['general', 'diagnosis', 'treatment', 'follow_up', 'other'])],
             'tags' => ['nullable', 'array'],
             'tags.*' => ['string', 'max:50'],
-            'parent_id' => ['nullable', 'exists:clinical_notes,id'],
+            'parent_id' => ['nullable', Rule::exists('clinical_notes', 'id')->where('patient_id', $this->route('patient')?->id)],
         ];
     }
 }
-
-

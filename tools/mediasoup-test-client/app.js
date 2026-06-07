@@ -240,7 +240,7 @@
           if (producerId) consume(producerId, peerId, kind);
           return;
         }
-      } catch (_) {}
+      } catch {}
     };
 
     ws.onclose = () => {

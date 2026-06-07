@@ -18,16 +18,18 @@ class PatientHistoryConsultationsController extends Controller
     {
         $patient = Auth::user()->patient;
 
-        if (!$patient) {
+        if (! $patient) {
             abort(403, 'Perfil de paciente não encontrado.');
         }
 
         $query = Appointments::query()
             ->with(['doctor.user', 'doctor.specializations'])
-            ->where('patient_id', $patient->id)
-            ->orderBy('scheduled_at', 'desc');
+            ->where('patient_id', $patient->id);
 
         $status = $request->get('status');
+        $search = trim((string) $request->get('search', ''));
+        $dateRange = $request->get('date_range', 'all');
+        $sort = $request->get('sort', 'recent-first');
 
         if ($status === 'upcoming') {
             $query->upcoming();
@@ -41,6 +43,32 @@ class PatientHistoryConsultationsController extends Controller
             $query->where('status', Appointments::STATUS_NO_SHOW);
         }
 
+        if ($search !== '') {
+            $query->where(function ($query) use ($search) {
+                $query->whereHas('doctor.user', function ($userQuery) use ($search) {
+                    $userQuery->where('name', 'like', "%{$search}%");
+                })->orWhereHas('doctor.specializations', function ($specializationQuery) use ($search) {
+                    $specializationQuery->where('name', 'like', "%{$search}%");
+                });
+            });
+        }
+
+        if ($dateRange === '30d') {
+            $query->where('scheduled_at', '>=', now()->subDays(30));
+        } elseif ($dateRange === '90d') {
+            $query->where('scheduled_at', '>=', now()->subDays(90));
+        } elseif ($dateRange === 'year') {
+            $query->whereYear('scheduled_at', now()->year);
+        }
+
+        if ($sort === 'soonest-first') {
+            $query->orderBy('scheduled_at');
+        } elseif ($sort === 'oldest-first') {
+            $query->orderBy('scheduled_at');
+        } else {
+            $query->orderByDesc('scheduled_at');
+        }
+
         $perPage = (int) config('telemedicine.pagination.consultations_per_page', 10);
         $appointments = $query
             ->paginate($perPage)
@@ -48,7 +76,7 @@ class PatientHistoryConsultationsController extends Controller
             ->through(function (Appointments $appointment) {
                 $doctor = $appointment->doctor;
                 $doctorUser = $doctor->user ?? null;
-                
+
                 return [
                     'id' => $appointment->id,
                     'status' => $appointment->status,
@@ -60,7 +88,7 @@ class PatientHistoryConsultationsController extends Controller
                             'name' => $doctorUser->name ?? 'Médico não informado',
                             'avatar' => $doctorUser->avatar ?? null,
                         ],
-                        'specializations' => $doctor->specializations 
+                        'specializations' => $doctor->specializations
                             ? $doctor->specializations->map(fn ($spec) => [
                                 'id' => $spec->id,
                                 'name' => $spec->name,
@@ -70,11 +98,20 @@ class PatientHistoryConsultationsController extends Controller
                 ];
             });
 
+        $statsRow = Appointments::where('patient_id', $patient->id)
+            ->selectRaw("
+                COUNT(*) as total,
+                SUM(CASE WHEN status IN ('scheduled', 'rescheduled') AND scheduled_at > NOW() THEN 1 ELSE 0 END) as upcoming,
+                SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed,
+                SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) as cancelled
+            ")
+            ->first();
+
         $stats = [
-            'total' => Appointments::where('patient_id', $patient->id)->count(),
-            'upcoming' => Appointments::where('patient_id', $patient->id)->upcoming()->count(),
-            'completed' => Appointments::where('patient_id', $patient->id)->completed()->count(),
-            'cancelled' => Appointments::where('patient_id', $patient->id)->cancelled()->count(),
+            'total' => (int) ($statsRow->total ?? 0),
+            'upcoming' => (int) ($statsRow->upcoming ?? 0),
+            'completed' => (int) ($statsRow->completed ?? 0),
+            'cancelled' => (int) ($statsRow->cancelled ?? 0),
         ];
 
         return Inertia::render('Patient/HistoryConsultations', [
@@ -82,8 +119,10 @@ class PatientHistoryConsultationsController extends Controller
             'stats' => $stats,
             'filters' => [
                 'status' => $status ?? 'all',
+                'search' => $search,
+                'date_range' => $dateRange,
+                'sort' => $sort,
             ],
         ]);
     }
 }
-

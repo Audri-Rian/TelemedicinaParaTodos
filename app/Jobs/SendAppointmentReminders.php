@@ -28,6 +28,7 @@ class SendAppointmentReminders implements ShouldQueue
     {
         $now = Carbon::now();
         $sendBeforeHours = config('telemedicine.reminders.send_before_hours', [24, 1]);
+        $maxPerAppointment = (int) config('telemedicine.reminders.max_per_appointment', 2);
 
         foreach ($sendBeforeHours as $hours) {
             $reminderTime = $now->copy()->addHours($hours);
@@ -39,9 +40,14 @@ class SendAppointmentReminders implements ShouldQueue
                 ->with(['doctor.user', 'patient.user'])
                 ->get();
 
-            $timeUntilLabel = $hours === 1 ? '1 hora' : $hours . ' horas';
+            $timeUntilLabel = $hours === 1 ? '1 hora' : $hours.' horas';
             foreach ($appointments as $appointment) {
-                $this->sendReminder($appointment, $notificationService, $timeUntilLabel);
+                if (! $this->canSendReminder($appointment, (int) $hours, $maxPerAppointment)) {
+                    continue;
+                }
+
+                $this->sendReminder($appointment, $notificationService, $timeUntilLabel, (int) $hours);
+                $this->markReminderSent($appointment, (int) $hours);
             }
         }
     }
@@ -52,10 +58,10 @@ class SendAppointmentReminders implements ShouldQueue
     private function sendReminder(
         Appointments $appointment,
         NotificationService $notificationService,
-        string $timeUntil
+        string $timeUntil,
+        int $hoursBefore
     ): void {
         $doctorName = $appointment->doctor->user->name ?? 'Médico';
-        $scheduledAt = $appointment->scheduled_at->format('d/m/Y H:i');
 
         // Notificar paciente
         $notificationService->create(
@@ -66,6 +72,7 @@ class SendAppointmentReminders implements ShouldQueue
                 'doctor_name' => $doctorName,
                 'scheduled_at' => $appointment->scheduled_at->toIso8601String(),
                 'time_until' => $timeUntil,
+                'reminder_hours_before' => $hoursBefore,
             ],
             $appointment->patient->user,
             ['email', 'in_app']
@@ -80,9 +87,32 @@ class SendAppointmentReminders implements ShouldQueue
                 'patient_name' => $appointment->patient->user->name ?? 'Paciente',
                 'scheduled_at' => $appointment->scheduled_at->toIso8601String(),
                 'time_until' => $timeUntil,
+                'reminder_hours_before' => $hoursBefore,
             ],
             $appointment->doctor->user,
             ['email', 'in_app']
         );
+    }
+
+    private function canSendReminder(Appointments $appointment, int $hoursBefore, int $maxPerAppointment): bool
+    {
+        $sentReminders = $appointment->metadata['reminders_sent'] ?? [];
+
+        if (count($sentReminders) >= $maxPerAppointment) {
+            return false;
+        }
+
+        return ! in_array($hoursBefore, $sentReminders, true);
+    }
+
+    private function markReminderSent(Appointments $appointment, int $hoursBefore): void
+    {
+        $metadata = $appointment->metadata ?? [];
+        $sentReminders = $metadata['reminders_sent'] ?? [];
+        $sentReminders[] = $hoursBefore;
+        $metadata['reminders_sent'] = array_values(array_unique($sentReminders));
+        $metadata['last_reminder_sent_at'] = now()->toIso8601String();
+
+        $appointment->update(['metadata' => $metadata]);
     }
 }
