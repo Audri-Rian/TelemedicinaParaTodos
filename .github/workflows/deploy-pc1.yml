@@ -29,6 +29,12 @@ jobs:
           if [ -f "$DEPLOY_ROOT/deploy/pc1/.env" ]; then
             cp "$DEPLOY_ROOT/deploy/pc1/.env" /tmp/telemedicina-pc1.env.bak
           fi
+          # Wayfinder gera arquivos como root dentro do container; normaliza ownership antes do rsync --delete.
+          if [ -d "$DEPLOY_ROOT/resources/js" ]; then
+            docker compose --env-file "$DEPLOY_ROOT/deploy/pc1/.env" -f "$DEPLOY_ROOT/deploy/pc1/docker-compose.yml" \
+              run --rm --user root --no-deps app \
+              chown -R "$(id -u):$(id -g)" /var/www/html/resources/js || true
+          fi
           rsync -a --delete \
             --exclude '.git' \
             --exclude 'node_modules' \
