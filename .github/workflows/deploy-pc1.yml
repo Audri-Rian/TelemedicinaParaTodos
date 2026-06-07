@@ -53,32 +53,37 @@ jobs:
 
       - name: Install PHP dependencies
         working-directory: ${{ env.COMPOSE_DIR }}
-        run: docker compose run --rm --no-deps app composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev
+        run: docker compose --env-file .env run --rm --no-deps app composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev
+
+      - name: Generate Wayfinder types
+        working-directory: ${{ env.COMPOSE_DIR }}
+        run: docker compose --env-file .env run --rm --no-deps app php artisan wayfinder:generate --with-form
 
       - name: Build frontend assets
         working-directory: ${{ env.DEPLOY_ROOT }}
         run: |
+          export PATH="${{ env.COMPOSE_DIR }}/scripts:$PATH"
+          ln -sf php-docker.sh "${{ env.COMPOSE_DIR }}/scripts/php"
           npm ci
           npm run build
 
       - name: Run database migrations
         working-directory: ${{ env.COMPOSE_DIR }}
-        run: docker compose run --rm --no-deps app php artisan migrate --force
+        run: docker compose --env-file .env run --rm --no-deps app php artisan migrate --force
 
       - name: Cache Laravel config and routes
         working-directory: ${{ env.COMPOSE_DIR }}
         run: |
-          docker compose run --rm --no-deps app php artisan config:cache
-          docker compose run --rm --no-deps app php artisan route:cache
-          docker compose run --rm --no-deps app php artisan view:cache
+          docker compose --env-file .env run --rm --no-deps app php artisan config:cache
+          docker compose --env-file .env run --rm --no-deps app php artisan route:cache
+          docker compose --env-file .env run --rm --no-deps app php artisan view:cache
 
       - name: Rebuild and restart stack
         working-directory: ${{ env.COMPOSE_DIR }}
         run: |
-          docker compose up -d --build app reverb queue scheduler nginx
-          docker compose ps
+          docker compose --env-file .env up -d --build app reverb queue scheduler nginx
+          docker compose --env-file .env ps
 
       - name: Smoke test
         working-directory: ${{ env.COMPOSE_DIR }}
-        run: |
-          APP_URL="${APP_URL:-http://127.0.0.1}" ./scripts/smoke-test.sh
+        run: APP_URL=http://127.0.0.1 ./scripts/smoke-test.sh
