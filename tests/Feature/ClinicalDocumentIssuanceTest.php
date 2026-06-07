@@ -134,7 +134,7 @@ class ClinicalDocumentIssuanceTest extends TestCase
         $this->assertDatabaseCount('examinations', 0);
     }
 
-    public function test_issuance_requires_appointment_id(): void
+    public function test_issuance_without_appointment_id_resolves_eligible_appointment(): void
     {
         $response = $this->actingAs($this->doctor->user)
             ->from(route('doctor.patients.medical-record', $this->patient))
@@ -142,8 +142,12 @@ class ClinicalDocumentIssuanceTest extends TestCase
                 'medications' => [['name' => 'Dipirona']],
             ]);
 
-        $response->assertSessionHasErrors('appointment_id');
-        $this->assertDatabaseCount('prescriptions', 0);
+        $response->assertRedirect();
+        $response->assertSessionHas('status', 'Prescrição emitida com sucesso.');
+        $this->assertDatabaseHas('prescriptions', [
+            'appointment_id' => $this->appointment->id,
+            'patient_id' => $this->patient->id,
+        ]);
     }
 
     public function test_appointment_must_belong_to_doctor_patient_pair(): void

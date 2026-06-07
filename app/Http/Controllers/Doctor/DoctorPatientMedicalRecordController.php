@@ -24,11 +24,14 @@ use App\Models\Patient;
 use App\Models\Prescription;
 use App\Services\FileStorageManager;
 use App\Services\MedicalRecordService;
+use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 use Throwable;
@@ -197,7 +200,7 @@ class DoctorPatientMedicalRecordController extends Controller
         $this->authorize('issuePrescription', $patient);
 
         $doctor = $request->user()->doctor;
-        $appointment = $this->resolveAppointment($request->validated('appointment_id'), $patient, $doctor->id);
+        $appointment = $this->resolveAppointmentForIssuance($request->validated('appointment_id'), $patient, $doctor->id);
         $this->authorize('createPrescription', $appointment);
 
         $this->medicalRecordService->issuePrescription($doctor, $patient, $appointment, $request->validated());
@@ -210,7 +213,7 @@ class DoctorPatientMedicalRecordController extends Controller
         $this->authorize('requestExamination', $patient);
 
         $doctor = $request->user()->doctor;
-        $appointment = $this->resolveAppointment($request->validated('appointment_id'), $patient, $doctor->id);
+        $appointment = $this->resolveAppointmentForIssuance($request->validated('appointment_id'), $patient, $doctor->id);
         $this->authorize('requestExamination', $appointment);
 
         $this->medicalRecordService->requestExamination($doctor, $patient, $appointment, $request->validated());
@@ -225,7 +228,7 @@ class DoctorPatientMedicalRecordController extends Controller
         $doctor = $request->user()->doctor;
 
         $validated = $request->validate([
-            'appointment_id' => ['required', 'exists:appointments,id'],
+            'appointment_id' => ['nullable', 'exists:appointments,id'],
             'examinations' => ['required', 'array', 'min:1', 'max:20'],
             'examinations.*.name' => ['required', 'string', 'max:255'],
             'examinations.*.type' => ['required', Rule::in(['lab', 'image', 'other'])],
@@ -234,7 +237,7 @@ class DoctorPatientMedicalRecordController extends Controller
             'examinations.*.priority' => ['nullable', Rule::in(['normal', 'urgent'])],
         ]);
 
-        $appointment = $this->resolveAppointment($validated['appointment_id'], $patient, $doctor->id);
+        $appointment = $this->resolveAppointmentForIssuance($validated['appointment_id'] ?? null, $patient, $doctor->id);
         $this->authorize('requestExamination', $appointment);
 
         foreach ($validated['examinations'] as $exam) {
@@ -264,7 +267,7 @@ class DoctorPatientMedicalRecordController extends Controller
         $this->authorize('issueCertificate', $patient);
 
         $doctor = $request->user()->doctor;
-        $appointment = $this->resolveAppointment($request->validated('appointment_id'), $patient, $doctor->id);
+        $appointment = $this->resolveAppointmentForIssuance($request->validated('appointment_id'), $patient, $doctor->id);
         $this->authorize('issueCertificate', $appointment);
 
         $this->medicalRecordService->issueCertificate($doctor, $patient, $appointment, $request->validated());
@@ -452,6 +455,48 @@ class DoctorPatientMedicalRecordController extends Controller
         ]);
     }
 
+    public function eligiblePatientsForDocuments(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if (! $user?->doctor) {
+            abort(403, 'Apenas médicos podem emitir documentos clínicos.');
+        }
+
+        $relationshipDays = (int) config('telemedicine.medical_records.document_eligible_relationship_days', 10);
+
+        $patientIds = Appointments::query()
+            ->where('doctor_id', $user->doctor->id)
+            ->where($this->eligibleForHubIssuance($relationshipDays))
+            ->distinct()
+            ->pluck('patient_id');
+
+        $patients = Patient::query()
+            ->select(['id', 'user_id', 'cpf', 'date_of_birth', 'gender'])
+            ->with('user:id,name')
+            ->whereIn('id', $patientIds)
+            ->get()
+            ->map(fn (Patient $patient) => [
+                'id' => $patient->id,
+                'name' => $patient->user->name ?? '',
+                'cpf' => $this->safePatientCpf($patient),
+                'age' => $patient->age,
+                'sex' => match (strtolower((string) $patient->gender)) {
+                    Patient::GENDER_MALE => 'M',
+                    Patient::GENDER_FEMALE => 'F',
+                    default => null,
+                },
+            ])
+            ->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)
+            ->values()
+            ->all();
+
+        return response()->json([
+            'patients' => $patients,
+            'relationship_days' => $relationshipDays,
+        ]);
+    }
+
     private function extractFilters(array $validated): array
     {
         return array_filter([
@@ -481,5 +526,103 @@ class DoctorPatientMedicalRecordController extends Controller
             ->where('patient_id', $patient->id)
             ->where('doctor_id', $doctorId)
             ->firstOrFail();
+    }
+
+    private function resolveAppointmentForIssuance(?string $appointmentId, Patient $patient, string $doctorId): Appointments
+    {
+        if ($appointmentId !== null && $appointmentId !== '') {
+            return $this->resolveAppointment($appointmentId, $patient, $doctorId);
+        }
+
+        return $this->resolveEligibleAppointment($patient, $doctorId);
+    }
+
+    /**
+     * Resolução automática (hub emite sem appointment_id). Prioridade:
+     * in_progress > agendada/reagendada de hoje > completed mais recente na janela
+     * de relacionamento; desempate por scheduled_at desc. 422 se nada elegível.
+     */
+    private function resolveEligibleAppointment(Patient $patient, string $doctorId): Appointments
+    {
+        $relationshipDays = (int) config('telemedicine.medical_records.document_eligible_relationship_days', 10);
+
+        $candidates = Appointments::query()
+            ->where('doctor_id', $doctorId)
+            ->where('patient_id', $patient->id)
+            ->where($this->eligibleForHubIssuance($relationshipDays))
+            ->orderByDesc('scheduled_at')
+            ->get();
+
+        $inProgress = $candidates->where('status', Appointments::STATUS_IN_PROGRESS);
+        if ($inProgress->count() > 1) {
+            Log::warning('Múltiplas consultas in_progress ao resolver vínculo de documento clínico', [
+                'doctor_id' => $doctorId,
+                'patient_id' => $patient->id,
+                'appointment_ids' => $inProgress->pluck('id')->all(),
+            ]);
+        }
+
+        [$appointment, $matchRule] = match (true) {
+            $inProgress->isNotEmpty() => [$inProgress->first(), 'in_progress'],
+            $candidates->contains(fn (Appointments $a) => $a->status !== Appointments::STATUS_COMPLETED) => [
+                $candidates->first(fn (Appointments $a) => $a->status !== Appointments::STATUS_COMPLETED),
+                'today',
+            ],
+            $candidates->isNotEmpty() => [$candidates->first(), 'completed'],
+            default => [null, null],
+        };
+
+        if ($appointment === null) {
+            Log::warning('Tentativa de emissão de documento clínico sem consulta elegível', [
+                'doctor_id' => $doctorId,
+                'patient_id' => $patient->id,
+            ]);
+
+            throw ValidationException::withMessages([
+                'appointment_id' => 'Nenhuma consulta elegível encontrada para este paciente nos últimos '.$relationshipDays.' dias.',
+            ]);
+        }
+
+        Log::info('Consulta resolvida automaticamente para emissão de documento clínico', [
+            'doctor_id' => $doctorId,
+            'patient_id' => $patient->id,
+            'appointment_id' => $appointment->id,
+            'match_rule' => $matchRule,
+        ]);
+
+        return $appointment;
+    }
+
+    /**
+     * Critério de elegibilidade do hub: consulta ativa agora, agendada/reagendada de hoje
+     * ou completed dentro da janela de relacionamento (P1 — não substitui a janela de 30d
+     * do vínculo explícito em eligibleAppointmentsForDocuments).
+     */
+    private function eligibleForHubIssuance(int $relationshipDays): \Closure
+    {
+        return function ($query) use ($relationshipDays) {
+            $query->where('status', Appointments::STATUS_IN_PROGRESS)
+                ->orWhere(function ($query) {
+                    $query->whereIn('status', [Appointments::STATUS_SCHEDULED, Appointments::STATUS_RESCHEDULED])
+                        ->whereDate('scheduled_at', now()->toDateString());
+                })
+                ->orWhere(function ($query) use ($relationshipDays) {
+                    $query->where('status', Appointments::STATUS_COMPLETED)
+                        ->where('scheduled_at', '>=', now()->subDays($relationshipDays));
+                });
+        };
+    }
+
+    private function safePatientCpf(Patient $patient): ?string
+    {
+        try {
+            return $patient->cpf;
+        } catch (DecryptException) {
+            Log::warning('Paciente com CPF inválido para decrypt na listagem de elegíveis para documentos', [
+                'patient_id' => $patient->id,
+            ]);
+
+            return null;
+        }
     }
 }

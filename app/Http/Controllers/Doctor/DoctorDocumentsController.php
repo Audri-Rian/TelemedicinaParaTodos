@@ -8,10 +8,8 @@ use App\Models\Appointments;
 use App\Models\MedicalDocument;
 use App\Models\Patient;
 use App\Services\FileStorageManager;
-use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\URL;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -33,30 +31,9 @@ class DoctorDocumentsController extends Controller
             abort(403, 'Apenas médicos podem acessar esta página.');
         }
 
-        $patientIds = Appointments::query()
-            ->where('doctor_id', $doctor->id)
-            ->distinct()
-            ->pluck('patient_id');
-
-        $patients = Patient::query()
-            ->select(['id', 'user_id', 'cpf', 'date_of_birth', 'gender'])
-            ->with('user:id,name')
-            ->whereIn('id', $patientIds)
-            ->limit(self::MAX_PATIENTS_PER_VIEW)
-            ->get()
-            ->map(fn (Patient $p) => [
-                'id' => $p->id,
-                'name' => $p->user->name ?? '',
-                'cpf' => $this->safePatientCpf($p),
-                'age' => $p->age,
-                'sex' => $this->sexLabel($p->gender),
-            ])
-            ->values()
-            ->all();
-
-        return Inertia::render('Doctor/Documents', [
-            'patients' => $patients,
-        ]);
+        // A lista de pacientes elegíveis é carregada via GET doctor/patients/eligible-for-documents
+        // (janela de relacionamento) — evita expor o catálogo completo com CPF no payload Inertia.
+        return Inertia::render('Doctor/Documents');
     }
 
     public function history(DoctorDocumentsIndexRequest $request): Response
@@ -171,36 +148,6 @@ class DoctorDocumentsController extends Controller
         }
 
         return $this->resolveDomainByCategory($document->category);
-    }
-
-    private function sexLabel(?string $gender): ?string
-    {
-        return match (strtolower((string) $gender)) {
-            Patient::GENDER_MALE => 'M',
-            Patient::GENDER_FEMALE => 'F',
-            default => null,
-        };
-    }
-
-    private function safePatientCpf(Patient $patient): ?string
-    {
-        try {
-            return $patient->cpf;
-        } catch (DecryptException) {
-            Log::warning('Paciente com CPF inválido para decrypt no módulo de documentos', [
-                'patient_id' => $patient->id,
-            ]);
-
-            $rawCpf = $patient->getRawOriginal('cpf');
-
-            if (! is_string($rawCpf)) {
-                return null;
-            }
-
-            $digitsOnly = preg_replace('/\D/', '', $rawCpf);
-
-            return strlen((string) $digitsOnly) === 11 ? $digitsOnly : null;
-        }
     }
 
     private function categoryLabel(?string $category): string

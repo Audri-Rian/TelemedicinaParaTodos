@@ -15,7 +15,7 @@ class StoreExaminationRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'appointment_id' => ['required', 'exists:appointments,id'],
+            'appointment_id' => ['nullable', 'exists:appointments,id'],
             'name' => ['required', 'string', 'max:255'],
             'type' => ['required', Rule::in(['lab', 'image', 'other'])],
             'justification' => ['required', 'string'],
@@ -25,5 +25,3 @@ class StoreExaminationRequest extends FormRequest
         ];
     }
 }
-
-

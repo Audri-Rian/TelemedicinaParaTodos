@@ -50,6 +50,7 @@ Route::middleware(['auth', 'verified', 'doctor'])->prefix('doctor')->name('docto
     Route::patch('patients/{patient}/medical-record/certificates/{certificate}', [App\Http\Controllers\Doctor\DoctorPatientMedicalRecordController::class, 'updateMedicalCertificate'])->middleware('throttle:30,1')->name('patients.medical-record.certificates.update');
     Route::get('patients/{patient}/medical-record/{type}/{record}/versions', [App\Http\Controllers\Doctor\DoctorPatientMedicalRecordController::class, 'showVersionHistory'])->middleware('throttle:30,1')->where('type', 'notes|prescriptions|certificates')->name('patients.medical-record.versions');
     Route::get('patients/{patient}/appointments/eligible-for-documents', [App\Http\Controllers\Doctor\DoctorPatientMedicalRecordController::class, 'eligibleAppointmentsForDocuments'])->middleware('throttle:60,1')->name('patients.appointments.eligible-for-documents');
+    Route::get('patients/eligible-for-documents', [App\Http\Controllers\Doctor\DoctorPatientMedicalRecordController::class, 'eligiblePatientsForDocuments'])->middleware('throttle:60,1')->name('patients.eligible-for-documents');
 
     // Agenda do médico
     Route::get('schedule', [App\Http\Controllers\Doctor\DoctorScheduleController::class, 'index'])->name('schedule');

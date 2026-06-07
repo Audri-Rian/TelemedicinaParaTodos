@@ -5,6 +5,7 @@ namespace App\Policies;
 use App\Models\Appointments;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class AppointmentPolicy
 {
@@ -228,9 +229,14 @@ class AppointmentPolicy
     /**
      * Emissão de documentos clínicos (Rx/exame/atestado) também é permitida em consulta
      * agendada/reagendada DE HOJE — espelha o endpoint eligible-for-documents (Q1).
+     * Ponto único de gating por assinatura digital (hub, tabs e in-call passam por aqui).
      */
     protected function doctorCanIssueClinicalDocument(User $user, Appointments $appointment): bool
     {
+        if (! $this->doctorHasIssuanceSignature($user)) {
+            return false;
+        }
+
         if ($this->doctorCanActOnAppointment($user, $appointment, $this->clinicalActionStatuses())) {
             return true;
         }
@@ -239,6 +245,33 @@ class AppointmentPolicy
             Appointments::STATUS_SCHEDULED,
             Appointments::STATUS_RESCHEDULED,
         ]) && $appointment->scheduled_at !== null && $appointment->scheduled_at->isToday();
+    }
+
+    /**
+     * CFM Res. 2.314/2022: emissão exige assinatura digital integrada. A flag de config
+     * existe apenas como rollback de emergência (SIGNATURE_REQUIRE_FOR_ISSUANCE=false).
+     */
+    protected function doctorHasIssuanceSignature(User $user): bool
+    {
+        if (! config('telemedicine.signature.require_for_issuance')) {
+            return true;
+        }
+
+        $doctor = $user->doctor;
+        if (! $doctor) {
+            return false;
+        }
+
+        if ($doctor->hasActiveDigitalSignature()) {
+            return true;
+        }
+
+        Log::warning('Emissão de documento clínico bloqueada por falta de assinatura digital', [
+            'doctor_id' => $doctor->id,
+            'signature_status' => $doctor->digital_signature_status,
+        ]);
+
+        return false;
     }
 
     public function createPrescription(User $user, Appointments $appointment): bool

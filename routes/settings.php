@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Settings\BugReportController;
 use App\Http\Controllers\Settings\ConnectedAccountsController;
+use App\Http\Controllers\Settings\DigitalSignatureController;
 use App\Http\Controllers\Settings\PasswordController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\Settings\TwoFactorController;
@@ -23,6 +24,15 @@ Route::middleware('auth')->group(function () {
         ->name('password.update');
 
     Route::get('settings/bug-report', [BugReportController::class, 'index'])->name('bug-report.index');
+
+    // Assinatura digital (apenas médicos) — fluxo de ativação MOCK até o provedor real existir
+    Route::middleware('doctor')->group(function () {
+        Route::get('settings/digital-signature', [DigitalSignatureController::class, 'show'])
+            ->name('digital-signature.show');
+        Route::post('settings/digital-signature/activate', [DigitalSignatureController::class, 'activate'])
+            ->middleware('throttle:6,1')
+            ->name('digital-signature.activate');
+    });
 
     // 2FA settings
     Route::get('settings/two-factor', [TwoFactorController::class, 'show'])->name('two-factor.show');

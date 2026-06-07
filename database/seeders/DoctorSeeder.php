@@ -40,6 +40,7 @@ class DoctorSeeder extends Seeder
                 'crm' => 'CRM-123456',
                 'biography' => 'Cardiologista demo com agenda, teleconsulta e integrações para testes locais.',
                 'status' => Doctor::STATUS_ACTIVE,
+                'digital_signature_status' => Doctor::SIGNATURE_ACTIVE,
                 'availability_schedule' => $availabilitySchedule,
                 'consultation_fee' => 350.00,
                 'license_number' => 'LIC-DEMO-DOCTOR',

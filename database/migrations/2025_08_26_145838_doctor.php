@@ -22,6 +22,8 @@ return new class extends Migration
             $table->string('license_number', 50)->nullable()->unique();
             $table->date('license_expiry_date')->nullable();
             $table->enum('status', ['active', 'inactive', 'suspended'])->default('active');
+            // not_integrated | pending | active | expired | revoked
+            $table->string('digital_signature_status')->default('not_integrated')->index();
             $table->json('availability_schedule')->nullable();
             $table->decimal('consultation_fee', 8, 2)->nullable()->index();
             $table->timestamps();

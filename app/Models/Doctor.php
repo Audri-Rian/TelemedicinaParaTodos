@@ -23,6 +23,7 @@ class Doctor extends Model
         'license_number',
         'license_expiry_date',
         'status',
+        'digital_signature_status',
         'availability_schedule',
         'consultation_fee',
         'cns',
@@ -43,6 +44,17 @@ class Doctor extends Model
     public const STATUS_INACTIVE = 'inactive';
 
     public const STATUS_SUSPENDED = 'suspended';
+
+    // Constantes para status de assinatura digital
+    public const SIGNATURE_NOT_INTEGRATED = 'not_integrated';
+
+    public const SIGNATURE_PENDING = 'pending';
+
+    public const SIGNATURE_ACTIVE = 'active';
+
+    public const SIGNATURE_EXPIRED = 'expired';
+
+    public const SIGNATURE_REVOKED = 'revoked';
 
     // Relacionamento com User
     public function user()
@@ -174,6 +186,11 @@ class Doctor extends Model
     public function hasAnySpecialization(): bool
     {
         return $this->specializations()->exists();
+    }
+
+    public function hasActiveDigitalSignature(): bool
+    {
+        return $this->digital_signature_status === self::SIGNATURE_ACTIVE;
     }
 
     public function isLicenseExpired(): bool

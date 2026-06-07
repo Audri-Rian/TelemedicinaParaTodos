@@ -352,6 +352,12 @@ return [
         // (emissão retroativa — ex.: atestado pós-consulta). Q1 da spec de emissão.
         'document_eligible_completed_days' => (int) env('DOCUMENT_ELIGIBLE_COMPLETED_DAYS', 30),
 
+        // Janela (dias) de relacionamento médico↔paciente para o hub de emissão de documentos.
+        // Filtra quais PACIENTES aparecem como elegíveis e governa a resolução automática
+        // de consulta (completed) quando o hub emite sem appointment_id. Convive com a
+        // janela de 30d acima — que segue valendo para vínculo explícito nas tabs/in-call.
+        'document_eligible_relationship_days' => (int) env('DOCUMENT_ELIGIBLE_RELATIONSHIP_DAYS', 10),
+
         // Limite de resultados em buscas de prontuário (performance).
         // MedicalRecordService::take(10) em algumas queries.
         'search_limit' => (int) env('MEDICAL_RECORD_SEARCH_LIMIT', 10),
@@ -611,6 +617,11 @@ return [
         // Driver de assinatura: 'null' (dev), 'a1_local' (prod A1 PFX), 'icp_brasil' (legado/stub).
         // 'a1_local' usa PadesEmbedder + A1PdfSigner com certificado PFX local.
         'driver' => env('SIGNATURE_DRIVER', 'null'),
+
+        // Gating de emissão: exige doctors.digital_signature_status = active para emitir
+        // Rx/atestado/exame (hub, tabs e in-call — checagem única na AppointmentPolicy).
+        // Default TRUE; a env existe apenas como botão de emergência para rollback.
+        'require_for_issuance' => (bool) env('SIGNATURE_REQUIRE_FOR_ISSUANCE', true),
 
         // Configuração do driver A1 local (PAdES com certificado PFX/PKCS#12).
         // NUNCA commitar o arquivo PFX nem a senha. Usar cofre (Vault, Secrets Manager).

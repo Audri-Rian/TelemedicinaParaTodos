@@ -39,7 +39,7 @@ class HandleInertiaRequests extends Middleware
         [$message, $author] = str(Inspiring::quotes()->random())->explode('-');
 
         $user = $request->user();
-        
+
         return [
             ...parent::share($request),
             'name' => config('app.name'),
@@ -58,6 +58,11 @@ class HandleInertiaRequests extends Middleware
                 'isDoctor' => $user?->isDoctor() ?? false,
                 'isPatient' => $user?->isPatient() ?? false,
                 'profile' => $user?->doctor ?? $user?->patient,
+                'signature' => $user?->doctor ? [
+                    'status' => $user->doctor->digital_signature_status,
+                    'active' => $user->doctor->hasActiveDigitalSignature(),
+                    'required' => (bool) config('telemedicine.signature.require_for_issuance'),
+                ] : null,
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'reverb' => [

@@ -4,7 +4,7 @@ import { edit as editPassword } from '@/routes/password';
 import { edit } from '@/routes/profile';
 import { type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3';
-import { Bug, Lock, User } from 'lucide-vue-next';
+import { Bug, Lock, PenLine, User } from 'lucide-vue-next';
 import { computed } from 'vue';
 
 interface Props {
@@ -17,7 +17,7 @@ const props = withDefaults(defineProps<Props>(), {
     hideHeading: false,
 });
 
-const sidebarNavItems: NavItem[] = [
+const baseNavItems: NavItem[] = [
     {
         title: 'Perfil',
         href: edit(),
@@ -39,6 +39,12 @@ const page = usePage();
 const currentPath = computed(() => (typeof page.url === 'string' ? page.url : '').replace(/\?.*$/, ''));
 const auth = computed(() => page.props.auth as { isDoctor?: boolean; role?: string | null } | undefined);
 const isDoctorSettings = computed(() => auth.value?.isDoctor === true || auth.value?.role === 'doctor');
+
+const sidebarNavItems = computed<NavItem[]>(() =>
+    isDoctorSettings.value
+        ? [...baseNavItems.slice(0, 2), { title: 'Assinatura digital', href: '/settings/digital-signature', icon: PenLine }, ...baseNavItems.slice(2)]
+        : baseNavItems,
+);
 const isProfilePage = computed(() => currentPath.value === '/settings/profile');
 
 const profileSubnavItems = [
