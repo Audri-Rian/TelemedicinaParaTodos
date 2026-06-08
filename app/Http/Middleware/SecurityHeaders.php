@@ -94,7 +94,7 @@ class SecurityHeaders
 
         $directives = [
             "default-src 'self'",
-            "script-src 'self' 'unsafe-inline'{$unsafeEval} https://fonts.googleapis.com https://fonts.bunny.net https://cdn.jsdelivr.net{$viteDevSources}",
+            "script-src 'self' 'unsafe-inline'{$unsafeEval} https://fonts.googleapis.com https://fonts.bunny.net https://cdn.jsdelivr.net https://static.cloudflareinsights.com{$viteDevSources}",
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.bunny.net https://rsms.me{$viteDevSources}",
             "font-src 'self' https://fonts.gstatic.com https://fonts.bunny.net https://rsms.me data:",
             "img-src 'self' data: https: blob:{$viteDevSources}",

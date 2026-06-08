@@ -153,21 +153,17 @@ class AvatarService
             return null;
         }
 
-        // Obter URL do disco
-        $url = $disk->url($path);
+        $userId = $this->extractUserIdFromAvatarPath($path);
+        $filename = basename($path);
 
-        // Se a URL contém 'localhost' sem porta, adicionar porta 8000
-        if (str_contains($url, 'http://localhost/') || str_contains($url, 'http://localhost/storage')) {
-            $url = str_replace('http://localhost', 'http://localhost:8000', $url);
+        if ($userId === '' || $filename === '') {
+            return null;
         }
 
-        // Se a URL não começar com http, construir URL completa
-        if (! str_starts_with($url, 'http')) {
-            $baseUrl = rtrim(config('app.url', 'http://localhost:8000'), '/');
-            $url = $baseUrl.'/'.ltrim($url, '/');
-        }
-
-        return $url;
+        return route('storage.avatar', [
+            'userId' => $userId,
+            'filename' => $filename,
+        ]);
     }
 
     /**
@@ -254,14 +250,28 @@ class AvatarService
             return null;
         }
 
-        if (! $disk->getAdapter() instanceof LocalFilesystemAdapter) {
-            return null;
+        $mimeType = $disk->mimeType($path) ?: 'image/jpeg';
+
+        if ($disk->getAdapter() instanceof LocalFilesystemAdapter) {
+            return [
+                'path' => $disk->path($path),
+                'mimeType' => $mimeType,
+            ];
         }
 
         return [
-            'path' => $disk->path($path),
-            'mimeType' => $disk->mimeType($path),
+            'contents' => $disk->get($path),
+            'mimeType' => $mimeType,
         ];
+    }
+
+    private function extractUserIdFromAvatarPath(string $avatarPath): string
+    {
+        if (! preg_match('#^avatars/([^/]+)/#', $avatarPath, $matches)) {
+            return '';
+        }
+
+        return $matches[1];
     }
 
     private function publicImagesDisk(): FilesystemAdapter

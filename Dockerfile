@@ -4,11 +4,15 @@ RUN apk add --no-cache \
     bash git curl zip unzip su-exec \
     libpq-dev postgresql-dev \
     mysql-dev \
+    freetype libjpeg-turbo libpng libwebp \
     linux-headers \
+    && apk add --no-cache --virtual .build-deps \
+    freetype-dev libjpeg-turbo-dev libpng-dev libwebp-dev \
     $PHPIZE_DEPS \
-    && docker-php-ext-install pdo pdo_mysql pdo_pgsql sockets pcntl \
-    && docker-php-ext-enable pdo_mysql pdo_pgsql sockets pcntl \
-    && apk del $PHPIZE_DEPS linux-headers
+    && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
+    && docker-php-ext-install pdo pdo_mysql pdo_pgsql sockets pcntl gd \
+    && docker-php-ext-enable pdo_mysql pdo_pgsql sockets pcntl gd \
+    && apk del .build-deps linux-headers
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 

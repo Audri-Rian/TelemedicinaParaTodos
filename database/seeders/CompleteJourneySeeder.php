@@ -31,8 +31,8 @@ class CompleteJourneySeeder extends Seeder
 
     public function run(): void
     {
-        if (! app()->environment('local', 'testing')) {
-            $this->command?->warn('CompleteJourneySeeder ignorado fora de local/testing.');
+        if (! app()->environment('local', 'testing', 'staging')) {
+            $this->command?->warn('CompleteJourneySeeder ignorado fora de local/testing/staging.');
 
             return;
         }
