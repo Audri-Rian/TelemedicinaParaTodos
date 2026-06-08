@@ -2,7 +2,10 @@
 
 use App\Integrations\Jobs\ProcessIntegrationQueue;
 use App\Integrations\Jobs\SyncExamResults;
+use App\Jobs\AutoStartVideoCall;
 use App\Jobs\CleanExpiredRedisLocks;
+use App\Jobs\EndScheduledVideoCalls;
+use App\Jobs\EndStuckInProgressAppointments;
 use App\Jobs\EndZombieVideoCalls;
 use App\Jobs\MarkNoShowAppointments;
 use App\Jobs\SendAppointmentReminders;
@@ -20,13 +23,31 @@ Schedule::job(new SendAppointmentReminders)
     ->withoutOverlapping()
     ->onOneServer();
 
+// Videochamada — iniciar automaticamente consultas na janela de tempo
+Schedule::job(new AutoStartVideoCall)
+    ->everyMinute()
+    ->withoutOverlapping()
+    ->onOneServer();
+
 // Manutenção — marcar consultas vencidas como no_show
 Schedule::job(new MarkNoShowAppointments)
     ->cron(config('telemedicine.maintenance.no_show_cron', '*/5 * * * *'))
     ->withoutOverlapping()
     ->onOneServer();
 
-// Manutenção — finalizar chamadas de vídeo presas/zumbis
+// Manutenção — encerrar consultas in_progress presas além da janela
+Schedule::job(new EndStuckInProgressAppointments)
+    ->cron(config('telemedicine.maintenance.stuck_in_progress_cron', '*/5 * * * *'))
+    ->withoutOverlapping()
+    ->onOneServer();
+
+// Videochamada — encerrar salas scheduled fora da janela
+Schedule::job(new EndScheduledVideoCalls)
+    ->everyMinute()
+    ->withoutOverlapping()
+    ->onOneServer();
+
+// Manutenção — finalizar chamadas ad-hoc presas/zumbis
 Schedule::job(new EndZombieVideoCalls)
     ->cron(config('telemedicine.maintenance.video_zombie_cleanup_cron', '*/5 * * * *'))
     ->withoutOverlapping()

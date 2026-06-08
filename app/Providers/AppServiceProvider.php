@@ -19,6 +19,7 @@ use App\Services\Signatures\NullPdfSigner;
 use App\Services\Signatures\NullSignatureDriver;
 use App\Support\Signatures\PadesEmbedder;
 use App\Support\StorageDomainConfigValidator;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -36,8 +37,10 @@ class AppServiceProvider extends ServiceProvider
 
         if ($httpUrl !== '' && $apiSecret !== '') {
             $this->app->bind(MediaGatewayInterface::class, MediaGatewayHttp::class);
+            $providerClass = MediaGatewayHttp::class;
         } else {
             $this->app->bind(MediaGatewayInterface::class, MediaGatewayStub::class);
+            $providerClass = MediaGatewayStub::class;
         }
 
         $this->app->bind(DigitalSignatureDriver::class, function () {
@@ -70,19 +73,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        $driver = $this->pdfSignatureDriver();
-
-        // Guard: NullPdfSigner has no legal validity. CFM Res. 2.314/2022 Art. 8 requires ICP-Brasil.
-        if ($this->app->isProduction() && $driver !== 'a1_local') {
-            throw new \RuntimeException(
-                "SIGNATURE_DRIVER={$driver} is not permitted in production. ".
-                'Set SIGNATURE_DRIVER=a1_local in .env and configure SIGNATURE_A1_PFX_PATH.'
-            );
-        }
-
-        StorageDomainConfigValidator::validate();
+        $this->enforceRuntimeConfig();
 
         Appointments::observe(AppointmentsObserver::class);
+        \App\Models\Notification::observe(\App\Observers\NotificationObserver::class);
+        \App\Models\NotificationPreference::observe(\App\Observers\NotificationPreferenceObserver::class);
         \App\Models\Prescription::observe(\App\Observers\PrescriptionObserver::class);
         \App\Models\Examination::observe(\App\Observers\ExaminationObserver::class);
         \App\Models\MedicalCertificate::observe(\App\Observers\MedicalCertificateObserver::class);
@@ -117,6 +112,42 @@ class AppServiceProvider extends ServiceProvider
             \App\Events\MedicalCertificateIssued::class,
             [\App\Listeners\SendNotificationListener::class, 'handleMedicalCertificateIssued']
         );
+    }
+
+    private function enforceRuntimeConfig(): void
+    {
+        if (! $this->shouldEnforceRuntimeConfig()) {
+            return;
+        }
+
+        if ((bool) config('telemedicine.video_call.enabled', true)) {
+            $jwtSecret = config('services.media_gateway.jwt_secret');
+            if (empty($jwtSecret)) {
+                Log::error('VIDEO_CALL_ENABLED=true mas SFU_JWT_SECRET não configurado. Defina SFU_JWT_SECRET no .env.');
+                throw new \RuntimeException('SFU_JWT_SECRET é obrigatório quando VIDEO_CALL_ENABLED=true.');
+            }
+        }
+
+        $driver = $this->pdfSignatureDriver();
+
+        // Guard: NullPdfSigner has no legal validity. CFM Res. 2.314/2022 Art. 8 requires ICP-Brasil.
+        if ($this->app->isProduction() && $driver !== 'a1_local') {
+            throw new \RuntimeException(
+                "SIGNATURE_DRIVER={$driver} is not permitted in production. ".
+                'Set SIGNATURE_DRIVER=a1_local in .env and configure SIGNATURE_A1_PFX_PATH.'
+            );
+        }
+
+        StorageDomainConfigValidator::validate();
+    }
+
+    private function shouldEnforceRuntimeConfig(): bool
+    {
+        if (! is_file(base_path('.env'))) {
+            return false;
+        }
+
+        return (string) config('app.key') !== '';
     }
 
     private function pdfSignatureDriver(): string

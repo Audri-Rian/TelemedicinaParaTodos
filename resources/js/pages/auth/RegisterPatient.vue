@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import BackgroundDecorativo from '@/components/BackgroundDecorativo.vue';
+import GoogleLoginButton from '@/components/GoogleLoginButton.vue';
 import TextLink from '@/components/TextLink.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -518,6 +519,15 @@ const handleSubmit = async () => {
                             <p class="text-2xl font-bold text-gray-800">Atendimento Ágil</p>
                             <p class="mt-2 text-sm text-gray-600">Conecte-se com especialistas em minutos após a validação.</p>
                         </div>
+                    </div>
+
+                    <div class="space-y-3">
+                        <div class="relative flex items-center gap-3">
+                            <div class="h-px flex-1 bg-gray-200" />
+                            <span class="text-xs text-gray-400">ou cadastre-se com</span>
+                            <div class="h-px flex-1 bg-gray-200" />
+                        </div>
+                        <GoogleLoginButton label="Cadastrar com Google" />
                     </div>
 
                     <div class="text-center text-sm text-gray-600">

@@ -12,7 +12,7 @@ graph TB
         A3[Composables]
         A4[Inertia.js Client]
         A5[Laravel Echo]
-        A6[PeerJS WebRTC]
+        A6[mediasoup-client WebRTC]
     end
 
     subgraph "Camada de Aplicação - Controllers"
@@ -20,7 +20,7 @@ graph TB
         B2[Doctor Controllers]
         B3[Patient Controllers]
         B4[Settings Controllers]
-        B5[VideoCall Controller]
+        B5[Call Controllers]
         B6[Shared Controllers]
     end
 
@@ -31,27 +31,28 @@ graph TB
         C4[TimelineEventService]
         C5[AvatarService]
         C6[ScheduleService]
+        C7[CallManagerService]
     end
 
     subgraph "Camada de Domínio - Models"
         D1[User/Doctor/Patient]
         D2[Appointments]
         D3[Medical Records]
-        D4[VideoCall]
+        D4[Call/Room]
         D5[Timeline Events]
     end
 
     subgraph "Camada de Infraestrutura - Events"
-        E1[RequestVideoCall]
+        E1[VideoCallRequested]
         E2[AppointmentStatusChanged]
-        E3[VideoCallRoomCreated]
-        E4[VideoCallRoomExpired]
+        E3[VideoCallAvailable]
+        E4[VideoCallEnded]
     end
 
     subgraph "Camada de Infraestrutura - Jobs"
-        F1[CleanupOldVideoCallEvents]
-        F2[ExpireVideoCallRooms]
-        F3[UpdateAppointmentFromRoom]
+        F1[AutoStartVideoCall]
+        F2[EndScheduledVideoCalls]
+        F3[EndZombieVideoCalls]
         F4[GenerateMedicalRecordPDF]
     end
 
@@ -76,6 +77,7 @@ graph TB
         J1[Laravel Reverb]
         J2[WebSocket Server]
         J3[HTTP Server]
+        J4[MediaSoup SFU]
     end
 
     A1 --> A2
@@ -83,7 +85,7 @@ graph TB
     A1 --> A4
     A4 --> B1
     A5 --> J1
-    A6 --> J1
+    A6 --> J4
 
     B1 --> C1
     B2 --> C1
@@ -147,15 +149,19 @@ graph TB
 ## Responsabilidades por Camada
 
 ### Camada de Apresentação
+
 **Tecnologias**: Vue.js 3, TypeScript, Tailwind CSS, Inertia.js
+
 - Renderização de interface
 - Interação do usuário
 - Comunicação com backend via Inertia
 - Eventos em tempo real via Echo
-- Videoconferência via PeerJS
+- Videoconferência via MediaSoup/SFU
 
 ### Camada de Aplicação - Controllers
+
 **Tecnologias**: Laravel Controllers
+
 - Recebem requisições HTTP
 - Validação via Form Requests
 - Orquestram Services
@@ -163,7 +169,9 @@ graph TB
 - Aplicam Policies
 
 ### Camada de Aplicação - Services
+
 **Tecnologias**: PHP Services
+
 - Lógica de negócio
 - Regras de negócio
 - Coordenação de fluxos
@@ -171,7 +179,9 @@ graph TB
 - Disparam Events
 
 ### Camada de Domínio - Models
+
 **Tecnologias**: Eloquent ORM
+
 - Entidades de domínio
 - Relacionamentos
 - Validações de dados
@@ -179,38 +189,50 @@ graph TB
 - Business rules básicas
 
 ### Camada de Infraestrutura - Events
+
 **Tecnologias**: Laravel Events
+
 - Comunicação assíncrona
 - Broadcasting em tempo real
 - Desacoplamento de componentes
 
 ### Camada de Infraestrutura - Jobs
+
 **Tecnologias**: Laravel Queues
+
 - Processamento assíncrono
 - Tarefas pesadas
 - Limpeza automática
 - Geração de documentos
 
 ### Camada de Infraestrutura - Observers
+
 **Tecnologias**: Laravel Observers
+
 - Hooks de modelo
 - Logs automáticos
 - Notificações
 
 ### Camada de Infraestrutura - Policies
+
 **Tecnologias**: Laravel Policies
+
 - Autorização
 - Permissões granulares
 - Controle de acesso
 
 ### Camada de Persistência
+
 **Tecnologias**: MySQL/PostgreSQL, Redis, File System
+
 - Armazenamento de dados
 - Cache
 - Arquivos e documentos
 
 ### Camada de Comunicação
+
 **Tecnologias**: Laravel Reverb, WebSocket, HTTP
+
 - Comunicação em tempo real
 - Requisições HTTP
 - Broadcasting
@@ -235,6 +257,4 @@ graph TB
 
 ---
 
-*Última atualização: Janeiro 2025*
-
-
+_Última atualização: Janeiro 2025_

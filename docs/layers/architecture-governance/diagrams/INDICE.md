@@ -7,9 +7,11 @@ Este índice organiza todos os diagramas do projeto por categoria e funcionalida
 ## 🏗️ Diagramas de Arquitetura
 
 ### 1. [Arquitetura Geral](01_ArquiteturaGeral.md)
+
 **Descrição**: Visão geral completa da arquitetura do sistema, mostrando todas as camadas, tecnologias e fluxo de dados.
 
 **Conteúdo**:
+
 - Camada de Apresentação (Frontend)
 - Camada de Aplicação (Backend)
 - Comunicação em Tempo Real
@@ -21,9 +23,11 @@ Este índice organiza todos os diagramas do projeto por categoria e funcionalida
 ---
 
 ### 2. [Arquitetura em Camadas](07_ArquiteturaCamadas.md)
+
 **Descrição**: Detalhamento das responsabilidades de cada camada do sistema.
 
 **Conteúdo**:
+
 - Camada de Apresentação
 - Camada de Aplicação (Controllers e Services)
 - Camada de Domínio (Models)
@@ -38,9 +42,11 @@ Este índice organiza todos os diagramas do projeto por categoria e funcionalida
 ## 🔄 Diagramas de Fluxo
 
 ### 3. [Fluxo de Consulta](02_FluxoConsulta.md)
+
 **Descrição**: Fluxo completo de uma consulta médica, desde o agendamento até a finalização.
 
 **Estados**:
+
 - SCHEDULED (Agendada)
 - IN_PROGRESS (Em andamento)
 - COMPLETED (Finalizada)
@@ -49,6 +55,7 @@ Este índice organiza todos os diagramas do projeto por categoria e funcionalida
 - RESCHEDULED (Reagendada)
 
 **Componentes do Prontuário**:
+
 - Diagnóstico (CID-10)
 - Prescrições
 - Exames
@@ -60,9 +67,11 @@ Este índice organiza todos os diagramas do projeto por categoria e funcionalida
 ---
 
 ### 4. [Fluxo de Autenticação](03_FluxoAutenticacao.md)
+
 **Descrição**: Processo de autenticação, registro e redirecionamento de usuários.
 
 **Fluxos**:
+
 - Registro de Médico
 - Registro de Paciente
 - Login
@@ -70,6 +79,7 @@ Este índice organiza todos os diagramas do projeto por categoria e funcionalida
 - Middleware de Autenticação
 
 **Segurança**:
+
 - Bcrypt para senhas
 - Sessões Laravel
 - CSRF Protection
@@ -78,29 +88,35 @@ Este índice organiza todos os diagramas do projeto por categoria e funcionalida
 ---
 
 ### 5. [Fluxo de Videoconferência](04_FluxoVideoconferencia.md)
-**Descrição**: Como funciona a videoconferência em tempo real usando WebRTC e Laravel Reverb.
+
+**Descrição**: Como funciona a videoconferência em tempo real usando WebRTC, MediaSoup/SFU e Laravel Reverb para eventos de negócio.
 
 **Componentes**:
-- PeerJS (WebRTC)
+
+- mediasoup-client (WebRTC)
+- MediaSoup SFU
 - Laravel Echo (WebSocket Client)
 - Laravel Reverb (WebSocket Server)
-- VideoCallController
+- CallController / AppointmentVideoSessionController
 - Events de Videoconferência
 
 **Fluxo**:
+
 1. Início da consulta
 2. Configuração WebRTC
 3. Solicitação de chamada
-4. Conexão P2P
+4. Conexão ao SFU
 5. Streaming de vídeo/áudio
 6. Finalização
 
 ---
 
 ### 6. [Fluxo de Agendamento](06_FluxoAgendamento.md)
+
 **Descrição**: Processo completo de busca, seleção e agendamento de consultas pelo paciente.
 
 **Etapas**:
+
 1. Buscar médicos disponíveis
 2. Aplicar filtros (especialidade, nome, data)
 3. Visualizar perfil do médico
@@ -112,6 +128,7 @@ Este índice organiza todos os diagramas do projeto por categoria e funcionalida
 9. Enviar notificações
 
 **Validações**:
+
 - Contato de emergência completo
 - Disponibilidade de slots
 - Datas bloqueadas
@@ -122,9 +139,11 @@ Este índice organiza todos os diagramas do projeto por categoria e funcionalida
 ## 🧩 Diagramas de Componentes
 
 ### 7. [Componentes Frontend](05_ComponentesFrontend.md)
+
 **Descrição**: Estrutura e hierarquia dos componentes Vue.js do frontend.
 
 **Categorias**:
+
 - **Layouts**: AppLayout, AuthLayout, SettingsLayout
 - **App Shell**: AppShell, AppHeader, AppSidebar, AppContent
 - **UI Components**: Reka UI (Button, Input, Card, Dialog, etc.)
@@ -141,9 +160,11 @@ Este índice organiza todos os diagramas do projeto por categoria e funcionalida
 ## 📚 Diagramas Relacionados
 
 ### Banco de Dados
+
 - **[Diagrama ERD](../../persistence/database/diagrama_banco_dados.md)** - Modelo entidade-relacionamento completo
 
 ### Documentação
+
 - **[Arquitetura](../Architecture/Arquitetura.md)** - Documentação detalhada da arquitetura
 - **[Manual do Usuário](../ManualDoUsuario.md)** - Guia completo para usuários
 
@@ -152,16 +173,19 @@ Este índice organiza todos os diagramas do projeto por categoria e funcionalida
 ## 🎯 Como Usar os Diagramas
 
 ### Para Desenvolvedores
+
 - Use os diagramas de arquitetura para entender a estrutura do sistema
 - Consulte os fluxos para implementar novas funcionalidades
 - Referencie os componentes para manter consistência
 
 ### Para Stakeholders
+
 - Use os fluxos para entender processos de negócio
 - Consulte a arquitetura para entender a tecnologia
 - Use os diagramas em apresentações e documentação
 
 ### Para Novos Membros da Equipe
+
 - Comece pela Arquitetura Geral
 - Entenda os fluxos principais (Consulta, Autenticação)
 - Explore os componentes frontend
@@ -171,6 +195,7 @@ Este índice organiza todos os diagramas do projeto por categoria e funcionalida
 ## 🔄 Manutenção
 
 Os diagramas devem ser atualizados quando:
+
 - Nova funcionalidade é adicionada
 - Arquitetura é modificada
 - Fluxos de processo mudam
@@ -180,6 +205,4 @@ Os diagramas devem ser atualizados quando:
 
 ---
 
-*Todos os diagramas são criados em formato Mermaid e podem ser visualizados em qualquer visualizador Markdown compatível.*
-
-
+_Todos os diagramas são criados em formato Mermaid e podem ser visualizados em qualquer visualizador Markdown compatível._

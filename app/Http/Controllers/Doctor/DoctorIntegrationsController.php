@@ -70,7 +70,7 @@ class DoctorIntegrationsController extends Controller
         ]);
 
         $syncCron = config('integrations.sync.exam_results_cron', '*/15 * * * *');
-        $nextSyncAt = (new CronExpression($syncCron))->getNextRunDate()->toIso8601String();
+        $nextSyncAt = (new CronExpression($syncCron))->getNextRunDate()->format(DATE_ATOM);
 
         return Inertia::render('Doctor/Integrations/Hub', [
             'stats' => [

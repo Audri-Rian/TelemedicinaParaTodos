@@ -6,9 +6,9 @@ export type DocumentKind = 'rx' | 'cert' | 'exams';
 
 export type PreviewPatient = {
     name: string;
-    cpf: string;
-    age: number;
-    sex: 'F' | 'M';
+    cpf?: string | null;
+    age?: number | null;
+    sex?: 'F' | 'M' | null;
 };
 
 export type RxPreviewItem = {
@@ -32,6 +32,7 @@ export type CertPreviewData = {
     endTime: string;
     cid: string;
     body: string;
+    restrictions: string;
 };
 
 export type ExamPreviewItem = {
@@ -39,16 +40,24 @@ export type ExamPreviewItem = {
     name: string;
 };
 
-const props = defineProps<{
-    docType: DocumentKind;
-    patient: PreviewPatient | null;
-    rxItems: RxPreviewItem[];
-    certData: CertPreviewData;
-    examItems: ExamPreviewItem[];
-    urgency: string;
-    indication: string;
-    fasting: string;
-}>();
+const props = withDefaults(
+    defineProps<{
+        docType: DocumentKind;
+        patient: PreviewPatient | null;
+        rxItems: RxPreviewItem[];
+        certData: CertPreviewData;
+        examItems: ExamPreviewItem[];
+        urgency: string;
+        indication: string;
+        fasting: string;
+        rxInstructions?: string;
+        rxValidUntil?: string;
+    }>(),
+    {
+        rxInstructions: '',
+        rxValidUntil: '',
+    },
+);
 
 const docTitle = computed(() => {
     if (props.docType === 'rx') {
@@ -91,6 +100,29 @@ const urgencyLabel = computed(() => {
     };
     return map[props.urgency] ?? 'Rotina';
 });
+
+function formatDateBr(isoDate: string): string {
+    const [year, month, day] = isoDate.split('-');
+    if (!year || !month || !day) {
+        return isoDate;
+    }
+    return `${day}/${month}/${year}`;
+}
+
+const certStartDateLabel = computed(() => (props.certData.startDate ? formatDateBr(props.certData.startDate) : '__/__/____'));
+
+const certPeriodLabel = computed(() => {
+    const { startTime, endTime } = props.certData;
+    if (startTime && endTime) {
+        return `das ${startTime} às ${endTime}`;
+    }
+    if (startTime) {
+        return `a partir das ${startTime}`;
+    }
+    return '';
+});
+
+const rxValidUntilLabel = computed(() => (props.rxValidUntil ? formatDateBr(props.rxValidUntil) : ''));
 
 const qrPattern = [
     '0011010001',
@@ -202,6 +234,12 @@ const qrPattern = [
                                 </div>
                             </li>
                         </ol>
+                        <div v-if="rxItems.length && rxInstructions" class="mt-2 text-[10px] text-zinc-800">
+                            <strong>Instruções gerais:</strong> {{ rxInstructions }}
+                        </div>
+                        <div v-if="rxItems.length && rxValidUntilLabel" class="mt-1 text-[10px] text-zinc-800">
+                            <strong>Receita válida até:</strong> {{ rxValidUntilLabel }}
+                        </div>
                     </template>
 
                     <!-- Atestado -->
@@ -210,16 +248,32 @@ const qrPattern = [
                             O texto do atestado aparecerá aqui.
                         </div>
                         <div v-else class="px-0 py-2 text-justify text-[10.5px] leading-[1.7]">
-                            <p class="mb-3">
+                            <p v-if="certData.type === 'comparecimento'" class="mb-3">
+                                Atesto, para os devidos fins, que o(a) paciente
+                                <strong>{{ patient?.name ?? '_______' }}</strong>
+                                compareceu a atendimento médico nesta unidade no dia <strong>{{ certStartDateLabel }}</strong
+                                ><template v-if="certPeriodLabel"
+                                    >, <strong>{{ certPeriodLabel }}</strong></template
+                                >.
+                            </p>
+                            <p v-else-if="certData.type === 'aptidao'" class="mb-3">
+                                Atesto, para os devidos fins, que o(a) paciente
+                                <strong>{{ patient?.name ?? '_______' }}</strong>
+                                foi avaliado(a) clinicamente nesta data e encontra-se <strong>apto(a)</strong> para o exercício de suas atividades, a
+                                partir de <strong>{{ certStartDateLabel }}</strong
+                                >.
+                            </p>
+                            <p v-else class="mb-3">
                                 Atesto, para os devidos fins, que o(a) paciente
                                 <strong>{{ patient?.name ?? '_______' }}</strong>
                                 esteve sob meus cuidados médicos no dia de hoje, devendo permanecer afastado(a) de suas atividades laborais por um
                                 período de
                                 <strong>{{ certData.days || '__' }} ({{ Number(certData.days || 0) > 0 ? certData.days : '__' }}) dias</strong>, a
-                                partir de <strong>{{ certData.startDate || '__/__/____' }}</strong
+                                partir de <strong>{{ certStartDateLabel }}</strong
                                 >.
                             </p>
                             <p v-if="certData.body" class="mb-3">{{ certData.body }}</p>
+                            <p v-if="certData.restrictions" class="mb-3"><strong>Restrições/recomendações:</strong> {{ certData.restrictions }}</p>
                             <p v-if="certData.cid" class="mb-3 text-[10px]">
                                 <strong>CID-10:</strong> <span class="font-mono">{{ certData.cid }}</span>
                                 <span class="text-zinc-600"> · informado com consentimento expresso do paciente.</span>

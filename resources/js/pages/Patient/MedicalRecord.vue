@@ -11,11 +11,13 @@ import DocumentsTab from '@/components/Patient/MedicalRecord/tabs/DocumentsTab.v
 import ExaminationsTab from '@/components/Patient/MedicalRecord/tabs/ExaminationsTab.vue';
 import HistoryTab from '@/components/Patient/MedicalRecord/tabs/HistoryTab.vue';
 import PrescriptionsTab from '@/components/Patient/MedicalRecord/tabs/PrescriptionsTab.vue';
+import ProfileTab from '@/components/Patient/MedicalRecord/tabs/ProfileTab.vue';
 import UpcomingTab from '@/components/Patient/MedicalRecord/tabs/UpcomingTab.vue';
 import VitalSignsTab from '@/components/Patient/MedicalRecord/tabs/VitalSignsTab.vue';
 import { useRouteGuard } from '@/composables/auth';
 import { useMedicalRecordFilters } from '@/composables/Patient/useMedicalRecordFilters';
 import AppLayout from '@/layouts/AppLayout.vue';
+import * as doctorRoutes from '@/routes/doctor';
 import * as patientRoutes from '@/routes/patient';
 import { type BreadcrumbItem } from '@/types';
 import type {
@@ -27,6 +29,7 @@ import type {
     MedicalDocument,
     MedicalMetrics,
     PatientProfile,
+    PatientProfileExtra,
     Prescription,
     TabId,
     VitalSignEntry,
@@ -49,6 +52,11 @@ interface Props {
     upcoming_appointments?: Appointment[];
     metrics?: MedicalMetrics;
     filters?: Record<string, unknown>;
+    patient_profile?: PatientProfileExtra;
+    context?: {
+        mode?: 'patient' | 'doctor';
+        viewer?: { id: string; name: string };
+    };
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -71,15 +79,28 @@ const props = withDefaults(defineProps<Props>(), {
     filters: () => ({}),
 });
 
-const { canAccessPatientRoute } = useRouteGuard();
+const { canAccessDoctorRoute, canAccessPatientRoute } = useRouteGuard();
 const { filtersState, hasFilters, emptyText, applyFilters, clearFilters, syncFromProps } = useMedicalRecordFilters(props.filters);
 
-const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Dashboard', href: patientRoutes.dashboard().url },
-    { title: 'Prontuário Médico', href: patientRoutes.medicalRecords().url },
-];
+const isDoctorMode = computed(() => props.context?.mode === 'doctor');
+
+const breadcrumbs = computed<BreadcrumbItem[]>(() => {
+    if (isDoctorMode.value) {
+        return [
+            { title: 'Dashboard', href: doctorRoutes.dashboard().url },
+            { title: 'Prontuário Médico', href: `/doctor/patients/${props.patient.id}/medical-record` },
+        ];
+    }
+
+    return [
+        { title: 'Dashboard', href: patientRoutes.dashboard().url },
+        { title: 'Prontuário Médico', href: patientRoutes.medicalRecords().url },
+    ];
+});
 
 const activeTab = ref<TabId>('historico');
+
+const doctorPatientId = computed(() => (props.context?.mode === 'doctor' ? props.patient.id : undefined));
 
 const consultations = computed(() => (props.consultations?.length ? props.consultations : props.timeline));
 const upcomingAppointments = computed(() => props.upcoming_appointments ?? []);
@@ -88,6 +109,7 @@ const metrics = computed(
 );
 
 const tabs = computed<Array<{ id: TabId; label: string; count: number }>>(() => [
+    ...(isDoctorMode.value ? [{ id: 'perfil' as TabId, label: 'Perfil', count: 0 }] : []),
     { id: 'historico', label: 'Histórico', count: consultations.value.length },
     { id: 'consultas', label: 'Consultas', count: consultations.value.length },
     { id: 'prescricoes', label: 'Prescrições', count: props.prescriptions?.length ?? 0 },
@@ -100,7 +122,25 @@ const tabs = computed<Array<{ id: TabId; label: string; count: number }>>(() => 
     { id: 'futuras', label: 'Futuras', count: upcomingAppointments.value.length },
 ]);
 
-onMounted(() => canAccessPatientRoute());
+// Deep-link de tab (ex.: ações rápidas da videochamada abrem ?tab=prescricoes)
+const applyTabFromQuery = () => {
+    if (typeof window === 'undefined') return;
+    const requested = new URLSearchParams(window.location.search).get('tab');
+    if (requested && tabs.value.some((tab) => tab.id === requested)) {
+        activeTab.value = requested as TabId;
+    }
+};
+
+onMounted(() => {
+    applyTabFromQuery();
+
+    if (isDoctorMode.value) {
+        canAccessDoctorRoute();
+        return;
+    }
+
+    canAccessPatientRoute();
+});
 
 watch(() => props.filters, syncFromProps, { deep: true });
 </script>
@@ -109,7 +149,7 @@ watch(() => props.filters, syncFromProps, { deep: true });
     <Head title="Prontuário Médico" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="min-h-full bg-[#f4f6f8] p-0 text-gray-950">
+        <div class="w-full bg-[#f4f6f8] p-0 text-gray-950">
             <div class="flex w-full flex-col gap-5 p-4 lg:p-5">
                 <PatientHeader :patient="patient" :filters-state="filtersState">
                     <template #metrics>
@@ -133,25 +173,48 @@ watch(() => props.filters, syncFromProps, { deep: true });
                     <TabNav :tabs="tabs" :active-tab="activeTab" @change="activeTab = $event" />
 
                     <div class="p-4 lg:p-5">
+                        <ProfileTab v-if="activeTab === 'perfil'" :patient="patient" :patient-profile="patient_profile" />
                         <HistoryTab v-if="activeTab === 'historico'" :consultations="consultations" :empty-text="emptyText" />
                         <ConsultationsTab v-if="activeTab === 'consultas'" :consultations="consultations" :empty-text="emptyText" />
-                        <PrescriptionsTab v-if="activeTab === 'prescricoes'" :prescriptions="props.prescriptions ?? []" :empty-text="emptyText" />
-                        <ExaminationsTab v-if="activeTab === 'exames'" :examinations="props.examinations ?? []" :empty-text="emptyText" />
+                        <PrescriptionsTab
+                            v-if="activeTab === 'prescricoes'"
+                            :prescriptions="props.prescriptions ?? []"
+                            :empty-text="emptyText"
+                            :patient-id="doctorPatientId"
+                        />
+                        <ExaminationsTab
+                            v-if="activeTab === 'exames'"
+                            :examinations="props.examinations ?? []"
+                            :empty-text="emptyText"
+                            :patient-id="doctorPatientId"
+                        />
                         <DocumentsTab
                             v-if="activeTab === 'documentos'"
                             :documents="props.documents ?? []"
                             :consultations="consultations"
                             :empty-text="emptyText"
+                            :patient-id="doctorPatientId"
                         />
                         <DiagnosesTab v-if="activeTab === 'diagnosticos'" :diagnoses="props.diagnoses ?? []" :empty-text="emptyText" />
                         <CertificatesTab
                             v-if="activeTab === 'atestados'"
                             :medical-certificates="props.medical_certificates ?? []"
                             :empty-text="emptyText"
+                            :patient-id="doctorPatientId"
                         />
                         <VitalSignsTab v-if="activeTab === 'vitais'" :vital-signs="props.vital_signs ?? []" :empty-text="emptyText" />
-                        <ClinicalNotesTab v-if="activeTab === 'notas'" :clinical-notes="props.clinical_notes ?? []" :empty-text="emptyText" />
-                        <UpcomingTab v-if="activeTab === 'futuras'" :upcoming-appointments="upcomingAppointments" :empty-text="emptyText" />
+                        <ClinicalNotesTab
+                            v-if="activeTab === 'notas'"
+                            :clinical-notes="props.clinical_notes ?? []"
+                            :empty-text="emptyText"
+                            :patient-id="doctorPatientId"
+                        />
+                        <UpcomingTab
+                            v-if="activeTab === 'futuras'"
+                            :upcoming-appointments="upcomingAppointments"
+                            :empty-text="emptyText"
+                            :is-doctor-mode="isDoctorMode"
+                        />
                     </div>
                 </section>
 

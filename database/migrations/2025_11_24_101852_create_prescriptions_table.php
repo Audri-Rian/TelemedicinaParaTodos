@@ -21,6 +21,13 @@ return new class extends Migration
             $table->date('valid_until')->nullable();
             $table->enum('status', ['active', 'expired', 'cancelled'])->default('active');
             $table->json('metadata')->nullable();
+            $table->uuid('partner_integration_id')->nullable();
+            $table->string('external_id')->nullable();
+            $table->string('digital_signature_hash')->nullable();
+            $table->enum('signature_status', ['unsigned', 'signed', 'verified', 'invalid'])->default('unsigned');
+            $table->string('verification_code', 32)->nullable()->unique();
+            $table->timestamp('signed_at')->nullable();
+            $table->string('pdf_path')->nullable();
             $table->timestamp('issued_at')->nullable();
             $table->timestamps();
             $table->softDeletes();
@@ -29,6 +36,7 @@ return new class extends Migration
             $table->index(['doctor_id', 'status']);
             $table->index('valid_until');
             $table->index('issued_at');
+            $table->index('signature_status');
         });
     }
 

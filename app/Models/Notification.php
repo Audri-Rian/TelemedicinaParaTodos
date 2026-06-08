@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use App\Casts\SafeNotificationTypeCast;
-use App\Enums\NotificationType;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -44,6 +43,7 @@ class Notification extends Model
         if ($this->read_at === null) {
             return $this->update(['read_at' => now()]);
         }
+
         return false;
     }
 

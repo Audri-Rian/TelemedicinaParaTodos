@@ -4,6 +4,9 @@ namespace App\Http\Controllers\Patient;
 
 use App\Http\Controllers\Controller;
 use App\Jobs\GenerateMedicalRecordPDF;
+use App\Models\ClinicalNote;
+use App\Models\MedicalCertificate;
+use App\Models\Prescription;
 use App\Services\MedicalRecordService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -119,6 +122,45 @@ class PatientMedicalRecordController extends Controller
         }
 
         return back()->with('status', $successMessage);
+    }
+
+    public function showVersionHistory(Request $request, string $type, string $record): JsonResponse
+    {
+        $patient = $request->user()?->patient;
+
+        if (! $patient) {
+            abort(403, 'Perfil de paciente não encontrado.');
+        }
+
+        $this->authorize('viewVersionHistory', $patient);
+
+        $model = match ($type) {
+            'notes' => ClinicalNote::where('patient_id', $patient->id)->findOrFail($record),
+            'prescriptions' => Prescription::where('patient_id', $patient->id)->findOrFail($record),
+            'certificates' => MedicalCertificate::where('patient_id', $patient->id)->findOrFail($record),
+            default => abort(404),
+        };
+
+        $this->medicalRecordService->logAccess($request->user(), $patient, 'view_version_history', [
+            'record_type' => $type,
+            'record_id' => $record,
+        ]);
+
+        $versions = $model->versions()
+            ->with('changedBy:id,name')
+            ->latest('version_number')
+            ->limit(100)
+            ->get()
+            ->map(fn ($v) => [
+                'version_number' => $v->version_number,
+                'changed_by' => $v->changedBy?->name ?? 'Sistema',
+                'change_reason' => $v->change_reason,
+                'changed_fields' => $v->changed_fields,
+                // Omit diff details from patient view for privacy/security
+                'created_at' => $v->created_at?->toIso8601String(),
+            ]);
+
+        return response()->json(['versions' => $versions]);
     }
 
     /**

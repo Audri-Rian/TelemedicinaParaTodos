@@ -35,9 +35,6 @@ jobs:
       - name: Install Node Dependencies
         run: npm ci
 
-      - name: Install Dependencies
-        run: composer install --no-interaction --prefer-dist --optimize-autoloader
-
       - name: Copy Environment File
         run: cp .env.example .env
 
@@ -47,8 +44,12 @@ jobs:
           echo "DB_DATABASE=$(pwd)/database/database.sqlite" >> .env
           echo "CACHE_STORE=array" >> .env
           echo "QUEUE_CONNECTION=sync" >> .env
+          echo "SFU_JWT_SECRET=ci-jwt-secret" >> .env
           mkdir -p database
           touch database/database.sqlite
+
+      - name: Install Dependencies
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader
 
       - name: Generate Application Key
         run: php artisan key:generate

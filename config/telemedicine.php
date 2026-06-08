@@ -123,6 +123,10 @@ return [
         // Janela de dias para disponibilidade/agendamento de médicos em telas de agenda.
         // Usado em: AvailabilityTimelineService, ScheduleConsultationController, DoctorPerfilController.
         'timeline_window_days' => (int) env('AVAILABILITY_TIMELINE_WINDOW_DAYS', 30),
+
+        // Exige que o médico tenha valor da consulta definido para criar novos slots.
+        // Usado em: StoreAvailabilitySlotRequest e UI de ScheduleManagement.
+        'require_consultation_fee_to_create_slot' => (bool) env('AVAILABILITY_REQUIRE_CONSULTATION_FEE', true),
     ],
 
     /*
@@ -136,14 +140,38 @@ return [
     */
 
     'video_call' => [
-        // Minutos de inatividade para encerrar sala "zumbi".
+        // Minutos ANTES do scheduled_at para abrir a sala (chamada agendada).
+        // Unificado com appointment.lead_minutes — agenda e sala abrem juntos.
+        'window_lead_minutes' => (int) env('VIDEO_CALL_WINDOW_LEAD_MINUTES', 10),
+
+        // Minutos APÓS o scheduled_at para encerrar a sala (chamada agendada).
+        'window_trailing_minutes' => (int) env('VIDEO_CALL_WINDOW_TRAILING_MINUTES', 10),
+
+        // Duração máxima em minutos de chamadas ad-hoc. EndZombieVideoCalls usa este valor.
+        'ad_hoc_max_duration_minutes' => (int) env('VIDEO_CALL_ADHOC_MAX_MINUTES', 60),
+
+        // Janela de elegibilidade ad-hoc: paciente só liga se tiver consulta nos últimos N dias.
+        'ad_hoc_relationship_days' => (int) env('VIDEO_CALL_ADHOC_RELATIONSHIP_DAYS', 7),
+
+        // Minutos de inatividade para encerrar sala "zumbi" (ad-hoc apenas).
         'room_inactive_minutes' => (int) env('VIDEO_ROOM_INACTIVE_MINUTES', 60),
 
-        // Duração máxima de uma sala ativa (minutos). Evita salas eternas.
+        // Duração máxima de uma sala ativa (minutos). Evita salas eternas (ad-hoc fallback).
         'room_max_duration_minutes' => (int) env('VIDEO_ROOM_MAX_DURATION_MINUTES', 120),
 
-        // Janela para iniciar videoconferência: usa appointment.lead_minutes e trailing_minutes.
-        // DoctorConsultationsController, PatientVideoCallController.
+        // Janela máxima (minutos após scheduled_at) para entrar em consulta in_progress.
+        // Após a janela: join bloqueado e consulta elegível para auto-encerramento
+        // (EndStuckInProgressAppointments). Alinhado a room_max_duration_minutes.
+        'in_progress_max_minutes' => (int) env('VIDEO_CALL_IN_PROGRESS_MAX_MINUTES', 120),
+
+        // TTL do JWT de acesso à sala de vídeo (minutos). CallManagerService::generateRoomToken.
+        'token_ttl_minutes' => (int) env('VIDEO_CALL_TOKEN_TTL_MINUTES', 10),
+
+        // Habilita o módulo de videochamada. Exige SFU_JWT_SECRET quando true.
+        'enabled' => (bool) env('VIDEO_CALL_ENABLED', true),
+
+        // Exige healthcheck do SFU antes de aceitar chamadas (fail-closed). Provider=sfu apenas.
+        'require_sfu_health' => (bool) env('VIDEO_CALL_REQUIRE_SFU_HEALTH', true),
     ],
 
     /*
@@ -201,6 +229,7 @@ return [
 
         // Frequência das rotinas de manutenção operacional.
         'no_show_cron' => env('NO_SHOW_CRON', '*/5 * * * *'),
+        'stuck_in_progress_cron' => env('STUCK_IN_PROGRESS_CRON', '*/5 * * * *'),
         'video_zombie_cleanup_cron' => env('VIDEO_ZOMBIE_CLEANUP_CRON', '*/5 * * * *'),
         'redis_lock_cleanup_cron' => env('REDIS_LOCK_CLEANUP_CRON', '*/15 * * * *'),
 
@@ -319,6 +348,16 @@ return [
         // Dias máximos permitidos em atestado médico. StoreMedicalCertificateRequest: max:60.
         'certificate_max_days' => (int) env('MEDICAL_CERTIFICATE_MAX_DAYS', 60),
 
+        // Janela (dias) de consultas completed elegíveis para vínculo de documento clínico
+        // (emissão retroativa — ex.: atestado pós-consulta). Q1 da spec de emissão.
+        'document_eligible_completed_days' => (int) env('DOCUMENT_ELIGIBLE_COMPLETED_DAYS', 30),
+
+        // Janela (dias) de relacionamento médico↔paciente para o hub de emissão de documentos.
+        // Filtra quais PACIENTES aparecem como elegíveis e governa a resolução automática
+        // de consulta (completed) quando o hub emite sem appointment_id. Convive com a
+        // janela de 30d acima — que segue valendo para vínculo explícito nas tabs/in-call.
+        'document_eligible_relationship_days' => (int) env('DOCUMENT_ELIGIBLE_RELATIONSHIP_DAYS', 10),
+
         // Limite de resultados em buscas de prontuário (performance).
         // MedicalRecordService::take(10) em algumas queries.
         'search_limit' => (int) env('MEDICAL_RECORD_SEARCH_LIMIT', 10),
@@ -403,8 +442,16 @@ return [
     */
 
     'auth' => [
-        // Máximo de tentativas de login antes de bloquear (rate limit).
         'login_max_attempts' => (int) env('AUTH_LOGIN_MAX_ATTEMPTS', 5),
+
+        'two_factor' => [
+            'window' => (int) env('TWO_FACTOR_WINDOW', 1),
+            'recovery_code_count' => (int) env('TWO_FACTOR_RECOVERY_CODE_COUNT', 10),
+        ],
+
+        'social' => [
+            'enabled_for_patients' => (bool) env('SOCIAL_AUTH_ENABLED_FOR_PATIENTS', true),
+        ],
     ],
 
     /*
@@ -570,6 +617,11 @@ return [
         // Driver de assinatura: 'null' (dev), 'a1_local' (prod A1 PFX), 'icp_brasil' (legado/stub).
         // 'a1_local' usa PadesEmbedder + A1PdfSigner com certificado PFX local.
         'driver' => env('SIGNATURE_DRIVER', 'null'),
+
+        // Gating de emissão: exige doctors.digital_signature_status = active para emitir
+        // Rx/atestado/exame (hub, tabs e in-call — checagem única na AppointmentPolicy).
+        // Default TRUE; a env existe apenas como botão de emergência para rollback.
+        'require_for_issuance' => (bool) env('SIGNATURE_REQUIRE_FOR_ISSUANCE', true),
 
         // Configuração do driver A1 local (PAdES com certificado PFX/PKCS#12).
         // NUNCA commitar o arquivo PFX nem a senha. Usar cofre (Vault, Secrets Manager).

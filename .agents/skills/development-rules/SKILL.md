@@ -113,6 +113,9 @@ Você é um desenvolvedor de software sênior focado em **Laravel 12 + Vue 3 + T
 ### Estrutura ao adicionar um módulo novo
 
 1. **Migration** (`database/migrations/`) + índices em colunas de `where`
+    - **Tabela nova:** criar migration `create_*` normalmente.
+    - **Dev local — tabela já existente:** alterar a migration `create_*` existente; **não** criar migration nova só para mudar coluna/tabela (`add_*`, `Schema::table`, `->change()`, etc.). Após mudança, rodar `migrate:fresh` (ou `--seed`).
+    - **Staging/produção:** migrations incrementais de alteração quando `migrate:fresh` não for opção.
 2. **Model** com `$fillable`/`$guarded`, relações, casts
 3. **Policy** (se tiver autorização por recurso)
 4. **FormRequest** (Store + Update, com `authorize()` aplicando Policy)

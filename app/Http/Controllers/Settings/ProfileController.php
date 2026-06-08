@@ -64,6 +64,7 @@ class ProfileController extends Controller
             'status' => $request->session()->get('status'),
             'avatarUrl' => $user->getAvatarUrl(),
             'avatarThumbnailUrl' => $user->getAvatarUrl(true),
+            'avatarMaxKb' => $this->avatarMaxKb(),
             'timelineCompleted' => $user->timeline_completed ?? false,
             'patient' => $patient ? [
                 'id' => $patient->id,
@@ -99,6 +100,44 @@ class ProfileController extends Controller
             'specializations' => Cache::remember('specializations:list', now()->addHours(6), fn () => Specialization::query()->orderBy('name')->get(['id', 'name'])
             ),
         ]);
+    }
+
+    private function avatarMaxKb(): int
+    {
+        $configuredMaxKb = (int) config('telemedicine.uploads.avatar_max_kb', 5120);
+        $runtimeMaxKb = $this->runtimeUploadMaxKb();
+
+        return $runtimeMaxKb > 0 ? min($configuredMaxKb, $runtimeMaxKb) : $configuredMaxKb;
+    }
+
+    private function runtimeUploadMaxKb(): int
+    {
+        $limits = array_filter([
+            $this->phpIniSizeToKb(ini_get('upload_max_filesize')),
+            $this->phpIniSizeToKb(ini_get('post_max_size')),
+        ]);
+
+        return $limits === [] ? 0 : min($limits);
+    }
+
+    private function phpIniSizeToKb(string|false $value): int
+    {
+        if ($value === false || trim($value) === '') {
+            return 0;
+        }
+
+        $value = trim($value);
+        $unit = strtolower($value[strlen($value) - 1]);
+        $number = (float) $value;
+
+        $bytes = match ($unit) {
+            'g' => $number * 1024 * 1024 * 1024,
+            'm' => $number * 1024 * 1024,
+            'k' => $number * 1024,
+            default => $number,
+        };
+
+        return $bytes <= 0 ? 0 : (int) ceil($bytes / 1024);
     }
 
     /**

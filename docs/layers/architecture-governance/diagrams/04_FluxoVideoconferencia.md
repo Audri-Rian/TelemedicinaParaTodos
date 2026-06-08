@@ -1,8 +1,8 @@
 # Diagrama de Fluxo de Videoconferência - Telemedicina Para Todos
 
-## Fluxo de Videoconferência WebRTC
+## Fluxo de Videoconferência WebRTC com SFU
 
-Este diagrama mostra como funciona a videoconferência em tempo real usando WebRTC e Laravel Reverb.
+Este diagrama mostra o fluxo atual de videochamada: Laravel controla negócio, Reverb avisa estado e o SFU MediaSoup transporta áudio/vídeo.
 
 ```mermaid
 sequenceDiagram
@@ -10,136 +10,114 @@ sequenceDiagram
     participant DF as Doctor Frontend
     participant P as Patient
     participant PF as Patient Frontend
-    participant C as VideoCallController
-    participant E as Events
+    participant C as Laravel Controllers
+    participant S as CallManagerService
+    participant G as MediaGateway
+    participant SFU as MediaSoup SFU
     participant R as Laravel Reverb
     participant DB as Database
-    participant Peer as PeerJS Server
 
-    Note over D,Peer: Início da Consulta
-    
-    D->>DF: Acessa detalhes da consulta
-    DF->>C: GET /doctor/consultations/{id}
-    C->>DB: Busca consulta
-    DB->>C: Retorna consulta (status: SCHEDULED)
-    C->>DF: Retorna dados da consulta
-    DF->>D: Exibe botão "Iniciar Consulta"
-    
-    D->>DF: Clica em "Iniciar Consulta"
-    DF->>C: POST /doctor/consultations/{id}/start
-    C->>DB: Atualiza status para IN_PROGRESS
-    C->>E: Dispara VideoCallRoomCreated
-    E->>R: Broadcast evento
-    R->>PF: Notifica paciente (WebSocket)
-    C->>DF: Retorna sala criada
-    
-    Note over D,Peer: Configuração WebRTC
-    
-    DF->>Peer: Conecta ao PeerJS
-    Peer->>DF: Retorna Peer ID do Doctor
-    PF->>Peer: Conecta ao PeerJS
-    Peer->>PF: Retorna Peer ID do Patient
-    
-    Note over D,Peer: Solicitação de Chamada
-    
-    DF->>C: POST /video-call/request/{patientId}
-    Note right of C: Envia Peer ID do Doctor
-    C->>E: Dispara RequestVideoCall
-    E->>R: Broadcast RequestVideoCall
-    R->>PF: Recebe evento (Laravel Echo)
-    PF->>P: Exibe notificação de chamada
-    
-    P->>PF: Aceita chamada
-    PF->>C: POST /video-call/accept
-    C->>E: Dispara RequestVideoCallStatus
-    E->>R: Broadcast status: accepted
-    R->>DF: Notifica Doctor
-    
-    Note over D,Peer: Conexão WebRTC P2P
-    
-    DF->>PF: Envia Peer ID via WebSocket
-    PF->>DF: Envia Peer ID via WebSocket
-    DF->>Peer: Inicia conexão P2P
-    PF->>Peer: Aceita conexão P2P
-    Peer->>DF: Conexão estabelecida
-    Peer->>PF: Conexão estabelecida
-    
-    DF->>DF: Solicita acesso câmera/microfone
-    PF->>PF: Solicita acesso câmera/microfone
-    DF->>PF: Transmite vídeo/áudio (P2P)
-    PF->>DF: Transmite vídeo/áudio (P2P)
-    
-    Note over D,Peer: Durante a Videoconferência
-    
-    DF->>E: Dispara VideoCallUserJoined (Doctor)
-    PF->>E: Dispara VideoCallUserJoined (Patient)
-    E->>R: Broadcast eventos
-    R->>PF: Notifica que Doctor entrou
-    R->>DF: Notifica que Patient entrou
-    
-    loop Durante a consulta
-        DF->>PF: Streaming de vídeo/áudio
-        PF->>DF: Streaming de vídeo/áudio
-        DF->>E: Eventos de controle (mute/unmute)
-        E->>R: Broadcast eventos
-        R->>PF: Atualiza controles
-    end
-    
-    Note over D,Peer: Finalização
-    
-    D->>DF: Finaliza consulta
-    DF->>C: POST /doctor/consultations/{id}/finalize
-    C->>DB: Atualiza status para COMPLETED
-    C->>E: Dispara VideoCallRoomExpired
-    E->>R: Broadcast expiração
-    R->>PF: Notifica expiração
-    
-    DF->>Peer: Fecha conexão P2P
-    PF->>Peer: Fecha conexão P2P
-    DF->>E: Dispara VideoCallUserLeft (Doctor)
-    PF->>E: Dispara VideoCallUserLeft (Patient)
-    E->>R: Broadcast eventos
-    R->>PF: Notifica que Doctor saiu
-    R->>DF: Notifica que Patient saiu
+    Note over D,SFU: Chamada agendada
+
+    S->>DB: Busca appointments dentro da janela
+    S->>DB: Cria ou reutiliza Call scheduled
+    S->>G: createRoom(callId)
+    G->>SFU: POST /rooms
+    SFU-->>G: room_id, sfu_node, media_ws_url
+    G-->>S: MediaRoomData
+    S->>DB: Persiste Room
+    S->>R: Broadcast VideoCallAvailable
+    R-->>DF: Evento em video-call.{doctorUserId}
+    R-->>PF: Evento em video-call.{patientUserId}
+
+    D->>DF: Entra na videochamada
+    DF->>C: POST /appointments/{appointment}/video/session
+    C->>S: provisionAppointmentCall(appointment)
+    S-->>C: Call + Room
+    C->>C: Gera JWT do SFU
+    C-->>DF: token, sfu_ws_url, room_id, role, window
+
+    P->>PF: Entra na videochamada
+    PF->>C: POST /appointments/{appointment}/video/session
+    C->>S: provisionAppointmentCall(appointment)
+    S-->>C: Call + Room existente
+    C->>C: Gera JWT do SFU
+    C-->>PF: token, sfu_ws_url, room_id, role, window
+
+    Note over DF,SFU: Sinalização técnica de mídia
+
+    DF->>SFU: WebSocket join(token)
+    SFU-->>DF: RTP capabilities
+    DF->>SFU: createWebRtcTransport(send/recv)
+    DF->>SFU: connectWebRtcTransport + produce
+
+    PF->>SFU: WebSocket join(token)
+    SFU-->>PF: RTP capabilities
+    PF->>SFU: createWebRtcTransport(send/recv)
+    PF->>SFU: connectWebRtcTransport + produce
+
+    SFU-->>DF: newProducer / consume / resumeConsumer
+    SFU-->>PF: newProducer / consume / resumeConsumer
+    SFU-->>DF: Áudio/vídeo remoto
+    SFU-->>PF: Áudio/vídeo remoto
+
+    Note over D,SFU: Encerramento
+
+    D->>DF: Encerra chamada
+    DF->>C: POST /calls/{call}/end
+    C->>S: endCall(call, user)
+    S->>G: destroyRoom(roomId)
+    G->>SFU: DELETE /rooms/{roomId}
+    S->>DB: status ended, ended_at, closed_reason
+    S->>R: Broadcast VideoCallEnded
+    R-->>DF: Limpar estado local
+    R-->>PF: Limpar estado local
+    DF->>SFU: Fecha WebSocket/transports
+    PF->>SFU: Fecha WebSocket/transports
 ```
 
-## Componentes da Videoconferência
+## Chamada ad-hoc
 
-### Frontend
-- **PeerJS**: Biblioteca WebRTC para conexão P2P
-- **Laravel Echo**: Cliente para receber eventos WebSocket
-- **Vue.js Components**: Interface de vídeo
+```mermaid
+sequenceDiagram
+    participant P as Patient
+    participant PF as Patient Frontend
+    participant D as Doctor
+    participant DF as Doctor Frontend
+    participant C as CallController
+    participant S as CallManagerService
+    participant G as MediaGateway
+    participant SFU as MediaSoup SFU
+    participant R as Laravel Reverb
 
-### Backend
-- **VideoCallController**: Gerencia requisições de chamada
-- **Events**: Eventos de videoconferência
-  - `RequestVideoCall`: Solicitação de chamada
-  - `RequestVideoCallStatus`: Status da chamada
-  - `VideoCallRoomCreated`: Sala criada
-  - `VideoCallRoomExpired`: Sala expirada
-  - `VideoCallUserJoined`: Usuário entrou
-  - `VideoCallUserLeft`: Usuário saiu
+    P->>PF: Solicita chamada para médico
+    PF->>C: POST /calls
+    C->>S: createCall(patient, doctor)
+    S->>R: Broadcast VideoCallRequested
+    R-->>DF: Chamada recebida
 
-### Infraestrutura
-- **Laravel Reverb**: Servidor WebSocket
-- **PeerJS Server**: Servidor de sinalização WebRTC
+    D->>DF: Aceita chamada
+    DF->>C: POST /calls/{call}/accept
+    C->>S: acceptCall(call, doctorUser)
+    S->>G: createRoom(callId)
+    G->>SFU: POST /rooms
+    SFU-->>G: room_id, media_ws_url
+    S->>S: Gera JWT
+    S->>R: Broadcast VideoCallAccepted(token, sfu_ws_url)
+    R-->>DF: Conectar ao SFU
+    R-->>PF: Conectar ao SFU
+```
 
-## Fluxo de Conexão WebRTC
+## Componentes
 
-1. **Sinalização**: Via Laravel Reverb (WebSocket)
-2. **Conexão P2P**: Estabelecida via PeerJS
-3. **Streaming**: Vídeo/áudio transmitido diretamente entre clientes
-4. **Controles**: Mute/unmute sincronizados via eventos
+- **Laravel:** `CallController`, `AppointmentVideoSessionController`, `CallManagerService`.
+- **Persistência:** `calls` e `rooms`.
+- **Eventos Reverb:** `VideoCallAvailable`, `VideoCallRequested`, `VideoCallAccepted`, `VideoCallRejected`, `VideoCallEnded`.
+- **Frontend:** `useVideoCall.ts`, `useVideoCallSession.ts`, `useSfu.ts`, `videoCall` store.
+- **SFU:** MediaSoup via WebSocket para sinalização técnica e WebRTC para mídia.
 
-## Segurança
+## Observações
 
-- **Autorização**: Apenas participantes da consulta podem se conectar
-- **Validação**: Verificação de permissões antes de criar sala
-- **Expiração**: Salas expiram automaticamente após finalização
-- **Auditoria**: Eventos registrados para compliance
-
----
-
-*Última atualização: Janeiro 2025*
-
-
+- Reverb não transporta SDP, ICE, `peerId` nem mídia.
+- O `roomId` confiável vem do backend/SFU e fica no JWT ou em resposta autenticada.
+- O token do SFU é curto e deve ser renovado pelo backend quando necessário.

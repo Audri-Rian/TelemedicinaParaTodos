@@ -19,13 +19,13 @@
 
 ## Histórico de Revisão
 
-| Data       | Versão | Descrição                                                                                                                                 | Autor                              |
-| ---------- | -----: | ----------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
-| 08/08/2025 |    1.0 | Elaboração dos primeiros conteúdos para implementação no documento.                                                                       | Audri Rian Cordeiro Carvalho Alves |
-| 14/08/2025 |    1.1 | Detalhamento de todos os tópicos já existentes na documentação.                                                                           | Audri Rian Cordeiro Carvalho Alves |
-| 21/08/2025 |    1.2 | Inclusão dos requisitos funcionais e não funcionais, regras de negócio e classes, assim como os diagramas de regras de negócio e classes. | Audri Rian Cordeiro Carvalho Alves |
-| 28/08/2025 |    1.4 | Adição dos mockups de tela e o fluxo de navegação das mesmas, junto a isso, a explicação do layout.                                       | Audri Rian Cordeiro Carvalho Alves |
-| 13/09/2025 |    1.5 | Alinhado com implementação atual: Especializações (CRUD + API), cadastro separado Paciente/Médico, videoconferência P2P (PeerJS + Reverb), e modelo de Consultas (Appointments). | Audri Rian Cordeiro Carvalho Alves |
+| Data       | Versão | Descrição                                                                                                                                            | Autor                              |
+| ---------- | -----: | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
+| 08/08/2025 |    1.0 | Elaboração dos primeiros conteúdos para implementação no documento.                                                                                  | Audri Rian Cordeiro Carvalho Alves |
+| 14/08/2025 |    1.1 | Detalhamento de todos os tópicos já existentes na documentação.                                                                                      | Audri Rian Cordeiro Carvalho Alves |
+| 21/08/2025 |    1.2 | Inclusão dos requisitos funcionais e não funcionais, regras de negócio e classes, assim como os diagramas de regras de negócio e classes.            | Audri Rian Cordeiro Carvalho Alves |
+| 28/08/2025 |    1.4 | Adição dos mockups de tela e o fluxo de navegação das mesmas, junto a isso, a explicação do layout.                                                  | Audri Rian Cordeiro Carvalho Alves |
+| 13/09/2025 |    1.5 | Alinhado com implementação: Especializações (CRUD + API), cadastro separado Paciente/Médico, videoconferência, e modelo de Consultas (Appointments). | Audri Rian Cordeiro Carvalho Alves |
 
 ---
 
@@ -35,21 +35,21 @@
    1.1 [Introdução](#11-introdução)
    1.2 [Visão Geral do Documento](#12-visão-geral-do-documento)
    1.3 [Identificação dos Requisitos](#13-identificação-dos-requisitos)
+    - 1.3.1 [Prioridades dos Requisitos](#131-prioridades-dos-requisitos)
+      1.4 [Identificação do Projeto](#14-identificação-do-projeto)
+      1.5 [Objetivo do Projeto](#15-objetivo-do-projeto)
+      1.6 [Justificativa](#16-justificativa)
+      1.7 [Escopo do Produto e Entregáveis](#17-escopo-do-produto-e-entregáveis)
+    - 1.7.1 [Funcionalidades Previstas](#171-funcionalidades-previstas)
+    - 1.7.2 [Entregáveis](#172-entregáveis)
+      1.8 [Premissas e Restrições](#18-premissas-e-restriçõess)
+    - 1.8.1 [Premissas](#181-premissas)
+    - 1.8.2 [Restrições](#182-restrições)
+      1.9 [Critérios de Aceitação do Projeto](#19-critérios-de-aceitação-do-projeto)
+      1.10 [Exclusões do Escopo](#110-exclusões-do-escopo)
+      1.11 [Stakeholders Envolvidos](#111-stakeholders-envolvidos)
+      1.12 [Riscos Iniciais](#112-riscos-iniciais)
 
-   * 1.3.1 [Prioridades dos Requisitos](#131-prioridades-dos-requisitos)
-     1.4 [Identificação do Projeto](#14-identificação-do-projeto)
-     1.5 [Objetivo do Projeto](#15-objetivo-do-projeto)
-     1.6 [Justificativa](#16-justificativa)
-     1.7 [Escopo do Produto e Entregáveis](#17-escopo-do-produto-e-entregáveis)
-   * 1.7.1 [Funcionalidades Previstas](#171-funcionalidades-previstas)
-   * 1.7.2 [Entregáveis](#172-entregáveis)
-     1.8 [Premissas e Restrições](#18-premissas-e-restriçõess)
-   * 1.8.1 [Premissas](#181-premissas)
-   * 1.8.2 [Restrições](#182-restrições)
-     1.9 [Critérios de Aceitação do Projeto](#19-critérios-de-aceitação-do-projeto)
-     1.10 [Exclusões do Escopo](#110-exclusões-do-escopo)
-     1.11 [Stakeholders Envolvidos](#111-stakeholders-envolvidos)
-     1.12 [Riscos Iniciais](#112-riscos-iniciais)
 2. [Documento de Especificação de Requisitos (ERS)](#2-documento-de-especificação-de-requisitos-ers)
    2.1 [Requisitos Funcionais](#21-requisitos-funcionais)
    2.2 [Requisitos Não Funcionais](#22-requisitos-não-funcionais)
@@ -63,26 +63,163 @@
    4.1 [Mockups / Protótipos de Tela](#41-mockups--protótipos-de-tela)
 5. [Documentação Técnica](#5-documentação-técnica)
    5.1 [Arquitetura do Sistema](#51-arquitetura-do-sistema)
-   * 5.1.1 [Segmentação da Arquitetura](#511-segmentação-da-arquitetura)
-   * 5.1.1.1 [Camada Cliente (Frontend)](#5111-camada-cliente-frontend)
-   * 5.1.1.2 [Camada Servidor (Backend)](#5112-camada-servidor-backend)
-   * 5.1.1.3 [Camada de Dados (Database)](#5113-camada-de-dados-database)
-   * 5.1.1.4 [Explicação da Segmentação](#5114-explicação-da-segmentação)
-   5.2 [Tecnologias Utilizadas](#52-tecnologias-utilizadas)
-   * 5.2.1 [Frontend](#521-frontend)
-   * 5.2.2 [Backend](#522-backend)
-   * 5.2.3 [Banco de Dados](#523-banco-de-dados)
-   * 5.2.4 [Ferramentas de Apoio](#524-ferramentas-de-apoio)
-   * 5.2.5 [Padrões Adotados](#525-padrões-adotados)
-   * 5.2.5.1 [Padrões Arquiteturais](#5251-padrões-arquiteturais)
-   * 5.2.5.2 [Arquitetura em Camadas](#5252-arquitetura-em-camadas)
-   * 5.2.6 [Boas Práticas e Convenções](#526-boas-práticas-e-convenções)
-   * 5.2.7 [Requisitos de Infraestrutura](#527-requisitos-de-infraestrutura)
-   * 5.2.7.1 [Ambiente de Desenvolvimento Atual](#5271-ambiente-de-desenvolvimento-atual)
-   * 5.2.7.2 [Hospedagem Planejada para Produção](#5272-hospedagem-planejada-para-produção)
-   * 5.2.8 [APIs e Integrações](#528-apis-e-integrações)
-   * 5.2.9 [Caracterização da API](#529-caracterização-da-api)
-   5.3 [Repositório e Código-Fonte](#53-repositório-e-código-fonte)
+    - 5.1.1 [Segmentação da Arquitetura](#511-segmentação-da-arquitetura)
+    - 5.1.1.1 [Camada Cliente (Frontend)](#5111-camada-cliente-frontend)
+    - 5.1.1.2 [Camada Servidor (Backend)](#5112-camada-servidor-backend)
+    - 5.1.1.3 [Camada de Dados (Database)](#5113-camada-de-dados-database)
+    - 5.1.1.4 [Explicação da Segmentação](#5114-explicação-da-segmentação)
+      5.2 [Tecnologias Utilizadas](#52-tecnologias-utilizadas)
+    - 5.2.1 [Frontend](#521-frontend)
+    - 5.2.2 [Backend](#522-backend)
+    - 5.2.3 [Banco de Dados](#523-banco-de-dados)
+    - 5.2.4 [Ferramentas de Apoio](#524-ferramentas-de-apoio)
+    - 5.2.5 [Padrões Adotados](#525-padrões-adotados)
+    - 5.2.5.1 [Padrões Arquiteturais](#5251-padrões-arquiteturais)
+    - 5.2.5.2 [Arquitetura em Camadas](#5252-arquitetura-em-camadas)
+    - 5.2.6 [Boas Práticas e Convenções](#526-boas-práticas-e-convenções)
+    - 5.2.7 [Requisitos de Infraestrutura](#527-requisitos-de-infraestrutura)
+    - 5.2.7.1 [Ambiente de Desenvolvimento Atual](#5271-ambiente-de-desenvolvimento-atual)
+    - 5.2.7.2 [Hospedagem Planejada para Produção](#5272-hospedagem-planejada-para-produção)
+    - 5.2.8 [APIs e Integrações](#528-apis-e-integrações)
+    - 5.2.9 [Caracterização da API](#529-caracterização-da-api)
+      5.3 [Repositório e Código-Fonte](#53-repositório-e-código-fonte)
+
+---
+
+## Atualização Técnica Vigente (Março/2026)
+
+> Esta seção passa a ser a referência principal deste documento para requisitos, regras e arquitetura funcional.  
+> O conteúdo anterior permanece como histórico acadêmico e de evolução.
+
+### 0.1 Escopo funcional vigente (visão executiva)
+
+- RF001/RF002: cadastro separado de paciente e médico implementado com validação dedicada.
+- RF003: agendamento com conflitos, janelas de início/cancelamento e trilha de status.
+- RF004/RF012: videoconferência em evolução para arquitetura SFU (`Call`/`Room`) com base real no projeto.
+- RF005/RF014: prontuário médico com diagnósticos, prescrições, exames, notas, atestados, sinais vitais, documentos e exportações PDF.
+- RF007/RF013: autenticação, autorização, settings de perfil/senha/avatar e políticas de acesso.
+- RF008/RF017: notificações e mensageria interna em endpoints `/api/*` no `routes/web.php`.
+- RF009/RF010/RF015/RF016: especializações, vínculo médico-especializações, agenda/disponibilidade e timeline ativos.
+- RF018: recursos LGPD (consentimento, portabilidade, relatório de acesso, solicitação de esquecimento) implementados.
+
+### 0.2 Requisitos funcionais atualizados (estado real)
+
+#### [RF001] Cadastro de Pacientes
+
+- **Estado:** Implementado
+- **Evidências:** `PatientRegistrationRequest`, `Patient` model, rotas de registro em `routes/auth.php`
+- **Regra-chave:** dados mínimos obrigatórios no registro inicial; dados clínicos estendidos opcionais.
+
+#### [RF002] Cadastro de Profissionais
+
+- **Estado:** Implementado
+- **Evidências:** `DoctorRegistrationRequest`, `Doctor` model, rotas de registro em `routes/auth.php`
+- **Regra-chave:** CRM único e formato alfanumérico em caixa alta.
+
+#### [RF003] Agendamento de Consultas
+
+- **Estado:** Implementado
+- **Evidências:** `AppointmentService`, `AppointmentsController`, `AppointmentPolicy`
+- **Regra-chave:** valida médico ativo, cadastro completo do paciente, conflitos e transições de status.
+
+#### [RF004] Consulta Online (Videoconferência)
+
+- **Estado:** Parcial (base técnica implementada)
+- **Evidências:** `CallManagerService`, modelos `Call`/`Room`, eventos `VideoCall*`, view `sfu-test`
+- **Observação:** há infraestrutura SFU e eventos; fluxo público completo por rotas dedicadas ainda incompleto.
+
+#### [RF005] Prescrição e Documentos
+
+- **Estado:** Implementado
+- **Evidências:** `MedicalRecordService`, `DoctorPatientMedicalRecordController`, modelos clínicos.
+
+#### [RF006] Pagamentos Online
+
+- **Estado:** Planejado
+- **Evidências:** ausência de serviços/controladores/migrations de gateway de pagamento no código atual.
+
+#### [RF007] Autenticação e Controle de Acesso
+
+- **Estado:** Implementado
+- **Evidências:** `routes/auth.php`, middlewares de perfil, `AppointmentPolicy`, `MedicalRecordPolicy`.
+
+#### [RF008] Notificações de Consultas
+
+- **Estado:** Implementado (in-app + e-mail)
+- **Evidências:** `Api/NotificationController`, `NotificationService`, mailables de lembrete/confirmação/cancelamento.
+
+#### [RF009] Gestão de Especializações
+
+- **Estado:** Implementado
+- **Evidências:** `SpecializationController`, rotas resource e `/api/specializations/*`.
+
+#### [RF010] Médico com Especializações
+
+- **Estado:** Implementado
+- **Evidências:** validação em `DoctorRegistrationRequest` e pivot `doctor_specialization`.
+
+#### [RF011] Paciente com Dados Clínicos
+
+- **Estado:** Implementado
+- **Evidências:** campos clínicos em `patients` + validações no registro de paciente.
+
+#### [RF012] Videoconferência em Tempo Real
+
+- **Estado:** Parcial
+- **Evidências:** eventos de vídeo, canais e base SFU.
+
+#### [RF013] Configurações de Conta
+
+- **Estado:** Implementado
+- **Evidências:** `routes/settings.php`, controladores `Settings/*`, `AvatarController`.
+
+#### [RF014] Gestão de Prontuário Médico
+
+- **Estado:** Implementado
+- **Evidências:** serviços, políticas, migrations e controladores clínicos por perfil.
+
+#### [RF015] Agenda e Disponibilidade
+
+- **Estado:** Implementado
+- **Evidências:** `ScheduleService`, `AvailabilityService`, rotas `/doctor/doctors/{doctor}/...`.
+
+#### [RF016] Timeline Profissional
+
+- **Estado:** Implementado
+- **Evidências:** `TimelineEventController`, `TimelineEventService`, `TimelineEventPolicy`.
+- **Regra vigente no código:** criação/gestão permitida a usuário autenticado proprietário do evento.
+
+#### [RF017] Mensageria entre Usuários
+
+- **Estado:** Implementado
+- **Evidências:** `Api/MessageController`, `MessageService`, endpoints `/api/messages/*`.
+
+#### [RF018] Conformidade LGPD Operacional
+
+- **Estado:** Implementado
+- **Evidências:** controladores em `app/Http/Controllers/LGPD/*` e rotas `/lgpd/*`.
+
+### 0.3 Regras de negócio vigentes (resumo executável)
+
+- RN001: consultas só com médico ativo.
+- RN002: paciente precisa cadastro completo para agendar (inclui contato de emergência).
+- RN003: conflito de horário validado em `AppointmentService::validateNoConflict`.
+- RN004: transições de status de consulta são restritas.
+- RN005: cancelamento respeita janela configurável.
+- RN006: reagendamento respeita status e conflito.
+- RN007: apenas participantes acessam consulta (policy).
+- RN008: prontuário com acesso controlado por policy e vínculo de atendimento.
+- RN009: emissão clínica por médico com CRM.
+- RN010: lembretes/notificações com limites anti-spam e agendamento.
+- RN011: timelines por usuário dono do recurso.
+- RN012: parâmetros críticos centralizados em `config/telemedicine.php`.
+
+### 0.4 Divergências corrigidas em relação à versão anterior
+
+- Vídeo: referência antiga centrada em PeerJS foi substituída por base SFU/MediaSoup em evolução.
+- Banco: documentação passa a tratar o projeto como multi-driver com configuração por ambiente (default `sqlite`, ambiente costuma usar `pgsql`).
+- API: endpoints estão em `routes/web.php` com prefixo `/api`; não há `routes/api.php` ativo.
+- Segurança/arquitetura: rastreabilidade formal via `Policies`, `FormRequests`, `Services` e `config/telemedicine.php`.
 
 ---
 
@@ -98,28 +235,28 @@ O projeto propõe o desenvolvimento de uma plataforma web de teleatendimento que
 
 A plataforma funcionará como um ambiente digital completo para interação entre pacientes e profissionais. Entre suas principais funcionalidades estão:
 
-* Cadastro e autenticação de usuários;
-* Perfis personalizados para pacientes e profissionais;
-* Agendamento de consultas online;
-* Atendimentos por videoconferência em tempo real (WebRTC via PeerJS) e sinalização por WebSockets (Laravel Reverb);
-* Gestão de documentos e prescrições digitais;
-* Pagamentos integrados (feature futura);
-* Segurança e conformidade com a LGPD.
+- Cadastro e autenticação de usuários;
+- Perfis personalizados para pacientes e profissionais;
+- Agendamento de consultas online;
+- Atendimentos por videoconferência em tempo real (WebRTC via SFU MediaSoup), com Laravel Reverb para eventos de negócio;
+- Gestão de documentos e prescrições digitais;
+- Pagamentos integrados (feature futura);
+- Segurança e conformidade com a LGPD.
 
 ## 1.3 Identificação dos Requisitos
 
 Por convenção, os requisitos são referenciados pelo nome da subseção onde estão descritos, seguido do seu identificador. Exemplo:
 
-* O requisito funcional **\[Cadastro de Usuários.RF-01]** está localizado na subseção “Requisitos Funcionais”, dentro do bloco identificado como **\[RF-01]**.
-* O requisito não funcional **\[Disponibilidade.NF-04]** encontra-se na seção “Requisitos Não Funcionais de Confiabilidade”, no bloco identificado como **\[NF-04]**.
+- O requisito funcional **\[Cadastro de Usuários.RF-01]** está localizado na subseção “Requisitos Funcionais”, dentro do bloco identificado como **\[RF-01]**.
+- O requisito não funcional **\[Disponibilidade.NF-04]** encontra-se na seção “Requisitos Não Funcionais de Confiabilidade”, no bloco identificado como **\[NF-04]**.
 
 ### 1.3.1 Prioridades dos Requisitos
 
 Os requisitos do sistema são classificados em três níveis de prioridade:
 
-* **Essencial:** indispensável para o funcionamento do sistema. Deve ser obrigatoriamente implementado.
-* **Importante:** afeta a qualidade do funcionamento. O sistema pode operar sem ele, mas de forma insatisfatória.
-* **Desejável:** não interfere nas funcionalidades básicas. Pode ser incluído em versões futuras.
+- **Essencial:** indispensável para o funcionamento do sistema. Deve ser obrigatoriamente implementado.
+- **Importante:** afeta a qualidade do funcionamento. O sistema pode operar sem ele, mas de forma insatisfatória.
+- **Desejável:** não interfere nas funcionalidades básicas. Pode ser incluído em versões futuras.
 
 ## 1.4 Identificação do Projeto
 
@@ -140,68 +277,68 @@ O projeto promove acesso facilitado e inclusivo aos serviços de saúde e bem-es
 
 ### 1.7.1 Funcionalidades Previstas
 
-* Cadastro e autenticação de usuários (pacientes e profissionais);
-* Perfis personalizados para pacientes e profissionais;
-* Agendamento de consultas;
-* Atendimento por videoconferência em tempo real (WebRTC via PeerJS) e sinalização por WebSockets (Laravel Reverb);
-* Prescrição digital e envio de documentos;
-* Pagamentos online (futuro);
-* Notificações e sinalização em tempo real via canais privados (Echo/Reverb);
-* Gestão de permissões e autenticação segura.
+- Cadastro e autenticação de usuários (pacientes e profissionais);
+- Perfis personalizados para pacientes e profissionais;
+- Agendamento de consultas;
+- Atendimento por videoconferência em tempo real (WebRTC via SFU MediaSoup), com sinalização de negócio por WebSockets (Laravel Reverb);
+- Prescrição digital e envio de documentos;
+- Pagamentos online (futuro);
+- Notificações e sinalização em tempo real via canais privados (Echo/Reverb);
+- Gestão de permissões e autenticação segura.
 
 ### 1.7.2 Entregáveis
 
-* Plataforma Web (frontend + backend);
-* Banco de Dados MySQL estruturado;
-* Módulo de autenticação seguro (bcrypt + controle de acesso);
-* Módulo de consultas online com integração de videoconferência;
-* Protótipos de interface (mockups das telas principais);
-* Documentação completa (DDE, ERS, Diagramas, DEI).
+- Plataforma Web (frontend + backend);
+- Banco de Dados MySQL estruturado;
+- Módulo de autenticação seguro (bcrypt + controle de acesso);
+- Módulo de consultas online com integração de videoconferência;
+- Protótipos de interface (mockups das telas principais);
+- Documentação completa (DDE, ERS, Diagramas, DEI).
 
 ## 1.8 Premissas e Restrições
 
 ### 1.8.1 Premissas
 
-* Todos os usuários terão acesso à internet estável.
-* Profissionais cadastrados terão registro válido em conselhos de classe.
-* Dispositivos utilizados possuirão câmera, microfone e navegador atualizado.
+- Todos os usuários terão acesso à internet estável.
+- Profissionais cadastrados terão registro válido em conselhos de classe.
+- Dispositivos utilizados possuirão câmera, microfone e navegador atualizado.
 
 ### 1.8.2 Restrições
 
-* Backend obrigatoriamente em **Laravel**.
-* Banco de dados **MySQL**.
-* Frontend em **HTML, CSS, JS**, podendo usar **Vue.js** ou **React**.
-* Funcionalidades em conformidade com a **LGPD**.
-* Recursos de videoconferência dependem de APIs externas.
+- Backend obrigatoriamente em **Laravel**.
+- Banco de dados **MySQL**.
+- Frontend em **HTML, CSS, JS**, podendo usar **Vue.js** ou **React**.
+- Funcionalidades em conformidade com a **LGPD**.
+- Recursos de videoconferência dependem de APIs externas.
 
 ## 1.9 Critérios de Aceitação do Projeto
 
-* Plataforma funcionando em navegadores suportados;
-* Consultas online com boa qualidade de áudio e vídeo;
-* Autenticação segura com criptografia;
-* Testes de desempenho suportando até **500 usuários simultâneos**;
-* Interface responsiva e amigável.
+- Plataforma funcionando em navegadores suportados;
+- Consultas online com boa qualidade de áudio e vídeo;
+- Autenticação segura com criptografia;
+- Testes de desempenho suportando até **500 usuários simultâneos**;
+- Interface responsiva e amigável.
 
 ## 1.10 Exclusões do Escopo
 
-* Validação automática de registros profissionais (ex: CRM via webservice);
-* Sistema de pagamentos completo já integrado (será considerado futuro).
+- Validação automática de registros profissionais (ex: CRM via webservice);
+- Sistema de pagamentos completo já integrado (será considerado futuro).
 
 ## 1.11 Stakeholders Envolvidos
 
-* **Pacientes** – usuários finais;
-* **Profissionais da Saúde** – prestadores de serviço;
-* **Equipe de Desenvolvimento** – responsável pelo sistema;
-* **Professor Orientador** – alinhamento acadêmico;
-* **Equipe de Design (opcional)** – experiência do usuário.
+- **Pacientes** – usuários finais;
+- **Profissionais da Saúde** – prestadores de serviço;
+- **Equipe de Desenvolvimento** – responsável pelo sistema;
+- **Professor Orientador** – alinhamento acadêmico;
+- **Equipe de Design (opcional)** – experiência do usuário.
 
 ## 1.12 Riscos Iniciais
 
-* Prazo curto (18 semanas);
-* Dificuldades técnicas na videoconferência;
-* Dependência de APIs externas;
-* Equipe em aprendizado de novas tecnologias;
-* Possíveis falhas de segurança se não implementadas corretamente.
+- Prazo curto (18 semanas);
+- Dificuldades técnicas na videoconferência;
+- Dependência de APIs externas;
+- Equipe em aprendizado de novas tecnologias;
+- Possíveis falhas de segurança se não implementadas corretamente.
 
 ---
 
@@ -213,195 +350,195 @@ Requisitos funcionais descrevem as funções que usuários e clientes esperam do
 
 ### \[RF001] Manter Cadastro de Pacientes
 
-* **Descrição:** Cadastro, alteração, inativação, consulta e pesquisa de pacientes em banco de dados seguro.
-* **Atores:** Paciente, Administrador
-* **Prioridade:** Essencial
-* **Entradas / Pré-Condições:** Nome completo, CPF, Data de Nascimento, Telefone, E-mail, Endereço, Senha.
-* **Saídas / Pós-Condições:** Dados salvos e disponíveis no perfil do paciente.
+- **Descrição:** Cadastro, alteração, inativação, consulta e pesquisa de pacientes em banco de dados seguro.
+- **Atores:** Paciente, Administrador
+- **Prioridade:** Essencial
+- **Entradas / Pré-Condições:** Nome completo, CPF, Data de Nascimento, Telefone, E-mail, Endereço, Senha.
+- **Saídas / Pós-Condições:** Dados salvos e disponíveis no perfil do paciente.
 
 ### \[RF002] Manter Cadastro de Profissionais da Saúde
 
-* **Descrição:** Cadastro, alteração, inativação, consulta e pesquisa de perfis de profissionais.
-* **Atores:** Profissional da Saúde, Administrador
-* **Prioridade:** Essencial
-* **Entradas / Pré-Condições:** Nome, CPF, Registro profissional, Especialidade, Telefone, E-mail, Endereço, Senha.
-* **Saídas / Pós-Condições:** Perfil disponível para visualização pelos pacientes com status "Ativo" após validação.
+- **Descrição:** Cadastro, alteração, inativação, consulta e pesquisa de perfis de profissionais.
+- **Atores:** Profissional da Saúde, Administrador
+- **Prioridade:** Essencial
+- **Entradas / Pré-Condições:** Nome, CPF, Registro profissional, Especialidade, Telefone, E-mail, Endereço, Senha.
+- **Saídas / Pós-Condições:** Perfil disponível para visualização pelos pacientes com status "Ativo" após validação.
 
 ### \[RF003] Agendamento de Consultas
 
-* **Descrição:** Pacientes podem agendar consultas com profissionais disponíveis. Sistema suporta status de reagendamento, integração completa com prontuário médico, acesso e edição de prontuário durante consulta, finalização com bloqueio de prontuário (exceto complementos), e geração de PDF completo da consulta.
-* **Atores:** Paciente, Profissional da Saúde
-* **Prioridade:** Essencial
-* **Entradas / Pré-Condições:** Seleção de Profissional, Especialidade, Data e Horário disponíveis.
-* **Saídas / Pós-Condições:** Confirmação do agendamento e notificação das partes. Consulta registrada com status (scheduled, in_progress, completed, no_show, cancelled, rescheduled).
-* **Funcionalidades Implementadas:**
-  * Status Rescheduled para consultas reagendadas
-  * Integração com Prontuário: Consultas conectam com múltiplas entidades de prontuário
-  * Prontuário Durante Consulta: Médico pode acessar e editar prontuário durante consulta
-  * Finalização com Prontuário: Ao finalizar, prontuário é bloqueado (exceto complementos)
-  * Complementos: Médico pode adicionar complementos após finalização
-  * PDF de Consulta: Gerar PDF completo da consulta com prontuário
+- **Descrição:** Pacientes podem agendar consultas com profissionais disponíveis. Sistema suporta status de reagendamento, integração completa com prontuário médico, acesso e edição de prontuário durante consulta, finalização com bloqueio de prontuário (exceto complementos), e geração de PDF completo da consulta.
+- **Atores:** Paciente, Profissional da Saúde
+- **Prioridade:** Essencial
+- **Entradas / Pré-Condições:** Seleção de Profissional, Especialidade, Data e Horário disponíveis.
+- **Saídas / Pós-Condições:** Confirmação do agendamento e notificação das partes. Consulta registrada com status (scheduled, in_progress, completed, no_show, cancelled, rescheduled).
+- **Funcionalidades Implementadas:**
+    - Status Rescheduled para consultas reagendadas
+    - Integração com Prontuário: Consultas conectam com múltiplas entidades de prontuário
+    - Prontuário Durante Consulta: Médico pode acessar e editar prontuário durante consulta
+    - Finalização com Prontuário: Ao finalizar, prontuário é bloqueado (exceto complementos)
+    - Complementos: Médico pode adicionar complementos após finalização
+    - PDF de Consulta: Gerar PDF completo da consulta com prontuário
 
 ### \[RF004] Realizar Consultas Online (Videoconferência e Chat Interno)
 
-* **Descrição:** Consultas por videoconferência integrada ou chat interno. Sistema cria salas de videoconferência automaticamente, rastreia eventos em tempo real, gerencia expiração automática de salas e integra com consultas.
-* **Atores:** Paciente, Profissional da Saúde
-* **Prioridade:** Essencial
-* **Entradas / Pré-Condições:** Acesso no horário agendado com internet, câmera e microfone habilitados.
-* **Saídas / Pós-Condições:** Consulta registrada no histórico do paciente e profissional.
-* **Funcionalidades Implementadas:**
-  * Salas de Videoconferência: Sistema cria salas automaticamente para consultas
-  * Eventos de Videoconferência: Rastreamento de eventos (entrada, saída, ações)
-  * Expiração Automática: Salas expiram automaticamente após período configurado
-  * Limpeza Automática: Jobs automáticos para limpeza de eventos antigos
-  * Integração com Consultas: Consultas atualizadas automaticamente a partir das salas
+- **Descrição:** Consultas por videoconferência integrada ou chat interno. Sistema cria salas de videoconferência automaticamente, rastreia eventos em tempo real, gerencia expiração automática de salas e integra com consultas.
+- **Atores:** Paciente, Profissional da Saúde
+- **Prioridade:** Essencial
+- **Entradas / Pré-Condições:** Acesso no horário agendado com internet, câmera e microfone habilitados.
+- **Saídas / Pós-Condições:** Consulta registrada no histórico do paciente e profissional.
+- **Funcionalidades Implementadas:**
+    - Salas de Videoconferência: Sistema cria salas automaticamente para consultas
+    - Eventos de Videoconferência: Rastreamento de eventos (entrada, saída, ações)
+    - Expiração Automática: Salas expiram automaticamente após período configurado
+    - Limpeza Automática: Jobs automáticos para limpeza de eventos antigos
+    - Integração com Consultas: Consultas atualizadas automaticamente a partir das salas
 
 ### \[RF005] Prescrição Digital e Envio de Documentos
 
-* **Descrição:** Emissão de prescrições digitais e envio de documentos.
-* **Atores:** Profissional da Saúde
-* **Prioridade:** Importante
-* **Entradas / Pré-Condições:** Tipo de documento, Conteúdo, Assinatura digital (quando aplicável).
-* **Saídas / Pós-Condições:** Paciente visualiza e baixa documentos em sua área restrita.
+- **Descrição:** Emissão de prescrições digitais e envio de documentos.
+- **Atores:** Profissional da Saúde
+- **Prioridade:** Importante
+- **Entradas / Pré-Condições:** Tipo de documento, Conteúdo, Assinatura digital (quando aplicável).
+- **Saídas / Pós-Condições:** Paciente visualiza e baixa documentos em sua área restrita.
 
 ### \[RF006] Pagamentos Online
 
-* **Descrição:** Pagamentos online por atendimentos, quando aplicável.
-* **Atores:** Paciente, Profissional da Saúde, Administrador
-* **Prioridade:** Desejável
-* **Entradas / Pré-Condições:** Método de pagamento (cartão, PIX ou boleto), valor e confirmação.
-* **Saídas / Pós-Condições:** Pagamento registrado e associado à consulta.
+- **Descrição:** Pagamentos online por atendimentos, quando aplicável.
+- **Atores:** Paciente, Profissional da Saúde, Administrador
+- **Prioridade:** Desejável
+- **Entradas / Pré-Condições:** Método de pagamento (cartão, PIX ou boleto), valor e confirmação.
+- **Saídas / Pós-Condições:** Pagamento registrado e associado à consulta.
 
 ### \[RF007] Autenticação e Controle de Acesso
 
-* **Descrição:** Autenticação de usuários e controle de permissões.
-* **Atores:** Paciente, Profissional da Saúde, Administrador
-* **Prioridade:** Essencial
-* **Entradas / Pré-Condições:** Login (E-mail ou CPF) e senha.
-* **Saídas / Pós-Condições:** Acesso à área restrita conforme perfil.
+- **Descrição:** Autenticação de usuários e controle de permissões.
+- **Atores:** Paciente, Profissional da Saúde, Administrador
+- **Prioridade:** Essencial
+- **Entradas / Pré-Condições:** Login (E-mail ou CPF) e senha.
+- **Saídas / Pós-Condições:** Acesso à área restrita conforme perfil.
 
 ### \[RF008] Notificações de Consultas
 
-* **Descrição:** Notificações sobre confirmações, alterações e cancelamentos.
-* **Atores:** Paciente, Profissional da Saúde
-* **Prioridade:** Desejável
-* **Entradas / Pré-Condições:** Consulta agendada ou alterada.
-* **Saídas / Pós-Condições:** Envio de notificação via e-mail e/ou painel da plataforma.
+- **Descrição:** Notificações sobre confirmações, alterações e cancelamentos.
+- **Atores:** Paciente, Profissional da Saúde
+- **Prioridade:** Desejável
+- **Entradas / Pré-Condições:** Consulta agendada ou alterada.
+- **Saídas / Pós-Condições:** Envio de notificação via e-mail e/ou painel da plataforma.
 
 ### \[RF009] Gestão de Especializações (Médicas)
 
-* **Descrição:** CRUD de especializações com listagem, exibição, edição e exclusão (com validação de integridade) e endpoints públicos de consulta.
-* **Atores:** Administrador
-* **Prioridade:** Importante
-* **Entradas / Pré-Condições:** Nome da especialização (único, até 100 caracteres).
-* **Saídas / Pós-Condições:** Especializações disponíveis para vinculação a médicos e consulta pública.
-* **Observações:** API pública implementada: `GET /api/specializations/list` (filtros: `search`, `active_only`, `with_count`) e `GET /api/specializations/options`.
+- **Descrição:** CRUD de especializações com listagem, exibição, edição e exclusão (com validação de integridade) e endpoints públicos de consulta.
+- **Atores:** Administrador
+- **Prioridade:** Importante
+- **Entradas / Pré-Condições:** Nome da especialização (único, até 100 caracteres).
+- **Saídas / Pós-Condições:** Especializações disponíveis para vinculação a médicos e consulta pública.
+- **Observações:** API pública implementada: `GET /api/specializations/list` (filtros: `search`, `active_only`, `with_count`) e `GET /api/specializations/options`.
 
 ### \[RF010] Cadastro de Médico com Especializações
 
-* **Descrição:** Fluxo de registro dedicado a médicos com CRM único, seleção de 1+ especializações e criação do perfil vinculado ao usuário.
-* **Atores:** Médico, Administrador
-* **Prioridade:** Essencial
-* **Entradas / Pré-Condições:** Nome, E-mail, Senha, CRM (único; formato alfanumérico), Especializações (UUID existentes).
-* **Saídas / Pós-Condições:** Usuário autenticado com perfil médico ativo e especializações vinculadas.
+- **Descrição:** Fluxo de registro dedicado a médicos com CRM único, seleção de 1+ especializações e criação do perfil vinculado ao usuário.
+- **Atores:** Médico, Administrador
+- **Prioridade:** Essencial
+- **Entradas / Pré-Condições:** Nome, E-mail, Senha, CRM (único; formato alfanumérico), Especializações (UUID existentes).
+- **Saídas / Pós-Condições:** Usuário autenticado com perfil médico ativo e especializações vinculadas.
 
 ### \[RF011] Cadastro de Paciente com Dados Clínicos Básicos
 
-* **Descrição:** Fluxo de registro dedicado a pacientes com dados mínimos obrigatórios e campos clínicos opcionais.
-* **Atores:** Paciente
-* **Prioridade:** Essencial
-* **Entradas / Pré-Condições:** Nome, E-mail, Senha, Gênero, Data de nascimento, Telefone. Opcionais: contato de emergência, histórico médico, alergias etc.
-* **Saídas / Pós-Condições:** Usuário autenticado com perfil de paciente ativo.
+- **Descrição:** Fluxo de registro dedicado a pacientes com dados mínimos obrigatórios e campos clínicos opcionais.
+- **Atores:** Paciente
+- **Prioridade:** Essencial
+- **Entradas / Pré-Condições:** Nome, E-mail, Senha, Gênero, Data de nascimento, Telefone. Opcionais: contato de emergência, histórico médico, alergias etc.
+- **Saídas / Pós-Condições:** Usuário autenticado com perfil de paciente ativo.
 
 ### \[RF012] Videoconferência de Consultas (Tempo Real)
 
-* **Descrição:** Solicitação e aceite de chamada de vídeo entre usuários via canais privados e conexão P2P para mídia.
-* **Atores:** Paciente, Médico
-* **Prioridade:** Essencial
-* **Entradas / Pré-Condições:** Usuários autenticados, permissão de câmera/microfone, PeerID válido; eventos `RequestVideoCall` e `RequestVideoCallStatus` no canal privado `video-call.{id}`.
-* **Saídas / Pós-Condições:** Estabelecimento de sessão de vídeo, término registra estado local da sessão (UI) e libera recursos.
-* **Observações:** Endpoints: `POST /video-call/request/{user}` e `POST /video-call/request/status/{user}`. Página: `GET /consultations`.
+- **Descrição:** Solicitação, aceite e entrada em chamada de vídeo entre usuários via canais privados, com mídia roteada por SFU MediaSoup.
+- **Atores:** Paciente, Médico
+- **Prioridade:** Essencial
+- **Entradas / Pré-Condições:** Usuários autenticados, permissão de câmera/microfone, `Call` autorizada, `Room` criada no SFU e token JWT válido.
+- **Saídas / Pós-Condições:** Estabelecimento de sessão de vídeo via SFU, término atualiza `calls`, libera recursos locais e destrói sala quando aplicável.
+- **Observações:** Endpoints principais: `POST /calls`, `GET /calls/active`, `POST /calls/{call}/accept`, `POST /calls/{call}/reject`, `POST /calls/{call}/end`, `POST /appointments/{appointment}/video/session`.
 
 ### \[RF013] Configurações de Perfil e Senha
 
-* **Descrição:** Edição de perfil, atualização de senha e exclusão de conta.
-* **Atores:** Usuário autenticado
-* **Prioridade:** Importante
-* **Entradas / Pré-Condições:** Dados de perfil válidos e senha atual para update de senha.
-* **Saídas / Pós-Condições:** Perfil atualizado e persistido.
+- **Descrição:** Edição de perfil, atualização de senha e exclusão de conta.
+- **Atores:** Usuário autenticado
+- **Prioridade:** Importante
+- **Entradas / Pré-Condições:** Dados de perfil válidos e senha atual para update de senha.
+- **Saídas / Pós-Condições:** Perfil atualizado e persistido.
 
 ### \[RF014] Gestão de Prontuários Médicos
 
-* **Descrição:** Sistema completo de gestão de prontuários médicos digitais com registro de diagnósticos, prescrições, exames, anotações clínicas, atestados, sinais vitais e documentos. Suporta visualização diferenciada para médicos e pacientes, exportação em PDF e auditoria completa.
-* **Atores:** Médico, Paciente
-* **Prioridade:** Essencial
-* **Entradas / Pré-Condições:** Consulta agendada ou em andamento para médicos; acesso autenticado para pacientes.
-* **Saídas / Pós-Condições:** Prontuário atualizado e disponível para visualização/exportação.
-* **Funcionalidades para Médicos:**
-  * Visualização de Prontuário Completo de pacientes atendidos
-  * Registro de Diagnóstico com CID-10 durante consulta
-  * Prescrição Digital com medicamentos estruturados
-  * Solicitação de Exames (laboratoriais, imagem, outros)
-  * Anotações Clínicas (públicas ou privadas)
-  * Atestados Médicos com código de verificação único
-  * Registro de Sinais Vitais durante consulta
-  * Anexar Documentos médicos ao prontuário
-  * Geração de PDF completo de consulta com prontuário
-  * Exportação de Prontuário completo em PDF
-* **Funcionalidades para Pacientes:**
-  * Visualização de Prontuário (itens não privados)
-  * Histórico completo de Consultas
-  * Visualização de Prescrições (ativas e expiradas)
-  * Visualização de Exames (solicitados e resultados)
-  * Visualização de Atestados emitidos
-  * Exportação de próprio prontuário em PDF
-* **Auditoria:**
-  * Logs Completos: Todas as ações em prontuários são registradas
-  * Rastreabilidade: IP, user agent e metadados registrados
-  * Compliance LGPD: Logs não podem ser excluídos
+- **Descrição:** Sistema completo de gestão de prontuários médicos digitais com registro de diagnósticos, prescrições, exames, anotações clínicas, atestados, sinais vitais e documentos. Suporta visualização diferenciada para médicos e pacientes, exportação em PDF e auditoria completa.
+- **Atores:** Médico, Paciente
+- **Prioridade:** Essencial
+- **Entradas / Pré-Condições:** Consulta agendada ou em andamento para médicos; acesso autenticado para pacientes.
+- **Saídas / Pós-Condições:** Prontuário atualizado e disponível para visualização/exportação.
+- **Funcionalidades para Médicos:**
+    - Visualização de Prontuário Completo de pacientes atendidos
+    - Registro de Diagnóstico com CID-10 durante consulta
+    - Prescrição Digital com medicamentos estruturados
+    - Solicitação de Exames (laboratoriais, imagem, outros)
+    - Anotações Clínicas (públicas ou privadas)
+    - Atestados Médicos com código de verificação único
+    - Registro de Sinais Vitais durante consulta
+    - Anexar Documentos médicos ao prontuário
+    - Geração de PDF completo de consulta com prontuário
+    - Exportação de Prontuário completo em PDF
+- **Funcionalidades para Pacientes:**
+    - Visualização de Prontuário (itens não privados)
+    - Histórico completo de Consultas
+    - Visualização de Prescrições (ativas e expiradas)
+    - Visualização de Exames (solicitados e resultados)
+    - Visualização de Atestados emitidos
+    - Exportação de próprio prontuário em PDF
+- **Auditoria:**
+    - Logs Completos: Todas as ações em prontuários são registradas
+    - Rastreabilidade: IP, user agent e metadados registrados
+    - Compliance LGPD: Logs não podem ser excluídos
 
 ### \[RF015] Sistema de Agenda e Disponibilidade
 
-* **Descrição:** Sistema completo de gestão de agenda e disponibilidade para médicos, permitindo configuração de múltiplos locais de atendimento, slots recorrentes e específicos, bloqueio de datas e consulta pública de disponibilidade.
-* **Atores:** Médico, Paciente
-* **Prioridade:** Essencial
-* **Entradas / Pré-Condições:** Médico autenticado para configuração; acesso público para consulta de disponibilidade.
-* **Saídas / Pós-Condições:** Agenda configurada e disponível para agendamento de consultas.
-* **Funcionalidades:**
-  * Locais de Atendimento: Médico pode cadastrar múltiplos locais (teleconsulta, consultório, hospital, clínica)
-  * Slots Recorrentes: Configurar disponibilidade semanal (ex: toda segunda-feira 8h-12h)
-  * Slots Específicos: Configurar disponibilidade para datas específicas
-  * Datas Bloqueadas: Bloquear datas específicas (feriados, férias)
-  * Validação de Conflitos: Sistema valida conflitos de horários
-  * Disponibilidade Padrão: Sistema cria disponibilidade padrão se médico não configurar
-  * Consulta de Disponibilidade: Pacientes podem consultar disponibilidade de médicos por data
+- **Descrição:** Sistema completo de gestão de agenda e disponibilidade para médicos, permitindo configuração de múltiplos locais de atendimento, slots recorrentes e específicos, bloqueio de datas e consulta pública de disponibilidade.
+- **Atores:** Médico, Paciente
+- **Prioridade:** Essencial
+- **Entradas / Pré-Condições:** Médico autenticado para configuração; acesso público para consulta de disponibilidade.
+- **Saídas / Pós-Condições:** Agenda configurada e disponível para agendamento de consultas.
+- **Funcionalidades:**
+    - Locais de Atendimento: Médico pode cadastrar múltiplos locais (teleconsulta, consultório, hospital, clínica)
+    - Slots Recorrentes: Configurar disponibilidade semanal (ex: toda segunda-feira 8h-12h)
+    - Slots Específicos: Configurar disponibilidade para datas específicas
+    - Datas Bloqueadas: Bloquear datas específicas (feriados, férias)
+    - Validação de Conflitos: Sistema valida conflitos de horários
+    - Disponibilidade Padrão: Sistema cria disponibilidade padrão se médico não configurar
+    - Consulta de Disponibilidade: Pacientes podem consultar disponibilidade de médicos por data
 
 ### \[RF016] Timeline de Profissional
 
-* **Descrição:** Sistema de timeline para profissionais registrarem eventos de educação, cursos, certificados e projetos profissionais, com controle de visibilidade pública e ordenação personalizada.
-* **Atores:** Profissional da Saúde
-* **Prioridade:** Importante
-* **Entradas / Pré-Condições:** Profissional autenticado com perfil ativo.
-* **Saídas / Pós-Condições:** Eventos registrados e disponíveis no perfil público (quando visíveis).
-* **Funcionalidades:**
-  * Eventos de Educação: Registrar formação acadêmica (fundamental, médio, graduação, pós)
-  * Cursos: Registrar cursos realizados
-  * Certificados: Registrar certificações profissionais
-  * Projetos: Registrar projetos profissionais
-  * Visibilidade: Controlar se evento aparece no perfil público
-  * Ordenação: Controlar ordem de exibição dos eventos
-  * Mídia: Anexar imagens/certificados aos eventos
+- **Descrição:** Sistema de timeline para profissionais registrarem eventos de educação, cursos, certificados e projetos profissionais, com controle de visibilidade pública e ordenação personalizada.
+- **Atores:** Profissional da Saúde
+- **Prioridade:** Importante
+- **Entradas / Pré-Condições:** Profissional autenticado com perfil ativo.
+- **Saídas / Pós-Condições:** Eventos registrados e disponíveis no perfil público (quando visíveis).
+- **Funcionalidades:**
+    - Eventos de Educação: Registrar formação acadêmica (fundamental, médio, graduação, pós)
+    - Cursos: Registrar cursos realizados
+    - Certificados: Registrar certificações profissionais
+    - Projetos: Registrar projetos profissionais
+    - Visibilidade: Controlar se evento aparece no perfil público
+    - Ordenação: Controlar ordem de exibição dos eventos
+    - Mídia: Anexar imagens/certificados aos eventos
 
 ## 2.2 Requisitos Não Funcionais
 
-* **\[NF001] Acesso Web:** Acesso por navegadores modernos; suporte a dispositivos com câmera e microfone. *(Prioridade: Essencial)*
-* **\[NF002] Interface Amigável:** Layout responsivo e intuitivo, mensagens de erro claras. *(Prioridade: Importante)*
-* **\[NF003] Backup de Dados:** Backups automáticos diários; recuperação em até 24 horas. *(Prioridade: Essencial)*
-* **\[NF004] Desempenho:** Resposta < 3s para operações críticas, mesmo com até 500 usuários simultâneos. *(Prioridade: Essencial)*
-* **\[NF005] Autenticação Segura:** Senhas criptografadas (bcrypt); proteção contra força bruta (bloqueio após 5 tentativas). *(Prioridade: Essencial)*
-* **\[NF006] Controle de Acesso:** Permissões por perfil; dados sensíveis restritos. *(Prioridade: Essencial)*
-* **\[NF007] Conformidade com a LGPD:** Consentimento, direito de exclusão e criptografia em repouso e trânsito (HTTPS/TLS). *(Prioridade: Essencial)*
-* **\[NF008] Disponibilidade:** Disponibilidade mínima de 99% (janelas de manutenção agendadas). *(Prioridade: Importante)*
+- **\[NF001] Acesso Web:** Acesso por navegadores modernos; suporte a dispositivos com câmera e microfone. _(Prioridade: Essencial)_
+- **\[NF002] Interface Amigável:** Layout responsivo e intuitivo, mensagens de erro claras. _(Prioridade: Importante)_
+- **\[NF003] Backup de Dados:** Backups automáticos diários; recuperação em até 24 horas. _(Prioridade: Essencial)_
+- **\[NF004] Desempenho:** Resposta < 3s para operações críticas, mesmo com até 500 usuários simultâneos. _(Prioridade: Essencial)_
+- **\[NF005] Autenticação Segura:** Senhas criptografadas (bcrypt); proteção contra força bruta (bloqueio após 5 tentativas). _(Prioridade: Essencial)_
+- **\[NF006] Controle de Acesso:** Permissões por perfil; dados sensíveis restritos. _(Prioridade: Essencial)_
+- **\[NF007] Conformidade com a LGPD:** Consentimento, direito de exclusão e criptografia em repouso e trânsito (HTTPS/TLS). _(Prioridade: Essencial)_
+- **\[NF008] Disponibilidade:** Disponibilidade mínima de 99% (janelas de manutenção agendadas). _(Prioridade: Importante)_
 
 ## 2.3 Regras de Negócio
 
@@ -698,139 +835,153 @@ Requisitos funcionais descrevem as funções que usuários e clientes esperam do
 ## 3.1 Arquitetura de Software
 
 ### Padrão Arquitetural
+
 O sistema utiliza o padrão **Controller → Service → Repository** seguindo os princípios SOLID:
 
-* **Presentation Layer (Controllers):** Controladores RESTful responsáveis apenas por receber requisições e retornar respostas
-* **Application Layer (Services):** Regras de negócio isoladas em Services com injeção de dependência
-* **Infrastructure Layer (Repositories):** Acesso aos dados via Repositories com Eloquent ORM
-* **Domain Layer (Models):** Entidades de domínio com relacionamentos bem definidos
+- **Presentation Layer (Controllers):** Controladores RESTful responsáveis apenas por receber requisições e retornar respostas
+- **Application Layer (Services):** Regras de negócio isoladas em Services com injeção de dependência
+- **Infrastructure Layer (Repositories):** Acesso aos dados via Repositories com Eloquent ORM
+- **Domain Layer (Models):** Entidades de domínio com relacionamentos bem definidos
 
 ### Stack Tecnológica
-* **Backend:** Laravel 11 (PHP 8.2+)
-* **Frontend:** Vue.js 3 com Inertia.js para SPA
-* **Banco de Dados:** MySQL 8.0+
-* **Cache/Queue:** Redis
-* **Autenticação:** Laravel Sanctum
-* **WebSockets:** Laravel Reverb (Broadcasting + Echo)
-* **Videoconferência:** WebRTC via PeerJS (P2P)
+
+- **Backend:** Laravel 11 (PHP 8.2+)
+- **Frontend:** Vue.js 3 com Inertia.js para SPA
+- **Banco de Dados:** MySQL 8.0+
+- **Cache/Queue:** Redis
+- **Autenticação:** Laravel Sanctum
+- **WebSockets:** Laravel Reverb (Broadcasting + Echo)
+- **Videoconferência:** WebRTC via MediaSoup/SFU
 
 ## 3.2 Modelo de Dados (ERD)
 
 ### Entidades Principais
 
 **Users (Tabela Base):**
-* id (uuid, primary key)
-* name (string, 255)
-* email (string, unique)
-* email_verified_at (timestamp)
-* password (hash bcrypt)
-* status (enum: active, inactive, suspended, blocked)
-* created_at, updated_at, deleted_at
+
+- id (uuid, primary key)
+- name (string, 255)
+- email (string, unique)
+- email_verified_at (timestamp)
+- password (hash bcrypt)
+- status (enum: active, inactive, suspended, blocked)
+- created_at, updated_at, deleted_at
 
 **Doctors (Extensão de Users - 1:1):**
-* id (uuid, primary key)
-* user_id (foreign key → users.id, unique)
-* crm (string, 20, unique, nullable)
-* biography (text)
-* license_number (string, 50, unique)
-* license_expiry_date (date)
-* status (enum: active, inactive, suspended)
-* availability_schedule (json)
-* consultation_fee (decimal 8,2)
-* specializations (relacionamento N:N via pivot)
+
+- id (uuid, primary key)
+- user_id (foreign key → users.id, unique)
+- crm (string, 20, unique, nullable)
+- biography (text)
+- license_number (string, 50, unique)
+- license_expiry_date (date)
+- status (enum: active, inactive, suspended)
+- availability_schedule (json)
+- consultation_fee (decimal 8,2)
+- specializations (relacionamento N:N via pivot)
 
 **Patients (Extensão de Users - 1:1):**
-* id (uuid, primary key)
-* user_id (foreign key → users.id, unique)
-* gender (enum: male, female, other)
-* date_of_birth (date, indexed)
-* phone_number (string, 20)
-* emergency_contact (string, 100)
-* emergency_phone (string, 20)
-* medical_history (text)
-* allergies (text)
-* current_medications (text)
-* blood_type (string, 5)
-* height, weight (decimal)
-* insurance_provider, insurance_number (string)
-* consent_telemedicine (boolean)
-* last_consultation_at (timestamp)
+
+- id (uuid, primary key)
+- user_id (foreign key → users.id, unique)
+- gender (enum: male, female, other)
+- date_of_birth (date, indexed)
+- phone_number (string, 20)
+- emergency_contact (string, 100)
+- emergency_phone (string, 20)
+- medical_history (text)
+- allergies (text)
+- current_medications (text)
+- blood_type (string, 5)
+- height, weight (decimal)
+- insurance_provider, insurance_number (string)
+- consent_telemedicine (boolean)
+- last_consultation_at (timestamp)
 
 **Specializations:**
-* id (uuid, primary key)
-* name (string, 100, unique, indexed)
-* created_at, updated_at
+
+- id (uuid, primary key)
+- name (string, 100, unique, indexed)
+- created_at, updated_at
 
 **doctor_specialization (Pivot N:N):**
-* doctor_id (uuid, fk → doctors.id)
-* specialization_id (uuid, fk → specializations.id)
-* created_at, updated_at
-* primary key composta (doctor_id, specialization_id)
+
+- doctor_id (uuid, fk → doctors.id)
+- specialization_id (uuid, fk → specializations.id)
+- created_at, updated_at
+- primary key composta (doctor_id, specialization_id)
 
 **Appointments (Consultas):**
-* id (uuid, primary key)
-* doctor_id (fk → doctors.id)
-* patient_id (fk → patients.id)
-* scheduled_at (timestamp, indexed)
-* access_code (string, unique, indexed)
-* started_at, ended_at (timestamp nullable)
-* video_recording_url (string nullable)
-* status (enum: scheduled, in_progress, completed, no_show, cancelled, rescheduled)
-* notes (text nullable)
-* metadata (json nullable)
-* created_at, updated_at, deleted_at (soft delete)
+
+- id (uuid, primary key)
+- doctor_id (fk → doctors.id)
+- patient_id (fk → patients.id)
+- scheduled_at (timestamp, indexed)
+- access_code (string, unique, indexed)
+- started_at, ended_at (timestamp nullable)
+- video_recording_url (string nullable)
+- status (enum: scheduled, in_progress, completed, no_show, cancelled, rescheduled)
+- notes (text nullable)
+- metadata (json nullable)
+- created_at, updated_at, deleted_at (soft delete)
 
 **AppointmentLog:**
-* id (pk)
-* appointments_id (fk → appointments.id)
-* event (string)
-* metadata (json)
-* created_at, updated_at
+
+- id (pk)
+- appointments_id (fk → appointments.id)
+- event (string)
+- metadata (json)
+- created_at, updated_at
 
 ### Relacionamentos
-* **Users** ↔ **Doctors/Patients** (1:1, polimórfico)
-* **Doctors** ↔ **Consultations** (1:N)
-* **Patients** ↔ **Consultations** (1:N)
-* **Consultations** ↔ **Prescriptions** (1:N)
-* **Users** ↔ **Notifications** (1:N)
-* **Doctors** ↔ **Specializations** (N:N via pivot)
-* **Doctors/Patients** ↔ **Appointments** (1:N)
+
+- **Users** ↔ **Doctors/Patients** (1:1, polimórfico)
+- **Doctors** ↔ **Consultations** (1:N)
+- **Patients** ↔ **Consultations** (1:N)
+- **Consultations** ↔ **Prescriptions** (1:N)
+- **Users** ↔ **Notifications** (1:N)
+- **Doctors** ↔ **Specializations** (N:N via pivot)
+- **Doctors/Patients** ↔ **Appointments** (1:N)
 
 ## 3.3 Casos de Uso por Ator
 
 **Paciente:**
-* Registrar-se no sistema com dados pessoais e médicos
-* Autenticar-se (login/logout com verificação de email)
-* Atualizar perfil e informações médicas
-* Buscar médicos por especialidade e disponibilidade
-* Agendar consultas online
-* Participar de consultas via videoconferência
-* Receber prescrições e documentos digitais
-* Visualizar histórico de consultas
-* Iniciar/aceitar chamadas de vídeo em tempo real
+
+- Registrar-se no sistema com dados pessoais e médicos
+- Autenticar-se (login/logout com verificação de email)
+- Atualizar perfil e informações médicas
+- Buscar médicos por especialidade e disponibilidade
+- Agendar consultas online
+- Participar de consultas via videoconferência
+- Receber prescrições e documentos digitais
+- Visualizar histórico de consultas
+- Iniciar/aceitar chamadas de vídeo em tempo real
 
 **Médico:**
-* Registrar-se com dados profissionais (CRM, especialidade)
-* Validar registro profissional
-* Gerenciar agenda e disponibilidade
-* Atender consultas via videoconferência
-* Emitir prescrições digitais
-* Enviar documentos para pacientes
-* Visualizar histórico de atendimentos
-* Gerenciar especializações vinculadas ao perfil (via Admin)
-* Iniciar/aceitar chamadas de vídeo em tempo real
+
+- Registrar-se com dados profissionais (CRM, especialidade)
+- Validar registro profissional
+- Gerenciar agenda e disponibilidade
+- Atender consultas via videoconferência
+- Emitir prescrições digitais
+- Enviar documentos para pacientes
+- Visualizar histórico de atendimentos
+- Gerenciar especializações vinculadas ao perfil (via Admin)
+- Iniciar/aceitar chamadas de vídeo em tempo real
 
 **Administrador:**
-* Validar cadastros de médicos
-* Gerenciar usuários (ativar/suspender/bloquear)
-* Monitorar consultas e transações
-* Manter integridade e segurança do sistema
-* Gerar relatórios e auditoria
-* Manter catálogo de especializações (CRUD)
+
+- Validar cadastros de médicos
+- Gerenciar usuários (ativar/suspender/bloquear)
+- Monitorar consultas e transações
+- Manter integridade e segurança do sistema
+- Gerar relatórios e auditoria
+- Manter catálogo de especializações (CRUD)
 
 ## 3.4 Arquitetura de Deployment
 
 ### Ambiente de Desenvolvimento
+
 ```
 Frontend (Vue.js + Vite)
     ↓ (HTTP/HTTPS)
@@ -842,6 +993,7 @@ Cache/Queue (Redis)
 ```
 
 ### Ambiente de Produção
+
 ```
 Load Balancer (Nginx)
     ↓
@@ -856,18 +1008,22 @@ Monitoring (Laravel Telescope)
 ## 3.5 Rotas Principais Implementadas
 
 ### Navegação e Autenticação
+
 • Navegação autenticada: `GET /dashboard`, `GET /appointments`, `GET /consultations`, `GET /healthRecords`
 • Autenticação e registro: `GET/POST /login`, `GET/POST /register`, `GET/POST /register/patient`, `GET/POST /register/doctor`
 • Configurações: `GET/PATCH /settings/profile`, `GET/PUT /settings/password`
 
 ### Especializações
+
 • Especializações (web): `Route::resource('specializations', ...)`
 • Especializações (API pública): `GET /api/specializations/list`, `GET /api/specializations/options`
 
 ### Videoconferência
+
 • Videoconferência: `POST /video-call/request/{user}`, `POST /video-call/request/status/{user}`
 
 ### Prontuários Médicos
+
 • `GET /doctor/patients/{patient}/medical-record` - Visualizar prontuário
 • `POST /doctor/patients/{patient}/medical-record/export` - Exportar prontuário
 • `POST /doctor/patients/{patient}/medical-record/diagnoses` - Criar diagnóstico
@@ -881,6 +1037,7 @@ Monitoring (Laravel Telescope)
 • `POST /patient/medical-records/documents` - Paciente anexar documento
 
 ### Agenda e Disponibilidade
+
 • `GET /doctor/schedule` - Visualizar agenda
 • `GET /doctor/doctors/{doctor}/schedule` - Visualizar agenda de médico
 • `POST /doctor/doctors/{doctor}/schedule/save` - Salvar configuração de agenda
@@ -895,6 +1052,7 @@ Monitoring (Laravel Telescope)
 • `GET /api/doctors/{doctor}/availability/{date}` - Consultar disponibilidade (público)
 
 ### Timeline de Profissional
+
 • `GET /api/timeline-events` - Listar eventos
 • `POST /api/timeline-events` - Criar evento
 • `GET /api/timeline-events/{timelineEvent}` - Visualizar evento
@@ -902,6 +1060,7 @@ Monitoring (Laravel Telescope)
 • `DELETE /api/timeline-events/{timelineEvent}` - Excluir evento
 
 ### Consultas
+
 • `GET /doctor/consultations/{appointment}` - Detalhes da consulta
 • `POST /doctor/consultations/{appointment}/start` - Iniciar consulta
 • `POST /doctor/consultations/{appointment}/save-draft` - Salvar rascunho
@@ -934,16 +1093,18 @@ A arquitetura do sistema é segmentada em três camadas principais:
 A camada cliente é responsável pela interface do usuário e interação com o sistema. Implementada como Single Page Application (SPA) utilizando Vue.js 3 com Inertia.js, proporciona uma experiência fluida e responsiva sem recarregamentos de página.
 
 **Características:**
+
 - **Framework:** Vue.js 3 (Composition API)
 - **Roteamento:** Inertia.js (server-side routing)
 - **Build Tool:** Vite 7.0+
 - **Estilização:** Tailwind CSS 4.1+
 - **TypeScript:** Suporte completo para type-safety
 - **Componentes UI:** Reka UI (componentes acessíveis)
-- **Videoconferência:** PeerJS (WebRTC P2P)
+- **Videoconferência:** mediasoup-client (WebRTC via SFU)
 - **WebSockets:** Laravel Echo + Vue Echo
 
 **Estrutura do Frontend:**
+
 ```
 resources/js/
 ├── pages/              # Páginas Inertia (rotas)
@@ -962,6 +1123,7 @@ resources/js/
 A camada servidor é responsável pelo processamento de requisições, lógica de negócio, validações e comunicação com o banco de dados. Implementada em Laravel 12 (PHP 8.2+), seguindo o padrão MVC com separação clara de responsabilidades.
 
 **Características:**
+
 - **Framework:** Laravel 12
 - **Linguagem:** PHP 8.2+
 - **Padrão Arquitetural:** Controller → Service → Repository (DDD Light)
@@ -972,6 +1134,7 @@ A camada servidor é responsável pelo processamento de requisições, lógica d
 - **Validação:** Form Requests (validação de entrada)
 
 **Estrutura do Backend:**
+
 ```
 app/
 ├── Http/
@@ -994,6 +1157,7 @@ app/
 A camada de dados é responsável pelo armazenamento persistente de informações. Utiliza PostgreSQL 16 como banco de dados relacional principal, com Redis para cache e filas.
 
 **Características:**
+
 - **SGBD Principal:** PostgreSQL 16
 - **Cache/Queue:** Redis 7
 - **ORM:** Eloquent (Laravel)
@@ -1002,11 +1166,12 @@ A camada de dados é responsável pelo armazenamento persistente de informaçõe
 - **UUIDs:** Identificadores únicos universais
 
 **Estrutura de Dados:**
+
 - **Tabelas Principais:** users, doctors, patients, appointments, specializations
 - **Tabelas de Relacionamento:** doctor_specialization (N:N)
 - **Tabelas de Prontuário:** diagnoses, prescriptions, examinations, clinical_notes, medical_certificates, vital_signs, medical_documents
 - **Tabelas de Auditoria:** appointment_logs, medical_record_audit_logs
-- **Tabelas de Videoconferência:** video_call_rooms, video_call_events
+- **Tabelas de Videoconferência:** calls, rooms
 
 #### 5.1.1.4. Explicação da Segmentação
 
@@ -1023,6 +1188,7 @@ A segmentação em três camadas principais (Cliente, Servidor e Dados) proporci
 ### 5.2.1. Frontend
 
 **Framework e Bibliotecas Principais:**
+
 - **Vue.js 3.5.13** - Framework JavaScript reativo para construção de interfaces
 - **Inertia.js 2.1.0** - Bridge entre frontend e backend, eliminando necessidade de API REST
 - **TypeScript 5.2.2** - Superset JavaScript com tipagem estática
@@ -1030,11 +1196,12 @@ A segmentação em três camadas principais (Cliente, Servidor e Dados) proporci
 - **Tailwind CSS 4.1.1** - Framework CSS utility-first
 - **Reka UI 2.6.0** - Biblioteca de componentes Vue acessíveis
 - **VueUse 12.8.2** - Coleção de composables Vue úteis
-- **PeerJS 1.5.5** - Biblioteca para WebRTC P2P (videoconferência)
+- **mediasoup-client 3.x** - Cliente WebRTC para SFU MediaSoup (videoconferência)
 - **Laravel Echo 2.2.0** - Cliente WebSocket para Laravel Reverb
 - **Lucide Vue Next 0.468.0** - Biblioteca de ícones
 
 **Ferramentas de Desenvolvimento:**
+
 - **ESLint 9.17.0** - Linter para JavaScript/TypeScript
 - **Prettier 3.4.2** - Formatador de código
 - **Vue TSC 2.2.4** - Type checking para Vue
@@ -1042,6 +1209,7 @@ A segmentação em três camadas principais (Cliente, Servidor e Dados) proporci
 ### 5.2.2. Backend
 
 **Framework e Bibliotecas Principais:**
+
 - **Laravel 12.0** - Framework PHP moderno e robusto
 - **PHP 8.2+** - Linguagem de programação do servidor
 - **Laravel Sanctum** - Sistema de autenticação para SPAs
@@ -1051,6 +1219,7 @@ A segmentação em três camadas principais (Cliente, Servidor e Dados) proporci
 - **DomPDF 3.1** - Geração de PDFs
 
 **Ferramentas de Desenvolvimento:**
+
 - **Laravel Pint 1.18** - Code style fixer
 - **Laravel Sail 1.41** - Ambiente Docker para desenvolvimento
 - **PHPUnit 11.5.3** - Framework de testes
@@ -1059,10 +1228,12 @@ A segmentação em três camadas principais (Cliente, Servidor e Dados) proporci
 ### 5.2.3. Banco de Dados
 
 **Sistemas de Gerenciamento:**
+
 - **PostgreSQL 16** - Banco de dados relacional principal
 - **Redis 7** - Cache e sistema de filas
 
 **Características:**
+
 - **ORM:** Eloquent (Laravel)
 - **Migrations:** Controle de versão do schema
 - **Soft Deletes:** Exclusão lógica implementada
@@ -1072,19 +1243,23 @@ A segmentação em três camadas principais (Cliente, Servidor e Dados) proporci
 ### 5.2.4. Ferramentas de Apoio
 
 **Versionamento:**
+
 - **Git** - Controle de versão distribuído
 - **GitHub** - Repositório remoto e colaboração
 
 **Containerização:**
+
 - **Docker** - Containerização da aplicação
 - **Docker Compose** - Orquestração de containers
 
 **Build e Deploy:**
+
 - **Composer** - Gerenciador de dependências PHP
 - **NPM/Pnpm** - Gerenciador de dependências JavaScript
 - **Vite** - Build tool para frontend
 
 **Monitoramento e Logs:**
+
 - **Laravel Pail** - Visualização de logs em tempo real
 - **Laravel Telescope** (planejado) - Debug e monitoramento
 
@@ -1093,25 +1268,30 @@ A segmentação em três camadas principais (Cliente, Servidor e Dados) proporci
 #### 5.2.5.1. Padrões Arquiteturais
 
 **Padrão MVC (Model-View-Controller):**
+
 - **Models:** Representam entidades de domínio e acesso a dados
 - **Views:** Componentes Vue.js renderizados via Inertia.js
 - **Controllers:** Recebem requisições e coordenam Services
 
 **Padrão Service Layer:**
+
 - Lógica de negócio isolada em Services
 - Controllers delegam processamento para Services
 - Services orquestram Models e regras de negócio
 
 **Padrão Repository (DDD Light):**
+
 - Eloquent ORM atua como Repository pattern
 - Models encapsulam acesso a dados
 - Scopes e Query Builders para consultas reutilizáveis
 
 **Padrão Observer:**
+
 - Observers monitoram eventos de modelos
 - Exemplo: `AppointmentsObserver` registra logs automáticos
 
 **Padrão Event-Driven:**
+
 - Eventos para comunicação assíncrona
 - Broadcasting em tempo real via WebSockets
 - Jobs para processamento assíncrono
@@ -1150,6 +1330,7 @@ O sistema segue uma arquitetura em camadas bem definida:
 ```
 
 **Benefícios:**
+
 - **Separação de Responsabilidades:** Cada camada tem função específica
 - **Testabilidade:** Camadas podem ser testadas isoladamente
 - **Manutenibilidade:** Mudanças em uma camada não afetam outras
@@ -1158,6 +1339,7 @@ O sistema segue uma arquitetura em camadas bem definida:
 ### 5.2.6. Boas Práticas e Convenções
 
 **Nomenclatura:**
+
 - **Controllers:** PascalCase com sufixo "Controller" (ex: `DoctorDashboardController`)
 - **Services:** PascalCase com sufixo "Service" (ex: `AppointmentService`)
 - **Models:** PascalCase singular (ex: `Appointment`, `Doctor`)
@@ -1165,12 +1347,14 @@ O sistema segue uma arquitetura em camadas bem definida:
 - **Routes:** kebab-case (ex: `/doctor/dashboard`)
 
 **Estrutura de Código:**
+
 - **PSR-12:** Padrão de codificação PHP
 - **ESLint + Prettier:** Padrão de codificação JavaScript/TypeScript
 - **TypeScript:** Tipagem estrita para type-safety
 - **Composables:** Lógica reutilizável no frontend
 
 **Segurança:**
+
 - **Validação:** Form Requests para validação de entrada
 - **Autorização:** Policies para controle de acesso
 - **Autenticação:** Laravel Sanctum para SPAs
@@ -1178,6 +1362,7 @@ O sistema segue uma arquitetura em camadas bem definida:
 - **HTTPS:** Comunicação criptografada (produção)
 
 **Performance:**
+
 - **Cache:** Redis para cache de consultas frequentes
 - **Queue:** Jobs assíncronos para tarefas pesadas
 - **Eager Loading:** Prevenção de N+1 queries
@@ -1188,23 +1373,28 @@ O sistema segue uma arquitetura em camadas bem definida:
 #### 5.2.7.1. Ambiente de Desenvolvimento Atual
 
 **Servidor Web:**
+
 - PHP 8.2 ou superior
 - Extensões PHP: pdo, pdo_pgsql, mbstring, openssl, tokenizer, xml, ctype, json, bcmath
 - Composer 2.0+
 
 **Banco de Dados:**
+
 - PostgreSQL 16 ou superior
 - Redis 7 ou superior
 
 **Node.js:**
+
 - Node.js 18+ ou superior
 - NPM ou Pnpm
 
 **Ferramentas:**
+
 - Git
 - Docker e Docker Compose (opcional, para ambiente containerizado)
 
 **Comandos de Desenvolvimento:**
+
 ```bash
 # Instalar dependências
 composer install
@@ -1224,26 +1414,31 @@ composer dev  # Inicia servidor PHP, Vite, Queue e Reverb simultaneamente
 #### 5.2.7.2. Hospedagem Planejada para Produção
 
 **Servidor de Aplicação:**
+
 - **Servidor Web:** Nginx ou Apache
 - **PHP-FPM:** PHP 8.2+ com opcache habilitado
 - **Process Manager:** Supervisor (para queues e workers)
 
 **Banco de Dados:**
+
 - **PostgreSQL:** 16+ em servidor dedicado ou cluster
 - **Redis:** 7+ para cache e filas
 
 **Infraestrutura:**
+
 - **Load Balancer:** Nginx ou AWS ELB
 - **CDN:** Para assets estáticos (CloudFlare, AWS CloudFront)
 - **Storage:** S3 ou compatível para arquivos (PDFs, imagens)
 - **SSL/TLS:** Certificado válido (Let's Encrypt ou comercial)
 
 **Monitoramento:**
+
 - **Logs:** Centralizados (CloudWatch, Papertrail)
 - **APM:** New Relic, Datadog ou Laravel Telescope
 - **Uptime:** Monitoramento de disponibilidade
 
 **Backup:**
+
 - **Banco de Dados:** Backups diários automatizados
 - **Arquivos:** Backup de storage (S3 versioning)
 - **Retenção:** Mínimo 30 dias
@@ -1251,16 +1446,19 @@ composer dev  # Inicia servidor PHP, Vite, Queue e Reverb simultaneamente
 ### 5.2.8. APIs e Integrações
 
 **APIs Internas:**
+
 - **Inertia.js:** Comunicação entre frontend e backend (não é REST API tradicional)
 - **Laravel Echo:** WebSocket para comunicação em tempo real
 - **Endpoints Públicos:** APIs REST para consulta de especializações e disponibilidade
 
 **APIs Externas (Futuras):**
+
 - **Pagamentos:** Integração com gateway de pagamento (Stripe, PagSeguro)
 - **Validação CRM:** Integração com webservice de validação de CRM (futuro)
 - **Notificações Push:** Serviço de notificações push (OneSignal, Firebase)
 
 **WebSockets:**
+
 - **Laravel Reverb:** Servidor WebSocket nativo
 - **Canais Privados:** Comunicação segura por usuário
 - **Eventos:** Broadcasting de eventos em tempo real
@@ -1268,14 +1466,17 @@ composer dev  # Inicia servidor PHP, Vite, Queue e Reverb simultaneamente
 ### 5.2.9. Caracterização da API
 
 **Tipo de API:**
+
 - **Híbrida:** Inertia.js para SPA + Endpoints REST públicos
 
 **Endpoints REST Públicos:**
+
 - `GET /api/specializations/list` - Listar especializações (com filtros)
 - `GET /api/specializations/options` - Opções de especializações para selects
 - `GET /api/doctors/{doctor}/availability/{date}` - Consultar disponibilidade de médico
 
 **Endpoints REST Autenticados:**
+
 - `GET /api/timeline-events` - Listar eventos de timeline
 - `POST /api/timeline-events` - Criar evento de timeline
 - `GET /api/timeline-events/{id}` - Visualizar evento
@@ -1283,23 +1484,28 @@ composer dev  # Inicia servidor PHP, Vite, Queue e Reverb simultaneamente
 - `DELETE /api/timeline-events/{id}` - Excluir evento
 
 **Autenticação:**
+
 - **SPA:** Laravel Sanctum (cookies HTTP-only)
 - **API:** Tokens de API (futuro, se necessário)
 
 **Formato de Resposta:**
+
 - **JSON:** Para endpoints REST
 - **Inertia Response:** Para rotas web (componentes Vue)
 
 **Versionamento:**
+
 - Versionamento via prefixo `/api/v1/` (planejado para futuras versões)
 
 ## 5.3. Repositório e Código-Fonte
 
 **Plataforma de Versionamento:**
+
 - **GitHub:** Repositório principal do projeto
 - **URL:** `https://github.com/Audri-Rian/TelemedicinaParaTodos`
 
 **Estrutura do Repositório:**
+
 ```
 TelemedicinaParaTodos/
 ├── app/                    # Código-fonte do backend (Laravel)
@@ -1318,32 +1524,35 @@ TelemedicinaParaTodos/
 ```
 
 **Branches:**
+
 - **main:** Branch principal (produção)
 - **develop:** Branch de desenvolvimento (planejado)
 
 **Commits:**
+
 - Mensagens em português brasileiro
 - Padrão: "tipo: descrição" (ex: "feat: adiciona sistema de prontuários")
 
 **Licença:**
+
 - MIT License (ver arquivo LICENSE)
 
 ---
 
 ## Histórico de Revisão
 
-| Data       | Versão | Descrição                                                                                                 | Autor                              |
-| ---------- | -----: | --------------------------------------------------------------------------------------------------------- | ---------------------------------- |
-| 08/08/2025 |    1.0 | Elaboração dos primeiros conteúdos para implementação no documento.                                      | Audri Rian Cordeiro Carvalho Alves |
-| 14/08/2025 |    1.1 | Detalhamento de todos os tópicos já existentes na documentação.                                          | Audri Rian Cordeiro Carvalho Alves |
-| 21/08/2025 |    1.2 | Inclusão dos requisitos funcionais e não funcionais, regras de negócio e classes.                       | Audri Rian Cordeiro Carvalho Alves |
-| 28/08/2025 |    1.4 | Adição dos mockups de tela e o fluxo de navegação.                                                       | Audri Rian Cordeiro Carvalho Alves |
-| 13/09/2025 |    1.5 | Alinhado com implementação: Especializações, cadastro separado, videoconferência P2P, modelo Consultas. | Audri Rian Cordeiro Carvalho Alves |
+| Data       | Versão | Descrição                                                                                                                          | Autor                              |
+| ---------- | -----: | ---------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
+| 08/08/2025 |    1.0 | Elaboração dos primeiros conteúdos para implementação no documento.                                                                | Audri Rian Cordeiro Carvalho Alves |
+| 14/08/2025 |    1.1 | Detalhamento de todos os tópicos já existentes na documentação.                                                                    | Audri Rian Cordeiro Carvalho Alves |
+| 21/08/2025 |    1.2 | Inclusão dos requisitos funcionais e não funcionais, regras de negócio e classes.                                                  | Audri Rian Cordeiro Carvalho Alves |
+| 28/08/2025 |    1.4 | Adição dos mockups de tela e o fluxo de navegação.                                                                                 | Audri Rian Cordeiro Carvalho Alves |
+| 13/09/2025 |    1.5 | Alinhado com implementação: Especializações, cadastro separado, videoconferência, modelo Consultas.                                | Audri Rian Cordeiro Carvalho Alves |
 | 15/01/2025 |    2.0 | Integração de funcionalidades implementadas: Prontuários (RF014), Agenda (RF015), Timeline (RF016), atualizações em RF003 e RF004. | Audri Rian Cordeiro Carvalho Alves |
 
 ---
 
-*Última atualização: Janeiro 2025*
-*Versão: 2.0*
+_Última atualização: Janeiro 2025_
+_Versão: 2.0_
 
-*Fim do documento.*
+_Fim do documento._

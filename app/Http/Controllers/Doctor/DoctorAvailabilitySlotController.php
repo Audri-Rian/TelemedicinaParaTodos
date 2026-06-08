@@ -43,7 +43,7 @@ class DoctorAvailabilitySlotController extends Controller
             $validated['location_id'] ?? null
         );
 
-        if (!$hasConflict) {
+        if (! $hasConflict) {
             return response()->json([
                 'success' => false,
                 'message' => 'Conflito de horário detectado. Já existe um slot configurado neste período.',
@@ -99,6 +99,8 @@ class DoctorAvailabilitySlotController extends Controller
      */
     public function update(UpdateAvailabilitySlotRequest $request, Doctor $doctor, AvailabilitySlot $slot): JsonResponse
     {
+        Gate::authorize('manageDoctorSchedule', $doctor);
+        abort_if((string) $slot->doctor_id !== (string) $doctor->id, 403);
         $this->authorize('update', $slot);
 
         $validated = $request->validated();
@@ -108,14 +110,14 @@ class DoctorAvailabilitySlotController extends Controller
             $startTime = $validated['start_time'] ?? $slot->start_time;
             $endTime = $validated['end_time'] ?? $slot->end_time;
             $dayOfWeek = $validated['day_of_week'] ?? $slot->day_of_week;
-            $specificDate = isset($validated['specific_date']) 
-                ? Carbon::parse($validated['specific_date']) 
+            $specificDate = isset($validated['specific_date'])
+                ? Carbon::parse($validated['specific_date'])
                 : $slot->specific_date;
             $locationId = $validated['location_id'] ?? $slot->location_id;
 
             // Validar duração mínima (config: telemedicine.availability.slot_min_duration_minutes)
-            $start = Carbon::createFromFormat('H:i:s', $startTime . ':00');
-            $end = Carbon::createFromFormat('H:i:s', $endTime . ':00');
+            $start = Carbon::createFromFormat('H:i:s', $startTime.':00');
+            $end = Carbon::createFromFormat('H:i:s', $endTime.':00');
             $diffInMinutes = $start->diffInMinutes($end);
             $minMinutes = (int) config('telemedicine.availability.slot_min_duration_minutes', 60);
 
@@ -136,7 +138,7 @@ class DoctorAvailabilitySlotController extends Controller
                 $slot->id // Excluir o próprio slot
             );
 
-            if (!$hasConflict) {
+            if (! $hasConflict) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Conflito de horário detectado. Já existe outro slot configurado neste período.',
@@ -175,6 +177,8 @@ class DoctorAvailabilitySlotController extends Controller
      */
     public function destroy(Doctor $doctor, AvailabilitySlot $slot): JsonResponse
     {
+        Gate::authorize('manageDoctorSchedule', $doctor);
+        abort_if((string) $slot->doctor_id !== (string) $doctor->id, 403);
         $this->authorize('delete', $slot);
 
         $slot->delete();
@@ -207,8 +211,6 @@ class DoctorAvailabilitySlotController extends Controller
     )]
     public function getByDate(Request $request, Doctor $doctor, string $date): JsonResponse
     {
-        Gate::authorize('manageDoctorSchedule', $doctor);
-
         try {
             $parsedDate = Carbon::parse($date);
         } catch (\Exception $e) {
@@ -226,4 +228,3 @@ class DoctorAvailabilitySlotController extends Controller
         ], 200);
     }
 }
-

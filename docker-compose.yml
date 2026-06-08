@@ -177,15 +177,21 @@ services:
       SESSION_LIFETIME: 120
 
       # Reverb (WebSocket) — cliente conecta em REVERB_HOST:REVERB_PORT (ex. localhost:8080)
-      BROADCAST_CONNECTION: reverb
-      REVERB_APP_ID: telemedicina-app
-      REVERB_APP_KEY: telemedicina-key
-      REVERB_APP_SECRET: telemedicina-secret
-      REVERB_HOST: localhost
-      REVERB_PORT: 8080
-      REVERB_SCHEME: http
-      REVERB_SERVER_HOST: 0.0.0.0
-      REVERB_SERVER_PORT: 8080
+      BROADCAST_CONNECTION: ${BROADCAST_CONNECTION:-reverb}
+      REVERB_APP_ID: ${REVERB_APP_ID:-telemedicina-app}
+      REVERB_APP_KEY: ${REVERB_APP_KEY:-telemedicina-key}
+      REVERB_APP_SECRET: ${REVERB_APP_SECRET:-telemedicina-secret}
+      REVERB_HOST: ${REVERB_HOST:-localhost}
+      REVERB_PORT: ${REVERB_PORT:-8080}
+      REVERB_SCHEME: ${REVERB_SCHEME:-http}
+      REVERB_SERVER_HOST: ${REVERB_SERVER_HOST:-0.0.0.0}
+      REVERB_SERVER_PORT: ${REVERB_SERVER_PORT:-8080}
+
+      # SFU MediaSoup
+      SFU_HTTP_URL: ${SFU_HTTP_URL:-}
+      SFU_WS_URL: ${SFU_WS_URL:-}
+      SFU_JWT_SECRET: ${SFU_JWT_SECRET:-}
+      SFU_API_SECRET: ${SFU_API_SECRET:-}
 
     command: >
       sh -c "php artisan migrate --force && exec php-fpm"
@@ -207,21 +213,21 @@ services:
     volumes:
       - .:/var/www/html
     environment:
-      APP_ENV: local
-      APP_KEY: base64:Vr23j63EFvgERAmlx3eUK4dwSNdCrvmyeYMerRPUD5s=
-      REVERB_SERVER_HOST: 0.0.0.0
-      REVERB_SERVER_PORT: 8080
-      REVERB_APP_ID: telemedicina-app
-      REVERB_APP_KEY: telemedicina-key
-      REVERB_APP_SECRET: telemedicina-secret
-      REVERB_HOST: localhost
-      REVERB_PORT: 8080
-      REVERB_SCHEME: http
+      APP_ENV: ${APP_ENV:-local}
+      APP_KEY: ${APP_KEY:-base64:Vr23j63EFvgERAmlx3eUK4dwSNdCrvmyeYMerRPUD5s=}
+      REVERB_SERVER_HOST: ${REVERB_SERVER_HOST:-0.0.0.0}
+      REVERB_SERVER_PORT: ${REVERB_SERVER_PORT:-8080}
+      REVERB_APP_ID: ${REVERB_APP_ID:-telemedicina-app}
+      REVERB_APP_KEY: ${REVERB_APP_KEY:-telemedicina-key}
+      REVERB_APP_SECRET: ${REVERB_APP_SECRET:-telemedicina-secret}
+      REVERB_HOST: ${REVERB_HOST:-localhost}
+      REVERB_PORT: ${REVERB_PORT:-8080}
+      REVERB_SCHEME: ${REVERB_SCHEME:-http}
       REDIS_HOST: redis
       REDIS_PORT: 6379
     command: php artisan reverb:start
     ports:
-      - '8080:8080'
+      - '${REVERB_SERVER_PORT:-8080}:${REVERB_SERVER_PORT:-8080}'
 
   # ===================================
   # Nginx (porta 80 → proxy para PHP-FPM)

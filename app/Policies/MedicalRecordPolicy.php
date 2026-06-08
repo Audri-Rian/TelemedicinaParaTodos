@@ -47,6 +47,11 @@ class MedicalRecordPolicy
         return $this->doctorCanAccessPatient($user, $patient);
     }
 
+    public function downloadDocument(User $user, Patient $patient): bool
+    {
+        return $this->uploadDocument($user, $patient);
+    }
+
     public function update(User $user, Patient $patient): bool
     {
         return $this->doctorCanAccessPatient($user, $patient);
@@ -84,6 +89,20 @@ class MedicalRecordPolicy
 
     public function generateConsultationPdf(User $user, Patient $patient): bool
     {
+        return $this->doctorCanAccessPatient($user, $patient);
+    }
+
+    public function updateClinicalRecord(User $user, Patient $patient): bool
+    {
+        return $this->doctorCanAccessPatient($user, $patient);
+    }
+
+    public function viewVersionHistory(User $user, Patient $patient): bool
+    {
+        if ($user->id === $patient->user_id) {
+            return true;
+        }
+
         return $this->doctorCanAccessPatient($user, $patient);
     }
 

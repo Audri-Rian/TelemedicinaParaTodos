@@ -35,5 +35,7 @@
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
+        <env name="SFU_JWT_SECRET" value="testing-jwt-secret"/>
+        <env name="SIGNATURE_DRIVER" value="null"/>
     </php>
 </phpunit>

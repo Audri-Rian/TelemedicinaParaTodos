@@ -76,29 +76,29 @@ graph TB
     D --> G
     F --> H
     F --> I
-    
+
     R --> A
     S --> A
     T --> A
     U --> A
     V --> A
     W --> A
-    
+
     X --> A
     Y --> A
     Z --> A
     AA --> A
     AB --> A
-    
+
     AC --> B
     AD --> B
     AE --> B
     AF --> B
-    
+
     AG --> C
     AH --> C
     AI --> C
-    
+
     R --> J
     R --> K
     R --> L
@@ -107,7 +107,7 @@ graph TB
     U --> O
     X --> P
     Y --> Q
-    
+
     R --> AJ
     S --> AJ
     X --> AJ
@@ -126,12 +126,15 @@ graph TB
 ## Organização de Componentes
 
 ### Layouts
+
 - **AppLayout**: Layout principal da aplicação (com sidebar e header)
 - **AuthLayout**: Layout para páginas de autenticação
 - **SettingsLayout**: Layout para páginas de configurações
 
 ### App Shell
+
 Componentes estruturais que compõem o layout principal:
+
 - **AppShell**: Container principal
 - **AppHeader**: Cabeçalho com logo e navegação
 - **AppSidebar**: Barra lateral com menu
@@ -140,7 +143,9 @@ Componentes estruturais que compõem o layout principal:
 - **NavUser**: Menu do usuário
 
 ### UI Components (Reka UI)
+
 Biblioteca de componentes reutilizáveis:
+
 - **Button**: Botões com variantes
 - **Input**: Campos de entrada
 - **Card**: Cards de conteúdo
@@ -151,7 +156,9 @@ Biblioteca de componentes reutilizáveis:
 - **Sidebar**: Sidebars colapsáveis
 
 ### Pages - Doctor
+
 Páginas específicas para médicos:
+
 - **DoctorDashboard**: Dashboard do médico
 - **DoctorConsultations**: Lista de consultas
 - **DoctorConsultationDetail**: Detalhes da consulta
@@ -160,7 +167,9 @@ Páginas específicas para médicos:
 - **DoctorAvailability**: Gestão de disponibilidade
 
 ### Pages - Patient
+
 Páginas específicas para pacientes:
+
 - **PatientDashboard**: Dashboard do paciente
 - **PatientSearchConsultations**: Busca de médicos
 - **PatientAppointments**: Minhas consultas
@@ -168,20 +177,26 @@ Páginas específicas para pacientes:
 - **PatientConsultationDetail**: Detalhes da consulta
 
 ### Pages - Auth
+
 Páginas de autenticação:
+
 - **Login**: Login de usuários
 - **RegisterDoctor**: Registro de médico
 - **RegisterPatient**: Registro de paciente
 - **RegisterSelect**: Seleção de tipo de registro
 
 ### Pages - Settings
+
 Páginas de configurações:
+
 - **Profile**: Edição de perfil
 - **Password**: Alteração de senha
 - **Appearance**: Configurações de aparência
 
 ### Composables
+
 Lógica reutilizável Vue 3:
+
 - **useAuth**: Autenticação e sessão
 - **useAuthGuard**: Proteção de rotas
 - **useDoctorRegistration**: Lógica de registro de médico
@@ -204,10 +219,8 @@ Lógica reutilizável Vue 3:
 - **Tailwind CSS 4**: Estilização
 - **Reka UI**: Biblioteca de componentes
 - **Laravel Echo**: Eventos em tempo real
-- **PeerJS**: Videoconferência WebRTC
+- **mediasoup-client**: Videoconferência WebRTC via SFU
 
 ---
 
-*Última atualização: Janeiro 2025*
-
-
+_Última atualização: Janeiro 2025_

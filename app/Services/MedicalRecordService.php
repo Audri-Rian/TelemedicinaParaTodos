@@ -222,6 +222,21 @@ class MedicalRecordService
         return $this->clinicalActionService->registerVitalSigns($appointment, $doctor, $payload);
     }
 
+    public function updateClinicalNote(Doctor $doctor, Patient $patient, ClinicalNote $note, array $payload): ClinicalNote
+    {
+        return $this->clinicalActionService->updateClinicalNote($doctor, $patient, $note, $payload);
+    }
+
+    public function updatePrescription(Doctor $doctor, Patient $patient, Prescription $prescription, array $payload): Prescription
+    {
+        return $this->clinicalActionService->updatePrescription($doctor, $patient, $prescription, $payload);
+    }
+
+    public function updateMedicalCertificate(Doctor $doctor, Patient $patient, MedicalCertificate $certificate, array $payload): MedicalCertificate
+    {
+        return $this->clinicalActionService->updateMedicalCertificate($doctor, $patient, $certificate, $payload);
+    }
+
     public function generateConsultationPdf(Appointments $appointment, User $requester): array
     {
         return $this->pdfService->generateConsultationPdf($appointment, $requester);

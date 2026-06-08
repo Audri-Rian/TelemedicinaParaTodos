@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted, nextTick } from 'vue';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, X } from 'lucide-vue-next';
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue';
 
 interface TourStepConfig {
     id: string;
@@ -25,98 +25,107 @@ interface Props {
 const props = defineProps<Props>();
 
 defineEmits<{
-    'next': [];
-    'previous': [];
-    'close': [];
-    'complete': [];
+    next: [];
+    previous: [];
+    close: [];
+    complete: [];
 }>();
 
 const tooltipRef = ref<HTMLElement | null>(null);
-const tooltipStyle = ref<{ top?: string; left?: string; bottom?: string; right?: string }>({});
+const tooltipStyle = ref<Record<string, string>>({});
 
-const position = computed(() => {
-    if (props.isMobile) {
-        return 'bottom';
-    }
-    return props.step.position;
-});
+const position = computed(() => (props.isMobile ? 'bottom' : props.step.position));
+
+// Eleva o elemento acima do overlay (z-40) para aparecer no "buraco" do spotlight
+const applyHighlight = (el: Element) => {
+    const htmlEl = el as HTMLElement;
+    htmlEl.dataset.tourHighlighted = 'true';
+    htmlEl.style.position = 'relative';
+    htmlEl.style.zIndex = '41';
+};
+
+const removeHighlight = (el: Element) => {
+    const htmlEl = el as HTMLElement;
+    if (htmlEl.dataset.tourHighlighted !== 'true') return;
+    delete htmlEl.dataset.tourHighlighted;
+    htmlEl.style.position = '';
+    htmlEl.style.zIndex = '';
+};
+
+const getTarget = () => document.querySelector(props.step.target);
 
 const updateTooltipPosition = () => {
     nextTick(() => {
-        const targetElement = document.querySelector(props.step.target);
-        if (!targetElement || !tooltipRef.value) return;
+        const targetEl = getTarget();
+        if (!targetEl || !tooltipRef.value) {
+            // Fallback: centraliza na viewport
+            tooltipStyle.value = {
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+            };
+            return;
+        }
 
-        const targetRect = targetElement.getBoundingClientRect();
+        const targetRect = targetEl.getBoundingClientRect();
         const tooltipRect = tooltipRef.value.getBoundingClientRect();
-        const viewportWidth = window.innerWidth;
-        const viewportHeight = window.innerHeight;
-        const spacing = 16;
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+        const gap = 12;
 
-        let top = '';
-        let left = '';
-        let bottom = '';
-        let right = '';
+        let top = 0;
+        let left = 0;
 
         switch (position.value) {
-            case 'top':
-                top = `${targetRect.top - tooltipRect.height - spacing}px`;
-                left = `${targetRect.left + (targetRect.width / 2) - (tooltipRect.width / 2)}px`;
-                break;
-            case 'bottom':
-                bottom = `${viewportHeight - targetRect.bottom + spacing}px`;
-                left = `${targetRect.left + (targetRect.width / 2) - (tooltipRect.width / 2)}px`;
+            case 'right':
+                top = targetRect.top + targetRect.height / 2 - tooltipRect.height / 2;
+                left = targetRect.right + gap;
                 break;
             case 'left':
-                top = `${targetRect.top + (targetRect.height / 2) - (tooltipRect.height / 2)}px`;
-                right = `${viewportWidth - targetRect.left + spacing}px`;
+                top = targetRect.top + targetRect.height / 2 - tooltipRect.height / 2;
+                left = targetRect.left - tooltipRect.width - gap;
                 break;
-            case 'right':
-                top = `${targetRect.top + (targetRect.height / 2) - (tooltipRect.height / 2)}px`;
-                left = `${targetRect.right + spacing}px`;
+            case 'bottom':
+                top = targetRect.bottom + gap;
+                left = targetRect.left + targetRect.width / 2 - tooltipRect.width / 2;
+                break;
+            case 'top':
+                top = targetRect.top - tooltipRect.height - gap;
+                left = targetRect.left + targetRect.width / 2 - tooltipRect.width / 2;
                 break;
         }
 
-        // Ajustar para não sair da viewport
-        if (left && parseFloat(left) < spacing) {
-            left = `${spacing}px`;
-        }
-        if (top && parseFloat(top) < spacing) {
-            top = `${spacing}px`;
-        }
-        if (right && parseFloat(right) < spacing) {
-            right = `${spacing}px`;
-        }
-        if (bottom && parseFloat(bottom) < spacing) {
-            bottom = `${spacing}px`;
-        }
+        // Clampa para não sair da viewport
+        left = Math.max(gap, Math.min(left, vw - tooltipRect.width - gap));
+        top = Math.max(gap, Math.min(top, vh - tooltipRect.height - gap));
 
-        tooltipStyle.value = { top, left, bottom, right };
+        tooltipStyle.value = {
+            top: `${top}px`,
+            left: `${left}px`,
+        };
     });
 };
 
-const highlightTarget = () => {
-    const targetElement = document.querySelector(props.step.target);
-    if (targetElement) {
-        targetElement.classList.add('tour-highlight');
+const highlightAndPosition = () => {
+    const targetEl = getTarget();
+    if (targetEl) {
+        targetEl.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+        applyHighlight(targetEl);
+        // Re-calcula após scroll completar (smooth ~300ms)
+        setTimeout(updateTooltipPosition, 350);
     }
-};
-
-const removeHighlight = () => {
-    const targetElement = document.querySelector(props.step.target);
-    if (targetElement) {
-        targetElement.classList.remove('tour-highlight');
-    }
+    updateTooltipPosition();
 };
 
 onMounted(() => {
-    highlightTarget();
-    updateTooltipPosition();
+    highlightAndPosition();
     window.addEventListener('resize', updateTooltipPosition);
-    window.addEventListener('scroll', updateTooltipPosition, true);
+    window.addEventListener('scroll', updateTooltipPosition, { passive: true, capture: true });
 });
 
 onUnmounted(() => {
-    removeHighlight();
+    const targetEl = getTarget();
+    if (targetEl) removeHighlight(targetEl);
     window.removeEventListener('resize', updateTooltipPosition);
     window.removeEventListener('scroll', updateTooltipPosition, true);
 });
@@ -126,108 +135,54 @@ onUnmounted(() => {
     <div
         ref="tooltipRef"
         :style="tooltipStyle"
-        class="fixed z-50 w-full max-w-sm bg-white rounded-lg shadow-xl border border-gray-200 p-6 animate-in fade-in-0 zoom-in-95 duration-200"
+        class="fixed z-[52] w-80 animate-in rounded-xl border border-gray-200 bg-white p-5 shadow-2xl duration-200 fade-in-0 zoom-in-95"
         role="region"
         :aria-label="`Passo ${currentIndex + 1} de ${totalSteps}`"
     >
         <!-- Barra de progresso -->
         <div class="mb-4">
-            <div class="flex items-center justify-between text-xs text-gray-600 mb-2">
-                <span>Passo {{ currentIndex + 1 }} de {{ totalSteps }}</span>
+            <div class="mb-1.5 flex items-center justify-between text-xs text-gray-500">
+                <span class="font-medium">{{ currentIndex + 1 }} / {{ totalSteps }}</span>
                 <span>{{ Math.round(progress) }}%</span>
             </div>
-            <div class="w-full bg-gray-200 rounded-full h-2">
-                <div
-                    class="bg-primary h-2 rounded-full transition-all duration-300"
-                    :style="{ width: `${progress}%` }"
-                />
+            <div class="h-1.5 w-full rounded-full bg-gray-100">
+                <div class="h-1.5 rounded-full bg-primary transition-all duration-300" :style="{ width: `${progress}%` }" />
             </div>
         </div>
 
         <!-- Conteúdo -->
-        <h3 id="tour-title" class="text-lg font-semibold text-gray-900 mb-2">
+        <h3 class="mb-1.5 text-base font-semibold text-gray-900">
             {{ step.title }}
         </h3>
-        <p id="tour-description" class="text-sm text-gray-600 mb-6">
+        <p class="mb-4 text-sm leading-relaxed text-gray-600">
             {{ step.description }}
         </p>
 
         <!-- Navegação -->
-        <div class="flex items-center justify-between gap-3">
-            <div class="flex items-center gap-2">
-                <Button
-                    v-if="canGoBack"
-                    @click="$emit('previous')"
-                    variant="outline"
-                    size="sm"
-                    aria-label="Passo anterior"
-                    :disabled="isLoading"
-                >
-                    <ChevronLeft class="w-4 h-4 mr-1" />
-                    Anterior
-                </Button>
-            </div>
+        <div class="flex items-center justify-between gap-2">
+            <Button v-if="canGoBack" @click="$emit('previous')" variant="outline" size="sm" :disabled="isLoading">
+                <ChevronLeft class="mr-1 h-3.5 w-3.5" />
+                Anterior
+            </Button>
+            <div v-else />
 
-            <div class="flex items-center gap-2">
-                <Button
-                    v-if="!isLastStep"
-                    @click="$emit('next')"
-                    variant="default"
-                    size="sm"
-                    aria-label="Próximo passo"
-                    :disabled="isLoading"
-                >
-                    Próximo
-                    <ChevronRight class="w-4 h-4 ml-1" />
+            <div class="ml-auto flex items-center gap-2">
+                <Button @click="$emit('close')" variant="ghost" size="sm" :disabled="isLoading" aria-label="Fechar tour">
+                    <X class="h-3.5 w-3.5" />
                 </Button>
-                <Button
-                    v-else
-                    @click="$emit('complete')"
-                    variant="default"
-                    size="sm"
-                    aria-label="Concluir tour"
-                    :disabled="isLoading"
-                >
+                <Button v-if="!isLastStep" @click="$emit('next')" variant="default" size="sm" :disabled="isLoading">
+                    Próximo
+                    <ChevronRight class="ml-1 h-3.5 w-3.5" />
+                </Button>
+                <Button v-else @click="$emit('complete')" variant="default" size="sm" :disabled="isLoading">
                     {{ isLoading ? 'Salvando...' : 'Concluir' }}
                 </Button>
             </div>
-
-            <Button
-                @click="$emit('close')"
-                variant="ghost"
-                size="sm"
-                class="ml-auto"
-                aria-label="Fechar tour"
-                :disabled="isLoading"
-            >
-                <X class="w-4 h-4" />
-                <span class="sr-only">Fechar</span>
-            </Button>
         </div>
     </div>
 </template>
 
 <style scoped>
-.tour-highlight {
-    position: relative;
-    z-index: 40;
-    outline: 2px solid rgb(59 130 246);
-    outline-offset: 2px;
-    border-radius: 0.5rem;
-}
-
-.sr-only {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border-width: 0;
-}
-
 @media (prefers-reduced-motion: reduce) {
     * {
         animation-duration: 0.01ms !important;
@@ -235,4 +190,3 @@ onUnmounted(() => {
     }
 }
 </style>
-

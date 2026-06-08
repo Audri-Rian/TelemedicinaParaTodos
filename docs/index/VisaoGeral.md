@@ -5,6 +5,7 @@
 Este é o **documento mestre** do projeto Telemedicina para Todos - um índice central que conecta toda a documentação do sistema. Aqui você encontrará uma visão geral do projeto, seus objetivos e links para todos os documentos detalhados.
 
 ### 📑 Sumário Navegável
+
 - [📋 Sobre Este Documento](#-sobre-este-documento)
 - [🎯 Audiência](#-audiência)
 - [📖 Escopo](#-escopo)
@@ -17,12 +18,14 @@ Este é o **documento mestre** do projeto Telemedicina para Todos - um índice c
 - [📞 Suporte e Contato](#-suporte-e-contato)
 
 ### 🎯 Audiência
+
 - **Desenvolvedores**: Encontrarão links diretos para documentação técnica
 - **Stakeholders**: Terão visão geral dos requisitos e funcionalidades
 - **Novos colaboradores**: Poderão navegar rapidamente pela estrutura do projeto
 - **Auditores**: Terão acesso à matriz de rastreabilidade de requisitos
 
 ### 📖 Escopo
+
 Este documento cobre toda a documentação do sistema, desde requisitos até implementação técnica. Ele **não** substitui a documentação específica de cada módulo.
 
 ---
@@ -49,6 +52,7 @@ O **Telemedicina para Todos** é uma plataforma moderna de telemedicina que cone
 - 📱 **Interface moderna** e acessível
 
 ### 💡 Problema que Resolve
+
 - **Para Pacientes**: Elimina deslocamentos desnecessários, economiza tempo e dinheiro
 - **Para Médicos**: Otimiza agenda, reduz faltas e melhora qualidade do atendimento
 - **Para o Sistema**: Democratiza o acesso à saúde de qualidade
@@ -58,35 +62,41 @@ O **Telemedicina para Todos** é uma plataforma moderna de telemedicina que cone
 ## 🗂️ Estrutura da Documentação
 
 ### 0. 📚 Documentação por Camadas (novo)
+
 - **[Visão das camadas](../layers/README.md)** - Arquitetura em camadas (Domínio, Sinalização, Mídia, Persistência, Infraestrutura, Arquitetura & Governança)
 - **[Camada de Domínio & Aplicação](../layers/domain/README.md)** - Módulos de negócio (Auth, Consultas, Mensagens, Videochamada, Prontuários) e dependências entre camadas
 
 ### 1. 📜 Requisitos e Regras de Negócio
+
 - **[Regras do Sistema](../layers/architecture-governance/requirements/SystemRules.md)** - Regras de negócio, compliance e segurança
 - **[Guia de Funcionalidades](../layers/architecture-governance/requirements/FuncionalitsGuide.md)** - Requisitos funcionais e casos de uso
 - **[Matriz de Rastreabilidade](MatrizRequisitos.md)** - Mapeamento completo requisito → implementação
 
 ### 2. 🏗️ Arquitetura e Padrões
+
 - **[Arquitetura do Sistema](../layers/architecture-governance/Architecture/Arquitetura.md)** - Estrutura geral, camadas e padrões
 - **[Guia do Frontend](../layers/architecture-governance/Architecture/VueGuide.md)** - Convenções Vue.js e estrutura do frontend
 - **[Guia de Desenvolvimento](../layers/architecture-governance/Architecture/DevGuide.md)** - Padrões de código e boas práticas
 - **[Guia para Desenvolvedores](../guides/GuiaDesenvolvedor.md)** - Básico do ambiente, onde achar cada doc, Swagger e ReDoc
 
 ### 3. 💾 Modelo de Dados
+
 - **[Diagrama do Banco de Dados](../layers/persistence/database/diagrama_banco_dados.md)** - Estrutura das tabelas e relacionamentos
 - **[Migrações](../../database/migrations/)** - Implementação das estruturas no banco
 
 ### 4. ⚙️ Lógica de Domínio
+
 - **[Lógica de Consultas](../modules/appointments/AppointmentsLogica.md)** - Regras de agendamento e fluxos
 - **[Implementação de Consultas](../modules/appointments/AppointmentsImplementationStudy.md)** - Detalhes técnicos
 - **[Lógica de Autenticação](../modules/auth/RegistrationLogic.md)** - Fluxos de registro e login
-- **[Implementação de Videochamadas](../layers/signaling/videocall/VideoCallImplementation.md)** - Sistema de vídeo (P2P atual)
+- **[Implementação de Videochamadas](../layers/signaling/videocall/VideoCallImplementation.md)** - Sistema de vídeo com SFU MediaSoup
 - **[Tarefas de Videochamadas](../layers/signaling/videocall/VideoCallTasks.md)** - Checklist de implementação
 - **[Migração P2P → MediaSoup](../videocall/MIGRACAO_P2P_PARA_MEDIASOUP.md)** - Remoção do P2P, adoção MediaSoup (SFU), recriação do backend e frontend de videochamada
 - **[Prontuários Médicos - Médico](../modules/MedicalRecords/MedicalRecordsDoctor.md)** - Gestão completa de prontuários
 - **[Prontuários Médicos - Paciente](../modules/MedicalRecords/MedicalRecordsPatient.md)** - Visualização de prontuários
 
 ### 5. 🔌 Interoperabilidade
+
 - **[Interoperabilidade — Ecossistema (README)](../interoperabilidade/README.md)** - Índice da documentação: propósito, navegação por objetivo e por tipo
 - **[Task — Intenção da feature](../interoperabilidade/TASK_INTEROPERABILIDADE_FEATURE.md)** - Objetivo, escopo e status da API para parceiros
 - **[Análise de propósito, UX e personas](../interoperabilidade/TASK_INTEROPERABILIDADE_ANALISE_UX_PERSONAS.md)** - Propósito real, problemas que resolve, casos de uso, riscos e evolução estratégica
@@ -97,16 +107,19 @@ O **Telemedicina para Todos** é uma plataforma moderna de telemedicina que cone
 - **[Métricas e KPIs](../interoperabilidade/Metricas.md)** - Integrações ativas, fluxos automatizados, redução de uploads, tempo em consulta
 
 ### 6. 🔧 Configuração e Instalação
+
 - **[Guia de Instalação](../setup/Start.md)** - Como configurar o ambiente de desenvolvimento
 - **[Guia para Desenvolvedores](../guides/GuiaDesenvolvedor.md)** - Básico para devs, documentação da API (Swagger/ReDoc)
 - **[Regras do Cursor](../setup/CursorRulesGuide.md)** - Configurações do ambiente de desenvolvimento
 
 ### 7. ☁️ Infraestrutura, Cloud e Escalabilidade
+
 - **[Camada de Infraestrutura](../layers/infrastructure/README.md)** - Responsabilidades, tecnologias e documentos da camada (EC2, Nginx, Docker, CI/CD)
 - **[Infraestrutura distribuída (homelab)](../DistributedSystems/EstruturaInicial.md)** - Estrutura em 3 PCs + notebook: PC1 Storage (MinIO), PC2 Edge (Tunnel + Nginx), PC3 Application (Laravel, PostgreSQL, Redis, RabbitMQ); [Contexto](../DistributedSystems/Contexto.md), [LGTM Observabilidade](../DistributedSystems/Arquitetura-LGTM-Observabilidade.md)
 - **[Estratégia AWS Cloud](../layers/infrastructure/aws/CloudScalabilityStrategy.md)** - Roadmap para migração e escalabilidade na nuvem
 
 ### 8. 📚 Referências
+
 - **[Glossário](Glossario.md)** - Definições de termos técnicos e de negócio
 - **[README Principal](../../README.md)** - Visão geral do projeto no GitHub
 
@@ -115,19 +128,21 @@ O **Telemedicina para Todos** é uma plataforma moderna de telemedicina que cone
 ## 🔗 Navegação Rápida
 
 ### Por Papel do Usuário
+
 - **👨‍⚕️ Médicos**: [Regras de Negócio](../requirements/SystemRules.md) → [Funcionalidades](../requirements/FuncionalitsGuide.md) → [Arquitetura](../architecture/Arquitetura.md)
 - **👤 Pacientes**: [Visão Geral do Projeto](../../README.md) → [Funcionalidades](../requirements/FuncionalitsGuide.md) → [Regras](../requirements/SystemRules.md)
 - **💻 Desenvolvedores**: [Guia para Desenvolvedores](../guides/GuiaDesenvolvedor.md) → [Arquitetura](../layers/architecture-governance/Architecture/Arquitetura.md) → [Guia de Dev](../layers/architecture-governance/Architecture/DevGuide.md) → [Implementações](../modules/appointments/AppointmentsImplementationStudy.md)
 - **☁️ DevOps/Cloud**: [Infraestrutura](../layers/infrastructure/README.md) → [Estrutura distribuída (3 PCs)](../DistributedSystems/EstruturaInicial.md) → [Configuração](../setup/Start.md)
 
 ### Por Tipo de Documentação
+
 - **📋 Requisitos**: [SystemRules.md](../requirements/SystemRules.md) + [FuncionalitsGuide.md](../requirements/FuncionalitsGuide.md)
 - **🏗️ Técnico**: [Arquitetura.md](../Architecture/Arquitetura.md) + [VueGuide.md](../Architecture/VueGuide.md)
 - **💾 Dados**: [diagrama_banco_dados.md](../database/diagrama_banco_dados.md)
-- **⚙️ Lógica**: 
-  - [AppointmentsLogica.md](../modules/appointments/AppointmentsLogica.md) - Consultas
-  - [VideoCallImplementation.md](../modules/videocall/VideoCallImplementation.md) - Videoconferência
-  - [MedicalRecordsDoctor.md](../modules/MedicalRecords/MedicalRecordsDoctor.md) - Prontuários
+- **⚙️ Lógica**:
+    - [AppointmentsLogica.md](../modules/appointments/AppointmentsLogica.md) - Consultas
+    - [VideoCallImplementation.md](../layers/signaling/videocall/VideoCallImplementation.md) - Videoconferência
+    - [MedicalRecordsDoctor.md](../modules/MedicalRecords/MedicalRecordsDoctor.md) - Prontuários
 - **☁️ Infraestrutura**: [README Infraestrutura](../layers/infrastructure/README.md) + [DistributedSystems](../DistributedSystems/EstruturaInicial.md)
 
 ---
@@ -135,6 +150,7 @@ O **Telemedicina para Todos** é uma plataforma moderna de telemedicina que cone
 ## 🚀 Começando
 
 ### Para Novos Desenvolvedores
+
 1. Leia o [README Principal](../../README.md) para entender o projeto
 2. Siga o [Guia para Desenvolvedores](../guides/GuiaDesenvolvedor.md) (básico, ambiente, Swagger/ReDoc)
 3. Configure o ambiente com o [Guia de Instalação](../setup/Start.md)
@@ -143,18 +159,21 @@ O **Telemedicina para Todos** é uma plataforma moderna de telemedicina que cone
 6. Explore as implementações específicas conforme necessário
 
 ### Para DevOps/Cloud Engineers
+
 1. Comece com a [Estratégia AWS Cloud](../aws/CloudScalabilityStrategy.md)
 2. Entenda a [Arquitetura](../architecture/Arquitetura.md) atual do sistema
 3. Revise os [Requisitos](../requirements/SystemRules.md) de segurança e compliance
 4. Configure o ambiente de desenvolvimento com o [Guia de Instalação](../setup/Start.md)
 
 ### Para Stakeholders
+
 1. Comece com a [Visão Geral do Projeto](../../README.md)
 2. Entenda as [Regras de Negócio](../requirements/SystemRules.md)
 3. Veja as [Funcionalidades](../requirements/FuncionalitsGuide.md) disponíveis
 4. Consulte a [Matriz de Requisitos](MatrizRequisitos.md) para rastreabilidade
 
 ### Para Auditores
+
 1. Acesse a [Matriz de Rastreabilidade](MatrizRequisitos.md)
 2. Revise as [Regras de Compliance](../requirements/SystemRules.md#segurança-e-compliance)
 3. Verifique os [Testes](../../tests/) implementados
@@ -164,24 +183,25 @@ O **Telemedicina para Todos** é uma plataforma moderna de telemedicina que cone
 
 ## 📊 Status da Documentação
 
-| Módulo | Status | Documentação |
-|--------|--------|--------------|
-| ✅ Autenticação | Completo | [RegistrationLogic.md](../modules/auth/RegistrationLogic.md) |
-| ✅ Consultas | Completo | [AppointmentsLogica.md](../modules/appointments/AppointmentsLogica.md) |
-| ✅ Videochamadas | Completo | [VideoCallImplementation.md](../modules/videocall/VideoCallImplementation.md) |
-| ✅ Prontuários Médicos | Completo | [MedicalRecordsDoctor.md](../modules/MedicalRecords/MedicalRecordsDoctor.md) |
-| ✅ Prescrições Digitais | Completo | [MedicalRecordsDoctor.md](../modules/MedicalRecords/MedicalRecordsDoctor.md) |
-| ✅ Sistema de Agenda | Completo | [SystemRules.md](../requirements/SystemRules.md) |
-| ✅ Timeline Profissional | Completo | [Arquitetura.md](../Architecture/Arquitetura.md) |
-| ✅ Arquitetura | Completo | [Arquitetura.md](../Architecture/Arquitetura.md) |
-| ✅ Cloud/AWS | Completo | [CloudScalabilityStrategy.md](../aws/CloudScalabilityStrategy.md) |
-| 📋 Interoperabilidade | Em estudo | [Interoperabilidade](../interoperabilidade/README.md) |
+| Módulo                   | Status    | Documentação                                                                           |
+| ------------------------ | --------- | -------------------------------------------------------------------------------------- |
+| ✅ Autenticação          | Completo  | [RegistrationLogic.md](../modules/auth/RegistrationLogic.md)                           |
+| ✅ Consultas             | Completo  | [AppointmentsLogica.md](../modules/appointments/AppointmentsLogica.md)                 |
+| ✅ Videochamadas         | Completo  | [VideoCallImplementation.md](../layers/signaling/videocall/VideoCallImplementation.md) |
+| ✅ Prontuários Médicos   | Completo  | [MedicalRecordsDoctor.md](../modules/MedicalRecords/MedicalRecordsDoctor.md)           |
+| ✅ Prescrições Digitais  | Completo  | [MedicalRecordsDoctor.md](../modules/MedicalRecords/MedicalRecordsDoctor.md)           |
+| ✅ Sistema de Agenda     | Completo  | [SystemRules.md](../requirements/SystemRules.md)                                       |
+| ✅ Timeline Profissional | Completo  | [Arquitetura.md](../Architecture/Arquitetura.md)                                       |
+| ✅ Arquitetura           | Completo  | [Arquitetura.md](../Architecture/Arquitetura.md)                                       |
+| ✅ Cloud/AWS             | Completo  | [CloudScalabilityStrategy.md](../aws/CloudScalabilityStrategy.md)                      |
+| 📋 Interoperabilidade    | Em estudo | [Interoperabilidade](../interoperabilidade/README.md)                                  |
 
 ---
 
 ## 🤝 Contribuindo com a Documentação
 
 ### Como Atualizar
+
 1. **Identifique** o documento que precisa de atualização
 2. **Edite** o arquivo correspondente
 3. **Atualize** este índice se necessário
@@ -189,6 +209,7 @@ O **Telemedicina para Todos** é uma plataforma moderna de telemedicina que cone
 5. **Commit** com mensagem descritiva
 
 ### Padrões de Escrita
+
 - Use **linguagem clara** e evite jargões excessivos
 - Inclua **exemplos práticos** quando possível
 - Mantenha **parágrafos curtos** para melhor legibilidade
@@ -200,11 +221,12 @@ O **Telemedicina para Todos** é uma plataforma moderna de telemedicina que cone
 ## 📞 Suporte e Contato
 
 Para dúvidas sobre a documentação ou sugestões de melhoria:
+
 - 📧 Abra uma **Issue** no GitHub
 - 💬 Use as **Discussões** do repositório
 - 📝 Faça um **Pull Request** com melhorias
 
 ---
 
-*Última atualização: Janeiro 2025*
-*Versão da documentação: 2.0*
+_Última atualização: Janeiro 2025_
+_Versão da documentação: 2.0_

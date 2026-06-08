@@ -28,6 +28,11 @@ export interface ConsultationPatient {
     height?: number | null;
     weight?: number | null;
     bmi?: number | null;
+    phone?: string | null;
+    email?: string | null;
+    emergency_contact?: string | null;
+    emergency_phone?: string | null;
+    insurance_provider?: string | null;
 }
 
 export interface RecentConsultation {
@@ -35,6 +40,7 @@ export interface RecentConsultation {
     date: string;
     diagnosis?: string | null;
     cid10?: string | null;
+    doctor?: string | null;
 }
 
 export type ConsultationMode = 'scheduled' | 'in_progress' | 'completed';

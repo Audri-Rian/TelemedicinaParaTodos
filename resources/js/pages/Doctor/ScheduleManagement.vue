@@ -1,12 +1,38 @@
 <script setup lang="ts">
 import AddLocationModal from '@/components/modals/doctor/AddLocationModal.vue';
+import { useToast } from '@/composables/useToast';
 import * as availabilityRoutes from '@/routes/doctor/availability';
 import * as locationRoutes from '@/routes/doctor/locations';
 import * as scheduleRoutes from '@/routes/doctor/schedule';
 import { usePage } from '@inertiajs/vue3';
 import axios from 'axios';
-import { Calendar, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Clock, MapPin, Plus, Trash2, Video } from 'lucide-vue-next';
+import { AlertCircle, Calendar, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Clock, MapPin, Plus, Trash2, Video, X } from 'lucide-vue-next';
 import { computed, onMounted, ref } from 'vue';
+
+const toast = useToast();
+
+const SLOT_CONFLICT_MESSAGE = 'Já existe um horário neste período. Escolha outro intervalo ou remova o slot existente.';
+
+const slotConflictByDate = ref<Record<string, string>>({});
+
+const isSlotConflictError = (error: unknown): boolean => {
+    const err = error as { response?: { status?: number; data?: { message?: string } } };
+    const status = err.response?.status;
+    const message = err.response?.data?.message?.toLowerCase() ?? '';
+    return status === 422 && message.includes('conflito');
+};
+
+const showSlotConflict = (dateKey: string) => {
+    slotConflictByDate.value = { ...slotConflictByDate.value, [dateKey]: SLOT_CONFLICT_MESSAGE };
+    toast.warning(SLOT_CONFLICT_MESSAGE, { title: 'Horário sobreposto', durationMs: 6000 });
+};
+
+const clearSlotConflict = (dateKey: string) => {
+    if (!slotConflictByDate.value[dateKey]) return;
+    const next = { ...slotConflictByDate.value };
+    delete next[dateKey];
+    slotConflictByDate.value = next;
+};
 
 // Interfaces
 interface ServiceLocation {
@@ -56,6 +82,7 @@ interface ScheduleConfig {
 
 interface Props {
     scheduleConfig?: ScheduleConfig;
+    requireConsultationFeeToCreateSlot?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -65,12 +92,35 @@ const props = withDefaults(defineProps<Props>(), {
         specific_slots: [],
         blocked_dates: [],
     }),
+    requireConsultationFeeToCreateSlot: true,
 });
 
 // Obter ID do médico do usuário autenticado
 const page = usePage();
 const auth = computed(() => (page.props as any).auth);
 const doctorId = computed(() => auth.value?.profile?.id);
+const requireConsultationFeeToCreateSlot = computed(() => props.requireConsultationFeeToCreateSlot);
+const hasConsultationFee = computed(() => {
+    if (!requireConsultationFeeToCreateSlot.value) {
+        return true;
+    }
+
+    const rawFee = auth.value?.profile?.consultation_fee;
+    const fee = Number(rawFee ?? 0);
+    return Number.isFinite(fee) && fee > 0;
+});
+
+const ensureConsultationFeeConfigured = () => {
+    if (hasConsultationFee.value) {
+        return true;
+    }
+
+    toast.warning('Defina o valor da consulta no perfil para liberar a criação de horários.', {
+        title: 'Valor da consulta obrigatório',
+    });
+
+    return false;
+};
 
 // Estados do calendário para datas específicas
 const currentCalendarDate = ref(new Date());
@@ -181,7 +231,7 @@ const loadScheduleConfig = async () => {
     } catch (error: any) {
         console.error('Erro ao carregar configuração:', error);
         const errorMessage = error.response?.data?.message || 'Erro ao carregar configuração da agenda';
-        alert(errorMessage);
+        toast.error(errorMessage, { title: 'Erro ao carregar agenda' });
     }
 };
 
@@ -238,9 +288,13 @@ const formatDateKey = (day: number) => {
 const toggleDateSelection = (day: number) => {
     if (!day) return;
 
+    if (!ensureConsultationFeeConfigured()) {
+        return;
+    }
+
     // Verificar se a data é passada
     if (isDatePast(day)) {
-        alert('Não é possível selecionar datas passadas.');
+        toast.warning('Não é possível configurar horários em datas passadas.', { title: 'Data inválida' });
         return;
     }
 
@@ -373,7 +427,9 @@ const closeAddLocationModal = () => {
 // Handler para adicionar local de atendimento
 const handleAddLocation = async (data: { name: string; type: string; address?: string; phone?: string; description?: string }) => {
     if (!doctorId.value) {
-        alert('ID do médico não encontrado');
+        toast.error('Não foi possível identificar o perfil do médico. Atualize a página e tente novamente.', {
+            title: 'Sessão inválida',
+        });
         return;
     }
 
@@ -401,21 +457,23 @@ const handleAddLocation = async (data: { name: string; type: string; address?: s
             // Adicionar novo local à lista
             serviceLocations.value.push(response.data.data);
             closeAddLocationModal();
+            toast.success('Local de atendimento adicionado.', { title: 'Local cadastrado' });
             // Recarregar configuração completa para garantir sincronização
             await loadScheduleConfig();
         }
     } catch (error: any) {
         console.error('Erro ao adicionar local:', error);
         const errorMessage = error.response?.data?.message || error.response?.data?.error || 'Erro ao adicionar local de atendimento';
-        alert(errorMessage);
+        toast.error(errorMessage, { title: 'Não foi possível adicionar' });
     } finally {
         isLoading.value = false;
     }
 };
 
 // Handler para adicionar slot de disponibilidade específico
-const handleAddSlot = async (dateKey: string, startTime: string, endTime: string, locationId?: string) => {
-    if (!doctorId.value) return;
+const handleAddSlot = async (dateKey: string, startTime: string, endTime: string, locationId?: string): Promise<boolean> => {
+    if (!doctorId.value) return false;
+    if (!ensureConsultationFeeConfigured()) return false;
 
     // Validar se a data não é passada
     const [year, month, day] = dateKey.split('-').map(Number);
@@ -425,8 +483,8 @@ const handleAddSlot = async (dateKey: string, startTime: string, endTime: string
     selectedDate.setHours(0, 0, 0, 0);
 
     if (selectedDate < today) {
-        alert('Não é possível adicionar horários para datas passadas.');
-        return;
+        toast.warning('Não é possível adicionar horários para datas passadas.', { title: 'Data inválida' });
+        return false;
     }
 
     isLoading.value = true;
@@ -452,12 +510,23 @@ const handleAddSlot = async (dateKey: string, startTime: string, endTime: string
                 location: slot.location?.name || 'Sem local',
             });
 
-            // Recarregar configuração completa
-            await loadScheduleConfig();
+            clearSlotConflict(dateKey);
+            toast.success('Horário adicionado com sucesso.', { title: 'Disponibilidade atualizada' });
+
+            return true;
         }
+
+        return false;
     } catch (error: any) {
         console.error('Erro ao adicionar slot:', error);
-        alert(error.response?.data?.message || 'Erro ao adicionar horário');
+        if (isSlotConflictError(error)) {
+            showSlotConflict(dateKey);
+        } else {
+            toast.error(error.response?.data?.message || 'Erro ao adicionar horário', {
+                title: 'Não foi possível adicionar',
+            });
+        }
+        return false;
     } finally {
         isLoading.value = false;
     }
@@ -475,11 +544,10 @@ const handleRemoveSlot = async (dateKey: string, slotId: string) => {
         const config = getSpecificDateConfig(dateKey);
         config.timeSlots = config.timeSlots.filter((slot) => slot.id !== slotId);
 
-        // Recarregar configuração completa
-        await loadScheduleConfig();
+        toast.success('Horário removido.', { title: 'Disponibilidade atualizada' });
     } catch (error: any) {
         console.error('Erro ao remover slot:', error);
-        alert(error.response?.data?.message || 'Erro ao remover horário');
+        toast.error(error.response?.data?.message || 'Erro ao remover horário', { title: 'Não foi possível remover' });
     } finally {
         isLoading.value = false;
     }
@@ -506,6 +574,7 @@ const setNewSlotData = (dateKey: string, field: 'startTime' | 'endTime' | 'locat
         };
     }
     newSlotData.value[dateKey][field] = value;
+    clearSlotConflict(dateKey);
 };
 
 const getNewSlotData = (dateKey: string) => {
@@ -540,7 +609,7 @@ const handleAddSlotSubmit = async (dateKey: string) => {
     const data = getNewSlotData(dateKey);
 
     if (!data.startTime || !data.endTime) {
-        alert('Por favor, preencha os horários de início e fim');
+        toast.warning('Preencha os horários de início e fim.', { title: 'Campos obrigatórios' });
         return;
     }
 
@@ -550,18 +619,19 @@ const handleAddSlotSubmit = async (dateKey: string) => {
     const diffInMinutes = (end.getTime() - start.getTime()) / (1000 * 60);
 
     if (diffInMinutes < 60) {
-        alert('O horário de fim deve ser pelo menos 1 hora após o horário de início.');
+        toast.warning('O horário de fim deve ser pelo menos 1 hora após o horário de início.', { title: 'Duração inválida' });
         return;
     }
 
-    await handleAddSlot(dateKey, data.startTime, data.endTime, data.locationId || undefined);
+    const success = await handleAddSlot(dateKey, data.startTime, data.endTime, data.locationId || undefined);
 
-    // Limpar dados do formulário
-    newSlotData.value[dateKey] = {
-        startTime: '',
-        endTime: '',
-        locationId: '',
-    };
+    if (success) {
+        newSlotData.value[dateKey] = {
+            startTime: '',
+            endTime: '',
+            locationId: '',
+        };
+    }
 };
 
 // Handler para remover local
@@ -575,9 +645,12 @@ const handleRemoveLocation = async (locationId: string) => {
 
         // Remover local da lista
         serviceLocations.value = serviceLocations.value.filter((loc) => loc.id !== locationId);
+        toast.success('Local de atendimento removido.', { title: 'Local removido' });
     } catch (error: any) {
         console.error('Erro ao remover local:', error);
-        alert(error.response?.data?.message || 'Erro ao remover local de atendimento');
+        toast.error(error.response?.data?.message || 'Erro ao remover local de atendimento', {
+            title: 'Não foi possível remover',
+        });
     } finally {
         isLoading.value = false;
     }
@@ -595,6 +668,18 @@ const getLocationIcon = (type: string) => {
         <div class="flex flex-col gap-1">
             <h1 class="text-3xl font-bold text-gray-900">Configurar Disponibilidade</h1>
             <p class="text-gray-600">Defina seus horários de atendimento e locais para otimizar sua agenda.</p>
+        </div>
+
+        <div
+            v-if="!hasConsultationFee"
+            class="flex items-start justify-between gap-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+            role="alert"
+        >
+            <div class="flex items-start gap-2">
+                <AlertCircle class="mt-0.5 h-4 w-4 shrink-0 text-amber-600" aria-hidden="true" />
+                <p>Para criar novos horários, primeiro defina o valor da consulta no seu perfil.</p>
+            </div>
+            <a href="/settings/profile" class="shrink-0 font-semibold text-amber-800 underline hover:text-amber-900"> Ir para Perfil </a>
         </div>
 
         <!-- Main Content: Two Column Layout -->
@@ -633,16 +718,26 @@ const getLocationIcon = (type: string) => {
                                 @click="toggleDateSelection(day)"
                                 :class="[
                                     'flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium transition-colors duration-200',
-                                    isDatePast(day)
+                                    !hasConsultationFee
                                         ? 'cursor-not-allowed bg-gray-200 text-gray-400'
-                                        : isDateBlocked(day)
-                                          ? 'cursor-pointer bg-red-100 text-red-600 ring-2 ring-red-300'
-                                          : isDateSelected(day)
-                                            ? 'cursor-pointer bg-primary text-gray-900 ring-2 ring-primary ring-offset-2'
-                                            : 'cursor-pointer text-gray-900 hover:bg-gray-100',
+                                        : isDatePast(day)
+                                          ? 'cursor-not-allowed bg-gray-200 text-gray-400'
+                                          : isDateBlocked(day)
+                                            ? 'cursor-pointer bg-red-100 text-red-600 ring-2 ring-red-300'
+                                            : isDateSelected(day)
+                                              ? 'cursor-pointer bg-primary text-gray-900 ring-2 ring-primary ring-offset-2'
+                                              : 'cursor-pointer text-gray-900 hover:bg-gray-100',
                                 ]"
-                                :disabled="isDatePast(day) || isDateBlocked(day)"
-                                :title="isDatePast(day) ? 'Data passada' : isDateBlocked(day) ? 'Data bloqueada' : ''"
+                                :disabled="!hasConsultationFee || isDatePast(day) || isDateBlocked(day)"
+                                :title="
+                                    !hasConsultationFee
+                                        ? 'Defina o valor da consulta no perfil'
+                                        : isDatePast(day)
+                                          ? 'Data passada'
+                                          : isDateBlocked(day)
+                                            ? 'Data bloqueada'
+                                            : ''
+                                "
                             >
                                 {{ day }}
                             </button>
@@ -759,12 +854,35 @@ const getLocationIcon = (type: string) => {
                                 <div
                                     class="rounded-lg border-2 border-dashed border-primary/50 bg-primary/5 p-4 transition-colors hover:bg-primary/10"
                                 >
-                                    <div class="mb-3 flex items-center gap-2">
-                                        <Plus class="h-5 w-5 text-primary" />
-                                        <h4 class="font-semibold text-gray-900">Adicionar Novo Horário</h4>
+                                    <div class="mb-3 flex items-center justify-between gap-2">
+                                        <div class="flex items-center gap-2">
+                                            <Plus class="h-5 w-5 text-primary" />
+                                            <h4 class="font-semibold text-gray-900">Adicionar Novo Horário</h4>
+                                        </div>
+                                        <p class="text-xs text-gray-500">Duração mínima: 1 hora</p>
                                     </div>
 
-                                    <div class="flex flex-wrap items-center gap-3">
+                                    <div
+                                        v-if="slotConflictByDate[dateKey]"
+                                        class="mb-3 flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-900"
+                                        role="alert"
+                                    >
+                                        <AlertCircle class="mt-0.5 h-4 w-4 shrink-0 text-amber-600" aria-hidden="true" />
+                                        <div class="min-w-0 flex-1">
+                                            <p class="font-semibold">Horário sobreposto</p>
+                                            <p class="text-amber-800">{{ slotConflictByDate[dateKey] }}</p>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            class="shrink-0 rounded-md p-1 text-amber-700 transition-colors hover:bg-amber-100"
+                                            aria-label="Fechar aviso de conflito de horário"
+                                            @click="clearSlotConflict(dateKey)"
+                                        >
+                                            <X class="h-4 w-4" aria-hidden="true" />
+                                        </button>
+                                    </div>
+
+                                    <div class="flex flex-wrap items-end gap-3">
                                         <!-- Start Time -->
                                         <div class="min-w-[140px] flex-1">
                                             <label class="mb-1 block text-xs font-medium text-gray-700">Horário Início</label>
@@ -772,6 +890,7 @@ const getLocationIcon = (type: string) => {
                                                 type="time"
                                                 :value="getNewSlotData(dateKey).startTime"
                                                 @input="setNewSlotData(dateKey, 'startTime', ($event.target as HTMLInputElement).value)"
+                                                :disabled="!hasConsultationFee"
                                                 class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-transparent focus:ring-2 focus:ring-primary"
                                             />
                                         </div>
@@ -784,9 +903,9 @@ const getLocationIcon = (type: string) => {
                                                 :value="getNewSlotData(dateKey).endTime"
                                                 :min="getMinEndTime(getNewSlotData(dateKey).startTime)"
                                                 @input="setNewSlotData(dateKey, 'endTime', ($event.target as HTMLInputElement).value)"
+                                                :disabled="!hasConsultationFee"
                                                 class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-transparent focus:ring-2 focus:ring-primary"
                                             />
-                                            <p v-if="getNewSlotData(dateKey).startTime" class="mt-1 text-xs text-gray-500">Duração mínima: 1 hora</p>
                                         </div>
 
                                         <!-- Location -->
@@ -796,6 +915,7 @@ const getLocationIcon = (type: string) => {
                                                 <select
                                                     :value="getNewSlotData(dateKey).locationId"
                                                     @change="setNewSlotData(dateKey, 'locationId', ($event.target as HTMLSelectElement).value)"
+                                                    :disabled="!hasConsultationFee"
                                                     class="w-full cursor-pointer appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-transparent focus:ring-2 focus:ring-primary"
                                                 >
                                                     <option value="">Selecione o local</option>
@@ -810,10 +930,13 @@ const getLocationIcon = (type: string) => {
                                         </div>
 
                                         <!-- Add Button -->
-                                        <div class="flex items-end">
+                                        <div class="shrink-0">
+                                            <label class="mb-1 block text-xs font-medium text-transparent select-none" aria-hidden="true"
+                                                >&nbsp;</label
+                                            >
                                             <button
                                                 @click="handleAddSlotSubmit(dateKey)"
-                                                :disabled="isLoading"
+                                                :disabled="isLoading || !hasConsultationFee"
                                                 class="flex items-center gap-2 rounded-lg bg-primary px-6 py-2 font-semibold whitespace-nowrap text-gray-900 transition-colors duration-200 hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
                                             >
                                                 <Plus class="h-4 w-4" />

@@ -67,6 +67,7 @@ class DoctorScheduleController extends Controller
                 ? $overview['locations']
                 : Inertia::optional(fn () => $overviewProps()['locations']),
             'initialTab' => $tab,
+            'requireConsultationFeeToCreateSlot' => (bool) config('telemedicine.availability.require_consultation_fee_to_create_slot', true),
         ]);
     }
 
@@ -122,9 +123,11 @@ class DoctorScheduleController extends Controller
                 'data' => $config,
             ], 200);
         } catch (\Exception $e) {
+            \Log::error('Schedule save failed', ['doctor_id' => $doctor->id, 'error' => $e->getMessage()]);
+
             return response()->json([
                 'success' => false,
-                'message' => 'Erro ao salvar configuração: '.$e->getMessage(),
+                'message' => 'Erro ao salvar configuração. Tente novamente.',
             ], 422);
         }
     }

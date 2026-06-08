@@ -14,7 +14,8 @@ return new class extends Migration
         Schema::create('integration_events', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->foreignUuid('partner_integration_id')
-                  ->constrained('partner_integrations')->cascadeOnDelete();
+                ->constrained('partner_integrations')->cascadeOnDelete();
+            $table->foreignUuid('doctor_id')->nullable()->constrained('doctors')->nullOnDelete();
             $table->enum('direction', ['outbound', 'inbound']);
             $table->string('event_type', 100);
             $table->enum('status', [
@@ -34,6 +35,9 @@ return new class extends Migration
             $table->timestamps();
 
             $table->index(['partner_integration_id', 'created_at']);
+            $table->index(['doctor_id', 'created_at']);
+            $table->index(['status', 'created_at'], 'integration_events_status_created_at_index');
+            $table->index(['partner_integration_id', 'direction'], 'integration_events_partner_direction_index');
             $table->index(['event_type', 'status']);
             $table->index(['resource_type', 'resource_id']);
             $table->index('external_id');

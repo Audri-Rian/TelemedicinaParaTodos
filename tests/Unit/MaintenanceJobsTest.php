@@ -77,14 +77,15 @@ class MaintenanceJobsTest extends TestCase
     public function zombie_video_job_ends_accepted_calls_and_appointment(): void
     {
         Carbon::setTestNow(Carbon::parse('2026-05-08 15:00:00'));
-        config(['telemedicine.video_call.room_max_duration_minutes' => 120]);
+        config(['telemedicine.video_call.ad_hoc_max_duration_minutes' => 120]);
 
         $appointment = $this->createAppointment([
             'scheduled_at' => now()->subHours(3),
             'status' => Appointments::STATUS_IN_PROGRESS,
             'started_at' => now()->subHours(3),
         ]);
-        $call = Call::create([
+        $call = Call::createFromSystem([
+            'call_type' => Call::TYPE_AD_HOC,
             'appointment_id' => $appointment->id,
             'doctor_id' => $this->doctor->id,
             'patient_id' => $this->patient->id,
@@ -92,9 +93,11 @@ class MaintenanceJobsTest extends TestCase
             'requested_at' => now()->subHours(3),
             'accepted_at' => now()->subHours(3),
         ]);
-        $room = Room::create([
+        $room = Room::createFromSystem([
             'call_id' => $call->id,
             'room_id' => 'room-zombie-1',
+            'sfu_node' => 'sfu-node-1',
+            'media_ws_url' => 'wss://sfu.test/ws',
         ]);
         $callManager = Mockery::mock(CallManagerService::class);
         $callManager->shouldReceive('destroyRoom')->once()->with(Mockery::on(
@@ -114,7 +117,8 @@ class MaintenanceJobsTest extends TestCase
         config(['telemedicine.video_call.room_inactive_minutes' => 60]);
 
         $appointment = $this->createAppointment(['scheduled_at' => now()->subHour()]);
-        $call = Call::create([
+        $call = Call::createFromSystem([
+            'call_type' => Call::TYPE_AD_HOC,
             'appointment_id' => $appointment->id,
             'doctor_id' => $this->doctor->id,
             'patient_id' => $this->patient->id,
@@ -134,14 +138,15 @@ class MaintenanceJobsTest extends TestCase
     public function zombie_video_job_keeps_call_active_when_room_cleanup_fails(): void
     {
         Carbon::setTestNow(Carbon::parse('2026-05-08 15:00:00'));
-        config(['telemedicine.video_call.room_max_duration_minutes' => 120]);
+        config(['telemedicine.video_call.ad_hoc_max_duration_minutes' => 120]);
 
         $appointment = $this->createAppointment([
             'scheduled_at' => now()->subHours(3),
             'status' => Appointments::STATUS_IN_PROGRESS,
             'started_at' => now()->subHours(3),
         ]);
-        $call = Call::create([
+        $call = Call::createFromSystem([
+            'call_type' => Call::TYPE_AD_HOC,
             'appointment_id' => $appointment->id,
             'doctor_id' => $this->doctor->id,
             'patient_id' => $this->patient->id,
@@ -149,9 +154,11 @@ class MaintenanceJobsTest extends TestCase
             'requested_at' => now()->subHours(3),
             'accepted_at' => now()->subHours(3),
         ]);
-        Room::create([
+        Room::createFromSystem([
             'call_id' => $call->id,
             'room_id' => 'room-zombie-fail',
+            'sfu_node' => 'sfu-node-1',
+            'media_ws_url' => 'wss://sfu.test/ws',
         ]);
         $callManager = Mockery::mock(CallManagerService::class);
         $callManager->shouldReceive('destroyRoom')->once()->andThrow(new \RuntimeException('SFU indisponível'));

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasClinicalVersioning;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -10,11 +11,15 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class MedicalCertificate extends Model
 {
+    use HasClinicalVersioning;
+
     /** @use HasFactory<\Database\Factories\MedicalCertificateFactory> */
     use HasFactory;
 
     use HasUuids;
     use SoftDeletes;
+
+    protected array $versionedFields = ['type', 'start_date', 'end_date', 'days', 'reason', 'restrictions', 'status'];
 
     protected $fillable = [
         'appointment_id',
@@ -26,14 +31,17 @@ class MedicalCertificate extends Model
         'days',
         'reason',
         'restrictions',
+        'status',
+        'metadata',
+    ];
+
+    protected $guarded = [
         'signature_hash',
         'signature_status',
         'signed_at',
         'crm_number',
         'verification_code',
         'pdf_url',
-        'status',
-        'metadata',
     ];
 
     protected $casts = [

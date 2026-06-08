@@ -15,17 +15,22 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->uuid('user_id')->unique();
             $table->string('crm', 20)->nullable()->unique()->index();
+            $table->string('cns', 15)->nullable();
+            $table->string('cbo', 6)->nullable();
             $table->text('biography')->nullable();
             $table->json('language')->nullable();
             $table->string('license_number', 50)->nullable()->unique();
             $table->date('license_expiry_date')->nullable();
             $table->enum('status', ['active', 'inactive', 'suspended'])->default('active');
+            // not_integrated | pending | active | expired | revoked
+            $table->string('digital_signature_status')->default('not_integrated')->index();
             $table->json('availability_schedule')->nullable();
             $table->decimal('consultation_fee', 8, 2)->nullable()->index();
             $table->timestamps();
             $table->softDeletes();
 
             // Indexes para performance
+            $table->index('cns');
             $table->index('status');
             $table->index('created_at');
 

@@ -124,6 +124,9 @@ class MedicalRecordClinicalActionService
         $version = 1;
         if (! empty($payload['parent_id'])) {
             $parent = ClinicalNote::findOrFail($payload['parent_id']);
+            if ($parent->patient_id !== $patient->id) {
+                throw new \RuntimeException('Nota pai não pertence ao paciente.');
+            }
             $version = ($parent->version ?? 1) + 1;
         }
 
@@ -153,7 +156,7 @@ class MedicalRecordClinicalActionService
 
     public function issueCertificate(Doctor $doctor, Patient $patient, Appointments $appointment, array $payload): MedicalCertificate
     {
-        $certificate = MedicalCertificate::create([
+        $certificate = (new MedicalCertificate)->forceFill([
             'appointment_id' => $appointment->id,
             'doctor_id' => $doctor->id,
             'patient_id' => $patient->id,
@@ -163,12 +166,12 @@ class MedicalRecordClinicalActionService
             'days' => $payload['days'] ?? 1,
             'reason' => $payload['reason'],
             'restrictions' => $payload['restrictions'] ?? null,
-            'signature_hash' => $payload['signature_hash'] ?? null,
             'crm_number' => $doctor->crm,
             'verification_code' => $this->generateVerificationCode(),
             'status' => MedicalCertificate::STATUS_ACTIVE,
             'metadata' => $payload['metadata'] ?? null,
         ]);
+        $certificate->save();
 
         if ($this->signatureService) {
             SignAndGenerateCertificatePdfJob::dispatch($certificate->id);
@@ -187,6 +190,86 @@ class MedicalRecordClinicalActionService
         );
 
         return $certificate;
+    }
+
+    public function updateClinicalNote(Doctor $doctor, Patient $patient, ClinicalNote $note, array $payload): ClinicalNote
+    {
+        if ($note->patient_id !== $patient->id) {
+            throw new \RuntimeException('Nota não pertence ao paciente.');
+        }
+
+        return DB::transaction(function () use ($doctor, $patient, $note, $payload) {
+            $note->setVersionChangeReason($payload['change_reason']);
+
+            $note->update(
+                collect($payload)->only(['title', 'content', 'is_private', 'category', 'tags'])->all()
+            );
+
+            $this->auditService->logDoctorAction(
+                $doctor,
+                $patient,
+                'clinical_note_updated',
+                ['note_id' => $note->id],
+            );
+
+            return $note->fresh();
+        });
+    }
+
+    public function updatePrescription(Doctor $doctor, Patient $patient, Prescription $prescription, array $payload): Prescription
+    {
+        if ($prescription->patient_id !== $patient->id) {
+            throw new \RuntimeException('Prescrição não pertence ao paciente.');
+        }
+
+        if ($prescription->isSigned()) {
+            throw new \DomainException('Prescrições assinadas digitalmente não podem ser editadas.');
+        }
+
+        return DB::transaction(function () use ($doctor, $patient, $prescription, $payload) {
+            $prescription->setVersionChangeReason($payload['change_reason']);
+
+            $prescription->update(
+                collect($payload)->only(['medications', 'instructions', 'valid_until'])->all()
+            );
+
+            $this->auditService->logDoctorAction(
+                $doctor,
+                $patient,
+                'prescription_updated',
+                ['prescription_id' => $prescription->id],
+            );
+
+            return $prescription->fresh();
+        });
+    }
+
+    public function updateMedicalCertificate(Doctor $doctor, Patient $patient, MedicalCertificate $certificate, array $payload): MedicalCertificate
+    {
+        if ($certificate->patient_id !== $patient->id) {
+            throw new \RuntimeException('Atestado não pertence ao paciente.');
+        }
+
+        if ($certificate->isSigned()) {
+            throw new \DomainException('Atestados assinados digitalmente não podem ser editados.');
+        }
+
+        return DB::transaction(function () use ($doctor, $patient, $certificate, $payload) {
+            $certificate->setVersionChangeReason($payload['change_reason']);
+
+            $certificate->update(
+                collect($payload)->only(['type', 'start_date', 'end_date', 'days', 'reason', 'restrictions'])->all()
+            );
+
+            $this->auditService->logDoctorAction(
+                $doctor,
+                $patient,
+                'medical_certificate_updated',
+                ['certificate_id' => $certificate->id],
+            );
+
+            return $certificate->fresh();
+        });
     }
 
     public function registerVitalSigns(Appointments $appointment, Doctor $doctor, array $payload): VitalSign

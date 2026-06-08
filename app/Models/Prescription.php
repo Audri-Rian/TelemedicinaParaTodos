@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasClinicalVersioning;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -10,11 +11,15 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Prescription extends Model
 {
+    use HasClinicalVersioning;
+
     /** @use HasFactory<\Database\Factories\PrescriptionFactory> */
     use HasFactory;
 
     use HasUuids;
     use SoftDeletes;
+
+    protected array $versionedFields = ['medications', 'instructions', 'valid_until', 'status'];
 
     protected $fillable = [
         'appointment_id',

@@ -6,6 +6,7 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -28,6 +29,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'doctor' => \App\Http\Middleware\EnsureUserIsDoctor::class,
             'patient' => \App\Http\Middleware\EnsureUserIsPatient::class,
+            'two_factor.pending' => \App\Http\Middleware\EnsureTwoFactorPending::class,
             'audit' => \App\Http\Middleware\AuditAccess::class,
             'partner.auth' => \App\Integrations\Http\Middleware\AuthenticatePartner::class,
             'partner.scope' => \App\Integrations\Http\Middleware\CheckPartnerScope::class,
@@ -41,7 +43,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // Renderizar página de erro customizada para erros HTTP
         $exceptions->render(function (\Symfony\Component\HttpKernel\Exception\HttpExceptionInterface $e, \Illuminate\Http\Request $request) {
             // Verificar se a requisição espera uma resposta JSON (API) ou se é uma rota de API
-            if ($request->expectsJson() || $request->is('api/*')) {
+            if ($request->expectsJson() || $request->wantsJson()) {
                 return response()->json([
                     'message' => $e->getMessage() ?: 'Erro na requisição',
                     'status' => $e->getStatusCode(),
@@ -57,10 +59,24 @@ return Application::configure(basePath: dirname(__DIR__))
             }
         });
 
+        $exceptions->render(function (ValidationException $e, \Illuminate\Http\Request $request) {
+            if ($request->expectsJson() || $request->is('api/*')) {
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'errors' => $e->errors(),
+                    'status' => 422,
+                ], 422);
+            }
+        });
+
         // Capturar todas as exceções não tratadas para rotas de API (apenas se não for HttpException)
         $exceptions->render(function (\Throwable $e, \Illuminate\Http\Request $request) {
             // Se for uma rota de API e não for uma HttpException (já tratada acima)
-            if ($request->is('api/*') && ! ($e instanceof \Symfony\Component\HttpKernel\Exception\HttpExceptionInterface)) {
+            if (
+                $request->is('api/*')
+                && ! ($e instanceof \Symfony\Component\HttpKernel\Exception\HttpExceptionInterface)
+                && ! ($e instanceof ValidationException)
+            ) {
                 \Log::error('Erro não tratado em API: '.$e->getMessage(), [
                     'trace' => $e->getTraceAsString(),
                     'url' => $request->url(),

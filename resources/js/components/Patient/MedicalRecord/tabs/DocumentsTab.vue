@@ -7,7 +7,6 @@ import { useMedicalRecordDocument } from '@/composables/Patient/useMedicalRecord
 import { useFormatters } from '@/composables/useFormatters';
 import patientMedicalRecordRoutes from '@/routes/patient/medical-records';
 import type { Appointment, MedicalDocument } from '@/types/medical-records';
-import { Link } from '@inertiajs/vue3';
 import { Download, Loader2, Upload } from 'lucide-vue-next';
 import { computed } from 'vue';
 
@@ -15,11 +14,18 @@ const props = defineProps<{
     documents: MedicalDocument[];
     consultations: Appointment[];
     emptyText: string;
+    patientId?: string;
 }>();
 
 const { formatStatus, formatFileSize } = useFormatters();
 const consultationsRef = computed(() => props.consultations);
-const { documentForm, appointmentOptions, submitDocument, handleFileChange } = useMedicalRecordDocument(consultationsRef);
+const patientIdRef = computed(() => props.patientId);
+const { documentForm, appointmentOptions, submitDocument, handleFileChange } = useMedicalRecordDocument(consultationsRef, patientIdRef);
+
+const resolveDownloadUrl = (documentId: string) =>
+    props.patientId
+        ? `/doctor/patients/${props.patientId}/medical-record/documents/${documentId}/download`
+        : patientMedicalRecordRoutes.documents.download.url({ document: documentId });
 
 const documentCategories = [
     { id: 'exam', label: 'Exame' },
@@ -116,13 +122,15 @@ const visibilityOptions = [
                     {{ formatStatus(document.category) }} · {{ formatFileSize(document.file_size) }}
                 </p>
                 <p v-if="document.description" class="mt-3 text-sm font-medium text-gray-600">{{ document.description }}</p>
-                <Link
-                    :href="patientMedicalRecordRoutes.documents.download.url({ document: document.id })"
+                <a
+                    :href="resolveDownloadUrl(document.id)"
+                    target="_blank"
+                    rel="noopener noreferrer"
                     class="mt-4 inline-flex items-center font-black text-[#0f6e78] hover:underline"
                 >
                     <Download class="mr-1 h-4 w-4" />
                     Baixar arquivo
-                </Link>
+                </a>
             </article>
             <EmptyBlock v-if="documents.length === 0" :text="emptyText" />
         </div>

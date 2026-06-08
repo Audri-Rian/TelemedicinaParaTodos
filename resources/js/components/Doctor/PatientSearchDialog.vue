@@ -5,7 +5,7 @@ import { Check, Search } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 
 type Patient = {
-    id: number;
+    id: string;
     name: string;
     cpf?: string | null;
     age?: number | null;
@@ -15,7 +15,7 @@ type Patient = {
 interface Props {
     open: boolean;
     patients?: Patient[];
-    selectedPatientId?: number | null;
+    selectedPatientId?: string | null;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -29,7 +29,7 @@ const emit = defineEmits<{
 }>();
 
 const patientSearch = ref('');
-const selectedPatientIdLocal = ref<number | null>(null);
+const selectedPatientIdLocal = ref<string | null>(null);
 const statusFilter = ref<'all' | 'active' | 'inactive'>('all');
 
 const normalizedPatients = computed(() =>

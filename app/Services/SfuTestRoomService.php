@@ -7,8 +7,8 @@ use Illuminate\Support\Facades\Log;
 
 /**
  * Serviço para a página de teste do SFU integrada ao Laravel.
- * Cria/garante a sala de teste no MediaSoup e emite tokens JWT sem autenticação
- * nem regras de negócio (apenas para debug e validação da infraestrutura).
+ * Cria/garante a sala de teste no MediaSoup e emite tokens JWT
+ * para debug e validação da infraestrutura.
  */
 class SfuTestRoomService
 {
@@ -52,12 +52,12 @@ class SfuTestRoomService
     }
 
     /**
-     * Emite um token JWT para um usuário de teste (sem usuário autenticado).
+     * Emite um token JWT para um usuário de teste.
      * Cada chamada gera um userId único para permitir múltiplos participantes na mesma sala.
      */
-    public function issueTestToken(): string
+    public function issueTestToken(string $role = 'user', ?string $userId = null): string
     {
-        $secret = config('services.media_gateway.jwt_secret', env('SFU_JWT_SECRET'));
+        $secret = config('services.media_gateway.jwt_secret');
 
         if (! $secret) {
             throw new \RuntimeException(
@@ -68,13 +68,18 @@ class SfuTestRoomService
         $ttlMinutes = (int) config('telemedicine.video_call.token_ttl_minutes', 60);
         $now = time();
         $exp = $now + ($ttlMinutes * 60);
-        $userId = 'test_'.uniqid('', true);
+        $userId ??= 'test_'.uniqid('', true);
+
+        $allowedRoles = ['doctor', 'patient', 'user'];
+        if (! in_array($role, $allowedRoles, true)) {
+            $role = 'user';
+        }
 
         $payload = [
             'callId' => self::TEST_CALL_ID,
             'roomId' => self::TEST_ROOM_ID,
             'userId' => $userId,
-            'role' => 'user',
+            'role' => $role,
             'iat' => $now,
             'exp' => $exp,
         ];

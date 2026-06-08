@@ -7,6 +7,7 @@
 ![GitHub pull requests](https://img.shields.io/github/issues-pr/Audri-Rian/TelemedicinaParaTodos?style=for-the-badge)
 
 ## 📑 Sumário Navegável
+
 - [📋 Sobre o Projeto](#telemedicina-para-todos-)
 - [🎯 Idealização](#idealização-)
 - [📚 Documentação Estrutural](#-documentação-estrutural)
@@ -20,7 +21,7 @@ Esse projeto nasceu para resolver um problema simples: ninguém gosta de perder 
 
 Com ela, dá para agendar consultas de forma rápida, conversar por vídeo em tempo real e ainda ter prontuários digitais sempre à mão. Tudo isso num só lugar, sem complicação e com a praticidade que a tecnologia pode oferecer.
 
-No fim das contas, é sobre facilitar a vida: menos correria, mais cuidado e saúde na tela do seu computador ou celular. 
+No fim das contas, é sobre facilitar a vida: menos correria, mais cuidado e saúde na tela do seu computador ou celular.
 
 ## Idealização 🐊👍
 
@@ -51,32 +52,38 @@ Está começando a construir sua base de pacientes. A plataforma lhe oferece uma
 Esta seção reúne os documentos essenciais organizados em uma **estrutura hierárquica** para facilitar a navegação e compreensão do sistema. A documentação segue os princípios de **hiperdocumentação** com referenciamento cruzado contextual.
 
 ### 🗂️ Índice Central
+
 - **[📋 Visão Geral](docs/index/VisaoGeral.md)** — **Documento mestre** com índice central e navegação guiada
 - **[📊 Matriz de Rastreabilidade](docs/index/MatrizRequisitos.md)** — Mapeamento completo requisito → implementação
 - **[📚 Glossário](docs/index/Glossario.md)** — Definições unificadas de termos técnicos e de negócio
 
 ### 📜 Requisitos e Regras de Negócio
+
 - **[📋 Regras do Sistema](docs/requirements/SystemRules.md)** — Regras de negócio, compliance e segurança
 - **[⚙️ Guia de Funcionalidades](docs/requirements/FuncionalitsGuide.md)** — Requisitos funcionais e casos de uso detalhados
 - **[🔐 Lógica de Autenticação](docs/modules/auth/RegistrationLogic.md)** — Fluxos de registro e login
 
 ### 🏗️ Arquitetura e Padrões
+
 - **[🏗️ Arquitetura do Sistema](docs/architecture/Arquitetura.md)** — Estrutura geral, camadas e padrões arquiteturais
 - **[🎨 Guia do Frontend](docs/architecture/VueGuide.md)** — Convenções Vue.js e estrutura do frontend
 - **[💻 Guia de Desenvolvimento](docs/architecture/DevGuide.md)** — Padrões de código e boas práticas
 - **[📘 Guia para Desenvolvedores](docs/guides/GuiaDesenvolvedor.md)** — Básico do ambiente, onde achar cada doc, Swagger e ReDoc
 
 ### 💾 Modelo de Dados
+
 - **[🗄️ Diagrama do Banco de Dados](docs/database/diagrama_banco_dados.md)** — Estrutura das tabelas e relacionamentos
 - **[📁 Migrações](../database/migrations/)** — Implementação das estruturas no banco
 
 ### ⚙️ Lógica de Domínio
+
 - **[📅 Lógica de Consultas](docs/modules/appointments/AppointmentsLogica.md)** — Regras de agendamento e fluxos de negócio
 - **[🔧 Implementação de Consultas](docs/modules/appointments/AppointmentsImplementationStudy.md)** — Detalhes técnicos e checklist
-- **[📹 Implementação de Videochamadas](docs/modules/videocall/VideoCallImplementation.md)** — Sistema de vídeo em tempo real
-- **[📋 Tarefas de Videochamadas](docs/modules/videocall/VideoCallTasks.md)** — Checklist de implementação
+- **[📹 Implementação de Videochamadas](docs/layers/signaling/videocall/VideoCallImplementation.md)** — Sistema de vídeo em tempo real com SFU
+- **[📋 Tarefas de Videochamadas](docs/layers/signaling/videocall/VideoCallTasks.md)** — Checklist de implementação
 
 ### 🔧 Configuração e Instalação
+
 - **[🚀 Guia de Instalação](docs/setup/Start.md)** — Configuração do ambiente de desenvolvimento
 - **[⚙️ Regras do Cursor](docs/setup/CursorRulesGuide.md)** — Configurações do ambiente de desenvolvimento
 - **[📊 Diagramas](docs/diagrams/)** — Artefatos visuais (Draw.io/Mermaid) do projeto
@@ -84,15 +91,17 @@ Esta seção reúne os documentos essenciais organizados em uma **estrutura hier
 ### 🚀 Navegação Rápida
 
 #### Por Papel do Usuário
+
 - **👨‍⚕️ Médicos**: [Regras de Negócio](docs/requirements/SystemRules.md) → [Funcionalidades](docs/requirements/FuncionalitsGuide.md) → [Arquitetura](docs/architecture/Arquitetura.md)
 - **👤 Pacientes**: [Visão Geral do Projeto](#idealização-) → [Funcionalidades](docs/requirements/FuncionalitsGuide.md) → [Regras](docs/requirements/SystemRules.md)
 - **💻 Desenvolvedores**: [Guia para Desenvolvedores](docs/guides/GuiaDesenvolvedor.md) → [Arquitetura](docs/architecture/Arquitetura.md) → [Guia de Dev](docs/architecture/DevGuide.md) → [Implementações](docs/modules/appointments/AppointmentsImplementationStudy.md)
 
 #### Por Tipo de Documentação
+
 - **📋 Requisitos**: [SystemRules.md](docs/requirements/SystemRules.md) + [FuncionalitsGuide.md](docs/requirements/FuncionalitsGuide.md)
 - **🏗️ Técnico**: [Arquitetura.md](docs/architecture/Arquitetura.md) + [VueGuide.md](docs/architecture/VueGuide.md)
 - **💾 Dados**: [diagrama_banco_dados.md](docs/database/diagrama_banco_dados.md)
-- **⚙️ Lógica**: [AppointmentsLogica.md](docs/modules/appointments/AppointmentsLogica.md) + [VideoCallImplementation.md](docs/modules/videocall/VideoCallImplementation.md)
+- **⚙️ Lógica**: [AppointmentsLogica.md](docs/layers/domain/modules/appointments/AppointmentsLogica.md) + [VideoCallImplementation.md](docs/layers/signaling/videocall/VideoCallImplementation.md)
 
 ---
 
@@ -105,6 +114,7 @@ Esta seção reúne os documentos essenciais organizados em uma **estrutura hier
 - **Inertia.js** - Integração entre Laravel e Vue.js
 - **MySQL/SQLite** - Banco de dados
 - **Laravel Reverb** - Broadcasting em tempo real
+- **MediaSoup / SFU** - Transporte de mídia WebRTC para videochamadas
 - **Laravel Wayfinder** - Sistema de roteamento avançado
 
 ### Frontend
@@ -115,6 +125,7 @@ Esta seção reúne os documentos essenciais organizados em uma **estrutura hier
 - **Tailwind CSS 4** - Framework CSS utilitário
 - **Reka UI** - Biblioteca de componentes Vue
 - **Lucide Vue** - Ícones vetoriais
+- **mediasoup-client** - Cliente WebRTC/SFU para videochamadas
 
 ### Ferramentas de Desenvolvimento
 
@@ -141,6 +152,7 @@ Apenas EU.
 ## Como Começar 😡👍
 
 ### Para Novos Desenvolvedores
+
 1. **Leia** o [README Principal](#telemedicina-para-todos-) para entender o projeto
 2. **Siga** o [Guia para Desenvolvedores](docs/guides/GuiaDesenvolvedor.md) (básico, ambiente, Swagger/ReDoc)
 3. **Configure** o ambiente com o [Guia de Instalação](docs/setup/Start.md)
@@ -149,12 +161,14 @@ Apenas EU.
 6. **Explore** as implementações específicas conforme necessário
 
 ### Para Stakeholders
+
 1. **Comece** com a [Visão Geral do Projeto](#idealização-)
 2. **Entenda** as [Regras de Negócio](docs/requirements/SystemRules.md)
 3. **Veja** as [Funcionalidades](docs/requirements/FuncionalitsGuide.md) disponíveis
 4. **Consulte** a [Matriz de Requisitos](docs/index/MatrizRequisitos.md) para rastreabilidade
 
 ### Para Auditores
+
 1. **Acesse** a [Matriz de Rastreabilidade](docs/index/MatrizRequisitos.md)
 2. **Revise** as [Regras de Compliance](docs/requirements/SystemRules.md#segurança-e-compliance)
 3. **Verifique** os [Testes](../tests/) implementados
@@ -169,24 +183,24 @@ Siga os passos detalhados no [Guia de Instalação](docs/setup/Start.md) para co
 A API é documentada com **OpenAPI 3.x** e pode ser vista em **Swagger UI** ou **ReDoc** (ambos usam a mesma spec).
 
 - **Gerar/atualizar a documentação** (após alterar controllers ou anotações OpenAPI):
-  ```bash
-  php artisan l5-swagger:generate
-  ```
+    ```bash
+    php artisan l5-swagger:generate
+    ```
 - **Acessar a documentação** (apenas em ambiente local/staging; em produção as rotas são bloqueadas por middleware):
-  - **Swagger UI:** `http://localhost:8000/api/documentation` (ou a URL base do seu ambiente)
-  - **ReDoc:** `http://localhost:8000/api/redoc` (mesma spec, visual alternativo)
-  - Staging: troque o host (ex.: `https://<host>/api/documentation` ou `https://<host>/api/redoc`)
+    - **Swagger UI:** `http://localhost:8000/api/documentation` (ou a URL base do seu ambiente)
+    - **ReDoc:** `http://localhost:8000/api/redoc` (mesma spec, visual alternativo)
+    - Staging: troque o host (ex.: `https://<host>/api/documentation` ou `https://<host>/api/redoc`)
 
 A spec gerada fica em `storage/api-docs/api-docs.json`. Endpoints que exigem autenticação usam sessão web (cookie); o "Try it out" no Swagger pode não enviar cookies automaticamente — para testar, use os endpoints públicos (ex.: especializações, disponibilidade por data) ou faça login no app no mesmo domínio antes.
 
 ### Serviços necessários (backend)
 
-| Serviço | Quando é necessário | Comando / observação |
-|--------|----------------------|------------------------|
-| **Redis** | Opcional: só se `CACHE_STORE=redis` ou `QUEUE_CONNECTION=redis` | Instalar e rodar Redis localmente |
-| **Queue worker** | Necessário para jobs em background (lembretes, notificações, etc.) | `php artisan queue:work` (em terminal separado ou Supervisor em produção) |
-| **Reverb** | Necessário para notificações e atualizações em tempo real (WebSocket) | `php artisan reverb:start` (em terminal separado) |
-| **Scheduler** | Necessário para lembretes de consulta e rotinas agendadas | Em dev: `php artisan schedule:work`; em produção: cron com `php artisan schedule:run` |
+| Serviço          | Quando é necessário                                                   | Comando / observação                                                                  |
+| ---------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| **Redis**        | Opcional: só se `CACHE_STORE=redis` ou `QUEUE_CONNECTION=redis`       | Instalar e rodar Redis localmente                                                     |
+| **Queue worker** | Necessário para jobs em background (lembretes, notificações, etc.)    | `php artisan queue:work` (em terminal separado ou Supervisor em produção)             |
+| **Reverb**       | Necessário para notificações e atualizações em tempo real (WebSocket) | `php artisan reverb:start` (em terminal separado)                                     |
+| **Scheduler**    | Necessário para lembretes de consulta e rotinas agendadas             | Em dev: `php artisan schedule:work`; em produção: cron com `php artisan schedule:run` |
 
 ### Comandos de setup
 
@@ -207,7 +221,7 @@ php artisan reverb:start
 
 ### Checklist — Subiu local e está ok
 
-- [ ] `cp .env.example .env` e variáveis mínimas preenchidas (APP_KEY com `php artisan key:generate`, DB_*, etc.)
+- [ ] `cp .env.example .env` e variáveis mínimas preenchidas (APP*KEY com `php artisan key:generate`, DB*\*, etc.)
 - [ ] `composer install` e `npm install` executados sem erro
 - [ ] `php artisan migrate` executou sem falha
 - [ ] (Opcional) `php artisan db:seed` rodou
@@ -221,4 +235,3 @@ php artisan reverb:start
 Este projeto está licenciado sob a Licença Apache 2.0 - veja o arquivo [LICENSE](LICENSE) para detalhes.
 
 A Licença Apache 2.0 é uma licença de software permissiva que permite que outros desenvolvedores utilizem, modifiquem e distribuam seu código livremente, desde que mantenham a atribuição original e incluam uma cópia da licença. Esta licença também oferece proteção de patentes e é amplamente utilizada em projetos empresariais e open source.
-

@@ -24,6 +24,11 @@ return new class extends Migration
             $table->string('attachment_url')->nullable();
             $table->enum('status', ['requested', 'in_progress', 'completed', 'cancelled'])->default('requested');
             $table->json('metadata')->nullable();
+            $table->uuid('partner_integration_id')->nullable();
+            $table->string('external_id')->nullable();
+            $table->string('external_accession')->nullable();
+            $table->enum('source', ['internal', 'integration', 'manual_upload'])->default('internal');
+            $table->timestamp('received_from_partner_at')->nullable();
             $table->timestamps();
             $table->softDeletes();
 
@@ -32,6 +37,8 @@ return new class extends Migration
             $table->index('type');
             $table->index('requested_at');
             $table->index('completed_at');
+            $table->index('external_id');
+            $table->index('source', 'examinations_source_index');
         });
     }
 

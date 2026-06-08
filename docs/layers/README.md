@@ -8,10 +8,10 @@ As camadas aqui documentadas não substituem os módulos existentes (como `modul
   Regras de negócio, fluxos funcionais e casos de uso por módulo: Auth, Appointments, Mensagens, Videochamada, Prontuários. Índice que aponta para `docs/modules/` e para as camadas técnicas.
 
 - **[Camada de Sinalização](signaling/README.md)** (`signaling/`)  
-  Controle de sessões em tempo real, presença, autenticação de peers, eventos WebSocket e integração com Laravel Reverb. Videochamadas (sinalização) e mensagens.
+  Controle de sessões em tempo real, presença, eventos WebSocket e integração com Laravel Reverb. Videochamadas (eventos de negócio) e mensagens.
 
 - **[Camada de Mídia](media/README.md)** (`media/`)  
-  Transmissão de áudio/vídeo/dados em tempo real (WebRTC/PeerJS), topologias P2P/SFU/MCU e controle de qualidade de mídia.
+  Transmissão de áudio/vídeo em tempo real (WebRTC/SFU MediaSoup) e controle de qualidade de mídia.
 
 - **[Camada de Persistência](persistence/README.md)** (`persistence/`)  
   Banco de dados relacional, Redis, estrutura de dados, modelos, logs e estratégias de cache.
@@ -27,10 +27,9 @@ As camadas aqui documentadas não substituem os módulos existentes (como `modul
 - **Por negócio/funcionalidade:** comece por `domain/README.md` para ver todos os módulos (Auth, Consultas, Mensagens, Videochamada, Prontuários) e suas regras.
 - **Por visão geral do sistema:** use `architecture-governance/README.md`.
 - **Por camada técnica:**
-  - `signaling/` — tempo real / eventos.
-  - `media/` — WebRTC / videoconferência.
-  - `persistence/` — dados e modelo de informação.
-  - `infrastructure/` — deploy, AWS, Cloudflare, CI/CD.
+    - `signaling/` — tempo real / eventos.
+    - `media/` — WebRTC / videoconferência.
+    - `persistence/` — dados e modelo de informação.
+    - `infrastructure/` — deploy, AWS, Cloudflare, CI/CD.
 
 Cada camada referencia documentos já existentes em `docs/` para evitar duplicação de conteúdo.
-
