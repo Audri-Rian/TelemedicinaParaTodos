@@ -4,6 +4,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { useRouteGuard } from '@/composables/auth';
 import { useInitials } from '@/composables/useInitials';
+import { useToast } from '@/composables/useToast';
 import { useVideoCall } from '@/composables/useVideoCall';
 import AppLayout from '@/layouts/AppLayout.vue';
 import * as patientRoutes from '@/routes/patient';
@@ -57,10 +58,11 @@ type StatusTone = 'live' | 'go' | 'wait' | 'warn' | 'muted';
 
 const { canAccessPatientRoute } = useRouteGuard();
 const { getInitials } = useInitials();
+const { info: toastInfo } = useToast();
 const page = usePage();
 const store = useVideoCallStore();
 
-const { callState, currentCall, isLoading, sfu, joinActiveCall, requestCall, endCall } = useVideoCall();
+const { callState, currentCall, isLoading, sfu, joinActiveCall, requestCall, leaveCall } = useVideoCall();
 
 const users = ((page.props.users as UserProp[]) || []).map((user) => ({
     ...user,
@@ -206,11 +208,12 @@ const joinVideoCall = async () => {
     }
 };
 
-const handleEndCall = async () => {
+const handleLeaveCall = async () => {
     if (!currentCall.value || isEndingCall.value) return;
     isEndingCall.value = true;
-    await endCall(currentCall.value.callId);
+    const left = await leaveCall(currentCall.value.callId);
     isEndingCall.value = false;
+    if (left) toastInfo('Você saiu da consulta.');
 };
 
 const checklist = [
@@ -239,7 +242,7 @@ const checklist = [
         :shared-documents="activeSharedDocuments"
         @toggle-mic="sfu.toggleMic()"
         @toggle-camera="sfu.toggleCamera()"
-        @end="handleEndCall"
+        @leave="handleLeaveCall"
     />
 
     <AppLayout :breadcrumbs="breadcrumbs">

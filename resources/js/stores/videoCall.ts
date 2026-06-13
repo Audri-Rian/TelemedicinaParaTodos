@@ -31,6 +31,9 @@ export const useVideoCallStore = defineStore('videoCall', () => {
     const appointmentLabel = ref<string | null>(null);
     const window = ref<{ opens_at: string; closes_at: string } | null>(null);
     const modalDismissed = ref(false);
+    // Papel do participante que saiu/caiu da chamada (peer). Usado para exibir
+    // "médico reconectando…" (paciente) ou "paciente saiu" (médico). Null = ambos presentes.
+    const peerLeftRole = ref<VideoCallRole | null>(null);
 
     const isActive = computed(() => ['requested', 'ringing', 'calling', 'accepted'].includes(status.value));
 
@@ -55,10 +58,19 @@ export const useVideoCallStore = defineStore('videoCall', () => {
         appointmentLabel.value = data.appointmentLabel;
         window.value = data.window;
         modalDismissed.value = false;
+        peerLeftRole.value = null;
     }
 
     function setStatus(newStatus: VideoCallStatus) {
         status.value = newStatus;
+    }
+
+    function setPeerLeft(role: VideoCallRole) {
+        peerLeftRole.value = role;
+    }
+
+    function clearPeerLeft() {
+        peerLeftRole.value = null;
     }
 
     function setToken(newToken: string | null, newSfuWsUrl: string | null) {
@@ -82,6 +94,7 @@ export const useVideoCallStore = defineStore('videoCall', () => {
         appointmentLabel.value = null;
         window.value = null;
         modalDismissed.value = false;
+        peerLeftRole.value = null;
     }
 
     return {
@@ -96,11 +109,14 @@ export const useVideoCallStore = defineStore('videoCall', () => {
         appointmentLabel,
         window,
         modalDismissed,
+        peerLeftRole,
         isActive,
         isOnVideoCallPage,
         setCall,
         setStatus,
         setToken,
+        setPeerLeft,
+        clearPeerLeft,
         dismissModal,
         clearCall,
     };

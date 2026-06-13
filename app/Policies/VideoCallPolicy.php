@@ -49,9 +49,25 @@ class VideoCallPolicy
     }
 
     /**
-     * Gate: encerrar chamada (ambos os tipos). Qualquer participante pode encerrar.
+     * Gate: encerrar chamada globalmente. Apenas o médico da call encerra (RF-03).
      */
     public function end(User $user, Call $call): bool
+    {
+        return $user->doctor !== null && (string) $user->doctor->id === (string) $call->doctor_id;
+    }
+
+    /**
+     * Gate: sair da chamada (desconexão local). Qualquer participante pode sair.
+     */
+    public function leave(User $user, Call $call): bool
+    {
+        return $this->view($user, $call);
+    }
+
+    /**
+     * Gate: reportar presença (heartbeat). Qualquer participante da call.
+     */
+    public function presence(User $user, Call $call): bool
     {
         return $this->view($user, $call);
     }

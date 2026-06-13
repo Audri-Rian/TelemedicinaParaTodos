@@ -2,6 +2,7 @@
 
 namespace Tests\Unit;
 
+use App\Contracts\MediaGatewayInterface;
 use App\Enums\NotificationType;
 use App\Jobs\CleanExpiredRedisLocks;
 use App\Jobs\EndZombieVideoCalls;
@@ -93,18 +94,17 @@ class MaintenanceJobsTest extends TestCase
             'requested_at' => now()->subHours(3),
             'accepted_at' => now()->subHours(3),
         ]);
-        $room = Room::createFromSystem([
+        Room::createFromSystem([
             'call_id' => $call->id,
             'room_id' => 'room-zombie-1',
             'sfu_node' => 'sfu-node-1',
             'media_ws_url' => 'wss://sfu.test/ws',
         ]);
-        $callManager = Mockery::mock(CallManagerService::class);
-        $callManager->shouldReceive('destroyRoom')->once()->with(Mockery::on(
-            fn (Room $receivedRoom) => $receivedRoom->is($room)
-        ));
+        $this->mock(MediaGatewayInterface::class, function ($mock) {
+            $mock->shouldReceive('destroyRoom')->once()->andReturn(null);
+        });
 
-        (new EndZombieVideoCalls)->handle(new AppointmentService, $callManager);
+        (new EndZombieVideoCalls)->handle(new AppointmentService, app(CallManagerService::class));
 
         $this->assertSame(Call::STATUS_ENDED, $call->fresh()->status);
         $this->assertSame(Appointments::STATUS_COMPLETED, $appointment->fresh()->status);
@@ -135,8 +135,10 @@ class MaintenanceJobsTest extends TestCase
     }
 
     /** @test */
-    public function zombie_video_job_keeps_call_active_when_room_cleanup_fails(): void
+    public function zombie_video_job_ends_call_even_when_room_cleanup_fails(): void
     {
+        // Contrato endCallSystem: a falha de SFU não impede o encerramento e o
+        // broadcast (sala órfã é tolerada e logada) — RF-04/NFR-01.
         Carbon::setTestNow(Carbon::parse('2026-05-08 15:00:00'));
         config(['telemedicine.video_call.ad_hoc_max_duration_minutes' => 120]);
 
@@ -160,18 +162,15 @@ class MaintenanceJobsTest extends TestCase
             'sfu_node' => 'sfu-node-1',
             'media_ws_url' => 'wss://sfu.test/ws',
         ]);
-        $callManager = Mockery::mock(CallManagerService::class);
-        $callManager->shouldReceive('destroyRoom')->once()->andThrow(new \RuntimeException('SFU indisponível'));
+        $this->mock(MediaGatewayInterface::class, function ($mock) {
+            $mock->shouldReceive('destroyRoom')->once()->andThrow(new \RuntimeException('SFU indisponível'));
+        });
 
-        $this->expectException(\RuntimeException::class);
+        (new EndZombieVideoCalls)->handle(new AppointmentService, app(CallManagerService::class));
 
-        try {
-            (new EndZombieVideoCalls)->handle(new AppointmentService, $callManager);
-        } finally {
-            $this->assertSame(Call::STATUS_ACCEPTED, $call->fresh()->status);
-            $this->assertNull($call->fresh()->ended_at);
-            $this->assertSame(Appointments::STATUS_IN_PROGRESS, $appointment->fresh()->status);
-        }
+        $this->assertSame(Call::STATUS_ENDED, $call->fresh()->status);
+        $this->assertNotNull($call->fresh()->ended_at);
+        $this->assertSame(Appointments::STATUS_COMPLETED, $appointment->fresh()->status);
     }
 
     /** @test */

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { VideoCallStatus } from '@/stores/videoCall';
-import { PhoneOff, Video } from 'lucide-vue-next';
+import { Video } from 'lucide-vue-next';
 
 defineProps<{
     callStatus: VideoCallStatus;
@@ -9,7 +9,6 @@ defineProps<{
 
 const emit = defineEmits<{
     enter: [];
-    end: [];
 }>();
 
 const statusLabel: Record<string, string> = {
@@ -46,19 +45,12 @@ const statusLabel: Record<string, string> = {
             </div>
 
             <button
-                class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-teal-600 text-white transition-colors hover:bg-teal-700"
+                class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-teal-600 px-2.5 text-white transition-colors hover:bg-teal-700"
                 title="Entrar na chamada"
                 @click="emit('enter')"
             >
                 <Video class="h-3.5 w-3.5" />
-            </button>
-
-            <button
-                class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-red-100 text-red-600 transition-colors hover:bg-red-200"
-                title="Encerrar chamada"
-                @click="emit('end')"
-            >
-                <PhoneOff class="h-3.5 w-3.5" />
+                <span class="text-xs font-semibold">Entrar</span>
             </button>
         </div>
     </Transition>

@@ -214,49 +214,101 @@ class CallManagerService
     }
 
     /**
-     * Encerra chamada voluntariamente (ambos os tipos).
+     * Encerra chamada globalmente (médico). Idempotente: chamada já encerrada não tem efeito (NFR-02).
      * Para scheduled: scheduler também encerra por janela — este método é complementar.
      */
     public function endCall(Call $call, User $endedBy): void
     {
+        if ($call->status === Call::STATUS_ENDED) {
+            return;
+        }
+
         if (! in_array($call->status, [Call::STATUS_ACCEPTED, Call::STATUS_REQUESTED, Call::STATUS_RINGING], true)) {
             throw new \InvalidArgumentException('Chamada não está ativa.');
         }
-
-        $call->updateFromSystem([
-            'status' => Call::STATUS_ENDED,
-            'ended_at' => now(),
-            'call_closed_reason' => Call::CLOSED_REASON_ENDED_BY_USER,
-        ]);
-
-        $this->invalidateActiveCallCache($call);
 
         // Não encerrar appointment em scheduled (D6) — apenas em ad-hoc
         if ($call->call_type === Call::TYPE_AD_HOC && $call->appointment && $call->appointment->status === Appointments::STATUS_IN_PROGRESS) {
             $this->appointmentService->end($call->appointment, $endedBy->id);
         }
 
-        $room = $call->room;
-        if ($room) {
-            $this->destroyRoom($room);
-        }
+        $reason = $this->isDoctorOf($call, $endedBy)
+            ? Call::CLOSED_REASON_ENDED_BY_DOCTOR
+            : Call::CLOSED_REASON_ENDED_BY_USER;
 
-        event(new \App\Events\VideoCallEnded($call, $endedBy));
+        $this->endCallSystem($call, $reason, $endedBy);
 
         Log::info('CALL_ENDED', [
             'call_id' => $call->id,
             'call_type' => $call->call_type,
-            'room_id' => $room?->room_id,
             'user_id' => $endedBy->id,
+            'closed_reason' => $reason,
         ]);
     }
 
     /**
-     * Encerra chamada scheduled fora da janela (chamado por EndScheduledVideoCalls).
+     * Saída local de um participante (paciente sai; médico cai/fecha aba).
+     * A call permanece ativa; apenas registra o left_at e notifica o peer remanescente.
+     * Idempotente.
      */
-    public function endCallForAppointmentWindow(Call $call): void
+    public function leaveCall(Call $call, User $leftBy): void
     {
-        if ($call->call_type !== Call::TYPE_SCHEDULED) {
+        $call->loadMissing(['doctor.user', 'patient.user']);
+
+        $isDoctor = $this->isDoctorOf($call, $leftBy);
+        $isPatient = $leftBy->patient !== null && (string) $leftBy->patient->id === (string) $call->patient_id;
+
+        if (! $isDoctor && ! $isPatient) {
+            throw new \InvalidArgumentException('Usuário não participa desta chamada.');
+        }
+
+        if ($isDoctor) {
+            $call->updateFromSystem(['doctor_left_at' => now()]);
+            $role = 'doctor';
+            $messageKey = 'call.left.doctor';
+        } else {
+            $call->updateFromSystem(['patient_left_at' => now()]);
+            $role = 'patient';
+            $messageKey = 'call.left.patient';
+        }
+
+        event(new \App\Events\VideoCallParticipantLeft($call, $role, $messageKey));
+
+        Log::info('CALL_PARTICIPANT_LEFT', [
+            'call_id' => $call->id,
+            'role' => $role,
+        ]);
+    }
+
+    /**
+     * Heartbeat de presença enquanto o SFU está conectado.
+     * Atualiza o last_seen do participante e limpa o left_at (reconectou).
+     */
+    public function recordPresence(Call $call, User $user): void
+    {
+        if ($this->isDoctorOf($call, $user)) {
+            $call->updateFromSystem(['doctor_last_seen_at' => now(), 'doctor_left_at' => null]);
+
+            return;
+        }
+
+        if ($user->patient !== null && (string) $user->patient->id === (string) $call->patient_id) {
+            $call->updateFromSystem(['patient_last_seen_at' => now(), 'patient_left_at' => null]);
+
+            return;
+        }
+
+        throw new \InvalidArgumentException('Usuário não participa desta chamada.');
+    }
+
+    /**
+     * Encerramento de sistema (jobs/auto): destrói sala, marca ended e faz broadcast.
+     * Unifica o ciclo de vida para que todos os encerramentos propaguem VideoCallEnded.
+     * Idempotente.
+     */
+    public function endCallSystem(Call $call, string $reason, ?User $endedBy = null): void
+    {
+        if ($call->status === Call::STATUS_ENDED) {
             return;
         }
 
@@ -269,6 +321,33 @@ class CallManagerService
             }
         }
 
+        $call->updateFromSystem([
+            'status' => Call::STATUS_ENDED,
+            'ended_at' => now(),
+            'call_closed_reason' => $reason,
+        ]);
+
+        $this->invalidateActiveCallCache($call);
+
+        event(new \App\Events\VideoCallEnded($call, $endedBy, $reason));
+
+        Log::info('CALL_ENDED_SYSTEM', [
+            'call_id' => $call->id,
+            'call_type' => $call->call_type,
+            'room_id' => $room?->room_id,
+            'closed_reason' => $reason,
+        ]);
+    }
+
+    /**
+     * Encerra chamada scheduled fora da janela (chamado por EndScheduledVideoCalls).
+     */
+    public function endCallForAppointmentWindow(Call $call): void
+    {
+        if ($call->call_type !== Call::TYPE_SCHEDULED) {
+            return;
+        }
+
         $closedReason = match (true) {
             $call->doctor_joined_at && $call->patient_joined_at => Call::CLOSED_REASON_WINDOW_EXPIRED,
             $call->patient_joined_at && ! $call->doctor_joined_at => Call::CLOSED_REASON_DOCTOR_NO_SHOW,
@@ -276,13 +355,7 @@ class CallManagerService
             default => Call::CLOSED_REASON_NO_SHOW,
         };
 
-        $call->updateFromSystem([
-            'status' => Call::STATUS_ENDED,
-            'ended_at' => now(),
-            'call_closed_reason' => $closedReason,
-        ]);
-
-        $this->invalidateActiveCallCache($call);
+        $this->endCallSystem($call, $closedReason);
 
         Log::info('VIDEO_CALL_WINDOW_ENDED', [
             'call_id' => $call->id,
@@ -291,6 +364,11 @@ class CallManagerService
             'doctor_joined_at' => $call->doctor_joined_at?->toIso8601String(),
             'patient_joined_at' => $call->patient_joined_at?->toIso8601String(),
         ]);
+    }
+
+    private function isDoctorOf(Call $call, User $user): bool
+    {
+        return $user->doctor !== null && (string) $user->doctor->id === (string) $call->doctor_id;
     }
 
     /**

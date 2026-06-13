@@ -73,24 +73,7 @@ class EndZombieVideoCalls implements ShouldQueue
         AppointmentService $appointmentService,
         CallManagerService $callManager
     ): void {
-        if ($call->room) {
-            try {
-                $callManager->destroyRoom($call->room);
-            } catch (\Throwable $exception) {
-                Log::warning('ZOMBIE_VIDEO_ROOM_DESTROY_FAILED', [
-                    'call_id' => $call->id,
-                    'room_id' => $call->room->room_id,
-                    'error' => $exception->getMessage(),
-                ]);
-
-                throw $exception;
-            }
-        }
-
-        $call->updateFromSystem([
-            'status' => Call::STATUS_ENDED,
-            'ended_at' => now(),
-        ]);
+        $callManager->endCallSystem($call, Call::CLOSED_REASON_ROOM_INACTIVE);
 
         if ($call->appointment?->status === Appointments::STATUS_IN_PROGRESS) {
             $appointmentService->end($call->appointment);

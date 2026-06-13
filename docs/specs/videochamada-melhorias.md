@@ -1,8 +1,20 @@
 # Feature Spec — Videochamada: melhorias de UX, ciclo de vida e anexos
 
-> Status: `draft`
+> Status: `implemented` (fases 1–5) · Data impl.: 2026-06-08
 > Autor: Tech Lead Agent · Data: 2026-06-08
 > Relacionadas: `videochamada-automatica-por-horario.md`, `video-call-mediagateway-persistent-ui.md`, `mediasoup-integration.md`
+
+## Decisões confirmadas (produto)
+
+- **`VIDEO_ROOM_INACTIVE_MINUTES=15`** confirmado.
+- **Médico não tem "sair"**: o botão do médico **encerra** globalmente. Queda de
+  conexão / fechar aba do médico é tratada como **queda temporária** — a call
+  permanece `accepted`, o paciente aguarda e vê o aviso **"O médico está
+  reconectando…"** (detectado pelo SFU: stream do médico sumiu). Se o médico não
+  retornar dentro de `doctor_reconnect_grace_minutes` (default 2), o job
+  `EndEmptyVideoCalls` encerra com `call_closed_reason=doctor_disconnected` e o
+  paciente recebe "O médico não conseguiu retornar à chamada."
+- Presença via heartbeat `POST /calls/{id}/presence` a cada 30s (Opção A).
 
 ---
 

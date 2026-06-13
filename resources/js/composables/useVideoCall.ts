@@ -1,4 +1,5 @@
 import { useVideoCallStore } from '@/stores/videoCall';
+import { mapVideoCallError } from '@/utils/videoCallMessages';
 import axios from 'axios';
 import { computed, ref } from 'vue';
 import { useToast } from './useToast';
@@ -152,14 +153,11 @@ export function useVideoCall() {
 
             await sfu.connect(sfu_ws_url ?? null, token);
         } catch (err: unknown) {
-            const axiosErr = err as { response?: { status?: number; data?: { message?: string } } };
-            const status = axiosErr.response?.status;
-            if (status === 403) {
-                toastError('Acesso não autorizado para esta consulta.');
-            } else if (status === 503) {
-                toastWarning(axiosErr.response?.data?.message ?? 'Sala em preparação, tente novamente.');
+            const status = (err as { response?: { status?: number } }).response?.status;
+            if (status === 503) {
+                toastWarning('A sala está sendo preparada. Tente novamente em instantes.');
             } else {
-                toastError(axiosErr.response?.data?.message ?? 'Não foi possível entrar na consulta.');
+                toastError(mapVideoCallError(err));
             }
             store.setStatus('error');
         } finally {
@@ -194,11 +192,11 @@ export function useVideoCall() {
                 window: null,
             });
         } catch (err: unknown) {
-            const axiosErr = err as { response?: { status?: number; data?: { message?: string; data?: { call_id?: string } } } };
-            if (axiosErr.response?.status === 409) {
-                toastWarning(axiosErr.response?.data?.message ?? 'Chamada já em andamento');
+            const status = (err as { response?: { status?: number } }).response?.status;
+            if (status === 409) {
+                toastWarning('Já existe uma chamada em andamento.');
             } else {
-                toastError((axiosErr.response?.data as { message?: string })?.message ?? 'Não foi possível iniciar a chamada');
+                toastError(mapVideoCallError(err));
             }
             store.setStatus('error');
         } finally {
@@ -220,8 +218,7 @@ export function useVideoCall() {
 
             await sfu.connect(sfu_ws_url ?? null, token);
         } catch (err: unknown) {
-            const axiosErr = err as { response?: { data?: { message?: string } } };
-            toastError(axiosErr.response?.data?.message ?? 'Erro ao aceitar a chamada');
+            toastError(mapVideoCallError(err));
             store.setStatus('error');
         } finally {
             isLoading.value = false;
@@ -239,16 +236,39 @@ export function useVideoCall() {
         }
     };
 
-    const endCall = async (callId: string): Promise<void> => {
-        sfu.disconnect();
-
+    /**
+     * Encerramento global (médico). API-first: só desconecta o SFU e limpa o
+     * estado após o backend confirmar — falha mostra erro amigável e mantém na sala.
+     * Retorna true em sucesso para o overlay decidir o toast.
+     */
+    const endCall = async (callId: string): Promise<boolean> => {
         try {
             await axios.post(`/calls/${callId}/end`);
-        } catch {
-            // encerramento local garantido mesmo se requisição falhar
+        } catch (err) {
+            toastError(mapVideoCallError(err));
+            return false;
         }
 
+        sfu.disconnect();
         store.clearCall();
+        return true;
+    };
+
+    /**
+     * Saída local (paciente). API-first: registra o leave no servidor (notifica o
+     * médico) e só então desconecta. A sala continua ativa para o peer.
+     */
+    const leaveCall = async (callId: string): Promise<boolean> => {
+        try {
+            await axios.post(`/calls/${callId}/leave`);
+        } catch (err) {
+            toastError(mapVideoCallError(err));
+            return false;
+        }
+
+        sfu.disconnect();
+        store.clearCall();
+        return true;
     };
 
     const setupEchoListeners = (userId: number): void => {
@@ -271,6 +291,7 @@ export function useVideoCall() {
         acceptCall,
         rejectCall,
         endCall,
+        leaveCall,
         setupEchoListeners,
         teardownEchoListeners,
     };

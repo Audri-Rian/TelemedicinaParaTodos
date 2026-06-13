@@ -23,6 +23,10 @@ return new class extends Migration
             $table->timestamp('accepted_at')->nullable();
             $table->timestamp('doctor_joined_at')->nullable();
             $table->timestamp('patient_joined_at')->nullable();
+            $table->timestamp('doctor_left_at')->nullable();
+            $table->timestamp('patient_left_at')->nullable();
+            $table->timestamp('doctor_last_seen_at')->nullable();
+            $table->timestamp('patient_last_seen_at')->nullable();
             $table->timestamp('ended_at')->nullable();
             $table->string('call_closed_reason')->nullable();
             $table->timestamps();

@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { useVideoCall } from '@/composables/useVideoCall';
 import { useVideoCallNavigation } from '@/composables/useVideoCallNavigation';
 import { useVideoCallSession } from '@/composables/useVideoCallSession';
 import { useVideoCallStore } from '@/stores/videoCall';
@@ -14,17 +13,10 @@ const props = defineProps<{
 const store = useVideoCallStore();
 const session = useVideoCallSession();
 const { enterCall } = useVideoCallNavigation();
-const { endCall } = useVideoCall();
 
 const showModal = computed(() => store.isActive && !store.modalDismissed && !store.isOnVideoCallPage);
 
 const showWidget = computed(() => store.isActive && store.modalDismissed && !store.isOnVideoCallPage);
-
-async function handleEndFromWidget() {
-    if (store.callId) {
-        await endCall(store.callId);
-    }
-}
 
 onMounted(async () => {
     if (!store.isActive) {
@@ -41,11 +33,5 @@ onUnmounted(() => {
 <template>
     <VideoCallActiveModal :open="showModal" :appointment-label="store.appointmentLabel" @enter="enterCall" @dismiss="store.dismissModal" />
 
-    <VideoCallFloatingWidget
-        v-if="showWidget"
-        :call-status="store.status"
-        :appointment-label="store.appointmentLabel"
-        @enter="enterCall"
-        @end="handleEndFromWidget"
-    />
+    <VideoCallFloatingWidget v-if="showWidget" :call-status="store.status" :appointment-label="store.appointmentLabel" @enter="enterCall" />
 </template>

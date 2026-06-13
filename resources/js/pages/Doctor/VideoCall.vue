@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { useRouteGuard } from '@/composables/auth';
 import { useInitials } from '@/composables/useInitials';
+import { useToast } from '@/composables/useToast';
 import { useVideoCall } from '@/composables/useVideoCall';
 import AppLayout from '@/layouts/AppLayout.vue';
 import * as doctorRoutes from '@/routes/doctor';
@@ -62,6 +63,7 @@ type StatusTone = 'live' | 'go' | 'wait' | 'warn' | 'muted';
 
 const { canAccessDoctorRoute } = useRouteGuard();
 const { getInitials } = useInitials();
+const { info: toastInfo } = useToast();
 const page = usePage();
 const store = useVideoCallStore();
 
@@ -174,8 +176,9 @@ const handleJoinCall = async () => {
 const handleEndCall = async () => {
     if (!currentCall.value || isEndingCall.value) return;
     isEndingCall.value = true;
-    await endCall(currentCall.value.callId);
+    const ended = await endCall(currentCall.value.callId);
     isEndingCall.value = false;
+    if (ended) toastInfo('Consulta encerrada.');
 };
 
 const getStatusLabel = (status: string): string => {

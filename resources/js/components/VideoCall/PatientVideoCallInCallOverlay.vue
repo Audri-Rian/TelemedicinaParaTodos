@@ -20,7 +20,8 @@ import { useCallChat } from '@/composables/useCallChat';
 import { useCallSharedDocuments } from '@/composables/useCallSharedDocuments';
 import patientMedicalRecordRoutes from '@/routes/patient/medical-records';
 import { CALL_DOCUMENT_CATEGORY_LABELS, formatCallDocumentSize, formatCallDocumentTime, type CallSharedDocument } from '@/types/call-documents';
-import { FileText, MessageSquare, NotebookPen, PanelRight, Stethoscope } from 'lucide-vue-next';
+import { videoCallMessage } from '@/utils/videoCallMessages';
+import { FileText, Loader2, MessageSquare, NotebookPen, PanelRight, Stethoscope } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 
 import '../../../css/patient-consult-video-call-design.css';
@@ -50,7 +51,7 @@ const props = withDefaults(
     },
 );
 
-const emit = defineEmits<{ toggleMic: []; toggleCamera: []; end: [] }>();
+const emit = defineEmits<{ toggleMic: []; toggleCamera: []; leave: [] }>();
 
 const TAB_DEFS = [
     { id: 'summary' as const, label: 'Consulta', icon: NotebookPen },
@@ -66,9 +67,6 @@ const showCaptions = ref(false);
 const stageView = ref<'doctor-main' | 'patient-main'>('doctor-main');
 const accent = ref('#0f766e');
 
-const screenSharing = ref(false);
-const handRaised = ref(false);
-
 const notes = ref<PatientConsultChecklistItem[]>([...MOCK_PATIENT_MY_NOTES]);
 
 const tweaksOpen = ref(false);
@@ -77,6 +75,32 @@ const toast = ref<{ message: string } | null>(null);
 let toastTimer: ReturnType<typeof setTimeout> | null = null;
 
 const roomRef = ref<HTMLElement | null>(null);
+
+// "Médico reconectando": o stream do médico (peer) sumiu enquanto o paciente
+// continua conectado ao SFU. Debounce evita piscar no connect inicial.
+const doctorReconnecting = ref(false);
+let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+
+watch(
+    () => [props.isInCall, props.remoteStreams.size] as const,
+    ([inCall, remoteCount]) => {
+        if (inCall && remoteCount === 0) {
+            if (!reconnectTimer && !doctorReconnecting.value) {
+                reconnectTimer = setTimeout(() => {
+                    doctorReconnecting.value = true;
+                    reconnectTimer = null;
+                }, 2500);
+            }
+            return;
+        }
+        if (reconnectTimer) {
+            clearTimeout(reconnectTimer);
+            reconnectTimer = null;
+        }
+        doctorReconnecting.value = false;
+    },
+    { immediate: true },
+);
 
 const doctor = computed<PatientConsultDoctor>(() => ({
     ...MOCK_PATIENT_DOCTOR,
@@ -131,7 +155,7 @@ const showToast = (message: string) => {
     }, 2400);
 };
 
-const onCtrlToggle = (key: 'mic' | 'cam' | 'screen' | 'captions' | 'hand' | 'more') => {
+const onCtrlToggle = (key: 'mic' | 'cam' | 'captions' | 'more') => {
     if (key === 'mic') {
         emit('toggleMic');
         showToast(props.isMicEnabled ? 'Microfone desligado' : 'Microfone ligado');
@@ -142,30 +166,30 @@ const onCtrlToggle = (key: 'mic' | 'cam' | 'screen' | 'captions' | 'hand' | 'mor
         showToast(props.isCameraEnabled ? 'Câmera desligada' : 'Câmera ligada');
         return;
     }
-    if (key === 'screen') {
-        screenSharing.value = !screenSharing.value;
-        showToast(screenSharing.value ? 'Você está compartilhando a tela' : 'Compartilhamento encerrado');
-        return;
-    }
     if (key === 'captions') {
         showCaptions.value = !showCaptions.value;
         showToast(showCaptions.value ? 'Legendas ativadas' : 'Legendas desativadas');
         return;
     }
-    if (key === 'hand') {
-        handRaised.value = !handRaised.value;
-        showToast(handRaised.value ? 'Você levantou a mão' : 'Mão abaixada');
-        return;
-    }
     showToast('Mais opções');
 };
+
+// Badge de "novos arquivos" recebidos enquanto a aba Arquivos não está aberta.
+const newFilesBadge = ref(0);
 
 const { documents: callDocuments } = useCallSharedDocuments({
     isInCall: () => props.isInCall,
     appointmentId: () => props.appointmentId,
     initialDocuments: () => props.sharedDocuments,
     hiddenVisibility: 'doctor',
-    onNewDocument: (doc) => showToast(`Novo documento compartilhado: ${doc.name}`),
+    onNewDocument: (doc) => {
+        showToast(`Novo documento compartilhado: ${doc.name}`);
+        if (tab.value !== 'files') newFilesBadge.value += 1;
+    },
+});
+
+watch(tab, (value) => {
+    if (value === 'files') newFilesBadge.value = 0;
 });
 
 const documentUrls = (doc: CallSharedDocument) => ({
@@ -196,6 +220,7 @@ const sharedFiles = computed<PatientConsultSharedFile[]>(() =>
         when: formatCallDocumentTime(doc.created_at),
         kind: doc.file_type?.startsWith('image/') ? 'img' : 'pdf',
         downloadUrl: documentUrls(doc).downloadUrl,
+        viewUrl: documentUrls(doc).viewUrl,
     })),
 );
 
@@ -211,8 +236,9 @@ const onSummaryAction = (kind: 'download' | 'view' | 'repeat' | 'doubt', item?: 
     }
     if (kind === 'repeat') showToast('Sinalizado: pode repetir, por favor?');
     if (kind === 'doubt') {
-        handRaised.value = true;
-        showToast('Você levantou uma dúvida');
+        // Sem "levantar mão" — direciona o paciente ao chat para escrever a dúvida.
+        tab.value = 'chat';
+        showToast('Escreva sua dúvida no chat');
     }
 };
 
@@ -220,10 +246,11 @@ const handleFullscreen = () => {
     roomRef.value?.requestFullscreen?.().catch(() => {});
 };
 
-const confirmEnd = () => {
+// Paciente apenas sai (leave): a sala continua para o médico. Feedback de
+// sucesso vem da página após o backend confirmar.
+const confirmLeave = () => {
     endModalOpen.value = false;
-    showToast('Você saiu da consulta');
-    emit('end');
+    emit('leave');
 };
 </script>
 
@@ -267,6 +294,7 @@ const confirmEnd = () => {
                                     <span :style="{ display: panelWidth >= 400 ? 'inline' : 'none' }">{{ t.label }}</span>
                                     <span v-if="t.id === 'summary' && sharedItems.length > 0" class="ct">{{ sharedItems.length }}</span>
                                     <span v-if="t.id === 'chat' && chatCount > 0" class="ct">{{ chatCount }}</span>
+                                    <span v-if="t.id === 'files' && newFilesBadge > 0" class="ct">{{ newFilesBadge }}</span>
                                 </button>
                             </div>
                             <button type="button" class="side-close" title="Fechar painel" @click="sideOpen = false">
@@ -299,9 +327,7 @@ const confirmEnd = () => {
                     <PatientConsultControlsBar
                         :mic-on="isMicEnabled"
                         :cam-on="isCameraEnabled"
-                        :screen-sharing="screenSharing"
                         :captions-on="showCaptions"
-                        :hand-raised="handRaised"
                         :is-ending="isEnding"
                         @toggle="onCtrlToggle"
                         @end="endModalOpen = true"
@@ -311,9 +337,26 @@ const confirmEnd = () => {
                 </div>
             </div>
 
+            <Transition
+                enter-active-class="transition ease-out duration-200"
+                enter-from-class="opacity-0 -translate-y-2"
+                enter-to-class="opacity-100 translate-y-0"
+                leave-active-class="transition ease-in duration-150"
+                leave-from-class="opacity-100 translate-y-0"
+                leave-to-class="opacity-0 -translate-y-2"
+            >
+                <div
+                    v-if="doctorReconnecting"
+                    class="pointer-events-none fixed top-20 left-1/2 z-[70] flex -translate-x-1/2 items-center gap-2 rounded-full bg-amber-500/95 px-4 py-2 text-sm font-semibold text-white shadow-lg"
+                >
+                    <Loader2 class="h-4 w-4 animate-spin" />
+                    {{ videoCallMessage('doctor.reconnecting') }}
+                </div>
+            </Transition>
+
             <div v-if="toast" class="toast">{{ toast.message }}</div>
 
-            <PatientConsultEndModal :open="endModalOpen" @close="endModalOpen = false" @confirm-end="confirmEnd" />
+            <PatientConsultEndModal :open="endModalOpen" @close="endModalOpen = false" @confirm-end="confirmLeave" />
 
             <PatientConsultTweaksPanel
                 :open="tweaksOpen"

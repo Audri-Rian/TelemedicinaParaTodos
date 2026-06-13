@@ -158,13 +158,38 @@ class VideoCallPolicyTest extends TestCase
         $this->assertTrue($result);
     }
 
-    public function test_patient_participant_can_end(): void
+    public function test_patient_participant_cannot_end(): void
     {
+        // RF-03: somente o médico encerra globalmente.
         $call = $this->makeCall();
 
         $result = $this->policy->end($this->patientUser, $call);
 
-        $this->assertTrue($result);
+        $this->assertFalse($result);
+    }
+
+    public function test_doctor_participant_can_leave(): void
+    {
+        $this->assertTrue($this->policy->leave($this->doctorUser, $this->makeCall()));
+    }
+
+    public function test_patient_participant_can_leave(): void
+    {
+        $this->assertTrue($this->policy->leave($this->patientUser, $this->makeCall()));
+    }
+
+    public function test_participant_can_record_presence(): void
+    {
+        $this->assertTrue($this->policy->presence($this->patientUser, $this->makeCall()));
+    }
+
+    public function test_stranger_cannot_record_presence(): void
+    {
+        $strangerUser = User::factory()->create();
+        Patient::factory()->create(['user_id' => $strangerUser->id]);
+        $strangerUser->load('patient');
+
+        $this->assertFalse($this->policy->presence($strangerUser, $this->makeCall()));
     }
 
     public function test_stranger_cannot_end(): void

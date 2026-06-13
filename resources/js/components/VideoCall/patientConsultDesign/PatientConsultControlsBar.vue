@@ -1,31 +1,15 @@
 <script setup lang="ts">
-import {
-    Captions,
-    ChevronDown,
-    Hand,
-    Maximize2,
-    Mic,
-    MicOff,
-    MonitorUp,
-    MoreHorizontal,
-    PhoneOff,
-    Settings,
-    Stamp,
-    Video,
-    VideoOff,
-} from 'lucide-vue-next';
+import { Captions, ChevronDown, Maximize2, Mic, MicOff, MoreHorizontal, PhoneOff, Settings, Stamp, Video, VideoOff } from 'lucide-vue-next';
 
 defineProps<{
     micOn: boolean;
     camOn: boolean;
-    screenSharing: boolean;
     captionsOn: boolean;
-    handRaised: boolean;
     isEnding: boolean;
 }>();
 
 const emit = defineEmits<{
-    toggle: [key: 'mic' | 'cam' | 'screen' | 'captions' | 'hand' | 'more'];
+    toggle: [key: 'mic' | 'cam' | 'captions' | 'more'];
     end: [];
     fullscreen: [];
     openSettings: [];
@@ -58,17 +42,9 @@ const emit = defineEmits<{
                     <ChevronDown class="h-2.5 w-2.5 -rotate-90" />
                 </span>
             </button>
-            <button type="button" class="ctrl-btn" :class="{ 'toggled-on': screenSharing }" @click="emit('toggle', 'screen')">
-                <MonitorUp class="h-5 w-5" />
-                <span class="tip">{{ screenSharing ? 'Parar compartilhamento' : 'Compartilhar tela' }}</span>
-            </button>
             <button type="button" class="ctrl-btn" :class="{ 'toggled-on': captionsOn }" @click="emit('toggle', 'captions')">
                 <Captions class="h-5 w-5" />
                 <span class="tip">{{ captionsOn ? 'Desativar legendas' : 'Ativar legendas em tempo real' }}</span>
-            </button>
-            <button type="button" class="ctrl-btn" :class="{ 'toggled-on': handRaised }" @click="emit('toggle', 'hand')">
-                <Hand class="h-5 w-5" />
-                <span class="tip">Levantar a mão</span>
             </button>
 
             <span class="ctrl-divider" />
@@ -80,7 +56,7 @@ const emit = defineEmits<{
 
             <button type="button" class="ctrl-end" :disabled="isEnding" @click="emit('end')">
                 <PhoneOff class="h-4 w-4" />
-                Encerrar
+                Sair
             </button>
         </div>
 

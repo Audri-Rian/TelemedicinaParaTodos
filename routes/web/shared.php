@@ -42,6 +42,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('calls/{call}/accept', [App\Http\Controllers\CallController::class, 'accept'])->middleware('throttle:10,1')->name('calls.accept');
     Route::post('calls/{call}/reject', [App\Http\Controllers\CallController::class, 'reject'])->middleware('throttle:10,1')->name('calls.reject');
     Route::post('calls/{call}/end', [App\Http\Controllers\CallController::class, 'end'])->middleware('throttle:10,1')->name('calls.end');
+    Route::post('calls/{call}/leave', [App\Http\Controllers\CallController::class, 'leave'])->middleware('throttle:10,1')->name('calls.leave');
+    Route::post('calls/{call}/presence', [App\Http\Controllers\CallController::class, 'presence'])->middleware('throttle:6,1')->name('calls.presence');
     Route::get('calls/{call}', [App\Http\Controllers\CallController::class, 'show'])->name('calls.show');
 
     Route::post('appointments/{appointment}/video/session', [App\Http\Controllers\AppointmentVideoSessionController::class, 'store'])

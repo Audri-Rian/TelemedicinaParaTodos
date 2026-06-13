@@ -2,7 +2,7 @@
 import type { ConsultSharedFile } from '@/components/VideoCall/doctorConsultDesign/doctorConsultDesignData';
 import doctorMedicalRecordDocuments from '@/routes/doctor/patients/medical-record/documents';
 import { useForm } from '@inertiajs/vue3';
-import { Download, FileText, Loader2, Upload } from 'lucide-vue-next';
+import { Download, FileText, Loader2, RotateCcw, Upload } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 
 const props = defineProps<{
@@ -15,6 +15,8 @@ const emit = defineEmits<{ uploaded: [] }>();
 
 const fileInput = ref<HTMLInputElement | null>(null);
 const dragOver = ref(false);
+// Mantém o último arquivo para permitir "tentar novamente" em caso de falha de rede.
+const lastFile = ref<File | null>(null);
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = ['application/pdf', 'image/jpeg', 'image/png'];
@@ -52,6 +54,7 @@ const submit = (file: File) => {
     form.clearErrors();
     form.file = file;
     form.appointment_id = props.appointmentId;
+    lastFile.value = file;
 
     // preserveState evita remontar a página da chamada (streams continuam vivos); a lista atualiza via broadcast
     form.post(doctorMedicalRecordDocuments.store.url({ patient: props.patientId }), {
@@ -60,9 +63,20 @@ const submit = (file: File) => {
         preserveState: true,
         onSuccess: () => {
             form.reset();
+            lastFile.value = null;
             emit('uploaded');
         },
+        onError: (errors) => {
+            // Falha de rede sem erro de validação específico: mensagem amigável genérica.
+            if (!errors.file) {
+                form.setError('file', 'Falha ao enviar o documento. Tente novamente.');
+            }
+        },
     });
+};
+
+const retryUpload = () => {
+    if (lastFile.value) submit(lastFile.value);
 };
 
 const onFileChange = (event: Event) => {
@@ -112,12 +126,37 @@ const downloadFile = (file: ConsultSharedFile) => {
             </button>
         </div>
 
-        <div v-if="form.errors.file" style="font-size: 12px; color: var(--destructive, #dc2626); padding: 0 2px 8px">
-            {{ form.errors.file }}
+        <div v-if="form.progress" style="padding: 0 2px 8px">
+            <div style="height: 4px; border-radius: 999px; background: var(--muted); overflow: hidden">
+                <div
+                    style="height: 100%; background: var(--primary, #0f766e); transition: width 0.2s ease"
+                    :style="{ width: `${form.progress.percentage ?? 0}%` }"
+                />
+            </div>
+            <div style="font-size: 11px; color: var(--muted-foreground); margin-top: 4px">Enviando… {{ form.progress.percentage ?? 0 }}%</div>
+        </div>
+
+        <div
+            v-if="form.errors.file"
+            style="
+                font-size: 12px;
+                color: var(--destructive, #dc2626);
+                padding: 0 2px 8px;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 8px;
+            "
+        >
+            <span>{{ form.errors.file }}</span>
+            <button v-if="lastFile && !form.processing" type="button" class="pat-add" @click="retryUpload">
+                <RotateCcw class="mr-1 inline h-3 w-3" />
+                Tentar novamente
+            </button>
         </div>
 
         <div v-if="files.length === 0" style="padding: 14px; text-align: center; color: var(--muted-foreground); font-size: 12.5px">
-            Nenhum documento compartilhado nesta consulta ainda.
+            Nenhum documento ainda — envie um arquivo para compartilhar com o paciente durante a consulta.
         </div>
 
         <div v-for="f in files" :key="f.id" class="file-row">

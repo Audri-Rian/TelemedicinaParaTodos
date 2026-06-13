@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { PatientConsultChecklistItem, PatientConsultSharedItem } from '@/components/VideoCall/patientConsultDesign/patientConsultDesignData';
-import { Check, Download, FlaskConical, Hand, MessageSquare, Pill, Plus, X } from 'lucide-vue-next';
+import { Check, Download, FlaskConical, MessageCircleQuestion, MessageSquare, Pill, Plus, X } from 'lucide-vue-next';
 import { ref } from 'vue';
 
 const props = defineProps<{
@@ -231,8 +231,8 @@ const remove = (id: number) => {
                     Pedir para repetir
                 </button>
                 <button type="button" class="act-btn" @click="emit('action', 'doubt')">
-                    <Hand class="h-3 w-3" />
-                    Levantar dúvida
+                    <MessageCircleQuestion class="h-3 w-3" />
+                    Tirar dúvida no chat
                 </button>
             </div>
         </div>

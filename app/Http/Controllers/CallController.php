@@ -104,6 +104,36 @@ class CallController extends Controller
         return response()->json(null, 204);
     }
 
+    public function leave(Call $call): JsonResponse
+    {
+        $this->authorize('video-call-leave', $call);
+
+        try {
+            $this->callManager->leaveCall($call, request()->user());
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
+        return response()->json(null, 204);
+    }
+
+    public function presence(Call $call): JsonResponse
+    {
+        $this->authorize('video-call-presence', $call);
+
+        if ($call->status !== Call::STATUS_ACCEPTED) {
+            return response()->json(null, 204);
+        }
+
+        try {
+            $this->callManager->recordPresence($call, request()->user());
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
+        return response()->json(null, 204);
+    }
+
     public function show(Call $call): JsonResponse
     {
         $this->authorize('video-call-view', $call);

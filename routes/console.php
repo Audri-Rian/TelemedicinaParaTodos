@@ -4,6 +4,7 @@ use App\Integrations\Jobs\ProcessIntegrationQueue;
 use App\Integrations\Jobs\SyncExamResults;
 use App\Jobs\AutoStartVideoCall;
 use App\Jobs\CleanExpiredRedisLocks;
+use App\Jobs\EndEmptyVideoCalls;
 use App\Jobs\EndScheduledVideoCalls;
 use App\Jobs\EndStuckInProgressAppointments;
 use App\Jobs\EndZombieVideoCalls;
@@ -43,6 +44,12 @@ Schedule::job(new EndStuckInProgressAppointments)
 
 // Videochamada — encerrar salas scheduled fora da janela
 Schedule::job(new EndScheduledVideoCalls)
+    ->everyMinute()
+    ->withoutOverlapping()
+    ->onOneServer();
+
+// Videochamada — encerrar salas vazias/sem presença (RF-04) e quedas do médico
+Schedule::job(new EndEmptyVideoCalls)
     ->everyMinute()
     ->withoutOverlapping()
     ->onOneServer();

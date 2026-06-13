@@ -76,10 +76,20 @@ class AppointmentVideoSessionController extends Controller
 
         $role = $user->doctor ? 'doctor' : 'patient';
 
-        if ($role === 'doctor' && ! $call->doctor_joined_at) {
-            $call->updateFromSystem(['doctor_joined_at' => now()]);
-        } elseif ($role === 'patient' && ! $call->patient_joined_at) {
-            $call->updateFromSystem(['patient_joined_at' => now()]);
+        // Marca entrada e inicia presença imediatamente (evita auto-fim prematuro
+        // antes do primeiro heartbeat).
+        if ($role === 'doctor') {
+            $call->updateFromSystem([
+                'doctor_joined_at' => $call->doctor_joined_at ?? now(),
+                'doctor_last_seen_at' => now(),
+                'doctor_left_at' => null,
+            ]);
+        } else {
+            $call->updateFromSystem([
+                'patient_joined_at' => $call->patient_joined_at ?? now(),
+                'patient_last_seen_at' => now(),
+                'patient_left_at' => null,
+            ]);
         }
 
         $leadMinutes = (int) config('telemedicine.video_call.window_lead_minutes', 10);

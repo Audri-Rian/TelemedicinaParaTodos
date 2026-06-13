@@ -37,6 +37,10 @@ class Call extends Model
         'accepted_at' => 'datetime',
         'doctor_joined_at' => 'datetime',
         'patient_joined_at' => 'datetime',
+        'doctor_left_at' => 'datetime',
+        'patient_left_at' => 'datetime',
+        'doctor_last_seen_at' => 'datetime',
+        'patient_last_seen_at' => 'datetime',
         'ended_at' => 'datetime',
     ];
 
@@ -64,7 +68,13 @@ class Call extends Model
 
     public const CLOSED_REASON_ENDED_BY_USER = 'ended_by_user';
 
+    public const CLOSED_REASON_ENDED_BY_DOCTOR = 'ended_by_doctor';
+
     public const CLOSED_REASON_WINDOW_EXPIRED = 'window_expired';
+
+    public const CLOSED_REASON_ROOM_INACTIVE = 'room_inactive';
+
+    public const CLOSED_REASON_DOCTOR_DISCONNECTED = 'doctor_disconnected';
 
     public function appointment(): BelongsTo
     {

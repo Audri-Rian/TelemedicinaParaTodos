@@ -6,6 +6,7 @@ use App\Contracts\MediaGatewayInterface;
 use App\DataTransferObjects\MediaRoomData;
 use App\Events\VideoCallAccepted;
 use App\Events\VideoCallEnded;
+use App\Events\VideoCallParticipantLeft;
 use App\Events\VideoCallRejected;
 use App\Events\VideoCallRequested;
 use App\Models\Appointments;
@@ -304,13 +305,13 @@ class CallControllerTest extends TestCase
         $this->assertDatabaseHas('calls', [
             'id' => $call->id,
             'status' => Call::STATUS_ENDED,
-            'call_closed_reason' => Call::CLOSED_REASON_ENDED_BY_USER,
+            'call_closed_reason' => Call::CLOSED_REASON_ENDED_BY_DOCTOR,
         ]);
 
         Event::assertDispatched(VideoCallEnded::class);
     }
 
-    public function test_patient_can_end_active_call(): void
+    public function test_patient_cannot_end_active_call(): void
     {
         Event::fake([VideoCallEnded::class]);
 
@@ -320,9 +321,14 @@ class CallControllerTest extends TestCase
         $response = $this->actingAs($this->patientUser)
             ->postJson(route('calls.end', $call));
 
-        $response->assertNoContent();
+        $response->assertForbidden();
 
-        Event::assertDispatched(VideoCallEnded::class);
+        $this->assertDatabaseHas('calls', [
+            'id' => $call->id,
+            'status' => Call::STATUS_ACCEPTED,
+        ]);
+
+        Event::assertNotDispatched(VideoCallEnded::class);
     }
 
     public function test_stranger_cannot_end_call(): void
@@ -338,14 +344,129 @@ class CallControllerTest extends TestCase
         $response->assertForbidden();
     }
 
-    public function test_cannot_end_already_ended_call(): void
+    public function test_ending_already_ended_call_is_idempotent(): void
     {
+        // NFR-02: encerrar uma call já encerrada não tem efeito colateral e retorna 204.
         $call = Call::factory()->ended()->forParticipants($this->doctor, $this->patient)->create();
 
         $response = $this->actingAs($this->doctorUser)
             ->postJson(route('calls.end', $call));
 
-        $response->assertUnprocessable();
+        $response->assertNoContent();
+    }
+
+    // -------------------------------------------------------------------------
+    // POST /calls/{call}/leave — sair da chamada (sem encerrar globalmente)
+    // -------------------------------------------------------------------------
+
+    public function test_patient_can_leave_call_without_ending_it(): void
+    {
+        Event::fake([VideoCallParticipantLeft::class, VideoCallEnded::class]);
+
+        $call = Call::factory()->accepted()->forParticipants($this->doctor, $this->patient)->create();
+        Room::factory()->create(['call_id' => $call->id]);
+
+        $response = $this->actingAs($this->patientUser)
+            ->postJson(route('calls.leave', $call));
+
+        $response->assertNoContent();
+
+        // A call continua ativa — apenas o paciente saiu.
+        $this->assertDatabaseHas('calls', [
+            'id' => $call->id,
+            'status' => Call::STATUS_ACCEPTED,
+        ]);
+        $this->assertNotNull($call->fresh()->patient_left_at);
+
+        Event::assertDispatched(VideoCallParticipantLeft::class, fn ($e) => $e->role === 'patient');
+        Event::assertNotDispatched(VideoCallEnded::class);
+    }
+
+    public function test_doctor_can_leave_call_temporarily(): void
+    {
+        Event::fake([VideoCallParticipantLeft::class]);
+
+        $call = Call::factory()->accepted()->forParticipants($this->doctor, $this->patient)->create();
+        Room::factory()->create(['call_id' => $call->id]);
+
+        $response = $this->actingAs($this->doctorUser)
+            ->postJson(route('calls.leave', $call));
+
+        $response->assertNoContent();
+
+        $this->assertDatabaseHas('calls', [
+            'id' => $call->id,
+            'status' => Call::STATUS_ACCEPTED,
+        ]);
+        $this->assertNotNull($call->fresh()->doctor_left_at);
+
+        Event::assertDispatched(VideoCallParticipantLeft::class, fn ($e) => $e->role === 'doctor');
+    }
+
+    public function test_stranger_cannot_leave_call(): void
+    {
+        $strangerUser = User::factory()->create();
+        Patient::factory()->create(['user_id' => $strangerUser->id]);
+
+        $call = Call::factory()->accepted()->forParticipants($this->doctor, $this->patient)->create();
+
+        $response = $this->actingAs($strangerUser)
+            ->postJson(route('calls.leave', $call));
+
+        $response->assertForbidden();
+    }
+
+    public function test_leave_is_idempotent(): void
+    {
+        Event::fake([VideoCallParticipantLeft::class]);
+
+        $call = Call::factory()->accepted()->forParticipants($this->doctor, $this->patient)->create();
+        Room::factory()->create(['call_id' => $call->id]);
+
+        $this->actingAs($this->patientUser)->postJson(route('calls.leave', $call))->assertNoContent();
+        $this->actingAs($this->patientUser)->postJson(route('calls.leave', $call))->assertNoContent();
+
+        $this->assertDatabaseHas('calls', ['id' => $call->id, 'status' => Call::STATUS_ACCEPTED]);
+    }
+
+    // -------------------------------------------------------------------------
+    // POST /calls/{call}/presence — heartbeat de presença
+    // -------------------------------------------------------------------------
+
+    public function test_participant_can_record_presence(): void
+    {
+        $call = Call::factory()->accepted()->forParticipants($this->doctor, $this->patient)->create();
+
+        $response = $this->actingAs($this->patientUser)
+            ->postJson(route('calls.presence', $call));
+
+        $response->assertNoContent();
+        $this->assertNotNull($call->fresh()->patient_last_seen_at);
+    }
+
+    public function test_presence_clears_left_marker_on_reconnect(): void
+    {
+        $call = Call::factory()->accepted()->forParticipants($this->doctor, $this->patient)->create();
+        $call->updateFromSystem(['doctor_left_at' => now()->subMinute()]);
+
+        $this->actingAs($this->doctorUser)
+            ->postJson(route('calls.presence', $call))
+            ->assertNoContent();
+
+        $this->assertNull($call->fresh()->doctor_left_at);
+        $this->assertNotNull($call->fresh()->doctor_last_seen_at);
+    }
+
+    public function test_stranger_cannot_record_presence(): void
+    {
+        $strangerUser = User::factory()->create();
+        Patient::factory()->create(['user_id' => $strangerUser->id]);
+
+        $call = Call::factory()->accepted()->forParticipants($this->doctor, $this->patient)->create();
+
+        $this->actingAs($strangerUser)
+            ->postJson(route('calls.presence', $call))
+            ->assertForbidden();
     }
 
     // -------------------------------------------------------------------------

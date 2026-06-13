@@ -50,6 +50,7 @@ export interface PatientConsultSharedFile {
     when: string;
     kind: 'pdf' | 'img';
     downloadUrl?: string;
+    viewUrl?: string;
 }
 
 export const MOCK_PATIENT_DOCTOR: PatientConsultDoctor = {

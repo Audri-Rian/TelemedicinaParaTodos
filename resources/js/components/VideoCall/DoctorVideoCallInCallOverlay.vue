@@ -81,9 +81,6 @@ const sideOpen = ref(true);
 const panelWidth = ref(420);
 const showCaptions = ref(false);
 
-const screenSharing = ref(false);
-const handRaised = ref(false);
-
 const endModalOpen = ref(false);
 const toast = ref<{ message: string } | null>(null);
 let toastTimer: ReturnType<typeof setTimeout> | null = null;
@@ -176,7 +173,7 @@ const showToast = (message: string) => {
     }, 2400);
 };
 
-const onCtrlToggle = (key: 'mic' | 'cam' | 'screen' | 'captions' | 'hand' | 'more') => {
+const onCtrlToggle = (key: 'mic' | 'cam' | 'captions' | 'more') => {
     if (key === 'mic') {
         emit('toggleMic');
         showToast(props.isMicEnabled ? 'Microfone desligado' : 'Microfone ligado');
@@ -187,19 +184,9 @@ const onCtrlToggle = (key: 'mic' | 'cam' | 'screen' | 'captions' | 'hand' | 'mor
         showToast(props.isCameraEnabled ? 'Câmera desligada' : 'Câmera ligada');
         return;
     }
-    if (key === 'screen') {
-        screenSharing.value = !screenSharing.value;
-        showToast(screenSharing.value ? 'Você está compartilhando a tela' : 'Compartilhamento encerrado');
-        return;
-    }
     if (key === 'captions') {
         showCaptions.value = !showCaptions.value;
         showToast(showCaptions.value ? 'Legendas em tempo real ativadas' : 'Legendas desativadas');
-        return;
-    }
-    if (key === 'hand') {
-        handRaised.value = !handRaised.value;
-        showToast(handRaised.value ? 'Você levantou a mão' : 'Mão abaixada');
         return;
     }
     showToast('Mais opções');
@@ -265,9 +252,10 @@ const openEndModal = () => {
     endModalOpen.value = true;
 };
 
+// API-first: apenas dispara o encerramento. O feedback de sucesso ("Consulta
+// encerrada") vem da página após o backend confirmar — evita toast otimista.
 const confirmEnd = () => {
     endModalOpen.value = false;
-    showToast('Consulta encerrada');
     emit('end');
 };
 </script>
@@ -345,9 +333,7 @@ const confirmEnd = () => {
                     <DoctorConsultControlsBar
                         :mic-on="isMicEnabled"
                         :cam-on="isCameraEnabled"
-                        :screen-sharing="screenSharing"
                         :captions-on="showCaptions"
-                        :hand-raised="handRaised"
                         :is-ending="isEnding"
                         @toggle="onCtrlToggle"
                         @end="openEndModal"

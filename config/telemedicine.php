@@ -153,8 +153,15 @@ return [
         // Janela de elegibilidade ad-hoc: paciente só liga se tiver consulta nos últimos N dias.
         'ad_hoc_relationship_days' => (int) env('VIDEO_CALL_ADHOC_RELATIONSHIP_DAYS', 7),
 
-        // Minutos de inatividade para encerrar sala "zumbi" (ad-hoc apenas).
-        'room_inactive_minutes' => (int) env('VIDEO_ROOM_INACTIVE_MINUTES', 60),
+        // Minutos sem presença (heartbeat) para encerrar sala vazia. RF-04.
+        'room_inactive_minutes' => (int) env('VIDEO_ROOM_INACTIVE_MINUTES', 15),
+
+        // Intervalo (segundos) do heartbeat de presença enviado pelo cliente em chamada.
+        'presence_interval_seconds' => (int) env('VIDEO_CALL_PRESENCE_INTERVAL', 30),
+
+        // Tolerância (minutos) para o médico reconectar antes do auto-encerramento
+        // por queda (paciente continua na sala aguardando).
+        'doctor_reconnect_grace_minutes' => (int) env('VIDEO_CALL_DOCTOR_RECONNECT_GRACE', 2),
 
         // Duração máxima de uma sala ativa (minutos). Evita salas eternas (ad-hoc fallback).
         'room_max_duration_minutes' => (int) env('VIDEO_ROOM_MAX_DURATION_MINUTES', 120),
